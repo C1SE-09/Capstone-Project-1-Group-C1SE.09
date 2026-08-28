@@ -1,0 +1,30 @@
+# Backend
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pydantic-settings
+httpx
+
+# Audio Processing
+librosa
+soundfile
+
+# Speech-to-Text
+faster-whisper
+
+# AI / NLP
+torch
+transformers
+datasets
+accelerate
+peft
+
+# Background Processing
+celery
+redis
+
+# Database
+sqlalchemy
+alembic
+pyodbc
