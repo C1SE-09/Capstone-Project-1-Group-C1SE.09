@@ -32,6 +32,11 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Lint code with Ruff
+      run: |
+        pip install ruff
+        ruff check . --exit-zero
+
     - name: Install dependencies and Run Test
       env:
         DATABASE_URL: postgresql+asyncpg://postgres:testpassword@localhost:5432/test_db
