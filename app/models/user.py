@@ -109,7 +109,7 @@ class School(Base, TimestampMixin):
     )
 
     # --- Primary key ---
-    id: Mapped[uuid.UUID] = mapped_column(
+    school_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
@@ -173,7 +173,7 @@ class School(Base, TimestampMixin):
 
     # --- Dunder ---
     def __repr__(self) -> str:  # pragma: no cover
-        return f"<School id={self.id!s} code={self.code!r} name={self.name!r}>"
+        return f"<School id={self.school_id!s} code={self.code!r} name={self.name!r}>"
 
 
 # ===========================================================================
@@ -215,7 +215,7 @@ class Class_(Base, TimestampMixin):
     )
 
     # --- Primary key ---
-    id: Mapped[uuid.UUID] = mapped_column(
+    class_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
@@ -225,7 +225,7 @@ class Class_(Base, TimestampMixin):
     # --- Foreign key ---
     school_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("school.id", ondelete="CASCADE", name="fk_class_school_id"),
+        ForeignKey("school.school_id", ondelete="CASCADE", name="fk_class_school_id"),
         nullable=False,
         comment="Owning school – cascades delete",
     )
@@ -277,7 +277,7 @@ class Class_(Base, TimestampMixin):
     # --- Dunder ---
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"<Class_ id={self.id!s} name={self.name!r} school_id={self.school_id!s}>"
+            f"<Class_ id={self.class_id!s} name={self.name!r} school_id={self.school_id!s}>"
         )
 
 
@@ -323,7 +323,7 @@ class Teacher(Base, TimestampMixin):
     )
 
     # --- Primary key ---
-    id: Mapped[uuid.UUID] = mapped_column(
+    teacher_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
@@ -333,13 +333,13 @@ class Teacher(Base, TimestampMixin):
     # --- Foreign keys ---
     school_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("school.id", ondelete="CASCADE", name="fk_teacher_school_id"),
+        ForeignKey("school.school_id", ondelete="CASCADE", name="fk_teacher_school_id"),
         nullable=False,
         comment="School the teacher belongs to",
     )
     class_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("class.id", ondelete="SET NULL", name="fk_teacher_class_id"),
+        ForeignKey("class.class_id", ondelete="SET NULL", name="fk_teacher_class_id"),
         nullable=True,
         comment="Current homeroom class – NULL if not yet assigned",
     )
