@@ -1,0 +1,6 @@
+//ValueNotifiers : Hold the data
+//ValueListenableBuilder :listen to the data(don't need the setState)
+
+import 'package:flutter/cupertino.dart';
+
+ValueNotifier<int> selectedPageNotifiers = ValueNotifier(0);
