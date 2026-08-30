@@ -1,4 +1,4 @@
-import 'package:adark_frontend/views/widget_tree.dart';
+import 'package:adark_frontend/presentation/widget_tree.dart';
 import 'package:flutter/material.dart';
 
 void main() {
