@@ -1,7 +1,7 @@
 import 'package:adark_frontend/data/notifiers.dart';
-import 'package:adark_frontend/views/pages/home_page.dart';
-import 'package:adark_frontend/views/pages/profile_page.dart';
-import 'package:adark_frontend/views/widgets/navbar_widget.dart';
+import 'package:adark_frontend/presentation/pages/home_page.dart';
+import 'package:adark_frontend/presentation/pages/profile_page.dart';
+import 'package:adark_frontend/presentation/widgets/navbar_widget.dart';
 import 'package:flutter/material.dart';
 
 List<Widget> page = [HomePage(), ProfilePage()];
