@@ -4,3 +4,4 @@
 import 'package:flutter/cupertino.dart';
 
 ValueNotifier<int> selectedPageNotifiers = ValueNotifier(0);
+ValueNotifier<bool> isDarkMode = ValueNotifier(false);
