@@ -11,12 +11,10 @@ class MainLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: context.canPop()
-            ? IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () => context.go("/login"),
-              )
-            : null,
+        leading: IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () => context.go("/login"),
+        ),
         title: const Text("ADARK"),
         centerTitle: true,
         actions: [
@@ -30,6 +28,12 @@ class MainLayout extends StatelessWidget {
                 icon: Icon(darkMode ? Icons.light_mode : Icons.dark_mode),
               );
             },
+          ),
+          IconButton(
+            onPressed: () {
+              context.go("/settings");
+            },
+            icon: Icon(Icons.settings),
           ),
         ],
       ),

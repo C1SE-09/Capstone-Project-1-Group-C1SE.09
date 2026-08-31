@@ -7,22 +7,20 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login'), centerTitle: true),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(50.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: () => context.push('/teacher'),
-              child: const Text('Login as Teacher'),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(25.0),
+              child: Image.asset('lib/assets/images/background.jpg'),
             ),
-            ElevatedButton(
-              onPressed: () => context.push('/parent'),
-              child: const Text('Login as Parent'),
-            ),
-            ElevatedButton(
-              onPressed: () => context.push('/admin'),
-              child: const Text('Login as Admin'),
+            FilledButton(
+              onPressed: () {
+                context.go("/home");
+              },
+              child: Text("Login"),
             ),
           ],
         ),
