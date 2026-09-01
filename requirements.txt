@@ -1,25 +1,25 @@
 # --- Core framework & Utilities ---
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-pydantic>=2.7.0
-pydantic-settings>=2.2.0
-python-dotenv>=1.0.0
+fastapi==0.115.0
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.0
 python-multipart          # Hỗ trợ upload file (âm thanh/ảnh) cho FastAPI
 httpx                     # Call API nội bộ / bên ngoài
 
 # --- Database ORM & Drivers ---
-sqlalchemy[asyncio]>=2.0.0
-alembic>=1.13.0
-asyncpg>=0.29.0           # PostgreSQL async driver
-psycopg2-binary>=2.9.0    # Sync fallback (cho Alembic)
+sqlalchemy[asyncio]==2.0.0
+alembic==1.13.0
+asyncpg==0.29.0           # PostgreSQL async driver
+psycopg2-binary==2.9.0    # Sync fallback (cho Alembic)
 pyodbc                    # SQL Server / ODBC driver
 
 # --- Auth ---
-firebase-admin>=6.5.0
+firebase-admin==6.5.0
 
 # --- Background Processing ---
-celery
-redis
+celery[redis]==5.4.0
+redis==5.2.1
 
 # --- Audio Processing & Speech-to-Text ---
 librosa

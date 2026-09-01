@@ -21,22 +21,20 @@ services:
     container_name: kinderlog_redis
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
 
-  backend:
-    build: .
-    container_name: kinderlog_backend
+  api:
+    build: ./backend
+    container_name: kinderlog_api
     env_file: .env
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/app
+      - ./backend:/app
     depends_on:
       db:
         condition: service_healthy
@@ -44,19 +42,17 @@ services:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  celery_worker:
-    build: .
-    container_name: kinderlog_celery_worker
+  worker:
+    build: ./backend
+    container_name: kinderlog_worker
     env_file: .env
     volumes:
-      - ./app:/app
+      - ./backend:/app
     depends_on:
-      db:
-        condition: service_healthy
       redis: 
         condition: service_healthy
     command: celery -A app.tasks.celery_app worker --loglevel=info --pool=solo
 
 volumes:
   postgres_data:
-  redis_data:
+  
