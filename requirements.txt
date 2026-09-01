@@ -1,8 +1,8 @@
 # --- Core framework & Utilities ---
 fastapi==0.115.0
-uvicorn[standard]==0.30.0
-pydantic==2.7.0
-pydantic-settings==2.2.0
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
 python-dotenv==1.0.0
 python-multipart          # Hỗ trợ upload file (âm thanh/ảnh) cho FastAPI
 httpx                     # Call API nội bộ / bên ngoài
@@ -18,8 +18,8 @@ pyodbc                    # SQL Server / ODBC driver
 firebase-admin==6.5.0
 
 # --- Background Processing ---
-celery
-redis
+celery[redis]==5.4.0
+redis==5.2.1
 
 # --- Audio Processing & Speech-to-Text ---
 librosa
