@@ -52,7 +52,9 @@ from app.models.base import Base, TimestampMixin
 # Forward-reference imports (avoid circular imports)
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
-    from app.models.user import Class_  # noqa: F401 – TASK-1.2.1
+    from app.models.user import Class_          # noqa: F401 – TASK-1.2.1
+    from app.models.report import DailyReport   # noqa: F401 – TASK-1.2.3
+    from app.models.report import VoiceRecord   # noqa: F401 – TASK-1.2.3
 
 
 # ===========================================================================
@@ -191,6 +193,20 @@ class Child(Base, TimestampMixin):
         "Class_",
         back_populates="children",
         lazy="joined",
+    )
+    voice_records: Mapped[List["VoiceRecord"]] = relationship(
+        "VoiceRecord",
+        back_populates="child",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="VoiceRecord.recorded_at",
+    )
+    daily_reports: Mapped[List["DailyReport"]] = relationship(
+        "DailyReport",
+        back_populates="child",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="DailyReport.report_date",
     )
 
     # --- Dunder ---
