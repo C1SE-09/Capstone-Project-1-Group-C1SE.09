@@ -8,6 +8,8 @@ import 'package:adark_frontend/presentation/pages/teacher_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../presentation/pages/setting_page.dart';
+
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
@@ -44,6 +46,10 @@ class AppRouter {
           GoRoute(
             path: '/admin',
             builder: (context, state) => const AdminDashboard(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingPage(),
           ),
         ],
       ),
