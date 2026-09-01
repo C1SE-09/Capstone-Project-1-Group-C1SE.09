@@ -4,7 +4,7 @@ app/models/__init__.py
 Re-exports all ORM model classes so that Alembic's ``env.py`` and other
 modules can import from a single location:
 
-    from app.models import Base, School, Class_, Teacher
+    from app.models import Base, School, Class_, Teacher, Child, Parent
 
 Import order matters: Base must be imported before any model so that
 SQLAlchemy's mapper registry is populated correctly.
@@ -17,6 +17,12 @@ from app.models.user import (
     SchoolStatus,
     Teacher,
     TeacherStatus,
+)
+from app.models.child import (
+    Child,
+    ChildStatus,
+    Parent,
+    ParentStatus,
 )
 
 __all__ = [
@@ -31,4 +37,10 @@ __all__ = [
     # Teacher
     "Teacher",
     "TeacherStatus",
+    # Child & Parent (TASK-1.2.2)
+    "Child",
+    "ChildStatus",
+    "Parent",
+    "ParentStatus",
 ]
+

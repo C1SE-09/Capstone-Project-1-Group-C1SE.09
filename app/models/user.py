@@ -7,6 +7,7 @@ Entity hierarchy
 ~~~~~~~~~~~~~~~~
     School  1──* Class_  1──* Teacher   (Teacher belongs to one Class_ & one School)
     School  1──* Teacher               (direct FK for fast school-level queries)
+    Class_  1──* Child                 (children enrolled in the class – TASK-1.2.2)
 
 Design decisions
 ~~~~~~~~~~~~~~~~
@@ -48,7 +49,7 @@ from app.models.base import Base, TimestampMixin
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
     # Imported only for type checkers; not executed at runtime.
-    from app.models.child import Child, Parent  # noqa: F401 – TASK-1.2.2
+    from app.models.child import Child  # noqa: F401 – TASK-1.2.2
 
 
 # ===========================================================================
@@ -271,8 +272,13 @@ class Class_(Base, TimestampMixin):
         lazy="selectin",
         order_by="Teacher.full_name",
     )
-    # children relationship will be added in TASK-1.2.2
-    # children: Mapped[List["Child"]] = relationship(...)
+    children: Mapped[List["Child"]] = relationship(
+        "Child",
+        back_populates="class_",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="Child.full_name",
+    )
 
     # --- Dunder ---
     def __repr__(self) -> str:  # pragma: no cover
@@ -405,6 +411,6 @@ class Teacher(Base, TimestampMixin):
     # --- Dunder ---
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"<Teacher id={self.id!s} email={self.email!r} "
+            f"<Teacher id={self.teacher_id!s} email={self.email!r} "
             f"school_id={self.school_id!s} class_id={self.class_id!s}>"
         )
