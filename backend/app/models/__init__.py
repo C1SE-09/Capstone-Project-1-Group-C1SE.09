@@ -15,13 +15,6 @@ SQLAlchemy's mapper registry is populated correctly.
 """
 
 from app.models.base import Base, TimestampMixin
-from app.models.user import (
-    Class_,
-    School,
-    SchoolStatus,
-    Teacher,
-    TeacherStatus,
-)
 from app.models.child import (
     Child,
     ChildStatus,
@@ -36,30 +29,30 @@ from app.models.report import (
     VoiceRecord,
     VoiceRecordStatus,
 )
+from app.models.user import (
+    Class_,
+    School,
+    SchoolStatus,
+    Teacher,
+    TeacherStatus,
+)
 
 __all__ = [
-    # Base
+    "ActivityCategory",
+    "ActivityEntry",
     "Base",
-    "TimestampMixin",
-    # School
-    "School",
-    "SchoolStatus",
-    # Class
-    "Class_",
-    # Teacher
-    "Teacher",
-    "TeacherStatus",
-    # Child & Parent (TASK-1.2.2)
     "Child",
     "ChildStatus",
-    "Parent",
-    "ParentStatus",
-    # Voice & Daily Report (TASK-1.2.3)
-    "VoiceRecord",
-    "VoiceRecordStatus",
+    "Class_",
     "DailyReport",
     "DailyReportStatus",
-    "ActivityEntry",
-    "ActivityCategory",
+    "Parent",
+    "ParentStatus",
+    "School",
+    "SchoolStatus",
+    "Teacher",
+    "TeacherStatus",
+    "TimestampMixin",
+    "VoiceRecord",
+    "VoiceRecordStatus",
 ]
-

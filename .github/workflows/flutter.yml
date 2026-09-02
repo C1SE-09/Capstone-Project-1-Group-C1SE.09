@@ -17,5 +17,10 @@ jobs:
       with:
         channel: 'stable'
 
+    - name: Install dependencies
+      working-directory: ./frontend
+      run: flutter pub get
+
     - name: Run Flutter Analyze
+      working-directory: ./frontend
       run: flutter analyze

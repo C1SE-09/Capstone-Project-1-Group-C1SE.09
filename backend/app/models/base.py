@@ -6,7 +6,7 @@ Provides:
 - ``TimestampMixin``: Adds ``created_at`` / ``updated_at`` columns automatically.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -16,7 +16,6 @@ class Base(DeclarativeBase):
     """Central declarative base for the entire ADARK application."""
 
     # Allow SQLAlchemy to inherit __tablename__ convention from subclasses
-    pass
 
 
 class TimestampMixin:

@@ -28,16 +28,18 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
-    Enum as SAEnum,
     ForeignKey,
     Index,
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -49,9 +51,11 @@ from app.models.base import Base, TimestampMixin
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
     # Imported only for type checkers; not executed at runtime.
-    from app.models.child import Child          # noqa: F401 – TASK-1.2.2
-    from app.models.report import DailyReport   # noqa: F401 – TASK-1.2.3
-    from app.models.report import VoiceRecord   # noqa: F401 – TASK-1.2.3
+    from app.models.child import Child
+    from app.models.report import (
+        DailyReport,
+        VoiceRecord,
+    )
 
 
 # ===========================================================================
@@ -130,17 +134,17 @@ class School(Base, TimestampMixin):
         nullable=False,
         comment="Short unique identifier used in reports, e.g. KG-HCM-01",
     )
-    address: Mapped[Optional[str]] = mapped_column(
+    address: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Physical street address",
     )
-    phone: Mapped[Optional[str]] = mapped_column(
+    phone: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
         comment="Contact phone number",
     )
-    email: Mapped[Optional[str]] = mapped_column(
+    email: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         comment="Administrative email address",
@@ -152,21 +156,21 @@ class School(Base, TimestampMixin):
         server_default=SchoolStatus.ACTIVE.value,
         comment="Lifecycle status of the school",
     )
-    logo_url: Mapped[Optional[str]] = mapped_column(
+    logo_url: Mapped[str | None] = mapped_column(
         String(512),
         nullable=True,
         comment="URL to the school logo image in object storage",
     )
 
     # --- Relationships ---
-    classes: Mapped[List["Class_"]] = relationship(
+    classes: Mapped[list[Class_]] = relationship(
         "Class_",
         back_populates="school",
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="Class_.name",
     )
-    teachers: Mapped[List["Teacher"]] = relationship(
+    teachers: Mapped[list[Teacher]] = relationship(
         "Teacher",
         back_populates="school",
         cascade="all, delete-orphan",
@@ -239,17 +243,17 @@ class Class_(Base, TimestampMixin):
         nullable=False,
         comment="Display name of the class, e.g. Lớp Mầm A",
     )
-    grade_label: Mapped[Optional[str]] = mapped_column(
+    grade_label: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         comment="Age/grade group label – Mầm | Chồi | Lá | Mẫu giáo",
     )
-    room_number: Mapped[Optional[str]] = mapped_column(
+    room_number: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
         comment="Physical room number or identifier",
     )
-    capacity: Mapped[Optional[int]] = mapped_column(
+    capacity: Mapped[int | None] = mapped_column(
         nullable=True,
         comment="Maximum number of children allowed in this class",
     )
@@ -262,19 +266,19 @@ class Class_(Base, TimestampMixin):
     )
 
     # --- Relationships ---
-    school: Mapped["School"] = relationship(
+    school: Mapped[School] = relationship(
         "School",
         back_populates="classes",
         lazy="joined",
     )
-    teachers: Mapped[List["Teacher"]] = relationship(
+    teachers: Mapped[list[Teacher]] = relationship(
         "Teacher",
         back_populates="class_",
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="Teacher.full_name",
     )
-    children: Mapped[List["Child"]] = relationship(
+    children: Mapped[list[Child]] = relationship(
         "Child",
         back_populates="class_",
         cascade="all, delete-orphan",
@@ -345,7 +349,7 @@ class Teacher(Base, TimestampMixin):
         nullable=False,
         comment="School the teacher belongs to",
     )
-    class_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("class.class_id", ondelete="SET NULL", name="fk_teacher_class_id"),
         nullable=True,
@@ -353,7 +357,7 @@ class Teacher(Base, TimestampMixin):
     )
 
     # --- Auth ---
-    firebase_uid: Mapped[Optional[str]] = mapped_column(
+    firebase_uid: Mapped[str | None] = mapped_column(
         String(128),
         nullable=True,
         comment="Firebase Authentication UID (linked after first login)",
@@ -370,12 +374,12 @@ class Teacher(Base, TimestampMixin):
         nullable=False,
         comment="Login and contact email – must be unique",
     )
-    phone: Mapped[Optional[str]] = mapped_column(
+    phone: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
         comment="Mobile phone number",
     )
-    avatar_url: Mapped[Optional[str]] = mapped_column(
+    avatar_url: Mapped[str | None] = mapped_column(
         String(512),
         nullable=True,
         comment="Profile picture URL in object storage",
@@ -398,24 +402,24 @@ class Teacher(Base, TimestampMixin):
     )
 
     # --- Relationships ---
-    school: Mapped["School"] = relationship(
+    school: Mapped[School] = relationship(
         "School",
         back_populates="teachers",
         lazy="joined",
     )
-    class_: Mapped[Optional["Class_"]] = relationship(
+    class_: Mapped[Class_ | None] = relationship(
         "Class_",
         back_populates="teachers",
         lazy="joined",
     )
-    voice_records: Mapped[List["VoiceRecord"]] = relationship(
+    voice_records: Mapped[list[VoiceRecord]] = relationship(
         "VoiceRecord",
         back_populates="teacher",
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="VoiceRecord.recorded_at",
     )
-    daily_reports: Mapped[List["DailyReport"]] = relationship(
+    daily_reports: Mapped[list[DailyReport]] = relationship(
         "DailyReport",
         back_populates="teacher",
         cascade="all, delete-orphan",
