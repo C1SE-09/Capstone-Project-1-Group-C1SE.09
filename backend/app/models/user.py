@@ -49,7 +49,9 @@ from app.models.base import Base, TimestampMixin
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
     # Imported only for type checkers; not executed at runtime.
-    from app.models.child import Child  # noqa: F401 – TASK-1.2.2
+    from app.models.child import Child          # noqa: F401 – TASK-1.2.2
+    from app.models.report import DailyReport   # noqa: F401 – TASK-1.2.3
+    from app.models.report import VoiceRecord   # noqa: F401 – TASK-1.2.3
 
 
 # ===========================================================================
@@ -406,7 +408,20 @@ class Teacher(Base, TimestampMixin):
         back_populates="teachers",
         lazy="joined",
     )
-    # voice_records / daily_reports relationships will be added in TASK-1.2.3
+    voice_records: Mapped[List["VoiceRecord"]] = relationship(
+        "VoiceRecord",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="VoiceRecord.recorded_at",
+    )
+    daily_reports: Mapped[List["DailyReport"]] = relationship(
+        "DailyReport",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="DailyReport.report_date",
+    )
 
     # --- Dunder ---
     def __repr__(self) -> str:  # pragma: no cover
