@@ -6,20 +6,20 @@ abstract class Failure {
 
 /// Server-related failures (API, network issues)
 class ServerFailure extends Failure {
-  const ServerFailure([String message = 'Server error occurred']) : super(message);
+  const ServerFailure([super.message = 'Server error occurred']);
 }
 
 /// Cache-related failures (local storage)
 class CacheFailure extends Failure {
-  const CacheFailure([String message = 'Cache error occurred']) : super(message);
+  const CacheFailure([super.message = 'Cache error occurred']);
 }
 
 /// Network connectivity failures
 class NetworkFailure extends Failure {
-  const NetworkFailure([String message = 'No internet connection']) : super(message);
+  const NetworkFailure([super.message = 'No internet connection']);
 }
 
 /// Validation failures
 class ValidationFailure extends Failure {
-  const ValidationFailure(String message) : super(message);
+  const ValidationFailure(super.message);
 }
