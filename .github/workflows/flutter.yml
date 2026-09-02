@@ -17,7 +17,10 @@ jobs:
       with:
         channel: 'stable'
 
+    - name: Install dependencies
+      working-directory: ./frontend
+      run: flutter pub get
+
     - name: Run Flutter Analyze
-      run: |
-        echo "Mocking Flutter Analyze... Workspace is currently empty."
-        echo "CI Passed! (Change this to 'flutter analyze' when frontend code is ready)"
+      working-directory: ./frontend
+      run: flutter analyze

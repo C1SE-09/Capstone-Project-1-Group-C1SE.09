@@ -31,17 +31,19 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
     Date,
-    Enum as SAEnum,
     ForeignKey,
     Index,
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -52,9 +54,11 @@ from app.models.base import Base, TimestampMixin
 # Forward-reference imports (avoid circular imports)
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
-    from app.models.user import Class_          # noqa: F401 – TASK-1.2.1
-    from app.models.report import DailyReport   # noqa: F401 – TASK-1.2.3
-    from app.models.report import VoiceRecord   # noqa: F401 – TASK-1.2.3
+    from app.models.report import (
+        DailyReport,
+        VoiceRecord,
+    )
+    from app.models.user import Class_
 
 
 # ===========================================================================
@@ -123,13 +127,13 @@ class Child(Base, TimestampMixin):
     )
 
     # --- Foreign keys ---
-    parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("parent.parent_id", ondelete="SET NULL", name="fk_child_parent_id"),
         nullable=True,
         comment="Owning parent account – NULL if parent account has been deleted",
     )
-    class_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("class.class_id", ondelete="SET NULL", name="fk_child_class_id"),
         nullable=True,
@@ -142,29 +146,29 @@ class Child(Base, TimestampMixin):
         nullable=False,
         comment="Full legal name of the child",
     )
-    nickname: Mapped[Optional[str]] = mapped_column(
+    nickname: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         comment="Preferred nickname used in teacher voice reports and parent notifications",
     )
-    date_of_birth: Mapped[Optional[date]] = mapped_column(
+    date_of_birth: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
         comment="Date of birth for age-group validation",
     )
-    gender: Mapped[Optional[str]] = mapped_column(
+    gender: Mapped[str | None] = mapped_column(
         String(10),
         nullable=True,
         comment="Gender: male | female | other",
     )
-    avatar_url: Mapped[Optional[str]] = mapped_column(
+    avatar_url: Mapped[str | None] = mapped_column(
         String(512),
         nullable=True,
         comment="Profile photo URL in object storage",
     )
 
     # --- Health ---
-    medical_allergies: Mapped[Optional[str]] = mapped_column(
+    medical_allergies: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment=(
@@ -184,24 +188,24 @@ class Child(Base, TimestampMixin):
     )
 
     # --- Relationships ---
-    parent: Mapped[Optional["Parent"]] = relationship(
+    parent: Mapped[Parent | None] = relationship(
         "Parent",
         back_populates="children",
         lazy="joined",
     )
-    class_: Mapped[Optional["Class_"]] = relationship(
+    class_: Mapped[Class_ | None] = relationship(
         "Class_",
         back_populates="children",
         lazy="joined",
     )
-    voice_records: Mapped[List["VoiceRecord"]] = relationship(
+    voice_records: Mapped[list[VoiceRecord]] = relationship(
         "VoiceRecord",
         back_populates="child",
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="VoiceRecord.recorded_at",
     )
-    daily_reports: Mapped[List["DailyReport"]] = relationship(
+    daily_reports: Mapped[list[DailyReport]] = relationship(
         "DailyReport",
         back_populates="child",
         cascade="all, delete-orphan",
@@ -266,7 +270,7 @@ class Parent(Base, TimestampMixin):
     )
 
     # --- Auth ---
-    firebase_uid: Mapped[Optional[str]] = mapped_column(
+    firebase_uid: Mapped[str | None] = mapped_column(
         String(128),
         nullable=True,
         comment="Firebase Authentication UID (linked after first login)",
@@ -283,12 +287,12 @@ class Parent(Base, TimestampMixin):
         nullable=False,
         comment="Primary mobile phone number – used for login and notifications",
     )
-    email: Mapped[Optional[str]] = mapped_column(
+    email: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         comment="Optional contact email address",
     )
-    avatar_url: Mapped[Optional[str]] = mapped_column(
+    avatar_url: Mapped[str | None] = mapped_column(
         String(512),
         nullable=True,
         comment="Profile photo URL in object storage",
@@ -311,7 +315,7 @@ class Parent(Base, TimestampMixin):
     )
 
     # --- Relationships ---
-    children: Mapped[List["Child"]] = relationship(
+    children: Mapped[list[Child]] = relationship(
         "Child",
         back_populates="parent",
         cascade="all, delete-orphan",

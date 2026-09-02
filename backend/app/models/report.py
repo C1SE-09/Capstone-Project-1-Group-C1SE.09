@@ -35,11 +35,10 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Date,
-    Enum as SAEnum,
     Float,
     ForeignKey,
     Index,
@@ -48,6 +47,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -58,8 +60,8 @@ from app.models.base import Base, TimestampMixin
 # Forward-reference imports (avoid circular imports)
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
-    from app.models.child import Child   # noqa: F401 – TASK-1.2.2
-    from app.models.user import Teacher  # noqa: F401 – TASK-1.2.1
+    from app.models.child import Child
+    from app.models.user import Teacher
 
 
 # ===========================================================================
@@ -164,7 +166,7 @@ class VoiceRecord(Base, TimestampMixin):
     )
 
     # --- Foreign keys ---
-    teacher_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    teacher_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "teacher.teacher_id",
@@ -174,7 +176,7 @@ class VoiceRecord(Base, TimestampMixin):
         nullable=True,
         comment="Teacher who uploaded the recording – NULL if teacher is deleted",
     )
-    child_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    child_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "child.child_id",
@@ -191,19 +193,19 @@ class VoiceRecord(Base, TimestampMixin):
         nullable=False,
         comment="Object-storage URL of the uploaded audio file",
     )
-    audio_duration: Mapped[Optional[float]] = mapped_column(
+    audio_duration: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         comment="Duration of the audio clip in seconds",
     )
-    file_size_bytes: Mapped[Optional[int]] = mapped_column(
+    file_size_bytes: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
         comment="Raw file size in bytes – used for storage quota reporting",
     )
 
     # --- AI processing ---
-    transcription: Mapped[Optional[str]] = mapped_column(
+    transcription: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="AI-generated speech-to-text transcript; NULL until COMPLETED",
@@ -215,31 +217,31 @@ class VoiceRecord(Base, TimestampMixin):
         server_default=VoiceRecordStatus.PENDING.value,
         comment="Processing lifecycle status of the voice record",
     )
-    error_message: Mapped[Optional[str]] = mapped_column(
+    error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Error detail when status = FAILED; used for debugging and retries",
     )
 
     # --- Timestamps ---
-    recorded_at: Mapped[Optional[date]] = mapped_column(
+    recorded_at: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
         comment="Client-reported date of the recording (usually today's date)",
     )
 
     # --- Relationships ---
-    teacher: Mapped[Optional["Teacher"]] = relationship(
+    teacher: Mapped[Teacher | None] = relationship(
         "Teacher",
         back_populates="voice_records",
         lazy="joined",
     )
-    child: Mapped[Optional["Child"]] = relationship(
+    child: Mapped[Child | None] = relationship(
         "Child",
         back_populates="voice_records",
         lazy="joined",
     )
-    daily_report: Mapped[Optional["DailyReport"]] = relationship(
+    daily_report: Mapped[DailyReport | None] = relationship(
         "DailyReport",
         back_populates="voice_record",
         uselist=False,   # 1-to-1: one VoiceRecord → at most one DailyReport
@@ -314,7 +316,7 @@ class DailyReport(Base, TimestampMixin):
     )
 
     # --- Foreign keys ---
-    teacher_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    teacher_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "teacher.teacher_id",
@@ -324,7 +326,7 @@ class DailyReport(Base, TimestampMixin):
         nullable=True,
         comment="Teacher who authored the report – NULL if teacher is deleted",
     )
-    child_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    child_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "child.child_id",
@@ -334,7 +336,7 @@ class DailyReport(Base, TimestampMixin):
         nullable=True,
         comment="Subject child – NULL if child record is deleted",
     )
-    voice_record_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    voice_record_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "voice_record.voice_record_id",
@@ -351,7 +353,7 @@ class DailyReport(Base, TimestampMixin):
         nullable=False,
         comment="Calendar date the report covers (used in UniqueConstraint with child_id)",
     )
-    summary_text: Mapped[Optional[str]] = mapped_column(
+    summary_text: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="AI-generated or teacher-edited narrative summary of the child's day",
@@ -365,29 +367,29 @@ class DailyReport(Base, TimestampMixin):
         server_default=DailyReportStatus.DRAFT.value,
         comment="Publication lifecycle: draft → published → archived",
     )
-    published_at: Mapped[Optional[date]] = mapped_column(
+    published_at: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
         comment="Date the teacher published (sent) the report to the parent",
     )
 
     # --- Relationships ---
-    teacher: Mapped[Optional["Teacher"]] = relationship(
+    teacher: Mapped[Teacher | None] = relationship(
         "Teacher",
         back_populates="daily_reports",
         lazy="joined",
     )
-    child: Mapped[Optional["Child"]] = relationship(
+    child: Mapped[Child | None] = relationship(
         "Child",
         back_populates="daily_reports",
         lazy="joined",
     )
-    voice_record: Mapped[Optional["VoiceRecord"]] = relationship(
+    voice_record: Mapped[VoiceRecord | None] = relationship(
         "VoiceRecord",
         back_populates="daily_report",
         lazy="joined",
     )
-    activities: Mapped[List["ActivityEntry"]] = relationship(
+    activities: Mapped[list[ActivityEntry]] = relationship(
         "ActivityEntry",
         back_populates="daily_report",
         cascade="all, delete-orphan",
@@ -476,7 +478,7 @@ class ActivityEntry(Base, TimestampMixin):
         nullable=False,
         comment="Short heading shown in the report card, e.g. 'Bữa trưa'",
     )
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Detailed narrative text for this activity item",
@@ -488,14 +490,14 @@ class ActivityEntry(Base, TimestampMixin):
         server_default="0",
         comment="Display sort order within the daily report (ascending)",
     )
-    icon_code: Mapped[Optional[str]] = mapped_column(
+    icon_code: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         comment="Optional icon identifier used by the Flutter client (e.g. 'meal_fork')",
     )
 
     # --- Relationships ---
-    daily_report: Mapped["DailyReport"] = relationship(
+    daily_report: Mapped[DailyReport] = relationship(
         "DailyReport",
         back_populates="activities",
         lazy="joined",

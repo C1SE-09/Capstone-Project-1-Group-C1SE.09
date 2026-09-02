@@ -32,13 +32,16 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: Lint code with Ruff
+    - name: Install dependencies
       run: |
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install -r requirements.txt
         pip install ruff
-        ruff check . --exit-zero
 
-    - name: Install dependencies and Run Test
+    - name: Lint code with Ruff
+      run: ruff check backend/
+
+    - name: Run Test
       env:
         DATABASE_URL: postgresql+asyncpg://postgres:testpassword@localhost:5432/test_db
-      run: |
-        echo "Mocking Pytest... Database is ready. CI Passed!"
+      run: pytest backend/tests/ -v
