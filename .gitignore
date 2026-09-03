@@ -1,4 +1,37 @@
-__pycache__/
-*.py[cod]
-venv/
-.env
+# ─── Secrets — never commit ───
+  .env
+  .env.local
+  *.pem
+  *.key
+  google-services.json
+  serviceAccount*.json
+  .vscode/
+
+  __pycache__/
+  *.py[cod]
+  *.egg-info/
+  .venv/
+  venv/
+  env/
+  .pytest_cache/
+  .mypy_cache/
+  .ruff_cache/
+
+  .dart_tool/
+  .flutter-plugins
+  .flutter-plugins-dependencies
+  build/
+  *.iml
+  .pub-cache/
+  .pub/
+
+  .vscode/
+  .idea/
+  *.swp
+
+  Thumbs.db
+  Desktop.ini
+  .DS_Store
+
+  media/
+  *.log
