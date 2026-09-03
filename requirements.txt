@@ -14,3 +14,6 @@ asyncpg==0.29.0           # PostgreSQL async driver
 psycopg2-binary==2.9.0    # Sync fallback (cho Alembic)
 pyodbc                    # SQL Server / ODBC driver
 
+# --- Testing ---
+pytest==8.0.0
+pytest-asyncio==0.23.0
