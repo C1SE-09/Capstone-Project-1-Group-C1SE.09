@@ -14,25 +14,3 @@ asyncpg==0.29.0           # PostgreSQL async driver
 psycopg2-binary==2.9.0    # Sync fallback (cho Alembic)
 pyodbc                    # SQL Server / ODBC driver
 
-# --- Auth ---
-firebase-admin==6.5.0
-
-# --- Background Processing ---
-celery[redis]==5.4.0
-redis==5.2.1
-
-# --- Audio Processing & Speech-to-Text ---
-librosa
-soundfile
-faster-whisper
-
-# --- AI / NLP ---
-torch
-transformers
-datasets
-accelerate
-peft
-
-# --- Testing ---
-pytest==8.0.0
-pytest-asyncio==0.23.0

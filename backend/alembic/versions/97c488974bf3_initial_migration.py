@@ -94,4 +94,8 @@ def downgrade() -> None:
     op.drop_table('class')
     op.drop_index('ix_school_status', table_name='school')
     op.drop_table('school')
+
+    op.execute("DROP TYPE IF EXISTS school_status_enum")
+    op.execute("DROP TYPE IF EXISTS class_status_enum")
+    op.execute("DROP TYPE IF EXISTS teacher_status_enum")
     # ### end Alembic commands ###
