@@ -1,10 +1,17 @@
+# Web framework
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
-pydantic==2.10.4
-pydantic-settings==2.7.1
-sqlalchemy==2.0.36
-psycopg[binary]==3.2.3
-alembic==1.14.0
-celery[redis]==5.4.0
-redis==5.2.1
 python-multipart==0.0.20
+
+# PhoWhisper + Text Analysis
+transformers==4.47.1   # Load model PhoWhisper
+accelerate==1.1.0      # Tối ưu GPU
+sentencepiece==0.2.0   # Chuyển đổi chữ để xử lý
+soundfile==0.12.1      # Đọc/ghi file audio
+librosa==0.10.2        # Xử lý âm thanh
+
+# Database
+sqlalchemy==2.0.36
+asyncpg==0.29.0
+redis==5.2.1
+celery[redis]==5.4.0
