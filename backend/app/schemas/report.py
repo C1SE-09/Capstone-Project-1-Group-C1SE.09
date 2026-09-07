@@ -14,7 +14,6 @@ import uuid
 from app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ===========================================================================
 # VoiceRecord Schemas
 # ===========================================================================

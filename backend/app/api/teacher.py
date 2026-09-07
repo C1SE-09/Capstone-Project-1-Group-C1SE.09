@@ -80,6 +80,7 @@ def _extract_duration_ffprobe(file_path: str) -> float | None:
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
         if result.returncode == 0:
             data = json.loads(result.stdout)
@@ -107,10 +108,10 @@ def _extract_duration_ffprobe(file_path: str) -> float | None:
     ),
 )
 def upload_voice_record(
-    file: UploadFile = File(..., description="Audio file (.m4a / .wav / .mp3 / .webm)"),
-    teacher_id: uuid.UUID = Form(..., description="UUID của teacher đang upload"),
-    class_id: uuid.UUID = Form(..., description="UUID của lớp học liên quan"),
-    db: Session = Depends(get_db),
+    file: UploadFile = File(..., description="Audio file (.m4a / .wav / .mp3 / .webm)"),  # noqa: B008
+    teacher_id: uuid.UUID = Form(..., description="UUID của teacher đang upload"),  # noqa: B008
+    class_id: uuid.UUID = Form(..., description="UUID của lớp học liên quan"),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordUploadResponse:
     # ------------------------------------------------------------------
     # 1. Validate file extension

@@ -39,7 +39,6 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Date,
-    Enum as SAEnum,
     Float,
     ForeignKey,
     Index,
@@ -48,6 +47,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -58,8 +60,8 @@ from app.models.base import Base, TimestampMixin
 # Forward-reference imports (avoid circular imports)
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
-    from app.models.child import Child   # noqa: F401 – TASK-1.2.2
-    from app.models.user import Teacher  # noqa: F401 – TASK-1.2.1
+    from app.models.child import Child
+    from app.models.user import Teacher
 
 
 # ===========================================================================
