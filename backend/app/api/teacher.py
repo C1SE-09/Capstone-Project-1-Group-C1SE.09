@@ -168,7 +168,7 @@ def upload_voice_record(
         logger.info("Uploaded to MinIO: %s", audio_url)
 
     except Exception as exc:
-        logger.exception("Upload failed: %s", exc)
+        logger.exception("Upload failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Upload thất bại. Vui lòng thử lại.",
