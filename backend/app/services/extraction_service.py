@@ -20,6 +20,7 @@ OUTPUT MẪU:
 
 import json
 
+
 def extract_from_transcript(transcript: str) -> dict:
     """
     Gọi model NLP trích xuất thông tin từ transcript.
