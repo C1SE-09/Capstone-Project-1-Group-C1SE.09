@@ -29,8 +29,8 @@ import logging
 import subprocess
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
@@ -38,9 +38,12 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.storage import upload_audio_to_minio
 from app.models.report import (
-    VoiceRecord, VoiceRecordStatus,
-    DailyReport, DailyReportStatus,
-    ActivityEntry, ActivityCategory
+    ActivityCategory,
+    ActivityEntry,
+    DailyReport,
+    DailyReportStatus,
+    VoiceRecord,
+    VoiceRecordStatus,
 )
 from app.schemas.report import VoiceRecordUploadResponse
 from app.services.extraction_service import extract_from_transcript
@@ -222,7 +225,7 @@ def upload_voice_record(
 def extract_voice(
     voice_id: uuid.UUID,
     teacher_id: uuid.UUID,  # TODO: replace with get_current_user when auth is ready
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db)  # noqa: B008
 ):
     # 1. Lấy VoiceRecord từ DB
     voice_record = db.query(VoiceRecord).filter(
@@ -250,9 +253,10 @@ def extract_voice(
     result = extract_from_transcript(transcript)
 
     # 7. Tạo DailyReport (nếu chưa có cho ngày hôm nay)
+    today = datetime.now(timezone.utc).date()
     existing_report = db.query(DailyReport).filter(
         DailyReport.child_id == voice_record.child_id,
-        DailyReport.report_date == date.today()
+        DailyReport.report_date == today
     ).first()
 
     if existing_report:
@@ -262,7 +266,7 @@ def extract_voice(
             child_id=voice_record.child_id,
             teacher_id=teacher_id,
             voice_record_id=voice_id,
-            report_date=date.today(),
+            report_date=today,
             status=DailyReportStatus.DRAFT
         )
         db.add(report)

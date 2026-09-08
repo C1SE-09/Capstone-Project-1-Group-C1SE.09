@@ -126,8 +126,9 @@ def test_transcribe_samples() -> None:
 def test_cpu_fallback() -> None:
     """Bắt buộc dùng CPU và kiểm tra transcribe hoạt động đúng."""
     _section("TEST 3: CPU Fallback (Forced)")
-    from app.services.stt_service import _MODEL_ID
     from faster_whisper import WhisperModel
+
+    from app.services.stt_service import _MODEL_ID
 
     # Load trực tiếp trên CPU, bỏ qua auto-detect
     model = WhisperModel(_MODEL_ID, device="cpu", compute_type="int8")
