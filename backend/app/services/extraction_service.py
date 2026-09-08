@@ -38,7 +38,7 @@ def extract_from_transcript(transcript: str) -> dict:
         }
     """
 
-    json_text = json.dumps({
+    json_text = json.dumps({  # noqa: F841
         "meals": None,
         "sleeping": None,
         "health": None,
@@ -46,4 +46,11 @@ def extract_from_transcript(transcript: str) -> dict:
         "mood": None
     })
 
-    return json.loads(json_text)
+    # return json.loads(json_text)  # TODO: gọi model thật ở đây
+    return {
+        "meals": "ăn ngon",
+        "sleeping": "ngủ ngon",
+        "health": "bình thường",
+        "activities": "vẽ tranh",
+        "mood": "vui vẻ"
+    }

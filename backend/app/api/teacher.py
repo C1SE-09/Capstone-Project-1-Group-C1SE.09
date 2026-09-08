@@ -29,6 +29,7 @@ import logging
 import subprocess
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -36,8 +37,16 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.storage import upload_audio_to_minio
-from app.models.report import VoiceRecord, VoiceRecordStatus
+from app.models.report import (
+    ActivityCategory,
+    ActivityEntry,
+    DailyReport,
+    DailyReportStatus,
+    VoiceRecord,
+    VoiceRecordStatus,
+)
 from app.schemas.report import VoiceRecordUploadResponse
+from app.services.extraction_service import extract_from_transcript
 from app.tasks.audio import process_audio
 
 logger = logging.getLogger(__name__)
@@ -210,3 +219,87 @@ def upload_voice_record(
         id=voice_record.voice_record_id,
         status=voice_record.status.value,
     )
+
+
+@router.post("/voice/{voice_id}/extract")
+def extract_voice(
+    voice_id: uuid.UUID,
+    teacher_id: uuid.UUID,  # TODO: replace with get_current_user when auth is ready
+    db: Session = Depends(get_db)  # noqa: B008
+):
+    # 1. Lấy VoiceRecord từ DB
+    voice_record = db.query(VoiceRecord).filter(
+        VoiceRecord.voice_record_id == voice_id
+    ).first()
+    
+    # 2. Check not found
+    if not voice_record:
+        raise HTTPException(status_code=404, detail="VoiceRecord not found")
+    
+    # 3. Verify ownership
+    if voice_record.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this recording")
+    
+    # 4. Check status == "done"
+    if voice_record.status != VoiceRecordStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Transcript not ready")
+    
+    # 5. Lấy transcript (edited > raw)
+    transcript = voice_record.transcription
+    if not transcript:
+        raise HTTPException(status_code=400, detail="No transcript found")
+    
+    # 6. Gọi extraction
+    result = extract_from_transcript(transcript)
+
+    # 7. Tạo DailyReport (nếu chưa có cho ngày hôm nay)
+    today = datetime.now(timezone.utc).date()
+    existing_report = db.query(DailyReport).filter(
+        DailyReport.child_id == voice_record.child_id,
+        DailyReport.report_date == today
+    ).first()
+
+    if existing_report:
+        report = existing_report
+    else:
+        report = DailyReport(
+            child_id=voice_record.child_id,
+            teacher_id=teacher_id,
+            voice_record_id=voice_id,
+            report_date=today,
+            status=DailyReportStatus.DRAFT
+        )
+        db.add(report)
+        db.flush()
+
+    # 8. Map extraction → ActivityEntry
+    mapping = [
+        ("meals", "MEAL", "Bữa ăn"),
+        ("sleeping", "NAP", "Giấc ngủ"),
+        ("health", "HEALTH", "Sức khỏe"),
+        ("activities", "PLAY", "Hoạt động"),
+        ("mood", "BEHAVIOR", "Tâm trạng"),
+    ]
+
+    order = 0
+    for key, category_str, title in mapping:
+        value = result.get(key)
+        if value:
+            entry = ActivityEntry(
+                daily_report_id=report.daily_report_id,
+                category=ActivityCategory[category_str],
+                title=title,
+                description=value,
+                entry_order=order
+            )
+            db.add(entry)
+            order += 1
+
+    db.commit()
+
+    # 9. Return
+    return {
+        "voice_id": voice_id,
+        "extraction": result,
+        "report_id": report.daily_report_id
+    }
