@@ -18,9 +18,6 @@ import tempfile
 import time
 from pathlib import Path
 
-# Fix UnicodeEncodeError tren Windows (cp1252 khong ho tro ky tu Unicode)
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-
 # Thêm backend/ vào sys.path để import được các module app.*
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(_BACKEND_DIR) not in sys.path:
@@ -170,6 +167,9 @@ def test_empty_file() -> None:
 
 
 if __name__ == "__main__":
+    # Fix UnicodeEncodeError tren Windows (cp1252 khong ho tro ky tu Unicode)
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
     print("\n" + "=" * 60)
     print("  PhoWhisper STT - Manual Benchmark & Test")
     print("=" * 60)
