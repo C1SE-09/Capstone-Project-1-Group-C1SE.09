@@ -38,7 +38,7 @@ from app.core.database import get_db
 from app.core.storage import upload_audio_to_minio
 from app.models.report import VoiceRecord, VoiceRecordStatus
 from app.schemas.report import VoiceRecordUploadResponse
-from app.tasks.audio import process_audio
+from app.tasks.process_audio import process_audio_task
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +204,7 @@ def upload_voice_record(
     # ------------------------------------------------------------------
     # 7. Dispatch Celery task
     # ------------------------------------------------------------------
-    process_audio.delay(str(voice_record.voice_record_id))
+    process_audio_task.delay(str(voice_record.voice_record_id))
 
     # ------------------------------------------------------------------
     # 8. Trả về 201

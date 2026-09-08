@@ -1,122 +1,110 @@
-import os
+from __future__ import annotations
+
 import logging
-import torch
+import os
+
 from faster_whisper import WhisperModel
 
-# Khởi tạo logger cho module này, dùng để ghi log lỗi hoặc thông tin trong quá trình chạy
 logger = logging.getLogger(__name__)
 
+# Model PhoWhisper-small trên HuggingFace Hub (định dạng CTranslate2)
+# faster-whisper tự tải về ~/.cache/huggingface lần đầu, cache lại cho các lần sau
+_MODEL_ID = "vinai/PhoWhisper-small"
 
-def _detect_device():
-    """
-    Tự động phát hiện thiết bị tốt nhất để chạy mô hình.
 
-    Returns:
-        tuple(str, str): (device, compute_type)
-            - ("cuda", "float16") nếu có GPU NVIDIA hỗ trợ CUDA.
-            - ("cpu",  "int8")    nếu không có GPU.
-    """
-    if torch.cuda.is_available():
-        gpu_name = torch.cuda.get_device_name(0)
-        logger.info(f"[STT] Phát hiện GPU: {gpu_name} — chạy bằng CUDA với float16.")
-        return "cuda", "float16"
+def _cuda_available() -> bool:
+    """Kiểm tra GPU CUDA qua ctranslate2."""
+    try:
+        import ctranslate2
+        return ctranslate2.get_cuda_device_count() > 0
+    except Exception:
+        return False
+
+
+def _load_model(model_id: str = _MODEL_ID) -> tuple[WhisperModel, str]:
+    """Tải WhisperModel: thử CUDA (int8) trước, fallback CPU (int8) nếu thất bại."""
+    if _cuda_available():
+        try:
+            logger.info("[STT] CUDA khả dụng — đang tải '%s' trên CUDA (int8).", model_id)
+            model = WhisperModel(model_id, device="cuda", compute_type="int8")
+            logger.info("[STT] Tải model thành công trên CUDA.")
+            return model, "cuda"
+        except Exception as cuda_err:
+            logger.warning("[STT] Load model trên CUDA thất bại: %s. Fallback về CPU (int8).", cuda_err)
     else:
-        logger.info("[STT] Không tìm thấy GPU — chạy bằng CPU với int8.")
-        return "cpu", "int8"
+        logger.warning("[STT] CUDA không khả dụng. Fallback về CPU (int8).")
+
+    # Fallback: tải trên CPU
+    logger.info("[STT] Đang tải '%s' trên CPU (int8).", model_id)
+    try:
+        model = WhisperModel(model_id, device="cpu", compute_type="int8")
+        logger.info("[STT] Tải model thành công trên CPU.")
+        return model, "cpu"
+    except Exception as cpu_err:
+        raise RuntimeError(
+            f"[STT] Không thể tải model '{model_id}' trên cả CUDA lẫn CPU: {cpu_err}"
+        ) from cpu_err
 
 
 class STTService:
-    """
-    Dịch vụ Speech-to-Text (STT) sử dụng mô hình Whisper thông qua thư viện faster-whisper.
-    Hỗ trợ nhận dạng giọng nói tiếng Việt và nhiều ngôn ngữ khác.
-    Tự động chọn GPU (CUDA/float16) nếu có, fallback về CPU (int8) nếu không.
-    """
+    """Dịch vụ Speech-to-Text dùng PhoWhisper-small qua faster-whisper."""
 
-    def __init__(self, model_size="small", device="auto", compute_type="auto", language="vi"):
-        """
-        Khởi tạo STTService và tải mô hình Whisper vào bộ nhớ.
-
-        Args:
-            model_size (str):    Kích thước mô hình Whisper. Các lựa chọn: "tiny", "base", "small", "medium", "large".
-                                 Mô hình nhỏ hơn thì nhanh hơn nhưng kém chính xác hơn. Mặc định: "small".
-            device (str):        Thiết bị chạy mô hình.
-                                 - "auto"  → tự động phát hiện GPU, fallback về CPU (khuyến nghị).
-                                 - "cuda"  → ép buộc dùng GPU (lỗi nếu không có CUDA).
-                                 - "cpu"   → ép buộc dùng CPU.
-                                 Mặc định: "auto".
-            compute_type (str):  Kiểu tính toán, ảnh hưởng đến tốc độ và bộ nhớ.
-                                 - "auto"    → tự động chọn theo device ("float16" cho GPU, "int8" cho CPU).
-                                 - "float16" → độ chính xác cao, phù hợp GPU.
-                                 - "int8"    → tiết kiệm RAM, phù hợp CPU.
-                                 Mặc định: "auto".
-            language (str):      Mã ngôn ngữ mặc định dùng để nhận dạng. Mặc định: "vi" (tiếng Việt).
-        """
-        # Lưu ngôn ngữ mặc định để dùng khi transcribe không truyền language
+    def __init__(self, model_id: str = _MODEL_ID, language: str = "vi") -> None:
         self.language = language
+        self.model, self.device = _load_model(model_id)
 
-        # Tự động phát hiện device và compute_type nếu được đặt là "auto"
-        if device == "auto" or compute_type == "auto":
-            auto_device, auto_compute = _detect_device()
-            device = auto_device if device == "auto" else device
-            compute_type = auto_compute if compute_type == "auto" else compute_type
-
-        # Lưu lại để có thể kiểm tra sau (ví dụ: log, debug)
-        self.device = device
-        self.compute_type = compute_type
-
-        logger.info(f"[STT] Khởi tạo mô hình '{model_size}' trên {device.upper()} với compute_type={compute_type}.")
-
-        # Tải mô hình Whisper — bước này có thể mất vài giây lần đầu do tải file model
-        self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
-
-    def transcribe(self, audio_path, language=None):
-        """
-        Chuyển đổi file âm thanh thành văn bản (Speech-to-Text).
-
-        Args:
-            audio_path (str): Đường dẫn tuyệt đối đến file âm thanh cần nhận dạng.
-                              Hỗ trợ các định dạng: .wav, .mp3, .m4a, v.v.
-            language (str):   Mã ngôn ngữ để nhận dạng (ví dụ: "vi", "en").
-                              Nếu None, sẽ dùng ngôn ngữ mặc định đã cấu hình lúc khởi tạo.
-
-        Returns:
-            str: Chuỗi văn bản đã được nhận dạng từ file âm thanh.
-
-        Raises:
-            FileNotFoundError: Nếu file âm thanh không tồn tại tại đường dẫn đã cho.
-        """
-        # Kiểm tra file âm thanh có tồn tại không trước khi xử lý
+    def transcribe(self, audio_path: str) -> str:
+        """Chuyển file âm thanh thành văn bản. Trả về chuỗi rỗng nếu audio im lặng."""
+        # Kiểm tra file tồn tại và không rỗng trước khi gọi model
         if not os.path.exists(audio_path):
-            raise FileNotFoundError(f"Audio file not found: {audio_path}")
+            raise FileNotFoundError(f"[STT] File audio không tìm thấy: {audio_path}")
 
-        # Ưu tiên ngôn ngữ được truyền vào, nếu không thì dùng ngôn ngữ mặc định
-        lang = language or self.language
+        file_size = os.path.getsize(audio_path)
+        if file_size == 0:
+            raise ValueError(f"[STT] File audio rỗng (0 byte): {audio_path}")
 
-        # Gọi model để nhận dạng âm thanh
-        # beam_size=5: dùng thuật toán beam search với 5 nhánh để cân bằng tốc độ và độ chính xác
-        # Kết quả trả về là một iterator các đoạn (segments) và metadata (info)
-        segments, info = self.model.transcribe(audio_path, language=lang, beam_size=5)
+        logger.debug("[STT] Bắt đầu transcribe: path=%s  size=%d bytes  device=%s",
+                     audio_path, file_size, self.device)
 
-        # Ghép tất cả các đoạn văn bản lại thành một chuỗi hoàn chỉnh, loại bỏ khoảng trắng thừa
-        return " ".join(seg.text.strip() for seg in segments).strip()
+        try:
+            # vad_filter=True: dùng Silero VAD để lọc khoảng im lặng, giảm hallucination
+            segments, info = self.model.transcribe(
+                audio_path,
+                language=self.language,
+                beam_size=5,
+                vad_filter=True,
+                vad_parameters={"min_silence_duration_ms": 500},
+            )
+            # Consume toàn bộ generator trước khi ra khỏi scope
+            texts = [seg.text.strip() for seg in segments]
+            transcript = " ".join(t for t in texts if t)
+        except (FileNotFoundError, ValueError):
+            raise
+        except Exception as exc:
+            # Lỗi từ ffmpeg / ctranslate2 (file hỏng, codec lạ,…)
+            raise ValueError(f"[STT] Không thể xử lý file audio '{audio_path}': {exc}") from exc
+
+        logger.info("[STT] Hoàn thành: %d segment(s), %d ký tự, ngôn ngữ=%s(%.0f%%), thời lượng=%.1fs",
+                    len(texts), len(transcript), info.language,
+                    info.language_probability * 100, info.duration)
+        return transcript
 
 
-def get_stt_service(model_size="small", device="auto", compute_type="auto", language="vi"):
-    """
-    Factory function để tạo một instance STTService với cấu hình tùy chỉnh.
-    Thường dùng cho dependency injection trong FastAPI (Depends).
-
-    Args:
-        model_size (str):    Kích thước mô hình Whisper. Mặc định: "small".
-        device (str):        Thiết bị chạy mô hình ("auto", "cuda", "cpu"). Mặc định: "auto".
-        compute_type (str):  Kiểu tính toán ("auto", "float16", "int8"). Mặc định: "auto".
-        language (str):      Ngôn ngữ nhận dạng mặc định. Mặc định: "vi".
-
-    Returns:
-        STTService: Một instance mới của STTService đã được khởi tạo.
-    """
-    return STTService(model_size=model_size, device=device, compute_type=compute_type, language=language)
+def _create_singleton() -> STTService:
+    """Khởi tạo singleton, raise ngay nếu load thất bại để worker biết khi khởi động."""
+    try:
+        service = STTService()
+        logger.info("[STT] stt_service singleton sẵn sàng (device=%s).", service.device)
+        return service
+    except Exception as exc:
+        logger.critical(
+            "[STT] KHÔNG THỂ KHỞI TẠO STTService: %s\n"
+            "Mọi yêu cầu transcribe sẽ thất bại cho đến khi worker khởi động lại.",
+            exc,
+        )
+        raise
 
 
-# Singleton instance dùng chung toàn app — tự động chọn GPU nếu có
-stt_service = get_stt_service()
+# Singleton — load model đúng 1 lần khi module được import
+# FastAPI endpoint và Celery task dùng chung instance này
+stt_service: STTService = _create_singleton()
