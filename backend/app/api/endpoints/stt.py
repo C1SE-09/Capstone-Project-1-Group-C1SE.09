@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile
 
 from app.services.stt_service import stt_service
 
