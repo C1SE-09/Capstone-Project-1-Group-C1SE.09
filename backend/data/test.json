@@ -1,0 +1,4286 @@
+[
+  {
+    "text": "Trưa nay ngủ lim dim, cứ xin uống nước suốt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tự dưng kêu đau họng đâm ra chán ăn, bỏ mứa cháo luôn",
+    "label": "meals"
+  },
+  {
+    "text": "Giờ vẽ tranh thì lơ đễnh lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Người khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc chơi trốn tìm thì năng động, chạy nhảy chơi cùng bạn vui lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trộm vía khỏe mạnh nha",
+    "label": "health"
+  },
+  {
+    "text": "Sáng nôn ói xong là người lừ đừ luôn",
+    "label": "health"
+  },
+  {
+    "text": "Trưa quấy, không chịu ngủ cứ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tham gia xếp hình tập trung cực kỳ",
+    "label": "activities"
+  },
+  {
+    "text": "Cữ phụ hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tâm trạng hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": "Đang bị táo bón nên đến bữa nhè đồ ăn, không chịu ăn đâu",
+    "label": "meals"
+  },
+  {
+    "text": "Nằm ngủ ngắn được một tẹo là khóc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Cứ nhõng nhẽo",
+    "label": "mood"
+  },
+  {
+    "text": "Nay kể chuyện tích cực chơi với cô lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát thịt ngon lành",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Không ốm đau gì, khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Tính vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": "Trông mệt mỏi, sốt rồi",
+    "label": "health"
+  },
+  {
+    "text": "Thế là ngậm cơm, ăn một nửa bát canh thôi",
+    "label": "meals"
+  },
+  {
+    "text": "Lên góc tô màu lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa nay ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Lúc nhảy múa thì năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Bữa cơm ngoan, cô nhắc tí là ăn gần hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Sức khỏe khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Ho khù khụ, sổ mũi đâm ra hay bị nghẹn, nhai lâu nuốt chậm ăn ít cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Lúc học nặn đất không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn ghê, tự xúc vèo cái ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Ngắm hoa tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tâm trạng vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": "Bị ngứa, nổi mẩn quanh người",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn, bỏ mứa rau",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động, toàn chạy nhảy chơi cùng bạn thôi",
+    "label": "activities"
+  },
+  {
+    "text": "Trộm vía ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Đau bụng, tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Giấc trưa giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Mặt cứ khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": "Trưa ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải cho ăn mới ăn gần hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Thể trạng khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Sốt nhẹ, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Đâm ra chán ăn, bỏ mứa phần sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin đi vệ sinh liên tục",
+    "label": "sleeping"
+  },
+  {
+    "text": "Giờ đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết quả trứng, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tính nay vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": "Tự dưng hắt hơi, ho khan",
+    "label": "health"
+  },
+  {
+    "text": "Lúc ăn không ngoan, nhè đồ ăn thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Giờ gấp giấy tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, tự xúc ăn hết canh",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa nay ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tâm trạng cực kỳ hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": "Bị sốt cao, ốm đâm ra lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm, ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Nằm trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trông buồn",
+    "label": "mood"
+  },
+  {
+    "text": "Chơi cầu trượt năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tính vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": "Kêu rát họng, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Kể chuyện tích cực chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Cơ thể khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Táo bón, đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, ăn một nửa bát cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngứa, nổi mẩn ở tay",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, bỏ mứa sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết thịt, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tiêu chảy, nôn ói",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn ít cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét, khóc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết canh",
+    "label": "meals"
+  },
+  {
+    "text": "Ho, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan, nhè đồ ăn rau",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Nhảy múa tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Sổ mũi, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, ăn một nửa bát canh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết trứng",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi trốn tìm tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Sốt nhẹ, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Bỏ mứa thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, phải cho ăn mới ăn gần hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Không chịu ăn, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Đau bụng, nôn ói",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, cô dỗ mới ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Hắt hơi, sốt",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm, ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Ngứa, nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan, bỏ mứa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi cầu trượt năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ốm, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, ăn một nửa bát canh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết quả trứng",
+    "label": "meals"
+  },
+  {
+    "text": "Không chịu ăn, nhè đồ ăn sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, tự xúc ăn hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt cao, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, bỏ mứa thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ho, rát họng",
+    "label": "health"
+  },
+  {
+    "text": "Bị nghẹn, nhai lâu nuốt chậm ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy không tập trung chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải cho ăn mới ăn gần hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi trốn tìm tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Đau bụng, tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, cô dỗ mới ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ngủ một mạch tới chiều, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Không ốm đau gì, khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Giờ gấp giấy tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tâm trạng vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": "Ấm đầu, hắt hơi liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan, nhè đồ ăn ra bàn",
+    "label": "meals"
+  },
+  {
+    "text": "Giấc trưa quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Cứ khóc nhè suốt",
+    "label": "mood"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết phần thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Sổ mũi đâm ra mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, bỏ mứa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tô màu lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát canh, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa, nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, ăn một nửa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất không tập trung chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn, nhè đồ ăn sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Âm nhạc năng động chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết quả trứng",
+    "label": "meals"
+  },
+  {
+    "text": "Nôn ói, đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm, ăn ít cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi cầu trượt tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khù khụ, sốt",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, cô dỗ mới ăn một nửa bát canh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Táo bón, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Bỏ mứa thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, phải cho ăn mới ăn gần hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi trốn tìm năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu, hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tích cực chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tiêu chảy, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết phần cá",
+    "label": "meals"
+  },
+  {
+    "text": "Kể chuyện tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ốm, rát họng",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, bỏ mứa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ, ho",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn một nửa bát canh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết quả trứng, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Đau bụng, nôn ói",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn, nhè đồ ăn thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi cầu trượt năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa, nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm, ăn ít cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, phải nhắc mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt cao, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, ăn một nửa bát canh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ho, sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, bỏ mứa sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết phần cá",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải cho ăn mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Táo bón, đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi trốn tìm năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khù khụ, hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn, bỏ mứa thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát canh",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tiêu chảy, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm, ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, tự xúc ăn hết quả trứng",
+    "label": "meals"
+  },
+  {
+    "text": "Sốt nhẹ, rát họng",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm, ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất không tập trung chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Kể chuyện năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa, nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn, bỏ mứa rau",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi cầu trượt tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói, ốm",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim, xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn một nửa bát canh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt cao, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Bỏ mứa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Đau bụng, táo bón",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn, nhè đồ ăn sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa nay bé ngủ ngon, tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Vẽ tranh tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tâm trạng hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng con bị ho, ngậm cơm ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tô màu lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé hào hứng ăn, phải cho ăn mới chịu ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Xé giấy tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Con kêu đau họng, nhè đồ ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Nay con ngoan, tự xúc ăn hết phần cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Bé sốt nhẹ, không chịu ăn ngậm cơm ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét ngủ lim dim",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết bánh, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa tích cực chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Cô phải nhắc hoài mới ăn một nửa bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện hào hứng",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị tiêu chảy, chán ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Nay con ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi đồ hàng tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng con ốm, ngậm cơm cô dỗ mới ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Trộm vía hào hứng ăn, ăn hết phần cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con bị nổi mẩn, nhè đồ ăn không chịu ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tô màu không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ăn ngoan, phải cho ăn mới ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm nhưng ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Nay lừ đừ, ho khan kêu đau họng",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết cơm, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa nay bé táo bón, đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ăn ngoan, tự xúc ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị nghẹn khi ăn, nchai lâu nuốt chậm ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn trằn trọc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hơi mệt",
+    "label": "health"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, ăn hết cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi cầu trượt năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con bị sốt cao, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Giấc trưa ngủ lim dim khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bữa nay con ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Đọc truyện tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ho sổ mũi, rát họng",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình hào hứng chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con bị đau bụng tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng mệt mỏi, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị nôn ói ốm",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ lim dim giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Lủi thủi chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Con ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn trên da",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn trằn trọc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi trốn tìm tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị ho sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải cho ăn mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Đau họng ho khan",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Tiêu chảy đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi cầu trượt tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ốm sốt cao",
+    "label": "health"
+  },
+  {
+    "text": "Nhè đồ ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khù khụ sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm cô dỗ mới ăn một nửa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Rát họng mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết cơm hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Hắt hơi ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải cho ăn mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm ăn một nửa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi trốn tìm năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ho sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn cô dỗ mới ăn một nửa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Kể chuyện tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bát bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải cho ăn mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Đau bụng tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Nhè đồ ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi cầu trượt năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khù khụ rát họng",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn cô dỗ mới ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn trằn trọc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi trốn tìm năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khan sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải cho ăn mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu đau họng",
+    "label": "health"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Táo bón đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi trốn tìm tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn cô dỗ mới ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt ho khù khụ",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi cầu trượt năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải nhắc mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn nhè đồ ăn cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ho sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm cô dỗ mới ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải cho ăn mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Âm nhạc tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa nay con ngủ ngon, tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Vẽ tranh tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Tâm trạng vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng con bị ho, ngậm cơm ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tô màu lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé hào hứng ăn, phải cho ăn mới chịu ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Xé giấy tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Con kêu đau họng, nhè đồ ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Nay con ngoan, tự xúc ăn hết phần cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Bé sốt nhẹ, không chịu ăn ngậm cơm ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét ngủ lim dim",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết bánh, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa tích cực chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Cô phải nhắc hoài mới ăn một nửa bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện hào hứng",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị tiêu chảy, chán ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Nay con ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi đồ hàng tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng con ốm, ngậm cơm cô dỗ mới ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Trộm vía hào hứng ăn, ăn hết phần cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con bị nổi mẩn, nhè đồ ăn không chịu ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tô màu không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ăn ngoan, phải cho ăn mới ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm nhưng ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Nay lừ đừ, ho khan kêu đau họng",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết cơm, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa nay bé táo bón, đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ăn ngoan, tự xúc ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị nghẹn khi ăn, nhai lâu nuốt chậm ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn trằn trọc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hơi mệt",
+    "label": "health"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, ăn hết cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi cầu trượt năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con bị sốt cao, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Giấc trưa ngủ lim dim khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bữa nay con ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Đọc truyện tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ho sổ mũi, rát họng",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình hào hứng chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con bị đau bụng tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng mệt mỏi, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị nôn ói ốm",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ lim dim giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Lủi thủi chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Con ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn trên da",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn trằn trọc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi trốn tìm tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị ho sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải cho ăn mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Đau họng ho khan",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Tiêu chảy đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi cầu trượt tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ốm sốt cao",
+    "label": "health"
+  },
+  {
+    "text": "Nhè đồ ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khù khụ sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm cô dỗ mới ăn một nửa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Rát họng mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết cơm hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Hắt hơi ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải cho ăn mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Xếp hình tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm ăn một nửa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Giật mình khóc thét khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi trốn tìm năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ho sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn cô dỗ mới ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gấp giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Kể chuyện tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bát bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải cho ăn mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nhảy múa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Đau bụng tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Nhè đồ ăn bỏ mứa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Không chịu ngủ ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi cầu trượt năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khù khụ rát họng",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn cô dỗ mới ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Nhai lâu nuốt chậm bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn trằn trọc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, phải nhắc mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Chơi trốn tìm năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt nhẹ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn nhè đồ ăn cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm ăn một nửa bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khan sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải cho ăn mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu đau họng",
+    "label": "health"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Âm nhạc tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Táo bón đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan nhè đồ ăn bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ăn ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi trốn tìm tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn cô dỗ mới ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt ho khù khụ",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ lim dim giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi cầu trượt năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Không chịu ăn bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Tè dầm khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải nhắc mới ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Nchai lâu nuốt chậm ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Quấy không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ dài ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Chán ăn nhè đồ ăn cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Nhảy múa năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ho sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Ngậm cơm cô dỗ mới ăn một nửa bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, phải cho ăn mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Âm nhạc tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Không ngoan bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ ngắn xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Hôm nay con ngoan lắm, tự xúc ăn hết bát cơm luôn",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ một mạch ngủ ngon cực kỳ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Cơ thể hoàn toàn khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Chiều ra sân chơi cầu trượt cùng bạn rất tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Sờ trán thấy con hơi ấm đầu, người có vẻ lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Bữa trưa chán ăn, ngậm cơm mãi cô phải dỗ mới chịu ăn một nửa bát bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa trằn trọc khó ngủ, thỉnh thoảng giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé hào hứng ăn, tự xúc vèo cái là ăn hết phần bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ dài không quấy khóc gì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Sức khỏe khỏe mạnh bình thường",
+    "label": "health"
+  },
+  {
+    "text": "Nặn đất không tập trung, hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Tính nay quậy phá",
+    "label": "mood"
+  },
+  {
+    "text": "Con kêu đau bụng rồi nôn ói ra một ít",
+    "label": "health"
+  },
+  {
+    "text": "Bữa chính không chịu ăn, bỏ mứa bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa không chịu ngủ, ngồi dậy khóc xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trưa nay con tè dầm ra nệm nhưng vẫn ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé nchai lâu nuốt chậm, ăn gần hết bánh cô lấy",
+    "label": "meals"
+  },
+  {
+    "text": "Sức khỏe khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Ra góc đọc truyện thì rất tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng nay con rất ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ trưa ngủ một mạch ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Người khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Xếp hình chơi cùng bạn tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Tâm trạng hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": "Bé chán ăn, nhè đồ ăn không chịu nuốt, ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Hay thức giấc, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bị sổ mũi với ho khan",
+    "label": "health"
+  },
+  {
+    "text": "Lúc kể chuyện thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Cứ khóc nhè suốt buổi",
+    "label": "mood"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết phần cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ trưa lim dim, thỉnh thoảng xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hơi mệt mỏi chút xíu",
+    "label": "health"
+  },
+  {
+    "text": "Chơi đồ hàng một mình, không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tâm trạng khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": "Cô phải nhắc mãi mới ăn một nửa bát bánh, hơi chán ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Tính nay nghịch ngợm",
+    "label": "mood"
+  },
+  {
+    "text": "Bé bị hắt hơi, sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Bữa nay không ngoan, bỏ mứa phần cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Trằn trọc khó ngủ, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tô màu chơi một mình, lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Trưa nay bé ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Sáng con ho, ngậm cơm ăn ít",
+    "label": "meals"
+  },
+  {
+    "text": "Bé hào hứng ăn, phải cho ăn mới chịu ăn gần hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Con kêu đau họng, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Nay con ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Bé sốt nhẹ",
+    "label": "health"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Cô phải nhắc mới ăn một nửa",
+    "label": "meals"
+  },
+  {
+    "text": "Bé bị tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Nay con ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Sáng con ốm",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn ít",
+    "label": "meals"
+  },
+  {
+    "text": "Trộm vía hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ăn hết cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Con bị nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Bé ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải cho ăn mới ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Nay lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa nay bé táo bón",
+    "label": "health"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé bị nghẹn",
+    "label": "meals"
+  },
+  {
+    "text": "Ăn hết cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Con bị sốt cao",
+    "label": "health"
+  },
+  {
+    "text": "Bữa nay con ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ho sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Con bị đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải nhắc mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Sáng mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Cô dỗ mới ăn ít",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé bị nôn ói",
+    "label": "health"
+  },
+  {
+    "text": "Con ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Ngứa nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé bị ho",
+    "label": "health"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải cho ăn mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải nhắc mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải cho ăn mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải nhắc mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải cho ăn mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải nhắc mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải cho ăn mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Ăn ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải nhắc mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Phải cho ăn mới ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa nay con ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Sáng con ho",
+    "label": "health"
+  },
+  {
+    "text": "Bé hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Phải cho ăn mới chịu ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Con kêu đau họng",
+    "label": "health"
+  },
+  {
+    "text": "Nay con ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  },
+  {
+    "text": "Bé sốt nhẹ",
+    "label": "health"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết",
+    "label": "meals"
+  },
+  {
+    "text": "Cô phải nhắc mới ăn một nửa",
+    "label": "meals"
+  },
+  {
+    "text": "Bé bị tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Nay con ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết",
+    "label": "meals"
+  }
+]
