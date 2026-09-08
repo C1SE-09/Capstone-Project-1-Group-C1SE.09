@@ -18,6 +18,8 @@ import tempfile
 import time
 from pathlib import Path
 
+import pytest
+
 # Thêm backend/ vào sys.path để import được các module app.*
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(_BACKEND_DIR) not in sys.path:
@@ -25,6 +27,13 @@ if str(_BACKEND_DIR) not in sys.path:
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("test_phowhisper")
+
+# Các test này là integration/benchmark — yêu cầu model PhoWhisper (CTranslate2)
+# đã được tải về máy. Bỏ qua hoàn toàn trong môi trường CI (GitHub Actions set CI=true).
+pytestmark = pytest.mark.skipif(
+    "CI" in os.environ,
+    reason="PhoWhisper integration tests require the pre-downloaded CTranslate2 model — skipped in CI",
+)
 
 SAMPLES_DIR = Path(__file__).parent / "audio_samples"
 SAMPLE_FILES = {
