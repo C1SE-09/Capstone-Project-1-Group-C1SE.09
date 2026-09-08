@@ -36,12 +36,22 @@ jobs:
       run: |
         pip install torch --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements.txt
-        pip install ruff
+        pip install ruff pytest httpx
 
     - name: Lint code with Ruff
       run: ruff check backend/
 
-    - name: Run Test
+    - name: Run Tests
       env:
-        DATABASE_URL: postgresql+asyncpg://postgres:testpassword@localhost:5432/test_db
+        DATABASE_URL: postgresql+psycopg://postgres:testpassword@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379/0
+        CELERY_BROKER_URL: redis://localhost:6379/0
+        CELERY_RESULT_BACKEND: redis://localhost:6379/1
+        MINIO_ENDPOINT: localhost:9000
+        MINIO_USER: minioadmin
+        MINIO_PASSWORD: minioadmin123
+        MINIO_BUCKET: audio
+        MINIO_SECURE: "false"
+        SECRET_KEY: test-secret-key
+        JWT_SECRET_KEY: test-jwt-secret-key
       run: pytest backend/tests/ -v
