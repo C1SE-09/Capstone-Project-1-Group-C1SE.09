@@ -54,4 +54,5 @@ jobs:
         MINIO_SECURE: "false"
         SECRET_KEY: test-secret-key
         JWT_SECRET_KEY: test-jwt-secret-key
+        PYTHONPATH: ${{ github.workspace }}/backend
       run: pytest backend/tests/ -v

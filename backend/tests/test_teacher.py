@@ -142,7 +142,7 @@ class TestUploadVoiceRecord:
         )
         assert resp.status_code == 400, resp.text
         detail = resp.json().get("detail", "")
-        assert "không được hỗ trợ" in detail
+        assert detail == "Unsupported audio format."
 
     # ------------------------------------------------------------------
     # 3. Oversized file → 413
