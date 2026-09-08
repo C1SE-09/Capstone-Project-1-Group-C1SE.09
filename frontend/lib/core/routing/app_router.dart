@@ -5,6 +5,7 @@ import 'package:adark_frontend/presentation/pages/login_page.dart';
 import 'package:adark_frontend/presentation/pages/parent_dashboard.dart';
 import 'package:adark_frontend/presentation/pages/profile_page.dart';
 import 'package:adark_frontend/presentation/pages/teacher_dashboard.dart';
+import 'package:adark_frontend/presentation/screens/recording_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -50,6 +51,17 @@ class AppRouter {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingPage(),
+          ),
+          GoRoute(
+            path: '/recording',
+            builder: (context, state) {
+              final params = state.uri.queryParameters;
+              return RecordingScreen(
+                filePath: params['filePath'] ?? '',
+                classId: params['classId'] ?? '',
+                teacherId: params['teacherId'] ?? '',
+              );
+            },
           ),
         ],
       ),
