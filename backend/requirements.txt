@@ -16,4 +16,5 @@ ctranslate2==4.4.0
 sqlalchemy==2.0.36
 asyncpg==0.29.0
 redis==5.2.1
+minio==7.2.15
 celery[redis]==5.4.0
