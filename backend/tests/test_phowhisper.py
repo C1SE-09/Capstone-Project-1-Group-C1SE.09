@@ -41,9 +41,9 @@ SAMPLE_FILES = {
 def _get_vram_mb() -> float | None:
     """Lấy VRAM đang dùng (MB) qua nvidia-smi, trả về None nếu không có GPU."""
     try:
-        import ctranslate2  # noqa: PLC0415
+        import ctranslate2
         if ctranslate2.get_cuda_device_count() > 0:
-            import subprocess  # noqa: PLC0415
+            import subprocess
             result = subprocess.run(
                 ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
                 capture_output=True, text=True, timeout=5, check=False,
@@ -120,8 +120,8 @@ def test_transcribe_samples() -> None:
 def test_cpu_fallback() -> None:
     """Bắt buộc dùng CPU và kiểm tra transcribe hoạt động đúng."""
     _section("TEST 3: CPU Fallback (Forced)")
-    from app.services.stt_service import _MODEL_ID  # noqa: PLC0415
-    from faster_whisper import WhisperModel  # noqa: PLC0415
+    from app.services.stt_service import _MODEL_ID
+    from faster_whisper import WhisperModel
 
     # Load trực tiếp trên CPU, bỏ qua auto-detect
     model = WhisperModel(_MODEL_ID, device="cpu", compute_type="int8")

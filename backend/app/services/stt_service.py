@@ -15,7 +15,7 @@ _MODEL_ID = "vinai/PhoWhisper-small"
 def _cuda_available() -> bool:
     """Kiểm tra GPU CUDA qua ctranslate2."""
     try:
-        import ctranslate2  # noqa: PLC0415
+        import ctranslate2
         return ctranslate2.get_cuda_device_count() > 0
     except (ImportError, AttributeError, RuntimeError):
         return False

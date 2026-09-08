@@ -30,7 +30,7 @@ def _download_audio(audio_url: str) -> str:
         logger.debug("[process_audio] Đang tải audio: %s -> %s", audio_url, tmp_path)
         with urlopen(audio_url, timeout=60) as resp, open(tmp_path, "wb") as f:
             f.write(resp.read())
-    except (OSError, URLError, HTTPError) as e:
+    except (OSError, URLError, HTTPError):
         # Dọn dẹp file tạm nếu download thất bại
         try:
             os.remove(tmp_path)
@@ -95,7 +95,7 @@ def process_audio_task(self, voice_record_id: str) -> dict:
             "transcript": raw_transcript,  # Chỉ text, không phân tích
         }
 
-    except Exception as exc:
+    except Exception:
         tb = traceback.format_exc()
         logger.error("[process_audio_task] LỖI voice_record_id=%s:\n%s", voice_record_id, tb)
 

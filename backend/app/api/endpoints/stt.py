@@ -2,7 +2,6 @@
 
 import os
 import tempfile
-
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.stt_service import stt_service
@@ -13,8 +12,11 @@ router = APIRouter()
 
 
 @router.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...)):
+async def transcribe(audio: UploadFile):
     """Nhận file âm thanh từ client, trả về văn bản đã nhận dạng (STT)."""
+    if not isinstance(audio, UploadFile):
+        raise HTTPException(status_code=400, detail="File âm thanh là bắt buộc")
+
     # Lưu file upload vào file tạm (delete=False để STTService có thể mở sau khi đóng)
     tmp_path = None
     try:
@@ -31,17 +33,17 @@ async def transcribe(audio: UploadFile = File(...)):
     except FileNotFoundError as e:
         raise HTTPException(
             status_code=400,
-            detail=f"File audio không tìm thấy: {str(e)}",
+            detail=f"File audio không tìm thấy: {e!s}",
         ) from e
     except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail=f"File audio không hợp lệ: {str(e)}",
+            detail=f"File audio không hợp lệ: {e!s}",
         ) from e
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Lỗi xử lý STT: {str(e)}",
+            detail=f"Lỗi xử lý STT: {e!s}",
         ) from e
     finally:
         # Luôn xóa file tạm sau khi xử lý xong, dù thành công hay thất bại
