@@ -7,7 +7,10 @@ celery_app = Celery(
     broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
     backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1"),
     # Khai báo package chứa các task để Celery tự động tìm
-    include=["app.tasks.audio"],
+    include=[
+        "app.tasks.audio",           # stub task cũ (ping, process_audio legacy)
+        "app.tasks.process_audio",   # task STT mới với full pipeline
+    ],
 )
 
 celery_app.conf.update(
