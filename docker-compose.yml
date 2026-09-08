@@ -73,7 +73,13 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    command: celery -A app.tasks.celery_app worker --loglevel=info --pool=solo
+    # Celery worker with concurrency limit to prevent GPU OOM
+    # Max 2 concurrent STT tasks (PhoWhisper inference is GPU-intensive)
+    command: >
+      celery -A app.tasks.celery_app.celery_app worker
+      --loglevel=info
+      --concurrency=2
+      -Q audio
 
 volumes:
   postgres_data:
