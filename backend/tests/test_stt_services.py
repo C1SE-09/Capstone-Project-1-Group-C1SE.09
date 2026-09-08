@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 # Thêm thư mục gốc của project (backend/) vào sys.path
 # để Python có thể tìm thấy module "app.services.stt_service" khi chạy trực tiếp file này
@@ -27,7 +27,7 @@ def test_transcribe():
             text = service.transcribe(audio_path)
             # In kết quả nhận dạng nếu thành công
             print(f"[OK] Result: {text}")
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError) as e:
             # In thông báo lỗi nếu quá trình nhận dạng thất bại
             print(f"[ERROR] Error: {e}")
     else:

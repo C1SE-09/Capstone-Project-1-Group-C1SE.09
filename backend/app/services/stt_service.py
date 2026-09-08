@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 import torch
 from faster_whisper import WhisperModel
 
@@ -95,7 +96,7 @@ class STTService:
         # Gọi model để nhận dạng âm thanh
         # beam_size=5: dùng thuật toán beam search với 5 nhánh để cân bằng tốc độ và độ chính xác
         # Kết quả trả về là một iterator các đoạn (segments) và metadata (info)
-        segments, info = self.model.transcribe(audio_path, language=lang, beam_size=5)
+        segments, _ = self.model.transcribe(audio_path, language=lang, beam_size=5)
 
         # Ghép tất cả các đoạn văn bản lại thành một chuỗi hoàn chỉnh, loại bỏ khoảng trắng thừa
         return " ".join(seg.text.strip() for seg in segments).strip()
