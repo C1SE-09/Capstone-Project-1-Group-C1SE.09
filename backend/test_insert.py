@@ -83,7 +83,7 @@ cur.execute("""
 """, (teacher_id, child_id))
 
 voice_id = cur.fetchone()[0]
-print(f"\n🎉 Tạo VoiceRecord thành công!")
+print("\n🎉 Tạo VoiceRecord thành công!")
 print(f"   voice_record_id: {voice_id}")
 print(f"   teacher_id:      {teacher_id}")
 print(f"   child_id:        {child_id}")

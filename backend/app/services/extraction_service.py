@@ -46,7 +46,7 @@ def extract_from_transcript(transcript: str) -> dict:
         "mood": None
     })
 
-    # return json.loads(json_text)
+    # return json.loads(json_text)  # TODO: gọi model thật ở đây
 
     # Tạm mock để test - sau này gọi model thật
     return {
