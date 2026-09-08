@@ -3,9 +3,8 @@
 import os
 import tempfile
 
-from fastapi import APIRouter, HTTPException, UploadFile
-
 from app.services.stt_service import stt_service
+from fastapi import APIRouter, HTTPException, UploadFile
 
 # Khởi tạo router cho nhóm endpoint STT (Speech-to-Text)
 # Router này sẽ được đăng ký vào app chính với prefix (ví dụ: /api/stt)
