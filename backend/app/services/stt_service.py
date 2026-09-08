@@ -105,6 +105,21 @@ def _create_singleton() -> STTService:
         raise
 
 
-# Singleton — load model đúng 1 lần khi module được import
-# FastAPI endpoint và Celery task dùng chung instance này
-stt_service: STTService = _create_singleton()
+# Singleton — load model theo cơ chế Lazy Loading
+# Đảm bảo model AI không bị tải vào RAM/VRAM ngay khi file này được import,
+# mà chỉ tải khi có request đầu tiên hoặc khi worker thực sự chạy.
+_stt_service_instance: STTService | None = None
+
+def get_stt_service() -> STTService:
+    """Lazy-load STT service on first use."""
+    global _stt_service_instance
+    if _stt_service_instance is None:
+        _stt_service_instance = _create_singleton()
+    return _stt_service_instance
+
+class _LazySTTService:
+    """Proxy object để giữ nguyên API tương thích ngược với các file khác."""
+    def __getattr__(self, name):
+        return getattr(get_stt_service(), name)
+
+stt_service = _LazySTTService()
