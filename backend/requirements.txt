@@ -4,11 +4,11 @@ uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 
 # PhoWhisper + Text Analysis
-transformers==4.47.1   # Load model PhoWhisper
-accelerate==1.1.0      # Tối ưu GPU
-sentencepiece==0.2.0   # Chuyển đổi chữ để xử lý
-soundfile==0.12.1      # Đọc/ghi file audio
-librosa==0.10.2        # Xử lý âm thanh
+transformers==4.47.1
+accelerate==1.1.0
+sentencepiece==0.2.0
+soundfile==0.12.1
+librosa==0.10.2
 faster-whisper==1.0.3
 ctranslate2==4.4.0
 

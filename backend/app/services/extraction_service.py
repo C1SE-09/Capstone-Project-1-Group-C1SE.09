@@ -46,4 +46,13 @@ def extract_from_transcript(transcript: str) -> dict:
         "mood": None
     })
 
-    return json.loads(json_text)
+    # return json.loads(json_text)
+
+    # Tạm mock để test - sau này gọi model thật
+    return {
+        "meals": "ăn ngon",
+        "sleeping": "ngủ ngon", 
+        "health": "bình thường",
+        "activities": "vẽ tranh",
+        "mood": "vui vẻ"
+    }
