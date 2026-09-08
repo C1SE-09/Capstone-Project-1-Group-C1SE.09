@@ -17,3 +17,12 @@ pyodbc                    # SQL Server / ODBC driver
 # --- Testing ---
 pytest==8.0.0
 pytest-asyncio==0.23.0
+
+# --- PhoWhisper ---
+transformers==4.47.1   # Load model PhoWhisper
+accelerate==1.1.0      # Tối ưu GPU
+sentencepiece==0.2.0   # Chuyển đổi chữ để xử lý
+soundfile==0.12.1      # Đọc/ghi file audio
+librosa==0.10.2        # Xử lý âm thanh
+faster-whisper==1.0.3
+ctranslate2==4.4.0
