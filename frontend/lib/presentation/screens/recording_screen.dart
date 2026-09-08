@@ -1,22 +1,22 @@
-/// frontend/lib/presentation/screens/recording_screen.dart
-/// ==========================================================
-/// Task #58: RecordingScreen
-///
-/// UI states:
-///   [_UploadState.idle]        – ready, buttons enabled
-///   [_UploadState.uploading]   – progress bar shown, buttons disabled
-///   [_UploadState.transcribing]– spinner + "Transcribing…" message
-///   [_UploadState.failed]      – "Upload failed" banner + Retry button
-///
-/// Usage (push from TeacherDashboard or via GoRouter):
-///   Navigator.push(context, MaterialPageRoute(
-///     builder: (_) => RecordingScreen(
-///       filePath: '/data/.../recording.m4a',
-///       classId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-///       teacherId: 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy',
-///     ),
-///   ));
-library recording_screen;
+// frontend/lib/presentation/screens/recording_screen.dart
+// ==========================================================
+// Task #58: RecordingScreen
+//
+// UI states:
+//   [_UploadState.idle]        – ready, buttons enabled
+//   [_UploadState.uploading]   – progress bar shown, buttons disabled
+//   [_UploadState.transcribing]– spinner + "Transcribing…" message
+//   [_UploadState.failed]      – "Upload failed" banner + Retry button
+//
+// Usage (push from TeacherDashboard or via GoRouter):
+//   Navigator.push(context, MaterialPageRoute(
+//     builder: (_) => RecordingScreen(
+//       filePath: '/data/.../recording.m4a',
+//       classId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+//       teacherId: 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy',
+//     ),
+//   ));
+
 
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:flutter/material.dart';
@@ -207,7 +207,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             Text(
               widget.filePath.split(RegExp(r'[\\/]')).last,
               style: tt.bodyMedium?.copyWith(
-                color: cs.onSurface.withOpacity(0.6),
+                color: cs.onSurface.withAlpha((0.6 * 255).round()),
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -268,7 +268,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               child: LinearProgressIndicator(
                 value: isIndeterminate ? null : _progress,
                 minHeight: 10,
-                backgroundColor: cs.surfaceVariant,
+                backgroundColor: cs.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
               ),
             ),
@@ -287,7 +287,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             Text(
               'Vui lòng không đóng ứng dụng trong khi tải lên.',
               style: tt.bodySmall?.copyWith(
-                color: cs.onSurface.withOpacity(0.5),
+                color: cs.onSurface.withAlpha((0.5 * 255).round()),
               ),
               textAlign: TextAlign.center,
             ),
@@ -332,7 +332,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             Text(
               'ID bản ghi: ${_result?.id ?? '—'}',
               style: tt.bodySmall?.copyWith(
-                color: cs.onSurface.withOpacity(0.5),
+                color: cs.onSurface.withAlpha((0.5 * 255).round()),
               ),
             ),
             const SizedBox(height: 40),
@@ -389,7 +389,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: cs.errorContainer.withOpacity(0.5),
+                color: cs.errorContainer.withAlpha((0.5 * 255).round()),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

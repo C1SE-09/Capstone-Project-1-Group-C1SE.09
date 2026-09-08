@@ -1,14 +1,14 @@
-/// frontend/lib/data/repositories/teacher_repository.dart
-/// =========================================================
-/// Data-layer implementation of [TeacherRepositoryBase].
-///
-/// Task #58: uploadAudio
-/// - Builds FormData with MultipartFile (audio) + class_id field
-/// - Calls POST /api/teacher/voice/upload
-/// - Reports upload progress via [onSendProgress] callback
-/// - Returns [VoiceRecord] entity on success
-/// - Throws [TeacherRepositoryException] on failure
-library teacher_repository;
+// frontend/lib/data/repositories/teacher_repository.dart
+// =========================================================
+// Data-layer implementation of [TeacherRepositoryBase].
+//
+// Task #58: uploadAudio
+// - Builds FormData with MultipartFile (audio) + class_id field
+// - Calls POST /api/teacher/voice/upload
+// - Reports upload progress via [onSendProgress] callback
+// - Returns [VoiceRecord] entity on success
+// - Throws [TeacherRepositoryException] on failure
+
 
 import 'package:dio/dio.dart';
 
@@ -16,10 +16,10 @@ import 'package:dio/dio.dart';
 // Entity: VoiceRecord
 // ---------------------------------------------------------------------------
 
-/// Lightweight entity returned after a successful upload.
-///
-/// Fields mirror the backend response schema:
-///   { "id": "<uuid>", "status": "pending" }
+// Lightweight entity returned after a successful upload.
+//
+// Fields mirror the backend response schema:
+//   { "id": "uuid", "status": "pending" }
 class VoiceRecord {
   const VoiceRecord({required this.id, required this.status});
 
@@ -41,7 +41,7 @@ class VoiceRecord {
 // Exception
 // ---------------------------------------------------------------------------
 
-/// Thrown when [TeacherRepository.uploadAudio] fails.
+// Thrown when [TeacherRepository.uploadAudio] fails.
 class TeacherRepositoryException implements Exception {
   const TeacherRepositoryException(this.message, {this.statusCode});
 
