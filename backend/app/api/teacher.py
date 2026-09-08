@@ -128,10 +128,7 @@ def upload_voice_record(
     if suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Định dạng file '{suffix}' không được hỗ trợ. "
-                f"Chấp nhận: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
-            ),
+            detail="Unsupported audio format.",
         )
 
     # ------------------------------------------------------------------

@@ -9,12 +9,33 @@ accelerate==1.1.0
 sentencepiece==0.2.0
 soundfile==0.12.1
 librosa==0.10.2
+# PhoWhisper STT
 faster-whisper==1.0.3
 ctranslate2==4.4.0
+huggingface-hub>=0.23.0    # Tải model từ HuggingFace Hub
+nvidia-cudnn-cu12>=9.0.0   # cuDNN cho CUDA inference (fix cudnn_ops_infer64_8.dll)
+
+# Audio / NLP helpers
+transformers==4.47.1       # Load / convert model PhoWhisper
+accelerate==1.1.0          # Tối ưu GPU khi convert
+sentencepiece==0.2.0       # Tokenizer
+soundfile==0.12.1          # Đọc/ghi file audio
+librosa==0.10.2            # Xử lý âm thanh
 
 # Database
 sqlalchemy==2.0.36
-asyncpg==0.29.0
+
+alembic==1.14.0
 redis==5.2.1
 minio==7.2.15
 celery[redis]==5.4.0
+psycopg[binary]==3.2.4
+
+# Testing
+pytest==8.3.5
+pytest-asyncio==0.24.0
+httpx==0.28.1
+
+# Config
+pydantic-settings==2.7.0
+pydantic==2.10.4

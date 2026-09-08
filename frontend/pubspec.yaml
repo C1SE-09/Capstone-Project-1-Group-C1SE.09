@@ -39,6 +39,9 @@ dependencies:
   equatable: ^2.0.5
   go_router: ^14.7.2
 
+  # HTTP client with multipart & progress support
+  dio: ^5.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
