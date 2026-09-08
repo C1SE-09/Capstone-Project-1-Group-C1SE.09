@@ -5,6 +5,7 @@ import os
 import tempfile
 import traceback
 import uuid
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 from app.core.database import SessionLocal
@@ -27,10 +28,9 @@ def _download_audio(audio_url: str) -> str:
     try:
         os.close(tmp_fd)
         logger.debug("[process_audio] Đang tải audio: %s -> %s", audio_url, tmp_path)
-        with urlopen(audio_url, timeout=60) as resp:  # noqa: S310
-            with open(tmp_path, "wb") as f:
-                f.write(resp.read())
-    except Exception:
+        with urlopen(audio_url, timeout=60) as resp, open(tmp_path, "wb") as f:
+            f.write(resp.read())
+    except (OSError, URLError, HTTPError) as e:
         # Dọn dẹp file tạm nếu download thất bại
         try:
             os.remove(tmp_path)
@@ -111,10 +111,10 @@ def process_audio_task(self, voice_record_id: str) -> dict:
                 err_record.status = VoiceRecordStatus.FAILED
                 err_record.error_message = tb[:4096]  # Giới hạn 4 KB
                 db.commit()
-        except Exception as db_exc:
+        except (OSError, RuntimeError) as db_exc:
             logger.error("[process_audio_task] Không thể ghi FAILED vào DB: %s", db_exc)
 
-        raise exc  # Re-raise để Celery đánh dấu task FAILURE
+        raise
 
     finally:
         # Luôn đóng DB session và xóa file tạm dù thành công hay thất bại

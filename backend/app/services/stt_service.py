@@ -15,9 +15,9 @@ _MODEL_ID = "vinai/PhoWhisper-small"
 def _cuda_available() -> bool:
     """Kiểm tra GPU CUDA qua ctranslate2."""
     try:
-        import ctranslate2
+        import ctranslate2  # noqa: PLC0415
         return ctranslate2.get_cuda_device_count() > 0
-    except Exception:
+    except (ImportError, AttributeError, RuntimeError):
         return False
 
 
@@ -29,7 +29,7 @@ def _load_model(model_id: str = _MODEL_ID) -> tuple[WhisperModel, str]:
             model = WhisperModel(model_id, device="cuda", compute_type="int8")
             logger.info("[STT] Tải model thành công trên CUDA.")
             return model, "cuda"
-        except Exception as cuda_err:
+        except RuntimeError as cuda_err:
             logger.warning("[STT] Load model trên CUDA thất bại: %s. Fallback về CPU (int8).", cuda_err)
     else:
         logger.warning("[STT] CUDA không khả dụng. Fallback về CPU (int8).")
@@ -40,7 +40,7 @@ def _load_model(model_id: str = _MODEL_ID) -> tuple[WhisperModel, str]:
         model = WhisperModel(model_id, device="cpu", compute_type="int8")
         logger.info("[STT] Tải model thành công trên CPU.")
         return model, "cpu"
-    except Exception as cpu_err:
+    except RuntimeError as cpu_err:
         raise RuntimeError(
             f"[STT] Không thể tải model '{model_id}' trên cả CUDA lẫn CPU: {cpu_err}"
         ) from cpu_err

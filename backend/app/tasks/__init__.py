@@ -21,10 +21,11 @@ Khởi động worker (giới hạn 2 concurrent STT tasks để tránh GPU OOM)
         --loglevel=info --concurrency 2 -Q audio
 """
 
-from app.tasks.celery_app import celery_app          # noqa: F401  (re-export)
-from app.tasks.process_audio import process_audio_task  # noqa: F401  (register task)
+from app.tasks.celery_app import celery_app
+from app.tasks.process_audio import process_audio_task
 
 __all__ = [
     "celery_app",
     "process_audio_task",
 ]
+

@@ -41,16 +41,16 @@ SAMPLE_FILES = {
 def _get_vram_mb() -> float | None:
     """Lấy VRAM đang dùng (MB) qua nvidia-smi, trả về None nếu không có GPU."""
     try:
-        import ctranslate2
+        import ctranslate2  # noqa: PLC0415
         if ctranslate2.get_cuda_device_count() > 0:
-            import subprocess
+            import subprocess  # noqa: PLC0415
             result = subprocess.run(
                 ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
                 capture_output=True, text=True, timeout=5, check=False,
             )
             if result.returncode == 0:
                 return float(result.stdout.strip().splitlines()[0])
-    except Exception:
+    except (ImportError, AttributeError, ValueError, OSError):
         pass
     return None
 
@@ -107,7 +107,7 @@ def test_transcribe_samples() -> None:
                 limit = 30 if svc.device == "cpu" else 10
                 status = "[OK]" if elapsed <= limit else "[SLOW]"
                 print(f"     {status}: {elapsed:.1f}s vs {limit}s target")
-        except Exception as e:
+        except ValueError as e:
             print(f"     [ERROR]: {e}")
 
     if results:
@@ -120,8 +120,8 @@ def test_transcribe_samples() -> None:
 def test_cpu_fallback() -> None:
     """Bắt buộc dùng CPU và kiểm tra transcribe hoạt động đúng."""
     _section("TEST 3: CPU Fallback (Forced)")
-    from faster_whisper import WhisperModel
-    from app.services.stt_service import _MODEL_ID
+    from app.services.stt_service import _MODEL_ID  # noqa: PLC0415
+    from faster_whisper import WhisperModel  # noqa: PLC0415
 
     # Load trực tiếp trên CPU, bỏ qua auto-detect
     model = WhisperModel(_MODEL_ID, device="cpu", compute_type="int8")
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         try:
             fn()
             passed += 1
-        except Exception as exc:
+        except (RuntimeError, ValueError, FileNotFoundError, OSError) as exc:
             failed += 1
             print(f"\n  [FAIL] {fn.__name__}: {exc}")
 
