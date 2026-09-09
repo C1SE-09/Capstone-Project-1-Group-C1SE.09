@@ -38,8 +38,8 @@ def extract_from_transcript(transcript: str) -> dict:
         }
     """
 
-    json_text = json.dumps(
-        {  # noqa: F841
+    json_text = json.dumps(  # noqa: F841
+        {
             "meals": None,
             "sleeping": None,
             "health": None,
