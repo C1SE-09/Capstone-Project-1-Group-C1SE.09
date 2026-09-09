@@ -25,7 +25,7 @@ import 'package:flutter/material.dart';
 // Internal state enum
 // ---------------------------------------------------------------------------
 
-enum _UploadState { idle, uploading, transcribing, failed }
+enum _UploadState { idle, uploading, transcribing, ready, failed }
 
 // ---------------------------------------------------------------------------
 // Screen widget
@@ -67,6 +67,11 @@ class _RecordingScreenState extends State<RecordingScreen>
   String? _errorMessage;
   VoiceRecord? _result;
 
+  bool _isEditing = false;
+  bool _isSaving = false;
+  late final TextEditingController _transcriptController;
+  int _charCount = 0;
+
   late final TeacherRepositoryBase _repo;
   late final AnimationController _pulseController;
 
@@ -78,6 +83,14 @@ class _RecordingScreenState extends State<RecordingScreen>
   void initState() {
     super.initState();
     _repo = widget._repository ?? TeacherRepository();
+    _transcriptController = TextEditingController();
+    _transcriptController.addListener(() {
+      if (mounted) {
+        setState(() {
+          _charCount = _transcriptController.text.length;
+        });
+      }
+    });
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -86,6 +99,7 @@ class _RecordingScreenState extends State<RecordingScreen>
 
   @override
   void dispose() {
+    _transcriptController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -115,10 +129,19 @@ class _RecordingScreenState extends State<RecordingScreen>
       );
 
       if (!mounted) return;
-      setState(() {
-        _result = record;
-        _state = _UploadState.transcribing;
-      });
+      _result = record;
+
+      if (record.status == 'completed') {
+        _transcriptController.text = record.effectiveTranscript;
+        setState(() {
+          _state = _UploadState.ready;
+        });
+      } else {
+        setState(() {
+          _state = _UploadState.transcribing;
+        });
+        _pollStatus(record.id);
+      }
     } on TeacherRepositoryException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -131,6 +154,83 @@ class _RecordingScreenState extends State<RecordingScreen>
         _state = _UploadState.failed;
         _errorMessage = e.toString();
       });
+    }
+  }
+
+  Future<void> _pollStatus(String voiceId) async {
+    while (mounted && _state == _UploadState.transcribing) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted || _state != _UploadState.transcribing) break;
+
+      try {
+        final updated = await _repo.getVoiceRecord(
+          voiceId: voiceId,
+          teacherId: widget.teacherId,
+        );
+
+        if (!mounted) break;
+        if (updated.status == 'completed') {
+          _transcriptController.text = updated.effectiveTranscript;
+          setState(() {
+            _result = updated;
+            _state = _UploadState.ready;
+          });
+          break;
+        } else if (updated.status == 'failed') {
+          setState(() {
+            _state = _UploadState.failed;
+            _errorMessage = 'Phiên âm âm thanh thất bại.';
+          });
+          break;
+        }
+      } catch (_) {
+        // Polling retry
+      }
+    }
+  }
+
+  Future<void> _saveTranscript() async {
+    final result = _result;
+    if (result == null) return;
+
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final updatedRecord = await _repo.updateTranscript(
+        voiceId: result.id,
+        editedTranscript: _transcriptController.text,
+        teacherId: widget.teacherId,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _result = updatedRecord;
+        _isEditing = false;
+        _isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã lưu bản chỉnh sửa phiên âm!')),
+      );
+    } on TeacherRepositoryException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lưu thất bại: ${e.message}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e')),
+      );
     }
   }
 
@@ -163,6 +263,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               _buildUploadingBody(colorScheme, textTheme),
             _UploadState.transcribing =>
               _buildTranscribingBody(colorScheme, textTheme),
+            _UploadState.ready => _buildReadyBody(colorScheme, textTheme),
             _UploadState.failed => _buildFailedBody(colorScheme, textTheme),
           },
         ),
@@ -297,7 +398,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     );
   }
 
-  /// Transcribing: success + spinner.
+  /// Transcribing: AI model processing spinner while waiting for Celery worker.
   Widget _buildTranscribingBody(ColorScheme cs, TextTheme tt) {
     return Center(
       key: const ValueKey('transcribing'),
@@ -306,48 +407,270 @@ class _RecordingScreenState extends State<RecordingScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Success check
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: cs.secondaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.check_circle_rounded,
-                size: 60,
-                color: cs.secondary,
+            // Pulse animation for AI transcription
+            FadeTransition(
+              opacity: _pulseController,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 54,
+                  color: cs.primary,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             Text(
-              'Tải lên thành công!',
-              style: tt.titleLarge?.copyWith(
+              'AI đang phân tích & phiên âm bài giảng…',
+              style: tt.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: cs.secondary,
+                color: cs.onSurface,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              'ID bản ghi: ${_result?.id ?? '—'}',
+              'Mô hình PhoWhisper đang chuyển đổi âm thanh thành văn bản.',
               style: tt.bodySmall?.copyWith(
-                color: cs.onSurface.withAlpha((0.5 * 255).round()),
+                color: cs.onSurface.withAlpha((0.6 * 255).round()),
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 40),
-            // Done button (navigate back / to result)
+            const SizedBox(height: 32),
             SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).pop(_result),
-                icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text('Quay lại trang chủ'),
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Ready: Transcript is loaded! Display editable text field + Save button + Proceed to Extract.
+  Widget _buildReadyBody(ColorScheme cs, TextTheme tt) {
+    final effectiveText = _result?.effectiveTranscript ?? '';
+    if (_transcriptController.text.isEmpty && effectiveText.isNotEmpty) {
+      _transcriptController.text = effectiveText;
+    }
+
+    final isModified = _transcriptController.text != (_result?.effectiveTranscript ?? '');
+    final showSaveButton = _isEditing || isModified;
+
+    return SingleChildScrollView(
+      key: const ValueKey('ready'),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Badge
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: cs.secondaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle_rounded,
+                  size: 28,
+                  color: cs.secondary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tải lên & Phiên âm hoàn tất',
+                      style: tt.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    Text(
+                      'ID: ${_result?.id ?? '—'}',
+                      style: tt.bodySmall?.copyWith(
+                        color: cs.onSurface.withAlpha((0.5 * 255).round()),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Title Row + Edit Toggle Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Văn bản phiên âm',
+                style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: cs.onSurface,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isEditing = !_isEditing;
+                    if (!_isEditing) {
+                      // Reset to last saved text if canceled
+                      _transcriptController.text =
+                          _result?.effectiveTranscript ?? '';
+                    }
+                  });
+                },
+                icon: Icon(
+                  _isEditing ? Icons.close_rounded : Icons.edit_rounded,
+                  size: 18,
+                ),
+                label: Text(_isEditing ? 'Hủy sửa' : 'Chỉnh sửa'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Multi-line TextFormField
+          TextFormField(
+            controller: _transcriptController,
+            readOnly: !_isEditing,
+            minLines: 4,
+            maxLines: 8,
+            style: tt.bodyLarge?.copyWith(height: 1.4),
+            decoration: InputDecoration(
+              hintText: 'Chưa có dữ liệu phiên âm...',
+              filled: true,
+              fillColor: _isEditing
+                  ? cs.surfaceContainerHighest.withAlpha((0.5 * 255).round())
+                  : cs.surfaceContainerLow,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: _isEditing ? cs.primary : cs.outlineVariant,
+                  width: _isEditing ? 1.5 : 1.0,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: cs.primary, width: 2),
+              ),
+              contentPadding: const EdgeInsets.all(16),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Informational character count & edit indicator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$_charCount ký tự',
+                style: tt.bodySmall?.copyWith(
+                  color: cs.onSurface.withAlpha((0.6 * 255).round()),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (_result?.editedTranscript != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Đã chỉnh sửa',
+                    style: tt.labelSmall?.copyWith(
+                      color: cs.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Action: Save Button (Visible in Edit mode or when modified)
+          if (showSaveButton) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: _isSaving ? null : _saveTranscript,
+                icon: _isSaving
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: cs.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.save_rounded),
+                label: Text(
+                  _isSaving ? 'Đang lưu…' : 'Lưu bản chỉnh sửa',
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: cs.secondary,
+                  foregroundColor: cs.onSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Action: Proceed to Extract Button
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop(_result);
+              },
+              icon: const Icon(Icons.auto_awesome_rounded),
+              label: const Text(
+                'Tiến hành trích xuất',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Secondary Action: Go back
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_rounded),
+              label: const Text('Quay lại trang chủ'),
+            ),
+          ),
+        ],
       ),
     );
   }

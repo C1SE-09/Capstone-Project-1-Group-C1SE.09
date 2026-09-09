@@ -84,6 +84,7 @@ def process_audio_task(self, voice_record_id: str) -> dict:
                     len(raw_transcript), voice_record_id)
 
         # 5. Lưu kết quả và đánh dấu COMPLETED
+        record.raw_transcript = raw_transcript
         record.transcription = raw_transcript
         record.status = VoiceRecordStatus.COMPLETED
         db.commit()

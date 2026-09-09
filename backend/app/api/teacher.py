@@ -45,9 +45,13 @@ from app.models.report import (
     VoiceRecord,
     VoiceRecordStatus,
 )
-from app.schemas.report import VoiceRecordUploadResponse
+from app.schemas.report import (
+    TranscriptUpdateRequest,
+    VoiceRecordDetailResponse,
+    VoiceRecordUploadResponse,
+)
 from app.services.extraction_service import extract_from_transcript
-from app.tasks.audio import process_audio
+from app.tasks.process_audio import process_audio_task
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +214,7 @@ def upload_voice_record(
     # ------------------------------------------------------------------
     # 7. Dispatch Celery task
     # ------------------------------------------------------------------
-    process_audio.delay(str(voice_record.voice_record_id))
+    process_audio_task.delay(str(voice_record.voice_record_id))
 
     # ------------------------------------------------------------------
     # 8. Trả về 201
@@ -218,6 +222,83 @@ def upload_voice_record(
     return VoiceRecordUploadResponse(
         id=voice_record.voice_record_id,
         status=voice_record.status.value,
+    )
+
+
+@router.get(
+    "/voice/{voice_id}",
+    response_model=VoiceRecordDetailResponse,
+    summary="Get VoiceRecord detail & status",
+    description="Trả về thông tin trạng thái (pending/processing/completed/failed) và các bản transcript.",
+)
+def get_voice_record(
+    voice_id: uuid.UUID,
+    teacher_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> VoiceRecordDetailResponse:
+    voice_record = db.query(VoiceRecord).filter(
+        VoiceRecord.voice_record_id == voice_id
+    ).first()
+
+    if not voice_record:
+        raise HTTPException(status_code=404, detail="VoiceRecord not found")
+
+    if teacher_id and voice_record.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this recording")
+
+    effective_transcript = (
+        voice_record.edited_transcript
+        or voice_record.raw_transcript
+        or voice_record.transcription
+    )
+
+    return VoiceRecordDetailResponse(
+        id=voice_record.voice_record_id,
+        status=voice_record.status,
+        raw_transcript=voice_record.raw_transcript or voice_record.transcription,
+        edited_transcript=voice_record.edited_transcript,
+        transcription=effective_transcript,
+    )
+
+
+@router.put(
+    "/voice/{voice_id}/transcript",
+    response_model=VoiceRecordDetailResponse,
+    summary="Update transcript for a VoiceRecord",
+    description="Lưu bản dịch đã chỉnh sửa vào edited_transcript mà không làm mất raw_transcript.",
+)
+def update_voice_transcript(
+    voice_id: uuid.UUID,
+    payload: TranscriptUpdateRequest,
+    teacher_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> VoiceRecordDetailResponse:
+    voice_record = db.query(VoiceRecord).filter(
+        VoiceRecord.voice_record_id == voice_id
+    ).first()
+
+    if not voice_record:
+        raise HTTPException(status_code=404, detail="VoiceRecord not found")
+
+    if teacher_id and voice_record.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this recording")
+
+    voice_record.edited_transcript = payload.edited_transcript
+    db.commit()
+    db.refresh(voice_record)
+
+    effective_transcript = (
+        voice_record.edited_transcript
+        or voice_record.raw_transcript
+        or voice_record.transcription
+    )
+
+    return VoiceRecordDetailResponse(
+        id=voice_record.voice_record_id,
+        status=voice_record.status,
+        raw_transcript=voice_record.raw_transcript or voice_record.transcription,
+        edited_transcript=voice_record.edited_transcript,
+        transcription=effective_transcript,
     )
 
 
@@ -245,7 +326,11 @@ def extract_voice(
         raise HTTPException(status_code=400, detail="Transcript not ready")
     
     # 5. Lấy transcript (edited > raw)
-    transcript = voice_record.transcription
+    transcript = (
+        voice_record.edited_transcript
+        or voice_record.raw_transcript
+        or voice_record.transcription
+    )
     if not transcript:
         raise HTTPException(status_code=400, detail="No transcript found")
     
