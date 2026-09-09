@@ -33,13 +33,15 @@ DEFAULT_AUDIO = _BACKEND_DIR / "test_audio_rin.mp3"
 def parse_args():
     parser = argparse.ArgumentParser(description="Demo STT PhoWhisper")
     parser.add_argument(
-        "--file", "-f",
+        "--file",
+        "-f",
         type=str,
         default=str(DEFAULT_AUDIO),
         help="Duong dan file audio",
     )
     parser.add_argument(
-        "--device", "-d",
+        "--device",
+        "-d",
         choices=["auto", "cuda", "cpu"],
         default="auto",
         help="Device: auto, cuda, cpu (mac dinh: auto)",
@@ -76,6 +78,7 @@ def main():
         if device == "auto":
             try:
                 import ctranslate2
+
                 device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
             except (ImportError, RuntimeError, AttributeError):
                 device = "cpu"
@@ -137,7 +140,9 @@ def main():
     print("=" * 60)
     print(f"  Thoi gian nhan dien : {elapsed:.2f}s")
     print(f"  So ky tu            : {len(transcript)}")
-    print(f"  Ngon ngu phat hien  : {info.language} (conf: {info.language_probability:.0%})")
+    print(
+        f"  Ngon ngu phat hien  : {info.language} (conf: {info.language_probability:.0%})"
+    )
     print("=" * 60 + "\n")
 
 

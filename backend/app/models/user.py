@@ -79,8 +79,6 @@ class TeacherStatus(str, enum.Enum):
     ON_LEAVE = "on_leave"
 
 
-
-
 # ===========================================================================
 # School
 # ===========================================================================
@@ -288,9 +286,7 @@ class Class_(Base, TimestampMixin):
 
     # --- Dunder ---
     def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"<Class_ id={self.class_id!s} name={self.name!r} school_id={self.school_id!s}>"
-        )
+        return f"<Class_ id={self.class_id!s} name={self.name!r} school_id={self.school_id!s}>"
 
 
 # ===========================================================================

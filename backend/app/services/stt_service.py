@@ -18,13 +18,14 @@ def _setup_nvidia_dll_paths() -> None:
     candidate_sp: set[str] = set()
     try:
         import site
+
         candidate_sp.update(site.getsitepackages())
-    except Exception:
+    except (AttributeError, ImportError, OSError):
         pass
     try:
         ct2_dir = os.path.dirname(ctranslate2.__file__)
         candidate_sp.add(os.path.dirname(ct2_dir))
-    except Exception:
+    except (AttributeError, ImportError, OSError):
         pass
 
     for sp in candidate_sp:
@@ -38,7 +39,9 @@ def _setup_nvidia_dll_paths() -> None:
                     except (AttributeError, OSError):
                         pass
                     if bin_dir not in os.environ.get("PATH", ""):
-                        os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ.get("PATH", "")
+                        os.environ["PATH"] = (
+                            bin_dir + os.path.pathsep + os.environ.get("PATH", "")
+                        )
 
 
 _setup_nvidia_dll_paths()
@@ -122,7 +125,9 @@ class STTService:
             transcript = self._do_transcribe(audio_path)
         except RuntimeError as exc:
             if self.device == "cuda":
-                logger.warning("[STT] LOI CUDA khi transcribe (%s). Dang fallback sang CPU...", exc)
+                logger.warning(
+                    "[STT] LOI CUDA khi transcribe (%s). Dang fallback sang CPU...", exc
+                )
                 self.device = "cpu"
                 self.model = _create_model(self.model_id, "cpu")
                 transcript = self._do_transcribe(audio_path)
@@ -150,9 +155,9 @@ def get_stt_service() -> STTService:
 
 class _LazySTTService:
     """Proxy de goi stt_service.transcribe(path) ma van lazy-load model."""
+
     def transcribe(self, audio_path: str) -> str:
         return get_stt_service().transcribe(audio_path)
 
 
 stt_service = _LazySTTService()
-

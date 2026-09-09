@@ -28,4 +28,3 @@ __all__ = [
     "celery_app",
     "process_audio_task",
 ]
-

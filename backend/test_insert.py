@@ -1,12 +1,9 @@
 import psycopg2
 
-#File này để Huy test thoi
+# File này để Huy test thoi
 
 conn = psycopg2.connect(
-    host="localhost",
-    database="capstone_db",
-    user="postgres",
-    password="123456"
+    host="localhost", database="capstone_db", user="postgres", password="123456"
 )
 cur = conn.cursor()
 
@@ -32,11 +29,14 @@ if class_row:
     class_id = class_row[0]
     print(f"✅ Dùng class có sẵn: {class_id}")
 else:
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO class (class_id, school_id, name, grade_label, is_active, created_at, updated_at)
         VALUES (gen_random_uuid(), %s, 'Lớp Mầm A', 'Mầm', true, NOW(), NOW())
         RETURNING class_id
-    """, (school_id,))
+    """,
+        (school_id,),
+    )
     class_id = cur.fetchone()[0]
     print(f"✅ Tạo class mới: {class_id}")
 
@@ -47,11 +47,14 @@ if teacher_row:
     teacher_id = teacher_row[0]
     print(f"✅ Dùng teacher có sẵn: {teacher_id}")
 else:
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO teacher (teacher_id, school_id, class_id, full_name, email, status, is_verified, created_at, updated_at)
         VALUES (gen_random_uuid(), %s, %s, 'Cô Giáo Test', 'test_teacher@example.com', 'ACTIVE', true, NOW(), NOW())
         RETURNING teacher_id
-    """, (school_id, class_id))
+    """,
+        (school_id, class_id),
+    )
     teacher_id = cur.fetchone()[0]
     print(f"✅ Tạo teacher mới: {teacher_id}")
 
@@ -62,16 +65,20 @@ if child_row:
     child_id = child_row[0]
     print(f"✅ Dùng child có sẵn: {child_id}")
 else:
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO child (child_id, class_id, full_name, nickname, status, created_at, updated_at)
         VALUES (gen_random_uuid(), %s, 'Bé Nam', 'Nam', 'ENROLLED', NOW(), NOW())
         RETURNING child_id
-    """, (class_id,))
+    """,
+        (class_id,),
+    )
     child_id = cur.fetchone()[0]
     print(f"✅ Tạo child mới: {child_id}")
 
 # 5. Tạo voice_record
-cur.execute("""
+cur.execute(
+    """
     INSERT INTO voice_record (
         voice_record_id, teacher_id, child_id, audio_url,
         transcription, status, created_at, updated_at
@@ -80,7 +87,9 @@ cur.execute("""
         'Hôm nay bé Nam ăn ngon miệng, ngủ trưa tốt, vui vẻ và vẽ tranh rất đẹp.',
         'COMPLETED', NOW(), NOW()
     ) RETURNING voice_record_id
-""", (teacher_id, child_id))
+""",
+    (teacher_id, child_id),
+)
 
 voice_id = cur.fetchone()[0]
 print("\n🎉 Tạo VoiceRecord thành công!")
