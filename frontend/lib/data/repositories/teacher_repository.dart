@@ -21,27 +21,44 @@ import 'package:dio/dio.dart';
 // Fields mirror the backend response schema:
 //   { "id": "uuid", "status": "pending" }
 class VoiceRecord {
-  const VoiceRecord({required this.id, required this.status});
+  const VoiceRecord({
+    required this.id,
+    required this.status,
+    this.rawTranscript,
+    this.editedTranscript,
+    this.transcription,
+  });
 
   final String id;
   final String status;
+  final String? rawTranscript;
+  final String? editedTranscript;
+  final String? transcription;
+
+  /// Returns the effective transcript text (edited > raw > transcription).
+  String get effectiveTranscript =>
+      editedTranscript ?? rawTranscript ?? transcription ?? '';
 
   factory VoiceRecord.fromJson(Map<String, dynamic> json) {
     return VoiceRecord(
       id: json['id'] as String,
       status: json['status'] as String,
+      rawTranscript: json['raw_transcript'] as String?,
+      editedTranscript: json['edited_transcript'] as String?,
+      transcription: json['transcription'] as String?,
     );
   }
 
   @override
-  String toString() => 'VoiceRecord(id: $id, status: $status)';
+  String toString() =>
+      'VoiceRecord(id: $id, status: $status, edited: ${editedTranscript != null})';
 }
 
 // ---------------------------------------------------------------------------
 // Exception
 // ---------------------------------------------------------------------------
 
-// Thrown when [TeacherRepository.uploadAudio] fails.
+// Thrown when [TeacherRepository.uploadAudio] or [updateTranscript] fails.
 class TeacherRepositoryException implements Exception {
   const TeacherRepositoryException(this.message, {this.statusCode});
 
@@ -68,6 +85,19 @@ abstract class TeacherRepositoryBase {
     required String classId,
     required String teacherId,
     void Function(int sent, int total)? onProgress,
+  });
+
+  /// Update the transcript of a [VoiceRecord].
+  Future<VoiceRecord> updateTranscript({
+    required String voiceId,
+    required String editedTranscript,
+    String? teacherId,
+  });
+
+  /// Fetch detail & status of a [VoiceRecord].
+  Future<VoiceRecord> getVoiceRecord({
+    required String voiceId,
+    String? teacherId,
   });
 }
 
@@ -111,6 +141,74 @@ class TeacherRepository implements TeacherRepositoryBase {
         '/api/teacher/voice/upload',
         data: formData,
         onSendProgress: onProgress,
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty response.',
+        );
+      }
+
+      return VoiceRecord.fromJson(body);
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<VoiceRecord> updateTranscript({
+    required String voiceId,
+    required String editedTranscript,
+    String? teacherId,
+  }) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/api/teacher/voice/$voiceId/transcript',
+        data: {'edited_transcript': editedTranscript},
+        queryParameters: teacherId != null ? {'teacher_id': teacherId} : null,
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty response.',
+        );
+      }
+
+      return VoiceRecord.fromJson(body);
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<VoiceRecord> getVoiceRecord({
+    required String voiceId,
+    String? teacherId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/teacher/voice/$voiceId',
+        queryParameters: teacherId != null ? {'teacher_id': teacherId} : null,
         options: Options(
           headers: {'Accept': 'application/json'},
         ),

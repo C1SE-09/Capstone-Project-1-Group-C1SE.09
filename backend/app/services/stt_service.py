@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # Model PhoWhisper-small trên HuggingFace Hub (định dạng CTranslate2)
 # faster-whisper tự tải về ~/.cache/huggingface lần đầu, cache lại cho các lần sau
-_MODEL_ID = "vinai/PhoWhisper-small"
+_MODEL_ID = "small"
 
 
 def _cuda_available() -> bool:

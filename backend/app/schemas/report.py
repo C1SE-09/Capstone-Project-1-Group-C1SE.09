@@ -42,3 +42,27 @@ class VoiceRecordUploadResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class TranscriptUpdateRequest(BaseModel):
+    """Payload gửi lên từ Flutter UI khi giáo viên chỉnh sửa transcript."""
+
+    edited_transcript: str = Field(
+        ...,
+        min_length=1,
+        description="Nội dung transcript đã chỉnh sửa của giáo viên",
+        examples=["Bé ăn ngoan, ngủ 1 tiếng rưỡi."],
+    )
+
+
+class VoiceRecordDetailResponse(BaseModel):
+    """Response trả về chi tiết VoiceRecord bao gồm cả raw và edited transcript."""
+
+    id: uuid.UUID = Field(..., description="UUID của VoiceRecord")
+    status: VoiceRecordStatus = Field(..., description="Trạng thái xử lý audio")
+    raw_transcript: str | None = Field(None, description="Bản dịch thô ban đầu từ AI")
+    edited_transcript: str | None = Field(None, description="Bản dịch đã được giáo viên chỉnh sửa")
+    transcription: str | None = Field(None, description="Bản dịch hiệu lực (edited hoặc raw)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+

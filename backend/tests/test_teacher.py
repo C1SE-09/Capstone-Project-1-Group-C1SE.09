@@ -80,10 +80,12 @@ def mock_db():
     db.commit = MagicMock()
 
     def fake_refresh(obj):
-        # Simulate DB assigning a UUID PK + PENDING status after commit
-        obj.voice_record_id = uuid.uuid4()
-        from app.models.report import VoiceRecordStatus
-        obj.status = VoiceRecordStatus.PENDING
+        # Simulate DB assigning a UUID PK + PENDING status after commit if not set
+        if not getattr(obj, "voice_record_id", None):
+            obj.voice_record_id = uuid.uuid4()
+        if not getattr(obj, "status", None):
+            from app.models.report import VoiceRecordStatus
+            obj.status = VoiceRecordStatus.PENDING
 
     db.refresh = fake_refresh
     return db
@@ -100,7 +102,7 @@ def client(mock_db):
             return_value=f"http://minio:9000/audio/teacher_{TEACHER_ID}_abc123.m4a",
         ),
         patch("app.api.teacher._extract_duration_ffprobe", return_value=42.0),
-        patch("app.api.teacher.process_audio.delay"),  # don't hit Celery
+        patch("app.api.teacher.process_audio_task.delay"),  # don't hit Celery
     ):
         yield TestClient(app)
 
@@ -183,3 +185,59 @@ class TestUploadVoiceRecord:
             files=_fake_audio_file(f"audio{ext}"),
         )
         assert resp.status_code == 201, resp.text
+
+
+class TestUpdateTranscript:
+    """PUT /api/teacher/voice/{voice_id}/transcript"""
+
+    def test_update_transcript_success(self, client, mock_db):
+        fake_id = uuid.uuid4()
+        from app.models.report import VoiceRecord, VoiceRecordStatus
+        mock_record = VoiceRecord(
+            voice_record_id=fake_id,
+            teacher_id=TEACHER_ID,
+            status=VoiceRecordStatus.COMPLETED,
+            transcription="Bé ăn cơm trưa lúc 11h.",
+            raw_transcript="Bé ăn cơm trưa lúc 11h.",
+            edited_transcript=None,
+        )
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_record
+
+        resp = client.put(
+            f"/api/teacher/voice/{fake_id}/transcript",
+            json={"edited_transcript": "Bé ăn cơm trưa lúc 11h30 và uống hết sữa."},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["id"] == str(fake_id)
+        assert body["raw_transcript"] == "Bé ăn cơm trưa lúc 11h."
+        assert body["edited_transcript"] == "Bé ăn cơm trưa lúc 11h30 và uống hết sữa."
+        assert body["transcription"] == "Bé ăn cơm trưa lúc 11h30 và uống hết sữa."
+        assert mock_record.raw_transcript == "Bé ăn cơm trưa lúc 11h."
+
+
+class TestGetVoiceRecord:
+    """GET /api/teacher/voice/{voice_id}"""
+
+    def test_get_voice_record_success(self, client, mock_db):
+        fake_id = uuid.uuid4()
+        from app.models.report import VoiceRecord, VoiceRecordStatus
+        mock_record = VoiceRecord(
+            voice_record_id=fake_id,
+            teacher_id=TEACHER_ID,
+            status=VoiceRecordStatus.COMPLETED,
+            transcription="Nội dung AI phiên âm.",
+            raw_transcript="Nội dung AI phiên âm.",
+            edited_transcript=None,
+        )
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_record
+
+        resp = client.get(f"/api/teacher/voice/{fake_id}")
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["id"] == str(fake_id)
+        assert body["status"] == "completed"
+        assert body["raw_transcript"] == "Nội dung AI phiên âm."
+        assert body["edited_transcript"] is None
+        assert body["transcription"] == "Nội dung AI phiên âm."
+

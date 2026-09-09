@@ -205,10 +205,20 @@ class VoiceRecord(Base, TimestampMixin):
     )
 
     # --- AI processing ---
+    raw_transcript: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Original AI speech-to-text transcript; NULL until COMPLETED",
+    )
+    edited_transcript: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Teacher-edited transcript; NULL if not manually edited",
+    )
     transcription: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
-        comment="AI-generated speech-to-text transcript; NULL until COMPLETED",
+        comment="Legacy/fallback transcript field; mirrors raw_transcript",
     )
     status: Mapped[VoiceRecordStatus] = mapped_column(
         SAEnum(VoiceRecordStatus, name="voice_record_status_enum", create_type=True),

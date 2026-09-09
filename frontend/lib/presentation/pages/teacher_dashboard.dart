@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:go_router/go_router.dart';
 
 class TeacherDashboard extends StatelessWidget {
@@ -19,11 +19,24 @@ class TeacherDashboard extends StatelessWidget {
           const SizedBox(height: 30),
           ElevatedButton.icon(
             onPressed: () async {
-              // --- ĐOẠN CODE TEST: TẠO FILE GIẢ ĐỂ TEST UPLOAD ---
+              // --- SỬ DỤNG ASSET THẬT "Bé Rin hôm nay ăn 3 bát cơm" ---
               final tempDir = Directory.systemTemp;
-              final dummyFile = File('${tempDir.path}/test_audio.m4a');
-              if (!await dummyFile.exists()) {
-                await dummyFile.writeAsString('Day la file am thanh gia de test');
+              final testAudioFile = File('${tempDir.path}/test_audio_rin.mp3');
+              
+              try {
+                final byteData = await rootBundle.load('assets/audio/sample_rin.mp3');
+                await testAudioFile.writeAsBytes(
+                  byteData.buffer.asUint8List(
+                    byteData.offsetInBytes,
+                    byteData.lengthInBytes,
+                  ),
+                );
+              } catch (_) {
+                // Fallback nếu chạy trực tiếp không qua Flutter assets
+                final sampleSource = File('backend/test_audio_rin.mp3');
+                if (await sampleSource.exists()) {
+                  await sampleSource.copy(testAudioFile.path);
+                }
               }
               // ----------------------------------------------------
               
@@ -32,7 +45,7 @@ class TeacherDashboard extends StatelessWidget {
               const testClassId = 'aaaaaaaa-0000-0000-0000-000000000001';
               const testTeacherId = 'bbbbbbbb-0000-0000-0000-000000000001';
               context.push(
-                '/recording?classId=$testClassId&teacherId=$testTeacherId&filePath=${Uri.encodeComponent(dummyFile.path)}',
+                '/recording?classId=$testClassId&teacherId=$testTeacherId&filePath=${Uri.encodeComponent(testAudioFile.path)}',
               );
             },
             icon: const Icon(Icons.mic),
