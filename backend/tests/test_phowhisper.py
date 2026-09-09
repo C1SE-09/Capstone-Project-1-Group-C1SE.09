@@ -1,13 +1,3 @@
-"""
-tests/test_phowhisper.py
-========================
-Benchmark & kiem thu thu cong PhoWhisper STT.
-
-Chay:
-    python tests/test_phowhisper.py
-    python -m pytest tests/test_phowhisper.py -v
-"""
-
 from __future__ import annotations
 
 import io
@@ -40,7 +30,7 @@ SAMPLE_FILES = {
     "test1.wav": SAMPLES_DIR / "test1.wav",   # ~112 KB
     "test2.wav": SAMPLES_DIR / "test2.wav",   # ~880 KB
     "test3.wav": SAMPLES_DIR / "test3.wav",   # ~740 KB
-    "test4.wav": SAMPLES_DIR / "test4.wav",   # ~7.1 MB (benchmark chính)
+    "test5.wav": SAMPLES_DIR / "test5.wav",   # ~7.1 MB (benchmark chính)
 }
 
 
@@ -109,7 +99,7 @@ def test_transcribe_samples() -> None:
             print(f"     Preview: {preview}")
 
             # Benchmark nguong: GPU < 10s, CPU < 30s cho file test4.wav
-            if label == "test4.wav":
+            if label == "test5.wav":
                 limit = 30 if svc.device == "cpu" else 10
                 status = "[OK]" if elapsed <= limit else "[SLOW]"
                 print(f"     {status}: {elapsed:.1f}s vs {limit}s target")
@@ -126,14 +116,14 @@ def test_transcribe_samples() -> None:
 def test_cpu_fallback() -> None:
     """Bắt buộc dùng CPU và kiểm tra transcribe hoạt động đúng."""
     _section("TEST 3: CPU Fallback (Forced)")
-    from app.services.stt_service import _MODEL_ID
+    from app.services.stt_service import MODEL_ID
     from faster_whisper import WhisperModel
 
     # Load trực tiếp trên CPU, bỏ qua auto-detect
-    model = WhisperModel(_MODEL_ID, device="cpu", compute_type="int8")
+    model = WhisperModel(MODEL_ID, device="cpu", compute_type="int8")
     print("  [OK] CPU model loaded")
 
-    target = SAMPLE_FILES["test1.wav"]
+    target = SAMPLE_FILES["test5.wav"]
     if target.exists():
         t0 = time.perf_counter()
         segments, _ = model.transcribe(
@@ -141,9 +131,9 @@ def test_cpu_fallback() -> None:
             vad_filter=True, vad_parameters={"min_silence_duration_ms": 500},
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
-        print(f"  [OK] test1.wav: {time.perf_counter() - t0:.2f}s -> {text[:80]}")
+        print(f"  [OK] test5.wav: {time.perf_counter() - t0:.2f}s -> {text[:80]}")
     else:
-        print("  [SKIP] test1.wav not found")
+        print("  [SKIP] test5.wav not found")
 
 
 def test_file_not_found() -> None:

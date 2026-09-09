@@ -1,12 +1,24 @@
+"""Celery task chạy PhoWhisper và lưu raw transcript vào VoiceRecord.
+
+Luồng trạng thái của schema hiện tại:
+    pending -> processing -> completed
+                          -> failed (nếu có lỗi)
+
+Task này chỉ nhận dạng audio thành text. Không phân tích, tóm tắt hay chỉnh sửa text.
+"""
+
 from __future__ import annotations
 
 import logging
 import os
+import shutil
 import tempfile
 import traceback
 import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import SessionLocal
 from app.models.report import VoiceRecord, VoiceRecordStatus
@@ -17,112 +29,104 @@ logger = logging.getLogger(__name__)
 
 
 def _download_audio(audio_url: str) -> str:
-    """Tải file audio từ URL (MinIO) về file tạm trên disk, trả về đường dẫn file tạm."""
-    # Suy ra extension từ URL (bỏ query string) để STTService nhận đúng codec
-    url_path = audio_url.split("?")[0]
-    _, ext = os.path.splitext(url_path)
-    suffix = ext if ext else ".wav"
+    """Tải audio từ object storage vào file tạm và trả về đường dẫn file.
 
-    # delete=False để STTService có thể mở file sau khi đóng file descriptor
-    tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+    Dữ liệu được copy theo luồng thay vì đọc toàn bộ vào RAM. Đuôi file được
+    giữ lại để FFmpeg/CTranslate2 nhận biết đúng định dạng audio.
+    """
+    url_without_query = audio_url.partition("?")[0]
+    suffix = os.path.splitext(url_without_query)[1] or ".wav"
+    file_descriptor, temporary_path = tempfile.mkstemp(suffix=suffix)
+    os.close(file_descriptor)
+
     try:
-        os.close(tmp_fd)
-        logger.debug("[process_audio] Đang tải audio: %s -> %s", audio_url, tmp_path)
-        with urlopen(audio_url, timeout=60) as resp, open(tmp_path, "wb") as f:
-            f.write(resp.read())
-    except (OSError, URLError, HTTPError):
-        # Dọn dẹp file tạm nếu download thất bại
+        with (
+            urlopen(audio_url, timeout=60) as response,
+            open(temporary_path, "wb") as temporary_file,
+        ):
+            shutil.copyfileobj(response, temporary_file)
+    except (HTTPError, URLError, OSError):
         try:
-            os.remove(tmp_path)
+            os.remove(temporary_path)
         except OSError:
-            pass
+            logger.warning("[STT task] Không thể xóa file tải lỗi: %s", temporary_path)
         raise
 
-    return tmp_path
+    return temporary_path
 
 
 @celery_app.task(
     name="process_audio_task",
-    bind=True,
-    max_retries=0,      # Không tự retry — lỗi GPU/STT cần can thiệp thủ công
-    acks_late=True,     # Chỉ ACK sau khi task hoàn thành, tránh mất task khi crash
-    queue="audio",      # Queue riêng để scale STT worker độc lập
+    acks_late=True,
+    reject_on_worker_lost=True,
+    queue="audio",
 )
-def process_audio_task(self, voice_record_id: str) -> dict:
-    logger.info("[process_audio_task] Bắt đầu xử lý voice_record_id=%s", voice_record_id)
+def process_audio_task(voice_record_id: str) -> dict[str, str]:
+    """Nhận dạng audio của VoiceRecord và chỉ lưu raw transcript.
 
+    ``voice_record_id`` là chuỗi UUID vì khóa chính thực tế của model
+    VoiceRecord là PostgreSQL UUID, không phải integer.
+    """
     try:
-        record_uuid = uuid.UUID(voice_record_id)
+        record_id = uuid.UUID(voice_record_id)
     except ValueError as exc:
         raise ValueError(f"voice_record_id không hợp lệ: {voice_record_id!r}") from exc
 
-    tmp_path: str | None = None
+    temporary_path: str | None = None
     db = SessionLocal()
 
     try:
-        # 1. Load VoiceRecord từ DB
-        record: VoiceRecord | None = (
-            db.query(VoiceRecord)
-            .filter(VoiceRecord.voice_record_id == record_uuid)
-            .first()
-        )
+        record = db.get(VoiceRecord, record_id)
         if record is None:
-            raise ValueError(f"VoiceRecord id={voice_record_id} không tồn tại trong DB.")
+            raise ValueError(f"VoiceRecord {voice_record_id} không tồn tại.")
 
-        # 2. Cập nhật trạng thái PROCESSING để client thấy ngay
+        # Commit ngay để API/client quan sát được worker đã bắt đầu xử lý.
         record.status = VoiceRecordStatus.PROCESSING
-        record.error_message = None  # Xóa lỗi cũ nếu đây là lần retry thành công
+        record.error_message = None
         db.commit()
-        db.refresh(record)
 
-        # 3. Tải audio từ MinIO về file tạm
-        tmp_path = _download_audio(record.audio_url)
+        temporary_path = _download_audio(record.audio_url)
+        raw_transcript = stt_service.transcribe(temporary_path)
 
-        # 4. Transcribe bằng STTService (PhoWhisper)
-        raw_transcript = stt_service.transcribe(tmp_path)
-        logger.info("[process_audio_task] Transcribe hoàn thành: %d ký tự  id=%s",
-                    len(raw_transcript), voice_record_id)
-
-        # 5. Lưu kết quả và đánh dấu COMPLETED
+        # PhoWhisper chỉ tạo text thô; model phân tích khác sẽ dùng field này.
         record.raw_transcript = raw_transcript
-        record.transcription = raw_transcript
         record.status = VoiceRecordStatus.COMPLETED
         db.commit()
 
-        logger.info("[process_audio_task] COMPLETED  voice_record_id=%s", voice_record_id)
+        logger.info(
+            "[STT task] Hoàn tất VoiceRecord %s: %d ký tự.",
+            voice_record_id,
+            len(raw_transcript),
+        )
         return {
             "voice_record_id": voice_record_id,
-            "status": "completed",
-            "transcript": raw_transcript,  # Chỉ text, không phân tích
+            "status": VoiceRecordStatus.COMPLETED.value,
         }
 
     except Exception:
-        tb = traceback.format_exc()
-        logger.error("[process_audio_task] LỖI voice_record_id=%s:\n%s", voice_record_id, tb)
+        error_traceback = traceback.format_exc()
+        logger.exception("[STT task] Xử lý VoiceRecord %s thất bại.", voice_record_id)
 
-        # Dùng transaction mới để ghi FAILED (tránh bị rollback cùng transaction lỗi)
+        # Transaction xử lý chính có thể đã lỗi, vì vậy phải rollback trước khi
+        # mở transaction mới để lưu trạng thái error.
         try:
             db.rollback()
-            err_record = (
-                db.query(VoiceRecord)
-                .filter(VoiceRecord.voice_record_id == record_uuid)
-                .first()
-            )
-            if err_record is not None:
-                err_record.status = VoiceRecordStatus.FAILED
-                err_record.error_message = tb[:4096]  # Giới hạn 4 KB
+            failed_record = db.get(VoiceRecord, record_id)
+            if failed_record is not None:
+                failed_record.status = VoiceRecordStatus.FAILED
+                failed_record.error_message = error_traceback
                 db.commit()
-        except (OSError, RuntimeError) as db_exc:
-            logger.error("[process_audio_task] Không thể ghi FAILED vào DB: %s", db_exc)
-
+        except SQLAlchemyError:
+            db.rollback()
+            logger.exception("[STT task] Không thể lưu trạng thái error vào DB.")
         raise
 
     finally:
-        # Luôn đóng DB session và xóa file tạm dù thành công hay thất bại
         db.close()
-        if tmp_path and os.path.exists(tmp_path):
+        if temporary_path:
             try:
-                os.remove(tmp_path)
-                logger.debug("[process_audio_task] Đã xóa file tạm: %s", tmp_path)
-            except OSError as e:
-                logger.warning("[process_audio_task] Không thể xóa file tạm %s: %s", tmp_path, e)
+                os.remove(temporary_path)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                logger.warning("[STT task] Không thể xóa file tạm: %s", temporary_path)

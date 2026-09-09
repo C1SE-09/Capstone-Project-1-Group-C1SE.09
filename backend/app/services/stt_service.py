@@ -1,125 +1,158 @@
-from __future__ import annotations
-
 import logging
 import os
+import sys
+import threading
+from typing import Literal
 
+import ctranslate2
 from faster_whisper import WhisperModel
 
 logger = logging.getLogger(__name__)
 
-# Model PhoWhisper-small trên HuggingFace Hub (định dạng CTranslate2)
-# faster-whisper tự tải về ~/.cache/huggingface lần đầu, cache lại cho các lần sau
-_MODEL_ID = "small"
 
+def _setup_nvidia_dll_paths() -> None:
+    """Thêm các thư mục nvidia/*/bin vào DLL directory và PATH trên Windows để CTranslate2 load cuBLAS/cuDNN."""
+    if sys.platform != "win32":
+        return
 
-def _cuda_available() -> bool:
-    """Kiểm tra GPU CUDA qua ctranslate2."""
+    candidate_sp: set[str] = set()
     try:
-        import ctranslate2
+        import site
+        candidate_sp.update(site.getsitepackages())
+    except Exception:
+        pass
+    try:
+        ct2_dir = os.path.dirname(ctranslate2.__file__)
+        candidate_sp.add(os.path.dirname(ct2_dir))
+    except Exception:
+        pass
+
+    for sp in candidate_sp:
+        nvidia_dir = os.path.join(sp, "nvidia")
+        if os.path.isdir(nvidia_dir):
+            for sub in os.listdir(nvidia_dir):
+                bin_dir = os.path.join(nvidia_dir, sub, "bin")
+                if os.path.isdir(bin_dir):
+                    try:
+                        os.add_dll_directory(bin_dir)
+                    except (AttributeError, OSError):
+                        pass
+                    if bin_dir not in os.environ.get("PATH", ""):
+                        os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ.get("PATH", "")
+
+
+_setup_nvidia_dll_paths()
+
+DEFAULT_MODEL_ID = "vudang449/PhoWhisper-large-ct2"
+MODEL_ID = os.getenv("PHOWHISPER_MODEL_ID", DEFAULT_MODEL_ID)
+
+COMPUTE_TYPE = "int8"
+LANGUAGE = "vi"
+
+Device = Literal["auto", "cuda", "cpu"]
+
+
+def cuda_available() -> bool:
+    """Tra ve True khi CTranslate2 nhin thay it nhat mot GPU CUDA."""
+    try:
         return ctranslate2.get_cuda_device_count() > 0
-    except (ImportError, AttributeError, RuntimeError):
+    except (RuntimeError, AttributeError):
+        logger.warning("[STT] Khong the kiem tra CUDA bang CTranslate2.", exc_info=True)
         return False
 
 
-def _load_model(model_id: str = _MODEL_ID) -> tuple[WhisperModel, str]:
-    """Tải WhisperModel: thử CUDA (int8) trước, fallback CPU (int8) nếu thất bại."""
-    if _cuda_available():
-        try:
-            logger.info("[STT] CUDA khả dụng — đang tải '%s' trên CUDA (int8).", model_id)
-            model = WhisperModel(model_id, device="cuda", compute_type="int8")
-            logger.info("[STT] Tải model thành công trên CUDA.")
-            return model, "cuda"
-        except RuntimeError as cuda_err:
-            logger.warning("[STT] Load model trên CUDA thất bại: %s. Fallback về CPU (int8).", cuda_err)
-    else:
-        logger.warning("[STT] CUDA không khả dụng. Fallback về CPU (int8).")
-
-    # Fallback: tải trên CPU
-    logger.info("[STT] Đang tải '%s' trên CPU (int8).", model_id)
-    try:
-        model = WhisperModel(model_id, device="cpu", compute_type="int8")
-        logger.info("[STT] Tải model thành công trên CPU.")
-        return model, "cpu"
-    except RuntimeError as cpu_err:
-        raise RuntimeError(
-            f"[STT] Không thể tải model '{model_id}' trên cả CUDA lẫn CPU: {cpu_err}"
-        ) from cpu_err
+def _create_model(model_id: str, device: Literal["cuda", "cpu"]) -> WhisperModel:
+    """Tao WhisperModel CTranslate2 voi INT8 tren device duoc chon."""
+    kwargs: dict[str, object] = {
+        "device": device,
+        "compute_type": COMPUTE_TYPE,
+        "num_workers": 1,
+    }
+    if device == "cpu":
+        kwargs["cpu_threads"] = 0
+    return WhisperModel(model_id, **kwargs)
 
 
 class STTService:
-    """Dịch vụ Speech-to-Text dùng PhoWhisper-small qua faster-whisper."""
+    """Nhan audio va tra ve duy nhat raw transcript tieng Viet."""
 
-    def __init__(self, model_id: str = _MODEL_ID, language: str = "vi") -> None:
-        self.language = language
-        self.model, self.device = _load_model(model_id)
+    def __init__(self, model_id: str = MODEL_ID, device: Device = "auto") -> None:
+        self.model_id = model_id
+        self.device, self.model = self._load_model(device)
+
+    def _load_model(self, requested_device: Device) -> tuple[str, WhisperModel]:
+        """Uu tien CUDA INT8 va tu dong chuyen sang CPU INT8 khi can."""
+        should_try_cuda = requested_device in {"auto", "cuda"} and cuda_available()
+
+        if should_try_cuda:
+            try:
+                logger.info("[STT] Dang nap %s tren CUDA.", self.model_id)
+                return "cuda", _create_model(self.model_id, "cuda")
+            except (RuntimeError, ValueError, OSError) as exc:
+                logger.warning("[STT] CUDA load that bai: %s. Fallback sang CPU.", exc)
+
+        elif requested_device == "cuda":
+            logger.warning("[STT] Khong tim thay CUDA. Fallback sang CPU.")
+
+        logger.info("[STT] Dang nap %s tren CPU.", self.model_id)
+        try:
+            return "cpu", _create_model(self.model_id, "cpu")
+        except (RuntimeError, ValueError, OSError) as exc:
+            raise RuntimeError(f"Khong the nap model tren CPU: {exc}") from exc
+
+    def _do_transcribe(self, audio_path: str) -> str:
+        segments, _ = self.model.transcribe(
+            audio_path,
+            language=LANGUAGE,
+            vad_filter=True,
+            vad_parameters={"min_silence_duration_ms": 500},
+            beam_size=5,
+            condition_on_previous_text=False,
+        )
+        return "".join(seg.text for seg in segments).strip()
 
     def transcribe(self, audio_path: str) -> str:
-        """Chuyển file âm thanh thành văn bản. Trả về chuỗi rỗng nếu audio im lặng."""
-        # Kiểm tra file tồn tại và không rỗng trước khi gọi model
-        if not os.path.exists(audio_path):
-            raise FileNotFoundError(f"[STT] File audio không tìm thấy: {audio_path}")
-
-        file_size = os.path.getsize(audio_path)
-        if file_size == 0:
-            raise ValueError(f"[STT] File audio rỗng (0 byte): {audio_path}")
-
-        logger.debug("[STT] Bắt đầu transcribe: path=%s  size=%d bytes  device=%s",
-                     audio_path, file_size, self.device)
+        """Nhan dien giong noi tu file audio, tra ve text tieng Viet."""
+        if not os.path.isfile(audio_path):
+            raise FileNotFoundError(f"Khong tim thay file: {audio_path}")
+        if os.path.getsize(audio_path) == 0:
+            raise ValueError(f"File audio rong: {audio_path}")
 
         try:
-            # vad_filter=True: dùng Silero VAD để lọc khoảng im lặng, giảm hallucination
-            segments, info = self.model.transcribe(
-                audio_path,
-                language=self.language,
-                beam_size=5,
-                vad_filter=True,
-                vad_parameters={"min_silence_duration_ms": 500},
-            )
-            # Consume toàn bộ generator trước khi ra khỏi scope
-            texts = [seg.text.strip() for seg in segments]
-            transcript = " ".join(t for t in texts if t)
-        except (FileNotFoundError, ValueError):
-            raise
-        except Exception as exc:
-            # Lỗi từ ffmpeg / ctranslate2 (file hỏng, codec lạ,…)
-            raise ValueError(f"[STT] Không thể xử lý file audio '{audio_path}': {exc}") from exc
+            transcript = self._do_transcribe(audio_path)
+        except RuntimeError as exc:
+            if self.device == "cuda":
+                logger.warning("[STT] LOI CUDA khi transcribe (%s). Dang fallback sang CPU...", exc)
+                self.device = "cpu"
+                self.model = _create_model(self.model_id, "cpu")
+                transcript = self._do_transcribe(audio_path)
+            else:
+                raise
 
-        logger.info("[STT] Hoàn thành: %d segment(s), %d ký tự, ngôn ngữ=%s(%.0f%%), thời lượng=%.1fs",
-                    len(texts), len(transcript), info.language,
-                    info.language_probability * 100, info.duration)
+        logger.info("[STT] Hoan tat tren %s: %d ky tu.", self.device, len(transcript))
         return transcript
 
 
-def _create_singleton() -> STTService:
-    """Khởi tạo singleton, raise ngay nếu load thất bại để worker biết khi khởi động."""
-    try:
-        service = STTService()
-        logger.info("[STT] stt_service singleton sẵn sàng (device=%s).", service.device)
-        return service
-    except Exception as exc:
-        logger.critical(
-            "[STT] KHÔNG THỂ KHỞI TẠO STTService: %s\n"
-            "Mọi yêu cầu transcribe sẽ thất bại cho đến khi worker khởi động lại.",
-            exc,
-        )
-        raise
+# Singleton: chi nap model mot lan duy nhat
+_instance: STTService | None = None
+_instance_lock = threading.Lock()
 
-
-# Singleton — load model theo cơ chế Lazy Loading
-# Đảm bảo model AI không bị tải vào RAM/VRAM ngay khi file này được import,
-# mà chỉ tải khi có request đầu tiên hoặc khi worker thực sự chạy.
-_stt_service_instance: STTService | None = None
 
 def get_stt_service() -> STTService:
-    """Lazy-load STT service on first use."""
-    global _stt_service_instance
-    if _stt_service_instance is None:
-        _stt_service_instance = _create_singleton()
-    return _stt_service_instance
+    """Tra ve singleton STTService (lazy-load, thread-safe)."""
+    global _instance
+    if _instance is None:
+        with _instance_lock:
+            if _instance is None:
+                _instance = STTService()
+    return _instance
+
 
 class _LazySTTService:
-    """Proxy object để giữ nguyên API tương thích ngược với các file khác."""
-    def __getattr__(self, name):
-        return getattr(get_stt_service(), name)
+    """Proxy de goi stt_service.transcribe(path) ma van lazy-load model."""
+    def transcribe(self, audio_path: str) -> str:
+        return get_stt_service().transcribe(audio_path)
+
 
 stt_service = _LazySTTService()
+
