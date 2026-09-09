@@ -38,6 +38,7 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    JSON,
     Date,
     Float,
     ForeignKey,
@@ -232,7 +233,12 @@ class VoiceRecord(Base, TimestampMixin):
         nullable=True,
         comment="Error detail when status = FAILED; used for debugging and retries",
     )
-
+    # --- AI extraction ---
+    extraction_result: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="AI extraction result: {meals, sleeping, health, activities, mood}",
+    )
     # --- Timestamps ---
     recorded_at: Mapped[date | None] = mapped_column(
         Date,

@@ -337,13 +337,44 @@ def extract_voice(
     # 6. Gọi extraction
     result = extract_from_transcript(transcript)
 
-    # 7. Tạo DailyReport (nếu chưa có cho ngày hôm nay)
+    # 7. Lưu vào DB
+    voice_record.extraction_result = result
+    db.commit()
+
+    # 8. Return
+    return {
+        "voice_id": voice_id,
+        "extraction": result,
+    }
+
+@router.post("/reports/draft")
+def create_report_from_extraction(
+    voice_id: uuid.UUID,
+    teacher_id: uuid.UUID,
+    db: Session = Depends(get_db) # noqa: B008
+):
+    # 1. Lấy VoiceRecord
+    voice_record = db.query(VoiceRecord).filter(
+        VoiceRecord.voice_record_id == voice_id
+    ).first()
+    
+    if not voice_record:
+        raise HTTPException(status_code=404, detail="VoiceRecord not found")
+    
+    if voice_record.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    result = voice_record.extraction_result
+    if not result:
+        raise HTTPException(status_code=400, detail="No extraction result found. Please extract first.")
+
+    # 3. Tạo DailyReport
     today = datetime.now(timezone.utc).date()
     existing_report = db.query(DailyReport).filter(
         DailyReport.child_id == voice_record.child_id,
         DailyReport.report_date == today
     ).first()
-
+    
     if existing_report:
         report = existing_report
     else:
@@ -356,8 +387,8 @@ def extract_voice(
         )
         db.add(report)
         db.flush()
-
-    # 8. Map extraction → ActivityEntry
+    
+    # 4. Map extraction → ActivityEntry
     mapping = [
         ("meals", "MEAL", "Bữa ăn"),
         ("sleeping", "NAP", "Giấc ngủ"),
@@ -365,7 +396,7 @@ def extract_voice(
         ("activities", "PLAY", "Hoạt động"),
         ("mood", "BEHAVIOR", "Tâm trạng"),
     ]
-
+    
     order = 0
     for key, category_str, title in mapping:
         value = result.get(key)
@@ -379,12 +410,10 @@ def extract_voice(
             )
             db.add(entry)
             order += 1
-
+    
     db.commit()
-
-    # 9. Return
+    
     return {
-        "voice_id": voice_id,
-        "extraction": result,
-        "report_id": report.daily_report_id
+        "report_id": str(report.daily_report_id),
+        "status": report.status.value
     }
