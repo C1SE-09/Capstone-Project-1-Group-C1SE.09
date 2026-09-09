@@ -75,6 +75,7 @@ AUDIO_CONTENT_TYPES: dict[str, str] = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _extract_duration_ffprobe(file_path: str) -> float | None:
     """
     Dùng ffprobe để lấy thời lượng audio (giây).
@@ -85,8 +86,10 @@ def _extract_duration_ffprobe(file_path: str) -> float | None:
         result = subprocess.run(
             [
                 "ffprobe",
-                "-v", "quiet",
-                "-print_format", "json",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
                 "-show_format",
                 file_path,
             ],
@@ -100,7 +103,12 @@ def _extract_duration_ffprobe(file_path: str) -> float | None:
             raw = data.get("format", {}).get("duration")
             if raw is not None:
                 return float(raw)
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError, ValueError):
+    except (
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+        json.JSONDecodeError,
+        ValueError,
+    ):
         logger.warning("ffprobe failed for file: %s", file_path)
     return None
 
@@ -108,6 +116,7 @@ def _extract_duration_ffprobe(file_path: str) -> float | None:
 # ---------------------------------------------------------------------------
 # Endpoint
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/voice/upload",
@@ -196,7 +205,7 @@ def upload_voice_record(
     # ------------------------------------------------------------------
     voice_record = VoiceRecord(
         teacher_id=teacher_id,
-        child_id=None,          # Chưa gán cho bé cụ thể lúc upload
+        child_id=None,  # Chưa gán cho bé cụ thể lúc upload
         audio_url=audio_url,
         audio_duration=duration,
         file_size_bytes=file_size,
@@ -237,15 +246,17 @@ def get_voice_record(
     teacher_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordDetailResponse:
-    voice_record = db.query(VoiceRecord).filter(
-        VoiceRecord.voice_record_id == voice_id
-    ).first()
+    voice_record = (
+        db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
+    )
 
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
 
     if teacher_id and voice_record.teacher_id != teacher_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this recording")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this recording"
+        )
 
     effective_transcript = (
         voice_record.edited_transcript
@@ -274,18 +285,22 @@ def update_voice_transcript(
     teacher_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordDetailResponse:
-    voice_record = db.query(VoiceRecord).filter(
-        VoiceRecord.voice_record_id == voice_id
-    ).first()
+    voice_record = (
+        db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
+    )
 
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
 
     if teacher_id and voice_record.teacher_id != teacher_id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this recording")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update this recording"
+        )
 
     voice_record.edited_transcript = payload.edited_transcript
-    voice_record.transcription = payload.edited_transcript or voice_record.raw_transcript
+    voice_record.transcription = (
+        payload.edited_transcript or voice_record.raw_transcript
+    )
     db.commit()
     db.refresh(voice_record)
 
@@ -308,25 +323,27 @@ def update_voice_transcript(
 def extract_voice(
     voice_id: uuid.UUID,
     teacher_id: uuid.UUID,  # TODO: replace with get_current_user when auth is ready
-    db: Session = Depends(get_db)  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
 ):
     # 1. Lấy VoiceRecord từ DB
-    voice_record = db.query(VoiceRecord).filter(
-        VoiceRecord.voice_record_id == voice_id
-    ).first()
-    
+    voice_record = (
+        db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
+    )
+
     # 2. Check not found
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
-    
+
     # 3. Verify ownership
     if voice_record.teacher_id != teacher_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this recording")
-    
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this recording"
+        )
+
     # 4. Check status == "done"
     if voice_record.status != VoiceRecordStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Transcript not ready")
-    
+
     # 5. Lấy transcript (edited > raw)
     transcript = (
         voice_record.edited_transcript
@@ -335,16 +352,20 @@ def extract_voice(
     )
     if not transcript:
         raise HTTPException(status_code=400, detail="No transcript found")
-    
+
     # 6. Gọi extraction
     result = extract_from_transcript(transcript)
 
     # 7. Tạo DailyReport (nếu chưa có cho ngày hôm nay)
     today = datetime.now(timezone.utc).date()
-    existing_report = db.query(DailyReport).filter(
-        DailyReport.child_id == voice_record.child_id,
-        DailyReport.report_date == today
-    ).first()
+    existing_report = (
+        db.query(DailyReport)
+        .filter(
+            DailyReport.child_id == voice_record.child_id,
+            DailyReport.report_date == today,
+        )
+        .first()
+    )
 
     if existing_report:
         report = existing_report
@@ -354,7 +375,7 @@ def extract_voice(
             teacher_id=teacher_id,
             voice_record_id=voice_id,
             report_date=today,
-            status=DailyReportStatus.DRAFT
+            status=DailyReportStatus.DRAFT,
         )
         db.add(report)
         db.flush()
@@ -377,7 +398,7 @@ def extract_voice(
                 category=ActivityCategory[category_str],
                 title=title,
                 description=value,
-                entry_order=order
+                entry_order=order,
             )
             db.add(entry)
             order += 1
@@ -388,5 +409,5 @@ def extract_voice(
     return {
         "voice_id": voice_id,
         "extraction": result,
-        "report_id": report.daily_report_id
+        "report_id": report.daily_report_id,
     }

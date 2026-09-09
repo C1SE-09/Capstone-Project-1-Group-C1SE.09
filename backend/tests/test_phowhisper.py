@@ -1,13 +1,3 @@
-"""
-tests/test_phowhisper.py
-========================
-Benchmark & kiem thu thu cong PhoWhisper STT.
-
-Chay:
-    python tests/test_phowhisper.py
-    python -m pytest tests/test_phowhisper.py -v
-"""
-
 from __future__ import annotations
 
 import io
@@ -25,7 +15,9 @@ _BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 logger = logging.getLogger("test_phowhisper")
 
 # Các test này là integration/benchmark — yêu cầu model PhoWhisper (CTranslate2)
@@ -37,10 +29,10 @@ pytestmark = pytest.mark.skipif(
 
 SAMPLES_DIR = Path(__file__).parent / "audio_samples"
 SAMPLE_FILES = {
-    "test1.wav": SAMPLES_DIR / "test1.wav",   # ~112 KB
-    "test2.wav": SAMPLES_DIR / "test2.wav",   # ~880 KB
-    "test3.wav": SAMPLES_DIR / "test3.wav",   # ~740 KB
-    "test4.wav": SAMPLES_DIR / "test4.wav",   # ~7.1 MB (benchmark chính)
+    "test1.wav": SAMPLES_DIR / "test1.wav",  # ~112 KB
+    "test2.wav": SAMPLES_DIR / "test2.wav",  # ~880 KB
+    "test3.wav": SAMPLES_DIR / "test3.wav",  # ~740 KB
+    "test5.wav": SAMPLES_DIR / "test5.wav",  # ~7.1 MB (benchmark chính)
 }
 
 
@@ -48,11 +40,20 @@ def _get_vram_mb() -> float | None:
     """Lấy VRAM đang dùng (MB) qua nvidia-smi, trả về None nếu không có GPU."""
     try:
         import ctranslate2
+
         if ctranslate2.get_cuda_device_count() > 0:
             import subprocess
+
             result = subprocess.run(
-                ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
-                capture_output=True, text=True, timeout=5, check=False,
+                [
+                    "nvidia-smi",
+                    "--query-gpu=memory.used",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
             )
             if result.returncode == 0:
                 return float(result.stdout.strip().splitlines()[0])
@@ -105,11 +106,11 @@ def test_transcribe_samples() -> None:
             results.append((label, elapsed, len(text)))
             print(f"     Time   : {elapsed:.2f}s")
             print(f"     Length : {len(text)} chars")
-            preview = text[:100] + ('...' if len(text) > 100 else '')
+            preview = text[:100] + ("..." if len(text) > 100 else "")
             print(f"     Preview: {preview}")
 
             # Benchmark nguong: GPU < 10s, CPU < 30s cho file test4.wav
-            if label == "test4.wav":
+            if label == "test5.wav":
                 limit = 30 if svc.device == "cpu" else 10
                 status = "[OK]" if elapsed <= limit else "[SLOW]"
                 print(f"     {status}: {elapsed:.1f}s vs {limit}s target")
@@ -126,24 +127,27 @@ def test_transcribe_samples() -> None:
 def test_cpu_fallback() -> None:
     """Bắt buộc dùng CPU và kiểm tra transcribe hoạt động đúng."""
     _section("TEST 3: CPU Fallback (Forced)")
-    from app.services.stt_service import _MODEL_ID
+    from app.services.stt_service import MODEL_ID
     from faster_whisper import WhisperModel
 
     # Load trực tiếp trên CPU, bỏ qua auto-detect
-    model = WhisperModel(_MODEL_ID, device="cpu", compute_type="int8")
+    model = WhisperModel(MODEL_ID, device="cpu", compute_type="int8")
     print("  [OK] CPU model loaded")
 
-    target = SAMPLE_FILES["test1.wav"]
+    target = SAMPLE_FILES["test5.wav"]
     if target.exists():
         t0 = time.perf_counter()
         segments, _ = model.transcribe(
-            str(target), language="vi", beam_size=5,
-            vad_filter=True, vad_parameters={"min_silence_duration_ms": 500},
+            str(target),
+            language="vi",
+            beam_size=5,
+            vad_filter=True,
+            vad_parameters={"min_silence_duration_ms": 500},
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
-        print(f"  [OK] test1.wav: {time.perf_counter() - t0:.2f}s -> {text[:80]}")
+        print(f"  [OK] test5.wav: {time.perf_counter() - t0:.2f}s -> {text[:80]}")
     else:
-        print("  [SKIP] test1.wav not found")
+        print("  [SKIP] test5.wav not found")
 
 
 def test_file_not_found() -> None:

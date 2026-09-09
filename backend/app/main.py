@@ -37,9 +37,8 @@ app.include_router(teacher_router)
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "FastAPI is running successfully!"}
+
+
 @app.get("/api/health")
 async def health_check():
-    return {
-        "status": "ok",
-        "message": "Server is healthy and running successfully"
-    }
+    return {"status": "ok", "message": "Server is healthy and running successfully"}

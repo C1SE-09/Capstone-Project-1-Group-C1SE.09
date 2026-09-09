@@ -60,9 +60,11 @@ class VoiceRecordDetailResponse(BaseModel):
     id: uuid.UUID = Field(..., description="UUID của VoiceRecord")
     status: VoiceRecordStatus = Field(..., description="Trạng thái xử lý audio")
     raw_transcript: str | None = Field(None, description="Bản dịch thô ban đầu từ AI")
-    edited_transcript: str | None = Field(None, description="Bản dịch đã được giáo viên chỉnh sửa")
-    transcription: str | None = Field(None, description="Bản dịch hiệu lực (edited hoặc raw)")
+    edited_transcript: str | None = Field(
+        None, description="Bản dịch đã được giáo viên chỉnh sửa"
+    )
+    transcription: str | None = Field(
+        None, description="Bản dịch hiệu lực (edited hoặc raw)"
+    )
 
     model_config = ConfigDict(from_attributes=True)
-
-

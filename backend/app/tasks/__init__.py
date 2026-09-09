@@ -15,10 +15,10 @@ Gửi task từ FastAPI endpoint hoặc bất kỳ đâu trong app:
 
     process_audio_task.delay(str(voice_record.voice_record_id))
 
-Khởi động worker (giới hạn 2 concurrent STT tasks để tránh GPU OOM):
+Khởi động worker (concurrency=1 cho PhoWhisper-large để tránh GPU OOM):
 
     celery -A app.tasks.celery_app.celery_app worker \\
-        --loglevel=info --concurrency 2 -Q audio
+        --loglevel=info --concurrency 1 -Q audio
 """
 
 from app.tasks.celery_app import celery_app
@@ -28,4 +28,3 @@ __all__ = [
     "celery_app",
     "process_audio_task",
 ]
-

@@ -7,7 +7,7 @@ with open("raw_validation.jsonl", "r", encoding="utf-8") as f:
         line = line.strip()
         if not line:
             continue
-        
+
         data.append(json.loads(line))
 print("Number of data: ", len(data))
 samples = []
@@ -21,22 +21,12 @@ for item in data:
         for label, keywords in output.items():
             if keywords is None:
                 continue
-            keywords_list = [
-                x.strip() for x in keywords.split(",")
-            ]
-            if any (keyword in sentence for keyword in keywords_list):
-                samples.append({
-                    "text" : sentence,
-                    "label" : label
-                })
+            keywords_list = [x.strip() for x in keywords.split(",")]
+            if any(keyword in sentence for keyword in keywords_list):
+                samples.append({"text": sentence, "label": label})
                 break
 print("Number off sample", len(samples))
 
-with open("validation.json", "w", encoding = 'utf-8') as f:
-    json.dump(
-        samples,
-        f,
-        ensure_ascii=False,
-        indent = 2
-    )
+with open("validation.json", "w", encoding="utf-8") as f:
+    json.dump(samples, f, ensure_ascii=False, indent=2)
 print("Saved")

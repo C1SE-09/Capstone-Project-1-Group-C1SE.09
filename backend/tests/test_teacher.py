@@ -28,11 +28,12 @@ from fastapi.testclient import TestClient
 
 # Seed IDs that match the DB seed fixtures (same as used in the Flutter test)
 TEACHER_ID = uuid.UUID("bbbbbbbb-0000-0000-0000-000000000001")
-CLASS_ID   = uuid.UUID("aaaaaaaa-0000-0000-0000-000000000001")
+CLASS_ID = uuid.UUID("aaaaaaaa-0000-0000-0000-000000000001")
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _fake_audio_file(
     filename: str = "recording.m4a",
@@ -64,7 +65,7 @@ def _make_form_data(
 ) -> dict:
     return {
         "teacher_id": str(teacher_id or TEACHER_ID),
-        "class_id":   str(class_id   or CLASS_ID),
+        "class_id": str(class_id or CLASS_ID),
     }
 
 
@@ -72,11 +73,12 @@ def _make_form_data(
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def mock_db():
     """Return a lightweight mock that satisfies SQLAlchemy Session usage."""
     db = MagicMock()
-    db.add    = MagicMock()
+    db.add = MagicMock()
     db.commit = MagicMock()
 
     def fake_refresh(obj):
@@ -85,6 +87,7 @@ def mock_db():
             obj.voice_record_id = uuid.uuid4()
         if not getattr(obj, "status", None):
             from app.models.report import VoiceRecordStatus
+
             obj.status = VoiceRecordStatus.PENDING
 
     db.refresh = fake_refresh
@@ -112,6 +115,7 @@ def client(mock_db):
 # ---------------------------------------------------------------------------
 # Test cases
 # ---------------------------------------------------------------------------
+
 
 class TestUploadVoiceRecord:
     """POST /api/teacher/voice/upload"""
@@ -193,6 +197,7 @@ class TestUpdateTranscript:
     def test_update_transcript_success(self, client, mock_db):
         fake_id = uuid.uuid4()
         from app.models.report import VoiceRecord, VoiceRecordStatus
+
         mock_record = VoiceRecord(
             voice_record_id=fake_id,
             teacher_id=TEACHER_ID,
@@ -222,6 +227,7 @@ class TestGetVoiceRecord:
     def test_get_voice_record_success(self, client, mock_db):
         fake_id = uuid.uuid4()
         from app.models.report import VoiceRecord, VoiceRecordStatus
+
         mock_record = VoiceRecord(
             voice_record_id=fake_id,
             teacher_id=TEACHER_ID,
@@ -240,4 +246,3 @@ class TestGetVoiceRecord:
         assert body["raw_transcript"] == "Nội dung AI phiên âm."
         assert body["edited_transcript"] is None
         assert body["transcription"] == "Nội dung AI phiên âm."
-

@@ -258,7 +258,9 @@ class Parent(Base, TimestampMixin):
         Index("ix_parent_phone", "phone"),
         Index("ix_parent_email", "email"),
         Index("ix_parent_status", "status"),
-        {"comment": "Parent / guardian accounts registered in ADARK (one account per family)"},
+        {
+            "comment": "Parent / guardian accounts registered in ADARK (one account per family)"
+        },
     )
 
     # --- Primary key ---
