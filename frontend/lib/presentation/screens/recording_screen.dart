@@ -70,7 +70,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   bool _isEditing = false;
   bool _isSaving = false;
   late final TextEditingController _transcriptController;
-  int _charCount = 0;
+  late final FocusNode _focusNode;
 
   late final TeacherRepositoryBase _repo;
   late final AnimationController _pulseController;
@@ -84,13 +84,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     super.initState();
     _repo = widget._repository ?? TeacherRepository();
     _transcriptController = TextEditingController();
-    _transcriptController.addListener(() {
-      if (mounted) {
-        setState(() {
-          _charCount = _transcriptController.text.length;
-        });
-      }
-    });
+    _focusNode = FocusNode();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -100,6 +94,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   @override
   void dispose() {
     _transcriptController.dispose();
+    _focusNode.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -458,14 +453,6 @@ class _RecordingScreenState extends State<RecordingScreen>
 
   /// Ready: Transcript is loaded! Display editable text field + Save button + Proceed to Extract.
   Widget _buildReadyBody(ColorScheme cs, TextTheme tt) {
-    final effectiveText = _result?.effectiveTranscript ?? '';
-    if (_transcriptController.text.isEmpty && effectiveText.isNotEmpty) {
-      _transcriptController.text = effectiveText;
-    }
-
-    final isModified = _transcriptController.text != (_result?.effectiveTranscript ?? '');
-    final showSaveButton = _isEditing || isModified;
-
     return SingleChildScrollView(
       key: const ValueKey('ready'),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -512,7 +499,7 @@ class _RecordingScreenState extends State<RecordingScreen>
           ),
           const SizedBox(height: 24),
 
-          // Title Row + Edit Toggle Button
+          // Title Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -521,71 +508,6 @@ class _RecordingScreenState extends State<RecordingScreen>
                 style: tt.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: cs.onSurface,
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isEditing = !_isEditing;
-                    if (!_isEditing) {
-                      // Reset to last saved text if canceled
-                      _transcriptController.text =
-                          _result?.effectiveTranscript ?? '';
-                    }
-                  });
-                },
-                icon: Icon(
-                  _isEditing ? Icons.close_rounded : Icons.edit_rounded,
-                  size: 18,
-                ),
-                label: Text(_isEditing ? 'Hủy sửa' : 'Chỉnh sửa'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Multi-line TextFormField
-          TextFormField(
-            controller: _transcriptController,
-            readOnly: !_isEditing,
-            minLines: 4,
-            maxLines: 8,
-            style: tt.bodyLarge?.copyWith(height: 1.4),
-            decoration: InputDecoration(
-              hintText: 'Chưa có dữ liệu phiên âm...',
-              filled: true,
-              fillColor: _isEditing
-                  ? cs.surfaceContainerHighest.withAlpha((0.5 * 255).round())
-                  : cs.surfaceContainerLow,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: cs.outlineVariant),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: _isEditing ? cs.primary : cs.outlineVariant,
-                  width: _isEditing ? 1.5 : 1.0,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: cs.primary, width: 2),
-              ),
-              contentPadding: const EdgeInsets.all(16),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Informational character count & edit indicator
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$_charCount ký tự',
-                style: tt.bodySmall?.copyWith(
-                  color: cs.onSurface.withAlpha((0.6 * 255).round()),
-                  fontWeight: FontWeight.w500,
                 ),
               ),
               if (_result?.editedTranscript != null)
@@ -606,38 +528,68 @@ class _RecordingScreenState extends State<RecordingScreen>
                 ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
 
-          // Action: Save Button (Visible in Edit mode or when modified)
-          if (showSaveButton) ...[
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton.icon(
-                onPressed: _isSaving ? null : _saveTranscript,
-                icon: _isSaving
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: cs.onPrimary,
-                        ),
-                      )
-                    : const Icon(Icons.save_rounded),
-                label: Text(
-                  _isSaving ? 'Đang lưu…' : 'Lưu bản chỉnh sửa',
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: cs.secondary,
-                  foregroundColor: cs.onSecondary,
-                ),
+          // Multi-line TextFormField (Directly editable, no state rebuilds while typing)
+          TextFormField(
+            controller: _transcriptController,
+            focusNode: _focusNode,
+            minLines: 4,
+            maxLines: 8,
+            autocorrect: false,
+            enableSuggestions: false,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            style: tt.bodyLarge?.copyWith(height: 1.4),
+            decoration: InputDecoration(
+              hintText: 'Chưa có dữ liệu phiên âm...',
+              filled: true,
+              fillColor: cs.surfaceContainerHighest.withAlpha((0.5 * 255).round()),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: cs.primary, width: 2),
+              ),
+              contentPadding: const EdgeInsets.all(16),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Action: Save Button
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: _isSaving ? null : _saveTranscript,
+              icon: _isSaving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: cs.onPrimary,
+                      ),
+                    )
+                  : const Icon(Icons.save_rounded),
+              label: Text(
+                _isSaving ? 'Đang lưu…' : 'Lưu bản chỉnh sửa',
+                style: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: cs.secondary,
+                foregroundColor: cs.onSecondary,
               ),
             ),
-            const SizedBox(height: 12),
-          ],
+          ),
+          const SizedBox(height: 12),
 
           // Action: Proceed to Extract Button
           SizedBox(
