@@ -105,13 +105,13 @@ class ActivityCategory(str, enum.Enum):
     curriculum (Chương trình GDMN).
     """
 
-    MEAL = "meal"             # Bữa ăn
-    NAP = "nap"               # Giấc ngủ
-    LEARNING = "learning"     # Hoạt động học tập
-    PLAY = "play"             # Hoạt động vui chơi
-    HEALTH = "health"         # Sức khỏe / y tế
-    BEHAVIOR = "behavior"     # Hành vi / cảm xúc
-    OTHER = "other"           # Khác
+    MEAL = "meal"  # Bữa ăn
+    NAP = "nap"  # Giấc ngủ
+    LEARNING = "learning"  # Hoạt động học tập
+    PLAY = "play"  # Hoạt động vui chơi
+    HEALTH = "health"  # Sức khỏe / y tế
+    BEHAVIOR = "behavior"  # Hành vi / cảm xúc
+    OTHER = "other"  # Khác
 
 
 # ===========================================================================
@@ -260,7 +260,7 @@ class VoiceRecord(Base, TimestampMixin):
     daily_report: Mapped[DailyReport | None] = relationship(
         "DailyReport",
         back_populates="voice_record",
-        uselist=False,   # 1-to-1: one VoiceRecord → at most one DailyReport
+        uselist=False,  # 1-to-1: one VoiceRecord → at most one DailyReport
         lazy="selectin",
     )
 

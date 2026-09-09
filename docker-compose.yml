@@ -65,6 +65,10 @@ services:
   worker:
     build: ./backend
     container_name: kinderlog_worker
+    # Cấp toàn bộ GPU cho worker để CTranslate2 chạy CUDA INT8.
+    # Yêu cầu host đã cài NVIDIA Container Toolkit.
+    # Nếu host không có GPU: bỏ dòng `gpus` để worker tự fallback CPU INT8.
+    gpus: all
     env_file: .env
     volumes:
       - ./backend:/app
@@ -73,12 +77,15 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    # Celery worker with concurrency limit to prevent GPU OOM
-    # Max 2 concurrent STT tasks (PhoWhisper inference is GPU-intensive)
+    environment:
+      # Repo này đã có model.bin CTranslate2; repo vinai gốc là checkpoint PyTorch.
+      PHOWHISPER_MODEL_ID: vudang449/PhoWhisper-large-ct2
+    # PhoWhisper-large cần nhiều VRAM hơn bản small. Một worker/concurrency=1
+    # giúp RTX 3050/4050 chỉ nạp một model và tránh GPU OOM.
     command: >
       celery -A app.tasks.celery_app.celery_app worker
       --loglevel=info
-      --concurrency=2
+      --concurrency=1
       -Q audio
 
 volumes:

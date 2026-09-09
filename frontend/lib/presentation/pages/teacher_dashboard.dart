@@ -19,12 +19,14 @@ class TeacherDashboard extends StatelessWidget {
           const SizedBox(height: 30),
           ElevatedButton.icon(
             onPressed: () async {
-              // --- SỬ DỤNG ASSET THẬT "Bé Rin hôm nay ăn 3 bát cơm" ---
+              // --- Nguồn file âm thanh mẫu ---
+              const assetPath = 'assets/audio/TEST.m4a';
+              final fileName = assetPath.split('/').last;
               final tempDir = Directory.systemTemp;
-              final testAudioFile = File('${tempDir.path}/test_audio_rin.mp3');
+              final testAudioFile = File('${tempDir.path}/$fileName');
               
               try {
-                final byteData = await rootBundle.load('assets/audio/sample_rin.mp3');
+                final byteData = await rootBundle.load(assetPath);
                 await testAudioFile.writeAsBytes(
                   byteData.buffer.asUint8List(
                     byteData.offsetInBytes,
@@ -33,7 +35,7 @@ class TeacherDashboard extends StatelessWidget {
                 );
               } catch (_) {
                 // Fallback nếu chạy trực tiếp không qua Flutter assets
-                final sampleSource = File('backend/test_audio_rin.mp3');
+                final sampleSource = File('backend/$fileName');
                 if (await sampleSource.exists()) {
                   await sampleSource.copy(testAudioFile.path);
                 }

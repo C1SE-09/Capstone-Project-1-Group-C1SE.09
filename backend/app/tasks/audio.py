@@ -42,9 +42,7 @@ def process_audio(self, voice_record_id: str) -> dict:
     - Tạo DailyReport với status=DRAFT
     - Cập nhật VoiceRecord.status = COMPLETED
     """
-    logger.info(
-        "[process_audio] Received task for voice_record_id=%s", voice_record_id
-    )
+    logger.info("[process_audio] Received task for voice_record_id=%s", voice_record_id)
 
     # TODO: Implement Gemini transcription pipeline
     # Placeholder: chỉ log, chưa làm gì thêm

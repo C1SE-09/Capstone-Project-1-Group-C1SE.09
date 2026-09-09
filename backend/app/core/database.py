@@ -19,10 +19,10 @@ from app.config import settings
 # ---------------------------------------------------------------------------
 engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,   # kiểm tra kết nối trước khi dùng (tránh stale connections)
+    pool_pre_ping=True,  # kiểm tra kết nối trước khi dùng (tránh stale connections)
     pool_size=10,
     max_overflow=20,
-    echo=False,           # Đổi thành True để debug SQL query
+    echo=False,  # Đổi thành True để debug SQL query
 )
 
 # ---------------------------------------------------------------------------
