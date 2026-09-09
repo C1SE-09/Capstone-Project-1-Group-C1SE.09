@@ -539,6 +539,15 @@ class _RecordingScreenState extends State<RecordingScreen>
             keyboardType: TextInputType.multiline,
             textInputAction: TextInputAction.newline,
             style: tt.bodyLarge?.copyWith(height: 1.4),
+            buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
+              return Text(
+                '$currentLength ký tự',
+                style: tt.bodySmall?.copyWith(
+                  color: cs.onSurface.withAlpha((0.6 * 255).round()),
+                  fontWeight: FontWeight.w500,
+                ),
+              );
+            },
             decoration: InputDecoration(
               hintText: 'Chưa có dữ liệu phiên âm...',
               filled: true,
