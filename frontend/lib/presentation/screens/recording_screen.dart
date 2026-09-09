@@ -67,7 +67,6 @@ class _RecordingScreenState extends State<RecordingScreen>
   String? _errorMessage;
   VoiceRecord? _result;
 
-  bool _isEditing = false;
   bool _isSaving = false;
   late final TextEditingController _transcriptController;
   late final FocusNode _focusNode;
@@ -203,7 +202,6 @@ class _RecordingScreenState extends State<RecordingScreen>
       if (!mounted) return;
       setState(() {
         _result = updatedRecord;
-        _isEditing = false;
         _isSaving = false;
       });
 
