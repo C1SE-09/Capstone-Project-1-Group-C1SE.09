@@ -169,7 +169,8 @@ def upload_voice_record(
         )
 
         # 5. Upload MinIO
-        object_name = f"teacher_{teacher_id}_{uuid.uuid4()}{suffix}"
+        file_stem = Path(filename).stem or "recording"
+        object_name = f"teacher_{teacher_id}_{file_stem}_{uuid.uuid4()}{suffix}"
         content_type = AUDIO_CONTENT_TYPES[suffix]
         audio_url = upload_audio_to_minio(
             file_path=tmp_path,
@@ -284,6 +285,7 @@ def update_voice_transcript(
         raise HTTPException(status_code=403, detail="Not authorized to update this recording")
 
     voice_record.edited_transcript = payload.edited_transcript
+    voice_record.transcription = payload.edited_transcript or voice_record.raw_transcript
     db.commit()
     db.refresh(voice_record)
 
