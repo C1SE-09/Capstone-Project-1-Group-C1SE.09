@@ -68,3 +68,13 @@ class VoiceRecordDetailResponse(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DraftReportCreateRequest(BaseModel):
+    """Payload tuỳ chọn khi tạo draft report với dữ liệu trích xuất đã chỉnh sửa."""
+
+    edited_extraction: dict[str, str | None] | None = Field(
+        None,
+        description="Dữ liệu trích xuất đã chỉnh sửa của giáo viên: {meals, sleeping, health, activities, mood}",
+    )
+

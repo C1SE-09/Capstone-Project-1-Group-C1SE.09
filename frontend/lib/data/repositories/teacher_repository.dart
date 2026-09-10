@@ -55,6 +55,60 @@ class VoiceRecord {
 }
 
 // ---------------------------------------------------------------------------
+// Entity: ExtractionData
+// ---------------------------------------------------------------------------
+
+class ExtractionData {
+  const ExtractionData({
+    this.meals,
+    this.sleeping,
+    this.health,
+    this.activities,
+    this.mood,
+  });
+
+  final String? meals;
+  final String? sleeping;
+  final String? health;
+  final String? activities;
+  final String? mood;
+
+  factory ExtractionData.fromJson(Map<String, dynamic> json) {
+    return ExtractionData(
+      meals: json['meals'] as String?,
+      sleeping: json['sleeping'] as String?,
+      health: json['health'] as String?,
+      activities: json['activities'] as String?,
+      mood: json['mood'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'meals': meals,
+        'sleeping': sleeping,
+        'health': health,
+        'activities': activities,
+        'mood': mood,
+      };
+
+  ExtractionData copyWith({
+    String? meals,
+    String? sleeping,
+    String? health,
+    String? activities,
+    String? mood,
+  }) {
+    return ExtractionData(
+      meals: meals ?? this.meals,
+      sleeping: sleeping ?? this.sleeping,
+      health: health ?? this.health,
+      activities: activities ?? this.activities,
+      mood: mood ?? this.mood,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Exception
 // ---------------------------------------------------------------------------
 
@@ -98,6 +152,19 @@ abstract class TeacherRepositoryBase {
   Future<VoiceRecord> getVoiceRecord({
     required String voiceId,
     String? teacherId,
+  });
+
+  /// Extract AI structured data from a voice recording's transcript.
+  Future<ExtractionData> extractVoice({
+    required String voiceId,
+    required String teacherId,
+  });
+
+  /// Create a draft DailyReport from AI extraction result.
+  Future<Map<String, dynamic>> createDraftReport({
+    required String voiceId,
+    required String teacherId,
+    ExtractionData? editedExtraction,
   });
 }
 
@@ -233,6 +300,79 @@ class TeacherRepository implements TeacherRepositoryBase {
     }
   }
 
+  @override
+  Future<ExtractionData> extractVoice({
+    required String voiceId,
+    required String teacherId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/voice/$voiceId/extract',
+        queryParameters: {'teacher_id': teacherId},
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null || body['extraction'] == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty extraction result.',
+        );
+      }
+
+      return ExtractionData.fromJson(body['extraction'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createDraftReport({
+    required String voiceId,
+    required String teacherId,
+    ExtractionData? editedExtraction,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/draft',
+        queryParameters: {
+          'voice_id': voiceId,
+          'teacher_id': teacherId,
+        },
+        data: editedExtraction != null
+            ? {'edited_extraction': editedExtraction.toJson()}
+            : null,
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty draft report response.',
+        );
+      }
+
+      return body;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
   // ------------------------------------------------------------------
   // Helpers
   // ------------------------------------------------------------------
@@ -246,3 +386,4 @@ class TeacherRepository implements TeacherRepositoryBase {
     return null;
   }
 }
+

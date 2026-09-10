@@ -46,6 +46,7 @@ from app.models.report import (
     VoiceRecordStatus,
 )
 from app.schemas.report import (
+    DraftReportCreateRequest,
     TranscriptUpdateRequest,
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
@@ -370,22 +371,31 @@ def extract_voice(
 def create_report_from_extraction(
     voice_id: uuid.UUID,
     teacher_id: uuid.UUID,
-    db: Session = Depends(get_db) # noqa: B008
+    payload: DraftReportCreateRequest | None = None,
+    db: Session = Depends(get_db),  # noqa: B008
 ):
     # 1. Lấy VoiceRecord
-    voice_record = db.query(VoiceRecord).filter(
-        VoiceRecord.voice_record_id == voice_id
-    ).first()
-    
+    voice_record = (
+        db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
+    )
+
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
-    
+
     if voice_record.teacher_id != teacher_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
-    result = voice_record.extraction_result
+
+    if payload and payload.edited_extraction:
+        result = payload.edited_extraction
+        voice_record.extraction_result = result
+    else:
+        result = voice_record.extraction_result
+
     if not result:
-        raise HTTPException(status_code=400, detail="No extraction result found. Please extract first.")
+        raise HTTPException(
+            status_code=400,
+            detail="No extraction result found. Please extract first.",
+        )
 
     # 3. Tạo DailyReport
     today = datetime.now(timezone.utc).date()
@@ -396,6 +406,10 @@ def create_report_from_extraction(
     
     if existing_report:
         report = existing_report
+        # Xoá các ActivityEntry cũ của báo cáo này trước khi ghi nhận lại
+        db.query(ActivityEntry).filter(
+            ActivityEntry.daily_report_id == report.daily_report_id
+        ).delete()
     else:
         report = DailyReport(
             child_id=voice_record.child_id,
