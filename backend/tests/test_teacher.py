@@ -63,6 +63,7 @@ def _fake_audio_file(
 def _make_form_data(
     teacher_id: str | None = None,
     class_id: str | None = None,
+    child_id: str | None = None,
 ) -> dict:
     return {
         "teacher_id": str(teacher_id or TEACHER_ID),
