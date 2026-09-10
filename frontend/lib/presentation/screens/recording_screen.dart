@@ -19,7 +19,9 @@
 
 
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
+import 'package:adark_frontend/presentation/screens/extraction_results_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 // ---------------------------------------------------------------------------
 // Internal state enum
@@ -604,7 +606,23 @@ class _RecordingScreenState extends State<RecordingScreen>
             height: 52,
             child: FilledButton.icon(
               onPressed: () {
-                Navigator.of(context).pop(_result);
+                final voiceId = _result?.id;
+                if (voiceId != null && voiceId.isNotEmpty) {
+                  try {
+                    context.push(
+                      '/extraction-results?voiceId=$voiceId&teacherId=${widget.teacherId}',
+                    );
+                  } catch (_) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ExtractionResultsScreen(
+                          voiceId: voiceId,
+                          teacherId: widget.teacherId,
+                        ),
+                      ),
+                    );
+                  }
+                }
               },
               icon: const Icon(Icons.auto_awesome_rounded),
               label: const Text(
