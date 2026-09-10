@@ -5,7 +5,7 @@ from pathlib import Path
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
+    except (AttributeError, OSError):
         pass
 
 # Thêm thư mục backend vào sys.path
@@ -23,7 +23,9 @@ def main():
     svc = get_stt_service()
 
     print(f"Đang nạp mô hình và xử lý file âm thanh: {audio_path}")
-    print(f"Thiết bị phần cứng  : {svc.device.upper()} ({'GPU Nvidia' if svc.device == 'cuda' else 'CPU'})")
+    print(
+        f"Thiết bị phần cứng  : {svc.device.upper()} ({'GPU Nvidia' if svc.device == 'cuda' else 'CPU'})"
+    )
     print("-" * 60)
 
     try:
@@ -33,7 +35,7 @@ def main():
         print("=" * 60)
         print(text)
         print("=" * 60)
-    except Exception as e:
+    except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
         print(f"❌ Lỗi khi xử lý file: {e}")
 
 

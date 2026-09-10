@@ -8,7 +8,10 @@ import shutil
 import tempfile
 import traceback
 import uuid
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import SessionLocal
 from app.models.report import VoiceRecord, VoiceRecordStatus
@@ -27,9 +30,12 @@ def _download_audio(audio_url: str) -> str:
         with urlopen(audio_url, timeout=60) as resp, open(tmp_path, "wb") as out_file:
             shutil.copyfileobj(resp, out_file)
         return tmp_path
-    except Exception:
+    except (HTTPError, URLError, OSError):
         if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
         raise
 
 
@@ -68,7 +74,7 @@ def process_audio_task(voice_record_id: str) -> dict[str, str]:
                 failed_record.status = VoiceRecordStatus.FAILED
                 failed_record.error_message = traceback.format_exc()
                 db.commit()
-        except Exception:
+        except SQLAlchemyError:
             db.rollback()
         raise
 
