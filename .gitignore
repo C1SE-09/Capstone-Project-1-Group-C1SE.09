@@ -2,3 +2,6 @@ __pycache__/
 *.py[cod]
 venv
 .envbackend/build.log
+.DS_Store
+.vscode
+.env
