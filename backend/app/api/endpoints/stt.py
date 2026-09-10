@@ -1,5 +1,3 @@
-# backend/app/api/endpoints/stt.py
-
 import os
 import tempfile
 
