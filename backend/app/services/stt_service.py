@@ -14,6 +14,10 @@ from faster_whisper import WhisperModel
 
 logger = logging.getLogger(__name__)
 
+
+class SttEmptyTranscriptError(ValueError):
+    """Audio không chứa giọng nói nhận diện được (VAD lọc hết hoặc file im lặng)."""
+
 # --- Cấu hình DLL NVIDIA trên Windows ---
 if sys.platform == "win32":
     try:
@@ -64,7 +68,10 @@ class STTService:
             try:
                 logger.info("[STT] Nạp mô hình PhoWhisper trên GPU (CUDA)")
                 return "cuda", WhisperModel(
-                    self.model_id, device="cuda", compute_type="int8", num_workers=1
+                    self.model_id, 
+                    device="cuda", 
+                    compute_type="float16", 
+                    num_workers=1,
                 )
             except (RuntimeError, ValueError, OSError) as exc:
                 logger.warning("[STT] CUDA error: %s. Fallback sang CPU", exc)
@@ -86,31 +93,49 @@ class STTService:
             raise ValueError(f"File audio rỗng: {audio_path}")
 
         try:
-            segments, _ = self.model.transcribe(
-                audio_path,
-                language="vi",
-                vad_filter=True,
-                vad_parameters={"min_silence_duration_ms": 500},
-                beam_size=5,
-                condition_on_previous_text=False,
-            )
-            transcript = "".join(seg.text for seg in segments).strip()
-            if not transcript:
-                raise ValueError(
-                    f"Nội dung file âm thanh rỗng hoặc không thể nhận dạng tiếng nói: {audio_path}"
-                )
-            return transcript
+            transcript = self._do_transcribe(audio_path)
+        except SttEmptyTranscriptError:
+            raise
         except RuntimeError:
             if self.device == "cuda":
-                logger.warning(
-                    "[STT] Lỗi GPU trong lúc transcribe, fallback sang CPU..."
-                )
+                logger.warning("[STT] Lỗi GPU trong lúc transcribe, fallback sang CPU...")
                 self.device = "cpu"
                 self.model = WhisperModel(
                     self.model_id, device="cpu", compute_type="int8", cpu_threads=0
                 )
                 return self.transcribe(audio_path)
             raise
+        return transcript
+
+    def _do_transcribe(self, audio_path: str) -> str: 
+        # Lan 1: had VAD — skip khoang lang, nhanh & chinh xac hon
+        segments, _ = self.model.transcribe(
+            audio_path,
+            language="vi",
+            vad_filter=True,
+            vad_parameters={"min_silence_duration_ms": 500},
+            beam_size=5,
+            condition_on_previous_text=False,
+            )
+        transcript = "".join(seg.text for seg in segments).strip()
+
+        # Lan 2 : VAD co the filter nham giong noi nho? -> retry no VAD
+        if not transcript:
+            logger.warning("[STT] Transcript empty with VAD. Retry no VAD...")
+            segments, _ = self.model.transcribe(
+                audio_path, 
+                language="vi",
+                vad_filter=False,
+                beam_size=5,
+            )
+            transcript = "".join(seg.text for seg in segments).strip()
+
+        if not transcript:
+            raise SttEmptyTranscriptError(
+                "Không nhận diện được giọng nói trong file audio."
+            )
+        return transcript
+        
 
 
 # --- Singleton & Lazy Loading ---

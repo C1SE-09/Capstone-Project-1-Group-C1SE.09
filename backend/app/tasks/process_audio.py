@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import SessionLocal
 from app.models.report import VoiceRecord, VoiceRecordStatus
-from app.services.stt_service import stt_service
+from app.services.stt_service import SttEmptyTranscriptError, stt_service
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,19 @@ def process_audio_task(voice_record_id: str) -> dict[str, str]:
         logger.info("[STT Task] Hoàn tất VoiceRecord %s (%d ký tự)", voice_record_id, len(record.raw_transcript))
         return {"voice_record_id": voice_record_id, "status": VoiceRecordStatus.COMPLETED.value}
 
+    except SttEmptyTranscriptError as exc:
+        logger.warning("[STT Task] VoiceRecord %s: audio không có giọng nói.", voice_record_id)
+        db.rollback()
+        try:
+            failed_record = db.get(VoiceRecord, record_id)
+            if failed_record:
+                failed_record.status = VoiceRecordStatus.FAILED
+                failed_record.error_message = str(exc)
+                db.commit()
+        except SQLAlchemyError:
+            db.rollback()
+        raise
+    
     except Exception:
         db.rollback()
         logger.exception("[STT Task] Thất bại khi xử lý VoiceRecord %s", voice_record_id)

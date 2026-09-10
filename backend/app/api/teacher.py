@@ -130,7 +130,7 @@ def _extract_duration_ffprobe(file_path: str) -> float | None:
         "và Celery task process_audio được kích hoạt để transcribe."
     ),
 )
-def upload_voice_record(
+async def upload_voice_record(
     file: UploadFile = File(..., description="Audio file (.m4a / .wav / .mp3 / .webm)"),  # noqa: B008
     teacher_id: uuid.UUID = Form(..., description="UUID của teacher đang upload"),  # noqa: B008
     class_id: uuid.UUID = Form(..., description="UUID của lớp học liên quan"),  # noqa: B008
@@ -152,25 +152,19 @@ def upload_voice_record(
     # ------------------------------------------------------------------
     # 2. Read bytes & validate size
     # ------------------------------------------------------------------
-    file_bytes = file.file.read()
-    file_size = len(file_bytes)
-
-    if file_size > MAX_FILE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=(
-                f"File quá lớn: {file_size / 1024 / 1024:.1f} MB. "
-                f"Giới hạn tối đa là 25 MB."
-            ),
-        )
-
-    # ------------------------------------------------------------------
-    # 3–5. Temp file → ffprobe → MinIO upload
-    # ------------------------------------------------------------------
+    file_size = 0
     tmp_path: str | None = None
     try:
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(file_bytes)
+            while chunk := await file.read(1024 * 1024):  # 1 MB mỗi lần
+                file_size += len(chunk)
+                if file_size > MAX_FILE_SIZE_BYTES:
+                    tmp_path = tmp.name
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="File quá lớn. Giới hạn tối đa là 25 MB.",
+                    )
+                tmp.write(chunk)
             tmp_path = tmp.name
 
         # 4. ffprobe
@@ -290,6 +284,11 @@ def update_voice_transcript(
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
     )
+    if voice_record.status != VoiceRecordStatus.COMPLETED:
+        raise HTTPException(
+            status_code=409,
+            detail="Transcript chua hoan tat, khong the chinh sua"
+        )
 
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
