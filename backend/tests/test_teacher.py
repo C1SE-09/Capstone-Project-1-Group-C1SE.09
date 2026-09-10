@@ -29,6 +29,7 @@ from fastapi.testclient import TestClient
 # Seed IDs that match the DB seed fixtures (same as used in the Flutter test)
 TEACHER_ID = uuid.UUID("bbbbbbbb-0000-0000-0000-000000000001")
 CLASS_ID = uuid.UUID("aaaaaaaa-0000-0000-0000-000000000001")
+CHILD_ID = uuid.UUID("cccccccc-0000-0000-0000-000000000001")
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,6 +67,7 @@ def _make_form_data(
     return {
         "teacher_id": str(teacher_id or TEACHER_ID),
         "class_id": str(class_id or CLASS_ID),
+        "child_id": str(child_id or CHILD_ID),
     }
 
 
