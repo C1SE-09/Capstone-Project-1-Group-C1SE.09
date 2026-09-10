@@ -134,7 +134,7 @@ def upload_voice_record(
     file: UploadFile = File(..., description="Audio file (.m4a / .wav / .mp3 / .webm)"),  # noqa: B008
     teacher_id: uuid.UUID = Form(..., description="UUID của teacher đang upload"),  # noqa: B008
     class_id: uuid.UUID = Form(..., description="UUID của lớp học liên quan"),  # noqa: B008
-    child_id: uuid.UUID = Form(..., description="UUID của child liên quan"),  # noqa: B008
+    child_id: uuid.UUID | None = Form(None, description="UUID của child liên quan"),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordUploadResponse:
     # ------------------------------------------------------------------
@@ -386,8 +386,8 @@ def create_report_from_extraction(
     if voice_record.teacher_id != teacher_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    if not voice_record.child_id:
-        raise HTTPException(status_code=400, detail="Please assign a child before creating report")
+    # if not voice_record.child_id:
+    #    raise HTTPException(status_code=400, detail="Please assign a child before creating report")
 
     if payload and payload.edited_extraction:
         result = payload.edited_extraction
