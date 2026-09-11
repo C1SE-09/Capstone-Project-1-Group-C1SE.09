@@ -1,0 +1,5006 @@
+[
+  {
+    "text": " Cả ngày vui vẻ cười đùa",
+    "label": "mood"
+  },
+  {
+    "text": " Chiều cô cho nặn đất thì không tập trung, hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Bữa chính bé không chịu ăn, bỏ mứa bát canh",
+    "label": "meals"
+  },
+  {
+    "text": " Ra góc đọc truyện thì rất tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Người khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Cả ngày hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": " Lúc kể chuyện thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Hơi mệt mỏi chút xíu",
+    "label": "health"
+  },
+  {
+    "text": " Tâm trạng khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": " Ăn ít sữa, cô phải dỗ",
+    "label": "meals"
+  },
+  {
+    "text": "Trộm vía hào hứng ăn, ăn gần hết suất bánh",
+    "label": "meals"
+  },
+  {
+    "text": " Chiều chơi trốn tìm cùng bạn rất tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Con bị ngứa, da nổi mẩn đỏ",
+    "label": "health"
+  },
+  {
+    "text": " Bữa nay chán ăn, bỏ mứa cháo",
+    "label": "meals"
+  },
+  {
+    "text": " Xé giấy không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Không chịu ngủ, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": " Hơi mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Xếp hình chơi một mình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hào hứng ăn, ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": " Ngủ dài, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": " Trưa trằn trọc khó ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": " Vẽ tranh lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": " Xếp hình với cô tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Ngủ ngắn, xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": " Chơi đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng kêu mệt mỏi, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Nặn đất không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Lủi thủi chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa tay nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": " Xé giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Hay thức giấc, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": " Ngắm hoa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Nhai lâu nuốt chậm, ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Chơi đồ hàng chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Đau họng, ho khan",
+    "label": "health"
+  },
+  {
+    "text": " Đọc truyện không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Nhảy múa năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Nặn đất lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": " Chơi cầu trượt tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Ốm, sốt cao",
+    "label": "health"
+  },
+  {
+    "text": " Quấy, giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": " Kể chuyện tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": " Vẽ tranh lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Xé giấy chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết cơm, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": " Hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Hắt hơi, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Chán ăn, ăn ít canh",
+    "label": "meals"
+  },
+  {
+    "text": " Xếp hình tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Nhảy múa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ho, sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": " Nhai lâu nuốt chậm, ăn ít canh",
+    "label": "meals"
+  },
+  {
+    "text": " Đọc truyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Xếp hình không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết thịt, hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ấm đầu, hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": " Nhảy múa tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết canh",
+    "label": "meals"
+  },
+  {
+    "text": " Xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": " Nhai lâu nuốt chậm, bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Xếp hình không tập trung chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Ho khan, sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Táo bón, đau bụng",
+    "label": "health"
+  },
+  {
+    "text": " Chơi trốn tìm tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Ngủ ngắn, xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": " Ngậm cơm, bỏ mứa rau",
+    "label": "meals"
+  },
+  {
+    "text": "Nôn ói, tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": " Tè dầm, khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": " Âm nhạc tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Trưa ngủ dài không quấy khóc gì",
+    "label": "sleeping"
+  },
+  {
+    "text": " Nặn đất không tập trung, hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Sức khỏe khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết phần cá",
+    "label": "meals"
+  },
+  {
+    "text": " Tô màu chơi một mình, lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Hát âm nhạc chơi với cô rất hào hứng",
+    "label": "activities"
+  },
+  {
+    "text": " Gấp giấy tập trung, chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Tâm trạng cả ngày của bé vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": " Trưa bé ngủ dài không quấy khóc gì",
+    "label": "sleeping"
+  },
+  {
+    "text": " Trưa bé ngủ một mạch, ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": " Người khỏe mạnh bình thường",
+    "label": "health"
+  },
+  {
+    "text": " Trưa bé trằn trọc khó ngủ, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": " Ngủ trưa bé ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé hào hứng ăn, ăn gần hết suất bánh",
+    "label": "meals"
+  },
+  {
+    "text": " Bé chán ăn, bỏ mứa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Bé tự xúc ăn hết bát thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Bé bị hắt hơi, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị táo bón",
+    "label": "health"
+  },
+  {
+    "text": "Bé sốt nhẹ, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị ngứa, nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Bé tự xúc ăn hết canh",
+    "label": "meals"
+  },
+  {
+    "text": "Trưa nay tè dầm ra nệm nhưng vẫn ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": " Cả ngày vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": "Con sờ thấy hơi ấm đầu, người lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": " Nhai lâu nuốt chậm, ăn gần hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Sáng nay ngoan, tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": " Kể chuyện lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Tô màu lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Ngủ ngắn, giật mình khóc thét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngứa, da nổi mẩn đỏ",
+    "label": "health"
+  },
+  {
+    "text": " Chơi đồ hàng lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Ngắm hoa với cô tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Xếp hình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, tự xúc ăn hết rau",
+    "label": "meals"
+  },
+  {
+    "text": " Chơi trốn tìm tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Trằn trọc, đòi bế",
+    "label": "sleeping"
+  },
+  {
+    "text": " Kể chuyện tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, tự xúc ăn hết thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Xếp hình tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Chơi trốn tìm năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Sức khỏe bình thường, chạy nhảy khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Có vẻ tủi thân",
+    "label": "mood"
+  },
+  {
+    "text": " Rất vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": " Người hơi mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Lúc chơi cầu trượt cùng bạn rất tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Hôm nay nghịch ngợm ghê",
+    "label": "mood"
+  },
+  {
+    "text": " Tham gia xếp hình với cô rất tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Hoàn toàn khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Cứ khóc nhè",
+    "label": "mood"
+  },
+  {
+    "text": "Bị nôn ói, ốm",
+    "label": "health"
+  },
+  {
+    "text": " Lủi thủi chơi một mình, không muốn nói chuyện",
+    "label": "activities"
+  },
+  {
+    "text": " Trộm vía khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Tính vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": " Khá khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": " Khá hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": "Người lừ đừ, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Gấp giấy rất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Hơi tủi thân",
+    "label": "mood"
+  },
+  {
+    "text": " Không ốm, khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Bị ốm, sốt cao",
+    "label": "health"
+  },
+  {
+    "text": " Trên lớp không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc kể chuyện tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Bị táo bón",
+    "label": "health"
+  },
+  {
+    "text": " Lúc nhảy múa rất tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Cứ nhõng nhẽo",
+    "label": "mood"
+  },
+  {
+    "text": " Cơ thể khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Cả ngày khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": " Lớp âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Trưa ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": " Lúc xé giấy tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Giờ nặn đất lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bị ấm đầu, đau họng",
+    "label": "health"
+  },
+  {
+    "text": " Khá buồn",
+    "label": "mood"
+  },
+  {
+    "text": " Lúc xé giấy khá tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bị ngứa, nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": " Ra góc đọc truyện thì chơi một mình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc xếp hình chơi với cô rất tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Người lừ đừ mệt mỏi, hơi ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Sờ thấy con hơi ấm đầu, người lừ đừ mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Nchai lâu nuốt chậm, ăn ít canh",
+    "label": "meals"
+  },
+  {
+    "text": " Ngủ trưa ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": " Chán ăn, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": " Nặn đất tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Ngậm cơm, ăn ít",
+    "label": "meals"
+  },
+  {
+    "text": " Quấy, đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": " Ngủ lim dim, hay thức giấc",
+    "label": "sleeping"
+  },
+  {
+    "text": " Tè dầm, ngủ lim dim",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đi học vui, tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": " Ngủ ngắn, quấy",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé hào hứng, tự xúc ăn hết trứng",
+    "label": "meals"
+  },
+  {
+    "text": " Tô màu tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc xé giấy thì tập trung chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Hôm nay cháu hơi lừ đừ, kêu đau họng",
+    "label": "health"
+  },
+  {
+    "text": " Cứ nhõng nhẽo suốt",
+    "label": "mood"
+  },
+  {
+    "text": " Lúc chơi trốn tìm khá năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Trông mệt mỏi và tủi thân",
+    "label": "health"
+  },
+  {
+    "text": " Chiều nay đọc truyện tập trung, chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng nay con chán ăn, bỏ mứa bát cháo",
+    "label": "meals"
+  },
+  {
+    "text": " Cả ngày khóc nhè",
+    "label": "mood"
+  },
+  {
+    "text": " Lúc nặn đất thì lơ đễnh, chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Kêu đau bụng rồi nôn ói",
+    "label": "health"
+  },
+  {
+    "text": " Không ngoan, bỏ mứa rau",
+    "label": "meals"
+  },
+  {
+    "text": " Tham gia tô màu thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Tự xúc ăn hết bát canh, trộm vía hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": " Ăn ít bánh, nhai lâu nuốt chậm",
+    "label": "meals"
+  },
+  {
+    "text": "Bạn ấy ngứa, nổi mẩn tay",
+    "label": "health"
+  },
+  {
+    "text": " Hôm nay hơi khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": " Âm nhạc tích cực chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc nặn đất hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, phải nhắc mới ăn gần hết rau",
+    "label": "meals"
+  },
+  {
+    "text": " Lên lớp nghe kể chuyện tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Bạn ấy bị rát họng, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Vẽ tranh tập trung, chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng nay ho khan, sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": " Giờ gấp giấy lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Trong giờ không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Tính quậy phá",
+    "label": "mood"
+  },
+  {
+    "text": "Tự xúc ăn hết thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết trứng",
+    "label": "meals"
+  },
+  {
+    "text": " Nchai lâu nuốt chậm, bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Không ăn, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Hôm nay con đi học ngoan, ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Ra sân chơi tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ốm, lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": " Chơi cùng bạn rất năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ngoan, tự xúc hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": " Xếp hình tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Con chán ăn, nhè đồ ăn, ăn ít",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn gần hết cá",
+    "label": "meals"
+  },
+  {
+    "text": " Chơi một mình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Cô nhắc mãi mới ăn nửa bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Âm nhạc hào hứng",
+    "label": "activities"
+  },
+  {
+    "text": " Ăn ít, cô phải dỗ",
+    "label": "meals"
+  },
+  {
+    "text": " Gấp giấy tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ, đau họng",
+    "label": "health"
+  },
+  {
+    "text": "Tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nghẹn, nchai lâu nuốt chậm",
+    "label": "meals"
+  },
+  {
+    "text": "Mệt mỏi, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Âm nhạc tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Không chịu ăn, nhè rau",
+    "label": "meals"
+  },
+  {
+    "text": "Hào hứng ăn, ăn hết trứng",
+    "label": "meals"
+  },
+  {
+    "text": " Kể chuyện tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Nhảy múa tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Chơi cầu trượt năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Không chịu ăn, nhè thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Trằn trọc, ngồi dậy khóc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đi học vui, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Ra sân chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Cô dỗ mới ăn ít cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Hôm nay con ngoan, ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Con hào hứng ăn, tự xúc hết thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Con đi học ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Chơi cùng bạn tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Trộm vía ngoan, ăn hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Ngoan, phải nhắc mới ăn gần hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Ốm, nôn ói",
+    "label": "health"
+  },
+  {
+    "text": "Đi học vui, tự xúc ăn hết sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Ấm đầu, ho",
+    "label": "health"
+  },
+  {
+    "text": " Tô màu tích cực",
+    "label": "activities"
+  },
+  {
+    "text": "Hôm nay cháu tự xúc ăn hết bát cháo, trộm vía hào hứng ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Con kêu đau họng, người mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Hoạt động chơi cầu trượt khá năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Lớp âm nhạc tích cực chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": " Đọc truyện lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": " Xếp hình lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc vẽ tranh lơ đễnh, chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": " Không chịu ngủ, ngồi dậy khóc xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": " Có triệu chứng sổ mũi, ho khan",
+    "label": "health"
+  },
+  {
+    "text": " Lúc ra sân hoạt động ngoài trời khá năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Giờ tô màu chơi một mình, lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Bữa chính ăn ít sữa, phải dỗ",
+    "label": "meals"
+  },
+  {
+    "text": "Bị ngứa, da nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": " Ra góc xếp hình chơi một mình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bữa nay ngoan, tự xúc ăn hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Kêu mệt mỏi, sờ thấy ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Giờ nặn đất không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói, ốm",
+    "label": "health"
+  },
+  {
+    "text": " Trạng thái khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Quấy, hay thức giấc",
+    "label": "sleeping"
+  },
+  {
+    "text": " Trưa ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": " Ra sân chơi cùng bạn rất tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Trưa trằn trọc, xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé nghẹn, nhai lâu nuốt chậm",
+    "label": "meals"
+  },
+  {
+    "text": "Sáng nay ngoan, tự xúc ăn hết cháo",
+    "label": "meals"
+  },
+  {
+    "text": " Giờ xếp hình tập trung, chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Cứ tủi thân ngồi một góc",
+    "label": "mood"
+  },
+  {
+    "text": "Chán ăn, bỏ mứa rau",
+    "label": "meals"
+  },
+  {
+    "text": "Bạn ấy tự xúc ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": " Ngồi dậy khóc, xin uống nước",
+    "label": "sleeping"
+  },
+  {
+    "text": " Hay thức giấc, xin đi vệ sinh",
+    "label": "sleeping"
+  },
+  {
+    "text": " Tô màu không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Ho khù khụ, hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": " Lúc gấp giấy tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc nhảy múa năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Hoạt động ngoài trời tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ấm đầu, sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Sốt, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Hắt hơi, sổ mũi",
+    "label": "health"
+  },
+  {
+    "text": "Đau bụng, táo bón",
+    "label": "health"
+  },
+  {
+    "text": " Đọc truyện chơi một mình lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Xếp hình chơi với cô rất tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Cười đùa vui vẻ",
+    "label": "mood"
+  },
+  {
+    "text": " Trông mệt và tủi thân",
+    "label": "mood"
+  },
+  {
+    "text": "Ngoan, tự xúc ăn hết cá",
+    "label": "meals"
+  },
+  {
+    "text": " Kể chuyện tập trung, chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Sốt cao, ốm",
+    "label": "health"
+  },
+  {
+    "text": " Sáng lúc ăn thì tự xúc, một loáng là ăn hết bát cháo rồi",
+    "label": "meals"
+  },
+  {
+    "text": " Giờ hoạt động ngoài trời thì năng động quá trời, chạy nhảy chơi cùng bạn suốt",
+    "label": "activities"
+  },
+  {
+    "text": "Tình hình là sáng sờ trán thấy ấm đầu, người cứ lừ đừ thế nào ấy",
+    "label": "health"
+  },
+  {
+    "text": " Cả ngày cứ nhõng nhẽo theo cô thôi",
+    "label": "mood"
+  },
+  {
+    "text": "Xếp hình tập trung cực kỳ, chơi với cô ngoan lắm",
+    "label": "activities"
+  },
+  {
+    "text": " Nói chung khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Cứ ngồi một góc lủi thủi, nhìn tủi thân kinh khủng",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay ngủ li bì từ trưa tới chiều luôn, mà lại tè dầm ra nệm nữa chứ",
+    "label": "sleeping"
+  },
+  {
+    "text": " Giờ nặn đất thì lơ đễnh cứ chơi một mình thôi",
+    "label": "activities"
+  },
+  {
+    "text": " Phải cho ăn đút từng thìa mới được ít canh",
+    "label": "meals"
+  },
+  {
+    "text": " Ra ngoài học vẽ tranh không tập trung tẹo nào",
+    "label": "activities"
+  },
+  {
+    "text": "Kể chuyện nghe chăm chú, chơi với cô hào hứng lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Đang đau bụng",
+    "label": "health"
+  },
+  {
+    "text": "Hôm nay sốt cao đâm ra người lừ đừ hẳn",
+    "label": "health"
+  },
+  {
+    "text": " Bữa chính tự xúc ăn gần hết suất thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Ho khù khụ nên ăn khó khăn, nhai lâu nuốt chậm được tí cháo",
+    "label": "meals"
+  },
+  {
+    "text": " Cứ ngồi buồn buồn",
+    "label": "mood"
+  },
+  {
+    "text": "Thể trạng khỏe mạnh, tham gia đọc truyện tập trung",
+    "label": "health"
+  },
+  {
+    "text": " Ra góc xé giấy thì lơ đễnh lủi thủi chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Học âm nhạc chơi với cô cực kỳ tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Tình hình khỏe mạnh vui vẻ",
+    "label": "health"
+  },
+  {
+    "text": " Ngủ ngắn, chợp mắt tí là hay thức giấc khóc đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nay đi học vui vẻ lắm",
+    "label": "mood"
+  },
+  {
+    "text": " Cô phải dỗ dữ lắm mới ăn được một nửa hộp sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": "Bạn ấy bị ho khan, sổ mũi đâm ra người lừ đừ",
+    "label": "health"
+  },
+  {
+    "text": " Tính nay quậy phá không chịu ngồi im",
+    "label": "mood"
+  },
+  {
+    "text": " Trưa lên giường là ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": "Lúc ngắm hoa tích cực lắm, chỉ trỏ suốt",
+    "label": "activities"
+  },
+  {
+    "text": " Cặp nhiệt độ thì sốt, người mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Ra đọc truyện thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Lên lớp hào hứng ăn, tự xúc ăn hết bát rau",
+    "label": "meals"
+  },
+  {
+    "text": " Ra xé giấy thì lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": " Ra sân chơi trốn tìm thì tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Giờ tô màu lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Trông người lừ đừ, sờ thì ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Chơi cầu trượt tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Bạn ấy bị nôn ói, người mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Giờ vẽ tranh thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hôm nay ăn ngoan, cô nhắc thì mới ăn gần hết rau",
+    "label": "meals"
+  },
+  {
+    "text": "Bị sốt nhẹ, đau họng",
+    "label": "health"
+  },
+  {
+    "text": " Bữa ăn không ngoan, nhè đồ ăn cá ra mâm",
+    "label": "meals"
+  },
+  {
+    "text": " Cả ngày quậy phá",
+    "label": "mood"
+  },
+  {
+    "text": " Bữa chính chán ăn, bỏ mứa hộp sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Bạn này trộm vía tự xúc ăn hết bát thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Trưa tè dầm, ngủ ngắn",
+    "label": "sleeping"
+  },
+  {
+    "text": " Người khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": " Bữa trưa ngậm cơm, cô dỗ mới chịu ăn một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": " Giờ nghỉ quấy, không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": " Chơi trốn tìm cực kỳ năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Bị ngứa, nổi mẩn đầy tay",
+    "label": "health"
+  },
+  {
+    "text": "Đau họng, mệt mỏi nên khó ở",
+    "label": "health"
+  },
+  {
+    "text": " Xếp hình trên lớp rất tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Bữa không chịu ăn, nhè đồ ăn ra",
+    "label": "meals"
+  },
+  {
+    "text": "Bị ấm đầu, hắt hơi liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết rau",
+    "label": "meals"
+  },
+  {
+    "text": " Chơi trốn tìm chạy nhảy năng động",
+    "label": "activities"
+  },
+  {
+    "text": "Ngứa, nổi mẩn khắp người",
+    "label": "health"
+  },
+  {
+    "text": " Bữa ăn ngậm cơm, bỏ mứa suất canh",
+    "label": "meals"
+  },
+  {
+    "text": " Cứ ngồi một góc khóc nhè",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc ra góc chơi đồ hàng thì tập trung phết",
+    "label": "activities"
+  },
+  {
+    "text": "Hôm nay ho, sổ mũi đâm ra mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Không ốm đau, khỏe mạnh, tâm trạng vui vẻ",
+    "label": "health"
+  },
+  {
+    "text": " Hoạt động ngoài trời tích cực lắm",
+    "label": "activities"
+  },
+  {
+    "text": " Bữa chính chán ăn, bỏ mứa suất rau",
+    "label": "meals"
+  },
+  {
+    "text": " Lên góc xé giấy thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Đọc truyện chơi cùng bạn rất tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt cao nên ốm bẹp rồi",
+    "label": "health"
+  },
+  {
+    "text": "Giờ kể chuyện chơi với cô hào hứng lắm",
+    "label": "activities"
+  },
+  {
+    "text": " Không chịu ngủ, cứ nằm đòi mẹ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động, toàn chạy nhảy chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Người khỏe mạnh, có tí nghịch ngợm",
+    "label": "health"
+  },
+  {
+    "text": " Lúc ăn hào hứng ăn, tự xúc vèo cái ăn hết bát rau",
+    "label": "meals"
+  },
+  {
+    "text": " Lên góc tô màu thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Giờ nặn đất chơi một mình, không tập trung",
+    "label": "activities"
+  },
+  {
+    "text": "Lúc chơi trốn tìm lại hay giành đồ chơi với bạn, quậy phá",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc hát âm nhạc tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Ăn thì phải cho ăn mới ăn gần hết thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Kể chuyện tích cực chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Sổ mũi, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": "Ho, sốt nhẹ",
+    "label": "health"
+  },
+  {
+    "text": "Táo bón, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Đọc truyện tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": " Bỏ mứa cháo",
+    "label": "meals"
+  },
+  {
+    "text": " Ngắm hoa năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Chán ăn, cô dỗ mới ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Ấm đầu, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": " Không ngoan, nhè đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Sốt nhẹ, ho",
+    "label": "health"
+  },
+  {
+    "text": " Nhảy múa tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Bỏ mứa thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Ngắm hoa tích cực",
+    "label": "activities"
+  },
+  {
+    "text": " Xé giấy tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Lừ đừ, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Bỏ mứa sữa",
+    "label": "meals"
+  },
+  {
+    "text": " Ngậm cơm, bỏ mứa sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Ho, mệt mỏi",
+    "label": "health"
+  },
+  {
+    "text": "Nay trộm vía ăn ngoan lắm, tự xúc hết vèo bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Thấy ho khù khụ rồi sổ mũi nữa, người mệt mỏi lắm",
+    "label": "health"
+  },
+  {
+    "text": "Trưa nay con ngủ li bì",
+    "label": "sleeping"
+  },
+  {
+    "text": " Chiều hoạt động ngoài trời năng động cực kỳ",
+    "label": "activities"
+  },
+  {
+    "text": " Ngồi nặn đất mà lơ đễnh lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Giờ kể chuyện tập trung nghe cô lắm",
+    "label": "activities"
+  },
+  {
+    "text": " Bữa cơm ngoan, cô nhắc một xíu là ăn gần hết bát canh",
+    "label": "meals"
+  },
+  {
+    "text": " Người khỏe mạnh, vui vẻ",
+    "label": "health"
+  },
+  {
+    "text": " Ra góc tô màu lơ đễnh chơi một mình",
+    "label": "activities"
+  },
+  {
+    "text": " Đến bữa không chịu ăn, nhè phần rau ra bàn",
+    "label": "meals"
+  },
+  {
+    "text": " Trông mệt mỏi với khóc nhè suốt",
+    "label": "health"
+  },
+  {
+    "text": " Lúc vẽ tranh tập trung chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng hắt hơi, sốt nhẹ",
+    "label": "health"
+  },
+  {
+    "text": " Tham gia xé giấy thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Chắc bị rát họng nên ốm",
+    "label": "health"
+  },
+  {
+    "text": " Quấy, không chịu ngủ trưa",
+    "label": "sleeping"
+  },
+  {
+    "text": " Giờ học gấp giấy thì lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": " Bạn ấy khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": "Giờ hoạt động ngoài trời năng động",
+    "label": "activities"
+  },
+  {
+    "text": " Đôi lúc hơi nghịch ngợm",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ ngắm hoa tập trung quan sát",
+    "label": "activities"
+  },
+  {
+    "text": " Vẽ tranh lơ đễnh lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Nôn ói, ốm đừ người ra",
+    "label": "health"
+  },
+  {
+    "text": "Xếp hình trên lớp tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Bữa nay tự xúc ăn hết cá",
+    "label": "meals"
+  },
+  {
+    "text": "Đang bị ngứa, nổi mẩn tay chân",
+    "label": "health"
+  },
+  {
+    "text": " Giờ học âm nhạc tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Bỏ mứa bát cháo",
+    "label": "meals"
+  },
+  {
+    "text": " Bữa chính chán ăn, cô dỗ mới ăn ít cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Nôn ói, ốm mệt",
+    "label": "health"
+  },
+  {
+    "text": "Ngứa, nổi mẩn cả lưng",
+    "label": "health"
+  },
+  {
+    "text": " Cứ bỏ mứa thịt không chịu ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Hoạt động ngoài trời năng động chạy nhảy",
+    "label": "activities"
+  },
+  {
+    "text": "Người lừ đừ, ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Bữa nay tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Phần thịt nay tự xúc ăn hết luôn",
+    "label": "meals"
+  },
+  {
+    "text": "Sốt nhẹ, có triệu chứng ho",
+    "label": "health"
+  },
+  {
+    "text": "Nôn ói, ốm đâm ra mệt",
+    "label": "health"
+  },
+  {
+    "text": "Kêu ngứa, nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Ấm đầu, hắt hơi liên tục",
+    "label": "health"
+  },
+  {
+    "text": " Nhìn tủi thân",
+    "label": "mood"
+  },
+  {
+    "text": " Đang quậy phá",
+    "label": "mood"
+  },
+  {
+    "text": " Học âm nhạc tập trung",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc nào cũng hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": " Bữa ăn thì tự xúc ăn hết bát canh",
+    "label": "meals"
+  },
+  {
+    "text": " Mặt tủi thân",
+    "label": "mood"
+  },
+  {
+    "text": "Đang kêu ngứa, nổi mẩn da",
+    "label": "health"
+  },
+  {
+    "text": " Lên góc đồ hàng hay giành đồ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Nay ngủ dài",
+    "label": "sleeping"
+  },
+  {
+    "text": " Mặt khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": " Chiều dậy chơi xếp hình tập trung cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Lúc ăn cháo không chịu ăn đâu, nhè đồ ăn ra khăn",
+    "label": "meals"
+  },
+  {
+    "text": "Ngủ li bì từ trưa tới chiều, mà lại tè dầm ra nệm nữa",
+    "label": "sleeping"
+  },
+  {
+    "text": " Nhìn chung là khỏe mạnh",
+    "label": "health"
+  },
+  {
+    "text": " Học vẽ tranh không tập trung tẹo nào",
+    "label": "activities"
+  },
+  {
+    "text": " Toàn quậy phá trêu bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Nghe kể chuyện chăm chú, chơi với cô tích cực lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt cao nên người lừ đừ hẳn đi",
+    "label": "health"
+  },
+  {
+    "text": " Bữa trưa tự xúc ăn gần hết cơm canh",
+    "label": "meals"
+  },
+  {
+    "text": " Lúc chơi đồ hàng tập trung lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Sáng mệt mỏi ốm rồi",
+    "label": "health"
+  },
+  {
+    "text": " Trông người khó chịu",
+    "label": "mood"
+  },
+  {
+    "text": "Nay lên lớp vui vẻ lắm",
+    "label": "mood"
+  },
+  {
+    "text": "Sốt nhẹ, trán hơi ấm đầu",
+    "label": "health"
+  },
+  {
+    "text": " Cô phải dỗ dữ lắm mới húp được một nửa cháo",
+    "label": "meals"
+  },
+  {
+    "text": "Hay bị nghẹn, nhai lâu nuốt chậm mãi mới ăn được ít thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Ra bàn tô màu lơ đễnh",
+    "label": "activities"
+  },
+  {
+    "text": "Hôm nay chạy nhảy năng động lắm",
+    "label": "activities"
+  },
+  {
+    "text": "Ra sân chơi cầu trượt năng động cực, chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": " Kêu đau họng",
+    "label": "health"
+  },
+  {
+    "text": " Không ốm đau gì, hào hứng",
+    "label": "mood"
+  },
+  {
+    "text": "Ngứa, nổi mẩn quanh người",
+    "label": "health"
+  },
+  {
+    "text": "Đau bụng, nôn ói",
+    "label": "health"
+  },
+  {
+    "text": " Học âm nhạc tập trung chơi với cô",
+    "label": "activities"
+  },
+  {
+    "text": " Xếp hình năng động chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Sốt cao, ốm mệt",
+    "label": "health"
+  },
+  {
+    "text": "Ăn ngoan, cô nhắc thì mới ăn gần hết cơm thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Lâu lâu nghịch ngợm",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng nay bị ấm đầu, đau họng",
+    "label": "health"
+  },
+  {
+    "text": "Trộm vía tự xúc ăn hết bát thịt",
+    "label": "meals"
+  },
+  {
+    "text": "Con nhà mình tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hôm nay nôn ói, tiêu chảy",
+    "label": "health"
+  },
+  {
+    "text": "Sáng nay ấm đầu, hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Trộm vía tự xúc ăn hết bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Bé hào hứng ăn, tự xúc ăn gần hết phần cá với sữa chua",
+    "label": "meals"
+  },
+  {
+    "text": " Nặn đất tích cực chơi cùng bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết phần thịt với sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ăn ngoan, phải cho ăn mới ăn hết bánh với rau",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nghẹn lúc ăn, nhai lâu nuốt chậm ăn ít cơm với cá",
+    "label": "meals"
+  },
+  {
+    "text": " Ngậm cơm mãi, ăn một nửa bát bánh với trứng",
+    "label": "meals"
+  },
+  {
+    "text": " Cô dỗ mãi mới ăn ít bánh với cá",
+    "label": "meals"
+  },
+  {
+    "text": " Nhai lâu nuốt chậm, ăn ít sữa với bánh",
+    "label": "meals"
+  },
+  {
+    "text": " Không ngoan, ăn ít cơm với thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Ngậm cơm, cô dỗ mới ăn một nửa bánh với rau",
+    "label": "meals"
+  },
+  {
+    "text": " Chán ăn, ăn ít thịt với bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết trứng với sữa",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết canh với sữa",
+    "label": "meals"
+  },
+  {
+    "text": " Chán ăn, cô dỗ mới ăn ít bánh với rau",
+    "label": "meals"
+  },
+  {
+    "text": " Ngậm cơm, ăn một nửa bát thịt với rau",
+    "label": "meals"
+  },
+  {
+    "text": " Không ngoan, nhè đồ ăn sữa với rau",
+    "label": "meals"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết phần thịt với bánh",
+    "label": "meals"
+  },
+  {
+    "text": " Ăn ít bánh với thịt, cô phải dỗ",
+    "label": "meals"
+  },
+  {
+    "text": " Cô dỗ mãi mới ăn ít sữa với thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Nchai lâu nuốt chậm, ăn ít sữa với cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Chán ăn, ăn ít thịt với sữa",
+    "label": "meals"
+  },
+  {
+    "text": " Không ngoan, nhè đồ ăn bánh với rau",
+    "label": "meals"
+  },
+  {
+    "text": "Tự xúc ăn hết bát cơm với sữa",
+    "label": "meals"
+  },
+  {
+    "text": " Nchai lâu nuốt chậm, bỏ mứa bánh với thịt",
+    "label": "meals"
+  },
+  {
+    "text": " Chán ăn, bỏ mứa sữa với bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết phần cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Hào hứng ăn, ăn hết bánh",
+    "label": "meals"
+  },
+  {
+    "text": " Cô dỗ mãi mới ăn ít bánh",
+    "label": "meals"
+  },
+  {
+    "text": " Không ngoan, bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngoan, tự xúc ăn hết cơm",
+    "label": "meals"
+  },
+  {
+    "text": " Ngậm cơm, bỏ mứa cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Con tự xúc ăn gần hết phần bánh",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nhai từng miếng rồi nhổ ra ngoài",
+    "label": "meals"
+  },
+  {
+    "text": "Con đang chơi nên quên ăn, cô phải gọi mãi",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ bỏ chạy khỏi bàn khi thấy bát đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nôn ra hết sau khi ăn xong",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ chỉ nhấm nháp vài miếng rồi kêu no",
+    "label": "meals"
+  },
+  {
+    "text": "Con từ chối ăn bất kỳ thứ gì cô đưa",
+    "label": "meals"
+  },
+  {
+    "text": "Bé gặm bánh quy rồi bỏ dở giữa chừng",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ nhai kẹo cao su suốt bữa ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Con xin uống nước nhiều lần để trì hoãn ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Bé đổ hết đồ ăn ra đất",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ đòi ăn một món khác, không chịu ăn món cô nấu",
+    "label": "meals"
+  },
+  {
+    "text": "Con lấy tay bốc thức ăn ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nói đồ ăn bị mặn quá nên không ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ giả vờ ăn rồi giấu đồ ăn trong túi",
+    "label": "meals"
+  },
+  {
+    "text": "Con chỉ uống sữa, không ăn gì thêm",
+    "label": "meals"
+  },
+  {
+    "text": "Bé ngậm cơm trong miệng lâu không nuốt",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ đòi ra ngoài chơi trước khi ăn xong",
+    "label": "meals"
+  },
+  {
+    "text": "Con ăn vặt liên tục nên đến bữa không còn đói",
+    "label": "meals"
+  },
+  {
+    "text": "Bé kéo khăn trải bàn làm đổ hết đồ ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ nói đau bụng nên không muốn ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Con ném thức ăn xuống sàn nhà",
+    "label": "meals"
+  },
+  {
+    "text": "Bé hôn mê nên phải cho ăn bằng ống",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ đòi mẹ cho ăn mới chịu ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Con ăn rau xanh vào miệng rồi lại nhổ ra",
+    "label": "meals"
+  },
+  {
+    "text": "Bé gãi đầu rồi quay đi không ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ ăn một miếng rồi đòi chơi điện thoại",
+    "label": "meals"
+  },
+  {
+    "text": "Con mếu máo vì không thích vị thức ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nằm sấp trên ghế không chịu ngồi vào bàn ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ lấy thìa múc cơm rồi để nguyên không ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Con ngáp liên tục khi đang ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Bé đòi ra ngoài sân chơi trước khi ăn trưa",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ lật đổ ly nước vào bát cơm",
+    "label": "meals"
+  },
+  {
+    "text": "Con nói không đói bụng rồi bỏ đi chơi",
+    "label": "meals"
+  },
+  {
+    "text": "Bé cầm đũa gõ bát suốt bữa ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ đòi xem hoạt hình mới chịu ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Con nhảy lên xuống ghế không ngồi yên ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Bé quay mặt đi khi cô đưa thìa đến miệng",
+    "label": "meals"
+  },
+  {
+    "text": "Trẻ gật đầu ngủ gật khi đang ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Con đòi đổi chỗ ngồi vì không thích vị trí",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nhai tóc trong lúc ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Bé gào lên đòi mẹ suốt đêm không chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con co ro một góc giường vì sợ bóng tối",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ lật đi lật lại hàng chục lần mới thiếp đi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngáy to khiến cả phòng không ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé nói mê suốt đêm không ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ bám chặt gấu bông mới chịu nhắm mắt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đòi bật đèn ngủ mới chịu nằm xuống",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé thức dậy lúc 3 giờ sáng không ngủ lại được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đẩy chăn ra khỏi giường vì nóng",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con cuộn mình lại như con nhím khi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lết xuống giường ngủ dưới sàn nhà",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ mút tay suốt giấc ngủ trưa",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ôm gối rồi lăn qua lăn lại không ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ chéo đầu trên gối không đúng tư thế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đi lại quanh giường trước khi nằm xuống",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đặt chân lên gối ngủ như chó con",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé gãi chân liên tục khi đang ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ nằm một chỗ rồi ngủ thiếp đi rất nhanh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đặt gấu bông ngồi ghế rồi tự đi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ gật đầu suốt buổi học",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đứt quãng giấc ngủ, thức dậy nhiều lần",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ xong vẫn còn dấu gối trên má",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngáy rồi tự thức dậy vì tiếng ngáy",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đặt mền lên mặt rồi ngủ thiếp đi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đi vệ sinh rồi không ngủ lại được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ôm chăn kín mặt khi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đặt gối úp lên đầu rồi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ một mạch suốt 4 tiếng đồng hồ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi mẹ nằm cạnh mới chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé chạy vòng quanh lớp suốt giờ ra chơi",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ ngồi im một góc không chơi với ai",
+    "label": "activities"
+  },
+  {
+    "text": "Con xếp que tính thành hàng dài trên bàn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé nói chuyện linh tinh một mình trong góc",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ lật giở các trang sách không đọc",
+    "label": "activities"
+  },
+  {
+    "text": "Con nhảy dây một mình ngoài sân",
+    "label": "activities"
+  },
+  {
+    "text": "Bé lắc chai nhựa suốt buổi không làm gì",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đào bới đất trong chậu hoa",
+    "label": "activities"
+  },
+  {
+    "text": "Con kéo ghế ra cửa ngồi nhìn ra ngoài",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp giày thành hàng ngay ngắn",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi cát bằng đôi tay không dụng cụ",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bước lùi ra sau không nhìn đường",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nấu ăn bằng đồ chơi trong bếp",
+    "label": "activities"
+  },
+  {
+    "text": "Con lắc đầu qua lại khi nghe nhạc",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xé giấy thành từng mảnh nhỏ",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nhặt lá cây bỏ vào túi",
+    "label": "activities"
+  },
+  {
+    "text": "Con lăn bóng trên sân một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Bé thổi bong bóng xà phòng",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đi nhón chân không tạo tiếng động",
+    "label": "activities"
+  },
+  {
+    "text": "Con xếp khối gỗ thành tháp cao",
+    "label": "activities"
+  },
+  {
+    "text": "Bé đứng một chỗ quay tơ thừng",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đuổi theo con chó trong sân",
+    "label": "activities"
+  },
+  {
+    "text": "Con nhảy lò cò quanh sân trường",
+    "label": "activities"
+  },
+  {
+    "text": "Bé đeo kính giả rồi đi lại trong lớp",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đắp mền lên đầu rồi trèo ra ngoài",
+    "label": "activities"
+  },
+  {
+    "text": "Con đếm ngón tay để giết thời gian",
+    "label": "activities"
+  },
+  {
+    "text": "Bé búng tay theo nhịp bài hát",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ lật hòn đá tìm kiếm côn trùng",
+    "label": "activities"
+  },
+  {
+    "text": "Con nhặt đá nhỏ bỏ vào lọ",
+    "label": "activities"
+  },
+  {
+    "text": "Bé vẽ tranh bằng ngón tay trên cát",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ bước đi cà nhắc như robot",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi khe khẽ không làm ồn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé kéo rèm cửa lên xuống liên tục",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đứng trước gương nói chuyện với bóng mình",
+    "label": "activities"
+  },
+  {
+    "text": "Bé ho liên tục không dứt",
+    "label": "health"
+  },
+  {
+    "text": "Con bị sổ mũi suốt cả ngày",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ đau bụng quằn quại kêu la",
+    "label": "health"
+  },
+  {
+    "text": "Bé phát ban đỏ khắp tay",
+    "label": "health"
+  },
+  {
+    "text": "Con bị tiêu chảy liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ sốt cao trên 39 độ",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm amidan sưng đỏ",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ đau tai khiến khóc thét",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị chàm khô da ở khuỷu tay",
+    "label": "health"
+  },
+  {
+    "text": "Con mắt đổ ghèn vàng",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị kiến bao tử nên nôn trớ",
+    "label": "health"
+  },
+  {
+    "text": "Bé sưng nướu không ăn được",
+    "label": "health"
+  },
+  {
+    "text": "Con bị dị ứng thức ăn nổi mẩn",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ đau đầu ôm trán kêu oi",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị rôm sảy ở cổ và nách",
+    "label": "health"
+  },
+  {
+    "text": "Con ho gà khan liên hồi",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị táo bón nhiều ngày không đi",
+    "label": "health"
+  },
+  {
+    "text": "Bé mắt lé phải đeo kính",
+    "label": "health"
+  },
+  {
+    "text": "Con bị nấm da ở chân",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ đau lưng không ngồi yên",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm da cơ địa ngứa liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Con sốt nhẹ 37 độ rưỡi",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị ngộ độc thức ăn nôn mửa",
+    "label": "health"
+  },
+  {
+    "text": "Bé bong tróc da đầu có nhiều gàu",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ đau răng khóc không ngừng",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị trĩ ra máu khi đi vệ sinh",
+    "label": "health"
+  },
+  {
+    "text": "Con bị sốt virus kéo dài 5 ngày",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ suy dinh dưỡng gầy yếu",
+    "label": "health"
+  },
+  {
+    "text": "Bé cáu kỉnh vì không được xem iPad",
+    "label": "mood"
+  },
+  {
+    "text": "Con hờn dỗi quay mặt đi không nói chuyện",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ khóc òa khi bị mắng",
+    "label": "mood"
+  },
+  {
+    "text": "Bé cười toe toét khi được tặng kẹo",
+    "label": "mood"
+  },
+  {
+    "text": "Con ghen tỵ khi thấy bạn được cô khen",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ sợ hãi khi nghe tiếng sấm",
+    "label": "mood"
+  },
+  {
+    "text": "Bé xấu hổ cúi mặt xuống đất",
+    "label": "mood"
+  },
+  {
+    "text": "Con hào hứng khi được đi chơi công viên",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ buồn bã vì không ai chơi cùng",
+    "label": "mood"
+  },
+  {
+    "text": "Bé giận dỗi đập đồ chơi xuống đất",
+    "label": "mood"
+  },
+  {
+    "text": "Con ngạc nhiên khi thấy bố mẹ đến đón",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tự hào khoe bài tập được cô giáo 10 điểm",
+    "label": "mood"
+  },
+  {
+    "text": "Bé mệt mỏi ngồi bệt xuống đất",
+    "label": "mood"
+  },
+  {
+    "text": "Con hoang mang không biết ngồi chỗ nào",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bực bội vì bị bạn chen chân",
+    "label": "mood"
+  },
+  {
+    "text": "Bé vui vẻ nhảy cầu lên xuống",
+    "label": "mood"
+  },
+  {
+    "text": "Con sợ sệt nép sau lưng mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ thoải mái nằm ngửa ra cỏ",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tức giận đấm vào gối",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ thất vọng khi đồ chơi bị hỏng",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hạnh phúc ngồi trong lòng mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Con lo lắng không biết bài kiểm tra được bao nhiêu",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ phấn khích khi thấy diễn viên xiếc",
+    "label": "mood"
+  },
+  {
+    "text": "Bé chán nản gãi đầu ngáp liên tục",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ xúc động rơi nước mắt khi xem phim",
+    "label": "mood"
+  },
+  {
+    "text": "Bé thoải mái cười đùa với bạn bè",
+    "label": "mood"
+  },
+  {
+    "text": "Con nhút nhát không dám lên trình diễn",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bình tĩnh ngồi chờ đến lượt",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hưng phấn khi thấy quà sinh nhật",
+    "label": "mood"
+  },
+  {
+    "text": "Con ghen tị ngồi xa nhìn bạn chơi với người khác",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tự ti cúi đầu khi bị bạn cười",
+    "label": "mood"
+  },
+  {
+    "text": "Bé mếu máo đòi mẹ ở nhà",
+    "label": "mood"
+  },
+  {
+    "text": "Con vui vẻ vẫy tay chào cô khi đến lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ giận tím mặt vì bị tịch thu đồ chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Bé thất vọng ngồi khóc một mình",
+    "label": "mood"
+  },
+  {
+    "text": "Con hào hứng kể lại chuyện về nhà cho mẹ nghe",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bối rối không biết trả lời sao khi cô hỏi",
+    "label": "mood"
+  },
+  {
+    "text": "Bé kiêu hãnh đội vòng nguyệt quế lên đầu",
+    "label": "mood"
+  },
+  {
+    "text": "Con buồn ngủ gật gà trong lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ sợ hãi bám chặt váy cô không buông",
+    "label": "mood"
+  },
+  {
+    "text": "Bé nhẹ nhõm thở phào khi được tha",
+    "label": "mood"
+  },
+  {
+    "text": "Con phấn khích nhảy lên khi nghe tin được đi trượt tuyết",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ ngạc nhiên há hốc mồm khi thấy món quà",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tức giận đỏ mặt khi bạn giành đồ chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Con hạnh phúc ngồi trong lòng bố nghe kể chuyện",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ lo lắng ôm gấu bông không buông",
+    "label": "mood"
+  },
+  {
+    "text": "Bé ngại ngùng núp sau lưng mẹ khi gặp người lạ",
+    "label": "mood"
+  },
+  {
+    "text": "Con vui mừng ôm chầm lấy cô giáo",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ chán nản gục đầu xuống bàn",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hờn dỗi nằm sấp không thèm ngẩng đầu",
+    "label": "mood"
+  },
+  {
+    "text": "Con hăm hở chạy đến trường mỗi sáng",
+    "label": "mood"
+  },
+  {
+    "text": "Bé mệt mỏi nằm lăn ra sàn nhà",
+    "label": "mood"
+  },
+  {
+    "text": "Con sung sướng nhắm mắt tận hưởng kem",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hối hận ngồi khóc vì đã nói dối cô",
+    "label": "mood"
+  },
+  {
+    "text": "Bé thoải mái cởi giày nằm ngửa trên cỏ",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hồi hộp nắm chặt tay mẹ trước cửa lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Con vui vẻ nhảy múa khi mưa đầu mùa",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bất mãn quay lưng đi không thèm nhìn",
+    "label": "mood"
+  },
+  {
+    "text": "Con tuyệt vọng ngồi ôm đầu khóc",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hào hứng xếp hàng đợi được vào cửa hàng bánh",
+    "label": "mood"
+  },
+  {
+    "text": "Bé giận dỗi lôi gấu bông ra đánh",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ vui vẻ nô đùa với các bạn trong sân",
+    "label": "mood"
+  },
+  {
+    "text": "Bé sợ hãi nhắm mắt khi thấy bóng ma trên tivi",
+    "label": "mood"
+  },
+  {
+    "text": "Con thất vọng ngồi thừ ra một góc",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hạnh phúc nắm tay mẹ đi dạo phố",
+    "label": "mood"
+  },
+  {
+    "text": "Bé cáu kỉnh đấm vào tường nhà",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ ghen tỵ đứng nhìn bạn nhận quà",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tự hào khoe bức tranh cho bố mẹ xem",
+    "label": "mood"
+  },
+  {
+    "text": "Con sợ sệt rúc vào góc giường đêm Noel",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ phấn khích nhảy cầu khi được xem phim mới",
+    "label": "mood"
+  },
+  {
+    "text": "Bé chán nản lật giở quyển truyện không đọc",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bực tức cắn móng tay suốt buổi",
+    "label": "mood"
+  },
+  {
+    "text": "Bé nhẹ nhàng vuốt ve con mèo",
+    "label": "mood"
+  },
+  {
+    "text": "Con mệt mỏi nằm sồm sộp trên sofa",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tức giận ném gối xuống đất",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hạnh phúc ngồi xem mưa qua cửa sổ",
+    "label": "mood"
+  },
+  {
+    "text": "Con bối rối đứng ngơ ngác giữa sân trường",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hờn dỗi quay mặt đi khi không được mua kẹo",
+    "label": "mood"
+  },
+  {
+    "text": "Bé vui vẻ vỗ tay khen khi bạn biểu diễn",
+    "label": "mood"
+  },
+  {
+    "text": "Con lo lắng xếp cặp sách chuẩn bị đi học",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ ngạc nhiên há to miệng khi thấy diều bay",
+    "label": "mood"
+  },
+  {
+    "text": "Bé thất vọng ngồi thu lu một mình",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ lơ mơ nói những điều không liên quan",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đổ mồ hôi đẫm lưng khi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngáy nhẹ rồi tự dừng lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con nằm nghiêng sang trái rồi sang phải",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé mút ngón cái suốt giấc ngủ đêm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đặt chân lên gối ôm gấu bông ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con thức giấc giữa đêm khóc đòi bú",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ thiếp đi ngay khi đặt đầu xuống gối",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con kéo mền lên đầu tránh lạnh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lim dim nhưng vẫn còn tỉnh",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngồi dậy rồi lại gục xuống ngủ tiếp",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé thở đều đều nhẹ nhàng như tiếng gió",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi bật quạt mới chịu nằm xuống",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ ngon lành suốt từ 9 giờ đến sáng",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé gãi lung tung khiến tỉnh giấc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ cuộn tròn như con sâu bướm ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đặt gối ôm vào ngực rồi mới ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đi giày vào giường ngủ không chịu cởi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ dán mắt vào trần nhà không chợp mắt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lết xuống đầu giường ngủ chân gối",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ gật gà trên xe máy của bố",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đặt chăn phủ kín đầu như ninja ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi mẹ hát ru mới chịu nhắm mắt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ trưa tại bàn học không về lớp",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con kéo rèm cửa kín mít mới yên tâm ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ ngon lành mồ hôi đầu ướt đẫm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đặt gấu bông nằm đối diện rồi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lăn sang trái rồi lăn sang phải không ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đặt chân lên thành giường ngủ chéo người",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi mở cửa sổ cho mát mới chịu nằm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ dật dờ không ngon giấc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đặt gối úp lên đầu tránh ánh sáng",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ gà gật suốt buổi sinh hoạt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ném bóng vào tường rồi đỡ lại",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp hoa bằng giấy màu",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nhảy lò cò trên một chân",
+    "label": "activities"
+  },
+  {
+    "text": "Con đạp xe đạp vòng quanh sân",
+    "label": "activities"
+  },
+  {
+    "text": "Bé đọc sách ngồi xổm dưới gầm bàn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nấu cơm giả bằng đất nặn",
+    "label": "activities"
+  },
+  {
+    "text": "Con bơi lội trong bể bơi mini",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp domino thành hình chữ S",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đá bóng lăn vào gầm giường",
+    "label": "activities"
+  },
+  {
+    "text": "Con vẽ ngôi nhà bằng sáp màu",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi khe khẽ trong thư viện",
+    "label": "activities"
+  },
+  {
+    "text": "Con bắt châu chấu trong vườn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp khối gỗ thành cầu",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ thả diều trên cánh đồng",
+    "label": "activities"
+  },
+  {
+    "text": "Con đọc truyện tranh một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi tàu hỏa trên sàn nhà",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ xếp giấy thành máy bay",
+    "label": "activities"
+  },
+  {
+    "text": "Bé kẹp kẹp tóe nước khi tưới cây",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ xây lâu đài bằng cát",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi rubik lắp được 3 mặt",
+    "label": "activities"
+  },
+  {
+    "text": "Bé nặn con gà bằng đất nặn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nhảy bao bố trong bao tải",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi trốn tìm trong vườn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp đũa thành hình thập tự",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ vẽ mặt cười trên tờ giấy",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi búp bê với các bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé lắc lắc lon sữa nghe tiếng kêu",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đi bộ trên vỉa hè đếm bước",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi xếp hình tangram",
+    "label": "activities"
+  },
+  {
+    "text": "Bé đào hang tìm sâu trong đất",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ vẽ tranh bằng ngón tay dính sơn",
+    "label": "activities"
+  },
+  {
+    "text": "Con nhảy ballet uốn éo theo nhạc",
+    "label": "activities"
+  },
+  {
+    "text": "Bé lật sỏi tìm kiếm cào cào",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ chơi điện tử handheld một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đấm bốc đấm vào gối",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi puzzle 50 mảnh",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị kiến đốt sưng tấy ở chân",
+    "label": "health"
+  },
+  {
+    "text": "Con bị ho gà không ngừng được",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị đau răng sưng má",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị cảm lạnh hắt hơi liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị sốt xuất huyết nằm liệt giường",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị viêm phế quản thở khò khè",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị ong đốt sưng môi",
+    "label": "health"
+  },
+  {
+    "text": "Con bị Zona thần kinh đau rát",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị dị ứng thuốc nổi mề đay",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị nấm lang ben ở cổ",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm ruột già đau bụng dữ dội",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị chàm eczema ngứa khắp người",
+    "label": "health"
+  },
+  {
+    "text": "Con bị kiến bao tử đau vùng thượng vị",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị viêm kết mạc mắt đỏ ngứa",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị hoại tử đầu ngón tay",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm xoang đau trán nhức đầu",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị ghẻ lở ngứa về đêm",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị tiêu chảy phải bù nước liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị dị ứng sữa bò nổi mẩn đỏ",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị sốc nhiệt nôn ói sau khi chơi nắng",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm da tiếp xúc với cây độc",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị nhiễm trùng da cần uống kháng sinh",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm mũi dị ứng thời tiết",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị sốt cao co giật phải nhập viện",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm ruột thừa đau dữ dội",
+    "label": "health"
+  },
+  {
+    "text": "Con bị tổn thương da dạng hồng ban",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị nhiễm giun sán cần tẩy giun",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm phổi phải nằm viện",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm xương tủy đau âm ỉ",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm gan vàng da vàng mắt",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm đường tiết niệu đau khi đi tiểu",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị sốt retro virus cần xét nghiệm máu",
+    "label": "health"
+  },
+  {
+    "text": "Con vui vẻ chạy đến ôm mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hớn hở khoe tranh cho cô xem",
+    "label": "mood"
+  },
+  {
+    "text": "Bé mừng rỡ nhảy lên khi thấy bố",
+    "label": "mood"
+  },
+  {
+    "text": "Con phấn khích kể chuyện cho bạn nghe",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hân hoan chạy đến trường",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tươi cười vẫy tay chào cô",
+    "label": "mood"
+  },
+  {
+    "text": "Con reo lên khi được đi chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ vui vẻ nhảy múa theo nhạc",
+    "label": "mood"
+  },
+  {
+    "text": "Con mỉm cười khi được khen bài",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hào hứng xếp hình với bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Bé vui vẻ nô đùa với các bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Con hớn hở nhận quà từ cô",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ cười đùa khi chơi ngoài sân",
+    "label": "mood"
+  },
+  {
+    "text": "Bé mếu máo khóc đòi mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Con buồn bã ngồi một mình",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ khóc thút thít vì mất đồ chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Bé cúi đầu im lặng không nói",
+    "label": "mood"
+  },
+  {
+    "text": "Con buồn ngủ gục đầu xuống bàn",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ nhòe nước mắt nhìn cô",
+    "label": "mood"
+  },
+  {
+    "text": "Bé khóc òa khi bị bạn giành đồ chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Con thất vọng ngồi xem bạn chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ buồn bã không muốn ăn",
+    "label": "mood"
+  },
+  {
+    "text": "Bé sụt sịt khóc khi cô phê bình",
+    "label": "mood"
+  },
+  {
+    "text": "Con gục đầu xuống bàn không thèm nhìc ai",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ im lặng ngồi góc lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Con bám chặt lấy cô không buông",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ run rẩy khi nghe tiếng sấm",
+    "label": "mood"
+  },
+  {
+    "text": "Bé khóc ré lên khi thấy kim tiêm",
+    "label": "mood"
+  },
+  {
+    "text": "Con núp sau lưng mẹ khi gặp người lạ",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ đổ mồ hôi khi cô gọi lên bảng",
+    "label": "mood"
+  },
+  {
+    "text": "Bé sợ hãi nhắm mắt không dám nhìn phim",
+    "label": "mood"
+  },
+  {
+    "text": "Con bám chặt tay mẹ khi đi qua cầu",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ run rẩy đứng xa con chó",
+    "label": "mood"
+  },
+  {
+    "text": "Bé sợ cô giáo mới không dám vào lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Con đỏ mặt tía tai khi bị cô hỏi",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bước ngược lùi không chịu vào lớp mới",
+    "label": "mood"
+  },
+  {
+    "text": "Bé gào lên đỏ mặt tía tai",
+    "label": "mood"
+  },
+  {
+    "text": "Con hất đồ chơi ra khỏi bàn",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ đập chân xuống đất liên tục",
+    "label": "mood"
+  },
+  {
+    "text": "Bé mặt đỏ gay gắt nhìn bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Con quay lưng đi không thèm nói chuyện",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hờn dỗi nằm sấp không ngẩng đầu",
+    "label": "mood"
+  },
+  {
+    "text": "Bé ném gối xuống đất giận dỗi",
+    "label": "mood"
+  },
+  {
+    "text": "Con la hét đòi được mua đồ",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ cắn móng tay bực bội",
+    "label": "mood"
+  },
+  {
+    "text": "Bé gầm gừ nhìn bạn giành đồ chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Con đấm đá lung tung khi giận",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hét lên không nghe ai nói",
+    "label": "mood"
+  },
+  {
+    "text": "Bé đỏ mặt ngại ngùng không dám nói",
+    "label": "mood"
+  },
+  {
+    "text": "Con cúi đầu xấu hổ khi bị cười",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ núp sau lưng mẹ khi có khách",
+    "label": "mood"
+  },
+  {
+    "text": "Bé ngại ngùng không dám xin phép đi WC",
+    "label": "mood"
+  },
+  {
+    "text": "Con đỏ mặt khi cô gọi đọc bài",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ lắp ba lắp bắp không nói nên lời",
+    "label": "mood"
+  },
+  {
+    "text": "Bé ngại ngùng đứng xa không dám gần cô",
+    "label": "mood"
+  },
+  {
+    "text": "Con e ngại không dám trả lời câu hỏi",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ đỏ mặt tía tai khi bị khen trước lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Bé ngại không dám ôm cô giáo",
+    "label": "mood"
+  },
+  {
+    "text": "Con xấu hổ cúi đầu không nhìc ai",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ ngại ngùng không dám xin thêm cơm",
+    "label": "mood"
+  },
+  {
+    "text": "Bé lo lắng không biết bố có đến đón không",
+    "label": "mood"
+  },
+  {
+    "text": "Con hồi hộp đợi cô kiểm tra bài",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bồn chồn ngồi đợi mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Bé lo âu không biết có được điểm cao không",
+    "label": "mood"
+  },
+  {
+    "text": "Con đứng ngồi không yên chờ kết quả",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ mất ngủ vì sợ ngày mai kiểm tra",
+    "label": "mood"
+  },
+  {
+    "text": "Bé lo lắng nhìn đồng hồ chờ giờ tan học",
+    "label": "mood"
+  },
+  {
+    "text": "Con bồn chồn không yên khi cô phạt",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hồi hộp đứng trước cửa lớp mới",
+    "label": "mood"
+  },
+  {
+    "text": "Bé lo âu nhìn bạn khóc không biết làm sao",
+    "label": "mood"
+  },
+  {
+    "text": "Con bất an không biết mẹ có đến không",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ căng thẳng ngồi đợi cô gọi tên",
+    "label": "mood"
+  },
+  {
+    "text": "Con vui vẻ đội vòng nguyệt quế",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tự hào khoe giày mới cho bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hãnh diện mang cặp sách mới",
+    "label": "mood"
+  },
+  {
+    "text": "Con kiêu ngạo nhìn bạn không chào",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ đắc chí vẫy vẫy bức tranh",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tự hào đội mũ thuyền trưởng",
+    "label": "mood"
+  },
+  {
+    "text": "Con hãnh diện khoe con cá mới bắt được",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ kiêu hãnh đội vương miện lên đầu",
+    "label": "mood"
+  },
+  {
+    "text": "Bé đắc chí nhảy cầu khi được giải nhất",
+    "label": "mood"
+  },
+  {
+    "text": "Con tự tin đọc bài trước lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hãnh diện mang bông hoa về tặng mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Bé há hốc miệng khi thấy bánh sinh nhật",
+    "label": "mood"
+  },
+  {
+    "text": "Con ngạc nhiên chỉ tay lên trời",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ trố mắt nhìn cầu vồng",
+    "label": "mood"
+  },
+  {
+    "text": "Bé kinh ngạc khi thấy diều bay",
+    "label": "mood"
+  },
+  {
+    "text": "Con ngạc nhiên khi bạn tặng quà",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tròn mắt nhìn pháo hoa",
+    "label": "mood"
+  },
+  {
+    "text": "Bé ngạc nhiên khi thấy cô thay đổi tóc",
+    "label": "mood"
+  },
+  {
+    "text": "Con trố mắt nhìn con bướm to",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ há hốc khi thấy xe tải lớn",
+    "label": "mood"
+  },
+  {
+    "text": "Bé kinh ngạc khi cô biến khăn thành thỏ",
+    "label": "mood"
+  },
+  {
+    "text": "Con ngạc nhiên thấy máy bay trực thăng",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tròn mắt nhìn nghệ sĩ xiếc",
+    "label": "mood"
+  },
+  {
+    "text": "Bé ngủ ngon giấc suốt buổi trưa",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con trằn trọc mãi mới chợp mắt được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngủ gà gật suốt giờ sinh hoạt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé nằm xem đồng hồ không chợp mắt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ say không hay gì khi cô dọn phòng",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ dật dờ hay giật mình tỉnh dậy",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đặt gấu bông nằm cạnh rồi mới yên tâm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ lật qua lật lại không tìm được tư thế",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ kéo chăn phủ kín đầu tránh nắng",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngáy nhẹ rồi tự dừng lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đái dầm quần không biết",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đổ mồ hôi đầu ướt đẫm khi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi uống nước suốt đêm không ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ ngon không cần cô ru",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con lim dim mắt nhưng vẫn chưa ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi bật đèn ngủ mới chịu nằm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ gà gật trong lớp học",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con nằm mơ thấy bị rượt nên la hét",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé gãi lung tung rồi tỉnh giấc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đặt gối ôm chặt ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngủ dán mắt vào trần không chợp",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé thở đều đều ngủ ngon lành",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con lắc đầu qua lại không ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngủ trưa tại bàn không về giường",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đi giày vào giường ngủ không cởi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi bật quạt cho mát mới chịu nằm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ ngon suốt 2 tiếng đồng hồ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ lơ mơ nói chuyện trong giấc ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đặt chân lên gối ngủ chéo người",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đứt quãng ngủ hay tỉnh giấc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé mở mắt nhìn quanh rồi nhắm lại ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngáp liên tục nhưng cố thức xem phim",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngồi dậy rồi lại gục xuống gối",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đẩy chăn ra vì cảm thấy nóng",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ ngon mỉm cười trong mơ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ gà gật trên xe của bố",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đặt mũ lên mặt rồi ngủ thiếp",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lăn sang trái rồi lăn sang phải",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ say đánh thức không dậy",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đòi uống sữa ấm trước khi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé mở mắt nhìn đồng hồ rồi nhắm lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đắp chăn phủ kín đầu ngủ trưa",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ cuộn tròn như hạt đỗ ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ gà gật suốt buổi học",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngủ ngon không quấy đêm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lật mình liên tục không ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ thiếp đi khi đang nghe cô kể",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đặt gấu bông nằm đầu giường mới ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ ngon không có giấc mơ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con cuộn mình thành hình trứng ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đặt gối ôm chặt vào ngực rồi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con lắc đầu qua lại không tìm tư thế ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé trằn trọc mãi mới chìm vào giấc ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đòi mở cửa sổ cho mát mới nằm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngủ ngon mồ hôi đầu ướt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé gục đầu xuống bàn ngủ thiếp đi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ nhắm mắt nhưng tai còn nghe",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé nằm sấp úp mặt vào gối ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ thiếp đi ngay khi đặt xuống",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ lắng nghe tiếng quạt quay rồi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đòi tắt đèn đỏ mới chịu nằm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con nhòe nước mắt nhìn cô",
+    "label": "mood"
+  },
+  {
+    "text": "Bé sợ bóng tối không dám đi WC",
+    "label": "mood"
+  },
+  {
+    "text": "Bé lắp ba lắp bắp không nói nên lời",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hồi hộp đợi cô kiểm tra bài",
+    "label": "mood"
+  },
+  {
+    "text": "Bé bồn chồn ngồi đợi mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ vui vẻ đội vòng nguyệt quế",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hãnh diện khoe giày mới cho bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Con tròn mắt nhìn pháo hoa",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hân hoan nhảy cầu khi bạn đến",
+    "label": "mood"
+  },
+  {
+    "text": "Bé thất vọng gục đầu xuống bàn",
+    "label": "mood"
+  },
+  {
+    "text": "Bé thoải mái nằm ngửa trên cỏ",
+    "label": "mood"
+  },
+  {
+    "text": "Con vui vẻ nô đùa với chú chó",
+    "label": "mood"
+  },
+  {
+    "text": "Bé giận dỗi nằm sấp không thèm ngẩng",
+    "label": "mood"
+  },
+  {
+    "text": "Con hân hoan ôm bà khi về thăm",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ xấu hổ đỏ mặt khi bị cô phê bình",
+    "label": "mood"
+  },
+  {
+    "text": "Bé bối rối gãi đầu không biết nói gì",
+    "label": "mood"
+  },
+  {
+    "text": "Con hồi hộp đứng trước cửa hàng bánh",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ buồn bã nhìn ra cửa sổ",
+    "label": "mood"
+  },
+  {
+    "text": "Bé vẽ tranh bằng ngón tay dính sơn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nhảy ballet uốn éo theo nhạc",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi puzzle 50 mảnh một mình",
+    "label": "activities"
+  },
+  {
+    "text": "Con xếp que tính thành hình nhà",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nhảy dây đếm được 100 lần",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bắt châu chấu trong đồng lúa",
+    "label": "activities"
+  },
+  {
+    "text": "Con thả diều trên cánh đồng lớn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ xếp khối gỗ thành tháp cao",
+    "label": "activities"
+  },
+  {
+    "text": "Bé đọc truyện tranh ngồi xổm",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ xếp giấy thành máy bay bay xa",
+    "label": "activities"
+  },
+  {
+    "text": "Bé đuổi bướm trong vườn hoa",
+    "label": "activities"
+  },
+  {
+    "text": "Con xây lâu đài bằng cát trên biển",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nặn con voi bằng đất nặn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé nhảy bao bố trong cuộc thi",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi búp bê với các bạn gái",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ ném bóng rổ vào lưới",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp hoa bằng giấy màu tặng mẹ",
+    "label": "activities"
+  },
+  {
+    "text": "Con nhảy lò cò trên một chân",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đạp xe đạp vòng quanh công viên",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bơi lội trong bể bơi trẻ em",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ chơi khe khẽ trong thư viện",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi đất nặn với cô",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đi bộ trên cát nóng đếm bước",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi rubik lắp được 6 mặt",
+    "label": "activities"
+  },
+  {
+    "text": "Con xếp domino thành hình con rồng",
+    "label": "activities"
+  },
+  {
+    "text": "Con thổi nến sinh nhật cho gấu",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đá bóng lăn vào vườn",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp lá cây thành hình con cuốn",
+    "label": "activities"
+  },
+  {
+    "text": "Con nấu cơm giả bằng đất nặn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ vẽ nguệch ngoạc trên giấy",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi ghế di động với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ đào đất trong vườn tìm sâu",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi xúc cát trắng trong hộp",
+    "label": "activities"
+  },
+  {
+    "text": "Con kéo co với các bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ ném đĩa bay trong sân",
+    "label": "activities"
+  },
+  {
+    "text": "Bé vẽ bập bênh trên giấy",
+    "label": "activities"
+  },
+  {
+    "text": "Con nhảy lò cò không ngừng",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ thả dến bay trong lớp",
+    "label": "activities"
+  },
+  {
+    "text": "Bé chơi đồ chơi bằng gỗ với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Con xếp hình con vật bằng nam châm",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ chơi nhảy bao bố trong sân",
+    "label": "activities"
+  },
+  {
+    "text": "Bé vẽ tranh bằng bút sáp",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi xếp khối với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ nhảy dây đếm đến 50",
+    "label": "activities"
+  },
+  {
+    "text": "Bé đuổi cào cào trên cỏ",
+    "label": "activities"
+  },
+  {
+    "text": "Con chơi bóng tròn với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ vẽ ngôi nhà có cửa sổ",
+    "label": "activities"
+  },
+  {
+    "text": "Bé xếp thuyền giấy trên nước",
+    "label": "activities"
+  },
+  {
+    "text": "Con đi bộ trên vạch kẻ",
+    "label": "activities"
+  },
+  {
+    "text": "Trẻ chơi núp la hèm trong lớp",
+    "label": "activities"
+  },
+  {
+    "text": "Bé bị cảm cúm sổ mũi nghẹt mũi",
+    "label": "health"
+  },
+  {
+    "text": "Con bị dị ứng nổi mẩn đỏ ngứa",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị sốt nhẹ 37 độ rưỡi",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị táo bón khó đi cầu",
+    "label": "health"
+  },
+  {
+    "text": "Con bị ho khan liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị ong đốt sưng tấy ở tay",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị dị ứng thuốc nổi mề đay",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị chàm ngứa ở khuỷu tay",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị sổ mũi đặc vàng",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm kết mạc mắt đỏ ngứa",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm amidan sưng đỏ khó nuốt",
+    "label": "health"
+  },
+  {
+    "text": "Con bị dị ứng sữa bò nổi mẩn đỏ",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị say nắng nôn ói",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị phát ban đỏ khắp người",
+    "label": "health"
+  },
+  {
+    "text": "Con bị nhiễm trùng da nhẹ",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị đau bụng ăn không tiêu",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm mũi dị ứng thời tiết",
+    "label": "health"
+  },
+  {
+    "text": "Con bị sốt cao phải uống thuốc hạ sốt",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị ho gà khan liên hồi",
+    "label": "health"
+  },
+  {
+    "text": "Con bị táo bón nhiều ngày không đi",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị viêm da cơ địa ngứa liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị sốt virus kéo dài vài ngày",
+    "label": "health"
+  },
+  {
+    "text": "Con bị ngộ độc thức ăn nôn mửa",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị bong tróc da đầu có nhiều gàu",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm mũi dị ứng hắt hơi liên tục",
+    "label": "health"
+  },
+  {
+    "text": "Con bị đau răng khóc không ngừng",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị ghẻ lở ngứa ở tay",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị tiêu chảy phải bù nước",
+    "label": "health"
+  },
+  {
+    "text": "Con bị ho có đờm ướt",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị viêm họng đau khi nuốt",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị sổ mũi nhiều ngày liền",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị kiến đốt sưng ở chân",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm tai nhẹ đau tai",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị chảy máu cam",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị nổi mụn nước ở tay",
+    "label": "health"
+  },
+  {
+    "text": "Con bị đau bụng đi cầu phân đen",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị sưng hạch ở cổ",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị phồng rộp ở chân",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị nhiễm khuẩn đường ruột",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm phế quản ho nhiều",
+    "label": "health"
+  },
+  {
+    "text": "Con bị dị ứng bụi bặm ngứa mắt",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị đau đầu chóng mặt",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị kiến bao tử nôn trớ",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị mắt đổ ghèn vàng",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm da tiếp xúc với cây",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị viêm ruột nôn ói",
+    "label": "health"
+  },
+  {
+    "text": "Con bị viêm xoang đau trán",
+    "label": "health"
+  },
+  {
+    "text": "Trẻ bị dị ứng phấn hoa hắt hơi",
+    "label": "health"
+  },
+  {
+    "text": "Bé bị viêm kết mạc mắt ghèn",
+    "label": "health"
+  },
+  {
+    "text": "Em tô màu con gà rất nhanh",
+    "label": "activities"
+  },
+  {
+    "text": "Em xé giấy dán thuyền trên sông",
+    "label": "activities"
+  },
+  {
+    "text": "Em gấp máy bay giấy bay xa nhất lớp",
+    "label": "activities"
+  },
+  {
+    "text": "Em nặn từng chấm son rất kiên nhẫn",
+    "label": "activities"
+  },
+  {
+    "text": "Em xếp ly nhựa thành tháp cao",
+    "label": "activities"
+  },
+  {
+    "text": "Em kể chuyện cò con cho bạn nghe",
+    "label": "activities"
+  },
+  {
+    "text": "Em trang trí bánh quy bằng kem",
+    "label": "activities"
+  },
+  {
+    "text": "Em tưới cây hoa hồng mỗi sáng",
+    "label": "activities"
+  },
+  {
+    "text": "Em đeo kính giả hóa bác sĩ chơi với bạn",
+    "label": "activities"
+  },
+  {
+    "text": "Em xếp bàn ghế ngay ngắn cho cô",
+    "label": "activities"
+  },
+  {
+    "text": "Em đọc sách một mình rất say mê",
+    "label": "activities"
+  },
+  {
+    "text": "Em lắp robot bằng hộp giấy",
+    "label": "activities"
+  },
+  {
+    "text": "Em nhảy lò cò một mình rất vui",
+    "label": "activities"
+  },
+  {
+    "text": "Em đắp đất thành con dao trong cát",
+    "label": "activities"
+  },
+  {
+    "text": "Em đánh trống nhỏ theo nhịp bài hát",
+    "label": "activities"
+  },
+  {
+    "text": "Em buộc tóc cho búp bê rất cẩn thận",
+    "label": "activities"
+  },
+  {
+    "text": "Em xếp đá hoa trang trí chậu cây",
+    "label": "activities"
+  },
+  {
+    "text": "Em vẽ ngôi nhà có cửa sổ hoa",
+    "label": "activities"
+  },
+  {
+    "text": "Em chơi nhảy bao bố với Lan",
+    "label": "activities"
+  },
+  {
+    "text": "Em lật sổ tay xem tranh rất ngoan",
+    "label": "activities"
+  },
+  {
+    "text": "Em lim dim mắt nghe cô kể chuyện",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em cuộn mình như hạt đỗ trong chăn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em đắp mền kín mặt như ninja",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em ngáy nhẹ rồi tự nín lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em gục đầu xuống bàn rồi thiếp đi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em nằm nghiêng sang phải ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em ôm gối ôm chặt vào ngực",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em đổ mồ hôi trán ướt đẫm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em lắng nghe tiếng quạt quay rồi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em mở mắt nhìn quanh rồi nhắm lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em kẹp gối giữa hai chân rồi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em lết xuống cuối nệm ngủ chân gối",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em trằn trọc tìm chỗ mát nằm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em thở đều đều ngủ say",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em đặt tay lên trán rồi thiếp đi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em hớn hở chạy đến ôm cô",
+    "label": "mood"
+  },
+  {
+    "text": "Em xấu hổ đỏ mặt khi bị cô hỏi",
+    "label": "mood"
+  },
+  {
+    "text": "Em hân hoan nhảy lên khi được điểm mười",
+    "label": "mood"
+  },
+  {
+    "text": "Em ngạc nhiên tròn mắt khi thấy quà",
+    "label": "mood"
+  },
+  {
+    "text": "Em tự hào khoe vòng tay cho bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Em thất vọng gục đầu xuống bàn",
+    "label": "mood"
+  },
+  {
+    "text": "Em giận dỗi quay lưng không thèm nói",
+    "label": "mood"
+  },
+  {
+    "text": "Em hồi hộp đứng trước cửa lớp mới",
+    "label": "mood"
+  },
+  {
+    "text": "Em bực bội cắn móng tay suốt buổi",
+    "label": "mood"
+  },
+  {
+    "text": "Em hân hoan vẫy tay chào bố",
+    "label": "mood"
+  },
+  {
+    "text": "Em chán nản ngồi một góc không chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Em reo lên khi thấy kem trong tủ lạnh",
+    "label": "mood"
+  },
+  {
+    "text": "Em buồn bã nhìn ra cửa sổ",
+    "label": "mood"
+  },
+  {
+    "text": "Em hắt hơi liên tục từ sáng",
+    "label": "health"
+  },
+  {
+    "text": "Em bị chảy máu cam vào giờ ra chơi",
+    "label": "health"
+  },
+  {
+    "text": "Em nổi mề đay ngứa khắp tay",
+    "label": "health"
+  },
+  {
+    "text": "Em đau tai phải đeo khẩu trang",
+    "label": "health"
+  },
+  {
+    "text": "Em bị sưng lợi đỏ ăn đau",
+    "label": "health"
+  },
+  {
+    "text": "Em bị ghẻ lở ngứa ở kẽ tay",
+    "label": "health"
+  },
+  {
+    "text": "Em đau răng sưng má bên phải",
+    "label": "health"
+  },
+  {
+    "text": "Em bị tiêu chảy phải thay quần nhiều lần",
+    "label": "health"
+  },
+  {
+    "text": "Em bị táo bón ba ngày chưa đi",
+    "label": "health"
+  },
+  {
+    "text": "Em đau đầu chóng mặt ngồi không vững",
+    "label": "health"
+  },
+  {
+    "text": "Em bị nhiệt miệng nổi mụn ở môi",
+    "label": "health"
+  },
+  {
+    "text": "Em bị sưng hạch ở cổ khi sờ thấy",
+    "label": "health"
+  },
+  {
+    "text": "Em nhè cơm từng chút một ăn rất lâu",
+    "label": "meals"
+  },
+  {
+    "text": "Em xin thêm một chén canh rau",
+    "label": "meals"
+  },
+  {
+    "text": "Em đòi mang về nhà ăn cùng mẹ",
+    "label": "meals"
+  },
+  {
+    "text": "Em nhai kỹ từng miếng thịt rất ngoan",
+    "label": "meals"
+  },
+  {
+    "text": "Em ngồi yên ăn cơm không quấy",
+    "label": "meals"
+  },
+  {
+    "text": "Em đổ sữa ra bàn làm ướt áo",
+    "label": "meals"
+  },
+  {
+    "text": "Em ăn bánh xong lau miệng bằng tay áo",
+    "label": "meals"
+  },
+  {
+    "text": "Em chống cằm ngồi ngắm bạn ăn",
+    "label": "meals"
+  },
+  {
+    "text": "Em uống sữa xong burp một tiếng",
+    "label": "meals"
+  },
+  {
+    "text": "Em chỉ nhấm nháp vài hạt cơm rồi bỏ",
+    "label": "meals"
+  },
+  {
+    "text": "Em xúc canh chan cơm rất ngon miệng",
+    "label": "meals"
+  },
+  {
+    "text": "Em đòi thêm một viên đường nữa",
+    "label": "meals"
+  },
+  {
+    "text": "Em nhai kẹo chocolate rất hậu",
+    "label": "meals"
+  },
+  {
+    "text": "Em ăn bưởi xong nhổ hạt ra đĩa",
+    "label": "meals"
+  },
+  {
+    "text": "Em gặm bánh quy nhâm nhi suốt giờ",
+    "label": "meals"
+  },
+  {
+    "text": "Bé nằm trên nệm lim dim mắt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con gối đầu lên tay rồi thiếp đi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ kêu khóc một chút rồi tự ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em mút tay út suốt giấc ngủ trưa",
+    "label": "sleeping"
+  },
+  {
+    "text": "Ngủ ngon giấc suốt buổi trưa",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đắp chăn len lên ngực ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con nằm sấp úp mặt xuống nệm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngồi gục đầu xuống bàn ngủ quên",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em mở mắt nhìn trần nhà rồi nhắm lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đặt gấu bông nằm bên cạnh rồi yên",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con thở đều đều mặt hồng hào",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ lật mình qua lật lại không ngủ được",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em gục đầu lên vai cô rồi ngủ thiếp",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đổ mồ hôi đầu ướt tóc dính trán",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con lim dim một hồi rồi tỉnh lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ nằm nghiêng co chân lên ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em đòi cô vỗ lưng một lúc mới chịu ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé ngủ say đến lúc cô gọi mới dậy",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con lắng nghe cô hát rồi nhắm mắt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ cuộn chân cuộn tay như con cuốn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em đặt tay lên mắt tránh nắng cửa sổ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Gục đầu vào vai bạn ngồi cạnh ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đắp mền lên mũi cho ấm",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngáy nhỏ một tiếng rồi nín",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ trằn trọc lật đổi tư thế mãi",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em đòi uống nước trước khi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé mếu máo đòi mẹ rồi khóc ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ôm gấu bông hình thỏ ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Nằm yên một chỗ không cựa quậy",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em gục đầu xuống gối ngủ quên",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé mở mắt nhìn quanh lớp rồi nhắm lại",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đắp chăn phủ kín người chỉ hở mặt",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ kẹp gối giữa hai chân ngủ ngon",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lết xuống đầu nệm nằm đỡ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con ngủ gà gật lúc cô kể chuyện",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ đặt tay lên trán che nắng rồi thiếp",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em nằm xếp chân lên nhau ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Lắng nghe tiếng quạt quay đều đều",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đổ mồ hôi trán ướt phải lau khăn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ cuộn mình thành cục tròn trong chăn",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em ngồi dậy rồi gục xuống ngủ tiếp",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé lim dim mắt nghe cô vỗ về",
+    "label": "sleeping"
+  },
+  {
+    "text": "Con đắp mền kín cổ cho ấm ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Trẻ ngáy nhẹ lúc ngủ sâu giấc",
+    "label": "sleeping"
+  },
+  {
+    "text": "Em thở đều đều mặt bình thường",
+    "label": "sleeping"
+  },
+  {
+    "text": "Lật mình liên tục không yên một chút",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé đặt gấu bông đối diện rồi ngủ",
+    "label": "sleeping"
+  },
+  {
+    "text": "Bé mếu máo đòi mẹ khi mới đến lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Con ôm chân mẹ không cho đi",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ khóc nho nhỏ ngồi một góc",
+    "label": "mood"
+  },
+  {
+    "text": "Em cười toe toét khi cô xoa đầu",
+    "label": "mood"
+  },
+  {
+    "text": "Cười toe toét khi được cô khen",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hớn hở chạy đến khoe giày mới",
+    "label": "mood"
+  },
+  {
+    "text": "Con buồn bã nhìn đồ chơi bị bạn lấy",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tự hào khoe tranh cho cô xem",
+    "label": "mood"
+  },
+  {
+    "text": "Bé sợ khi nghe tiếng chuông lớn",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ ngạc nhiên khi thấy bố đến sớm",
+    "label": "mood"
+  },
+  {
+    "text": "Em vui vẻ ôm bạn khi gặp lại",
+    "label": "mood"
+  },
+  {
+    "text": "Vui vẻ chạy đến ôm mẹ khi tan học",
+    "label": "mood"
+  },
+  {
+    "text": "Bé xấu hổ cúi đầu không dám nói",
+    "label": "mood"
+  },
+  {
+    "text": "Con hân hoan nhảy lên khi được khen",
+    "label": "mood"
+  },
+  {
+    "text": "Em bối rối gãi đầu không biết làm",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hồi hộp khi cô gọi tên",
+    "label": "mood"
+  },
+  {
+    "text": "Con reo lên khi thấy bánh sinh nhật",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ buồn bã ngồi một mình không chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Em hờn dỗi nằm sấp không ngẩng đầu",
+    "label": "mood"
+  },
+  {
+    "text": "Khóc thút thít vì mất đồ chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Con chán nản gục đầu xuống bàn",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hân hoan vẫy tay chào cô",
+    "label": "mood"
+  },
+  {
+    "text": "Em sợ khi bạn lớn lớn đến gần",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tươi cười khi cô cho điểm tốt",
+    "label": "mood"
+  },
+  {
+    "text": "Con mếu máo khóc đòi bố ở cổng",
+    "label": "mood"
+  },
+  {
+    "text": "Em vui vẻ nhảy múa theo nhạc",
+    "label": "mood"
+  },
+  {
+    "text": "Nhũn nhặt ngồi không muốn làm gì",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hớn hở chạy đến kể chuyện cho cô",
+    "label": "mood"
+  },
+  {
+    "text": "Con sợ bóng đèn nhấp nháy trong lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ hãnh diện khoe hoa tay cho bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Em thất vọng khi không hoàn thành bài",
+    "label": "mood"
+  },
+  {
+    "text": "Bé xấu hổ đỏ mặt khi bị cười",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ giận dỗi đập đồ chơi xuống đất",
+    "label": "mood"
+  },
+  {
+    "text": "Buồn bã nhìn ra cửa sổ chờ mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ vui vẻ nắm tay bạn đi chơi",
+    "label": "mood"
+  },
+  {
+    "text": "Em sợ hãi ôm gối ngồi góc lớp",
+    "label": "mood"
+  },
+  {
+    "text": "Bé kiêu hãnh khoe huy chương cho bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Con mếu máo khóc vì bị bạn đánh",
+    "label": "mood"
+  },
+  {
+    "text": "Em đắc chí vẫy vẫy bức tranh",
+    "label": "mood"
+  },
+  {
+    "text": "Chán nản ngồi xem bạn chơi đùa",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hớn hở khoe túi xách mới cho bạn",
+    "label": "mood"
+  },
+  {
+    "text": "Con run rẩy khi bị cô phê bình",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ tươi cười vẫy tay chào mẹ",
+    "label": "mood"
+  },
+  {
+    "text": "Em buồn rầu ngồi một mình ăn",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hân hoan ôm cô khi được thưởng",
+    "label": "mood"
+  },
+  {
+    "text": "Trẻ bối rối nhìn cô không hiểu bài",
+    "label": "mood"
+  },
+  {
+    "text": "Em sợ bị cô phạt ngồi một mình",
+    "label": "mood"
+  },
+  {
+    "text": "Vui vẻ khi được đi dã ngoại trong sân",
+    "label": "mood"
+  },
+  {
+    "text": "Bé mếu máo khóc vì bị bạn cướp đồ",
+    "label": "mood"
+  }
+]
