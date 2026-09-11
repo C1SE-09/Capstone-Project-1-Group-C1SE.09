@@ -4,7 +4,6 @@ import random
 from collections import Counter
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).parent
 
 TRAIN_FILE = BASE_DIR / "train.json"
@@ -178,9 +177,9 @@ print_distribution("Validation", validation)
 print_distribution("Test", test)
 
 
-train_texts = set(normalize_text(item["text"]) for item in train)
-validation_texts = set(normalize_text(item["text"]) for item in validation)
-test_texts = set(normalize_text(item["text"]) for item in test)
+train_texts = {normalize_text(item["text"]) for item in train}
+validation_texts = {normalize_text(item["text"]) for item in validation}
+test_texts = {normalize_text(item["text"]) for item in test}
 
 print("\nData leakage check")
 
