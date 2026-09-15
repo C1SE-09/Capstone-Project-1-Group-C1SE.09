@@ -270,8 +270,10 @@ class _RecordingScreenState extends State<RecordingScreen>
   // State widgets
   // ------------------------------------------------------------------
 
-  /// Idle: show file info and Upload button.
+  /// Idle: show file info, Confirm button, and Back button.
   Widget _buildIdleBody(ColorScheme cs, TextTheme tt) {
+    final fileName = widget.filePath.split(RegExp(r'[\\/]')).last;
+
     return Center(
       key: const ValueKey('idle'),
       child: Padding(
@@ -279,47 +281,79 @@ class _RecordingScreenState extends State<RecordingScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Microphone icon
+            // Audio file icon
             Container(
-              width: 120,
-              height: 120,
+              width: 110,
+              height: 110,
               decoration: BoxDecoration(
                 color: cs.primaryContainer,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.mic_rounded,
-                size: 64,
+                Icons.audio_file_rounded,
+                size: 58,
                 color: cs.onPrimaryContainer,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
             Text(
-              'Tệp âm thanh đã sẵn sàng',
+              'Xác nhận tệp âm thanh',
               style: tt.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              widget.filePath.split(RegExp(r'[\\/]')).last,
-              style: tt.bodyMedium?.copyWith(
-                color: cs.onSurface.withAlpha((0.6 * 255).round()),
+            const SizedBox(height: 12),
+            // Highlighted File Name box
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withAlpha((0.6 * 255).round()),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outlineVariant),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.insert_drive_file_outlined, color: cs.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      fileName.isNotEmpty ? fileName : 'tệp_âm_thanh',
+                      style: tt.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 48),
-            // Upload button
+            const SizedBox(height: 40),
+            // Confirm button (Tải lên MinIO & khởi chạy Celery task)
             SizedBox(
               width: double.infinity,
               height: 52,
               child: FilledButton.icon(
                 onPressed: _startUpload,
-                icon: const Icon(Icons.cloud_upload_outlined),
+                icon: const Icon(Icons.check_circle_outline_rounded),
                 label: const Text(
-                  'Tải lên & phiên âm',
+                  'Xác nhận & Tải lên',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Back button (Quay lại màn hình trước)
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text(
+                  'Trở lại',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                 ),
               ),
             ),
@@ -328,6 +362,7 @@ class _RecordingScreenState extends State<RecordingScreen>
       ),
     );
   }
+
 
   /// Uploading: progress bar + percentage, buttons disabled.
   Widget _buildUploadingBody(ColorScheme cs, TextTheme tt) {
@@ -421,7 +456,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             ),
             const SizedBox(height: 32),
             Text(
-              'AI đang phân tích & phiên âm bài giảng…',
+              'Hệ thống đang phiên âm…',
               style: tt.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: cs.onSurface,
