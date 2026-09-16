@@ -23,6 +23,7 @@ class _ClassDashboardState extends State<ClassDashboard> {
     super.dispose();
   }
 
+  @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
