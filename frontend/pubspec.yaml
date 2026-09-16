@@ -41,6 +41,7 @@ dependencies:
 
   # HTTP client with multipart & progress support
   dio: ^5.7.0
+  fl_chart: 0.69.0
 
 dev_dependencies:
   flutter_test:
