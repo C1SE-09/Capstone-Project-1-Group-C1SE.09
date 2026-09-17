@@ -18,7 +18,7 @@ from app.services.stt_service import get_stt_service
 
 def main():
     # Đường dẫn file âm thanh cần test
-    audio_path = str(backend_dir / "tests" / "audio_samples" / "test1.wav")
+    audio_path = str(backend_dir / "tests" / "audio_samples" / "test9.wav")
 
     svc = get_stt_service()
 

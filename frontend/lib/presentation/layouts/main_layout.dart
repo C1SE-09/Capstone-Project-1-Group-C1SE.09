@@ -53,6 +53,7 @@ class MainLayout extends StatelessWidget {
             icon: Icon(Icons.admin_panel_settings),
             label: 'Admin',
           ),
+          NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard')
         ],
       ),
     );
@@ -65,6 +66,7 @@ class MainLayout extends StatelessWidget {
     if (location.startsWith('/teacher')) return 2;
     if (location.startsWith('/parent')) return 3;
     if (location.startsWith('/admin')) return 4;
+    if (location.startsWith('/dashboard')) return 5;
     return 0;
   }
 
@@ -84,6 +86,8 @@ class MainLayout extends StatelessWidget {
         break;
       case 4:
         context.go('/admin');
+      case 5:
+        context.go('/dashboard');
         break;
     }
   }

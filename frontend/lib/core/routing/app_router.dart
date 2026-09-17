@@ -7,6 +7,7 @@ import 'package:adark_frontend/presentation/pages/profile_page.dart';
 import 'package:adark_frontend/presentation/pages/teacher_dashboard.dart';
 import 'package:adark_frontend/presentation/screens/extraction_results_screen.dart';
 import 'package:adark_frontend/presentation/screens/recording_screen.dart';
+import 'package:adark_frontend/presentation/pages/class_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -52,6 +53,10 @@ class AppRouter {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingPage(),
+          ),
+          GoRoute(
+            path: '/dashboard',
+            builder: (context, state) => const ClassDashboard(),
           ),
           GoRoute(
             path: '/recording',
