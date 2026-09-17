@@ -43,6 +43,9 @@ dependencies:
   dio: ^5.7.0
   fl_chart: 0.69.0
 
+  # File picker for selecting local audio files
+  file_picker: ^8.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
