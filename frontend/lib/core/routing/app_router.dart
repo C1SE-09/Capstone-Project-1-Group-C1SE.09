@@ -1,23 +1,21 @@
-import 'package:adark_frontend/presentation/layouts/main_layout.dart';
-import 'package:adark_frontend/presentation/pages/admin_dashboard.dart';
-import 'package:adark_frontend/presentation/pages/home_page.dart';
+// frontend/lib/core/routing/app_router.dart
+// =========================================================
+// GoRouter cấu hình toàn bộ điều hướng của app.
+//
+// (Sẽ thêm route /teacher và /parent ở bước cuối,
+//  sau khi xây xong 2 màn hình tương ứng.)
+
+import 'package:adark_frontend/presentation/pages/class_detail_screen.dart';
 import 'package:adark_frontend/presentation/pages/login_page.dart';
-import 'package:adark_frontend/presentation/pages/parent_dashboard.dart';
-import 'package:adark_frontend/presentation/pages/profile_page.dart';
-import 'package:adark_frontend/presentation/pages/teacher_dashboard.dart';
+import 'package:adark_frontend/presentation/pages/parent_screen.dart';
+import 'package:adark_frontend/presentation/pages/teacher_screen.dart';
 import 'package:adark_frontend/presentation/screens/extraction_results_screen.dart';
 import 'package:adark_frontend/presentation/screens/recording_screen.dart';
-import 'package:adark_frontend/presentation/pages/class_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../presentation/pages/setting_page.dart';
-
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
-);
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shell',
 );
 
 class AppRouter {
@@ -25,61 +23,44 @@ class AppRouter {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
     routes: [
+      // ── Auth ────────────────────────────────────────────────
       GoRoute(path: '/', redirect: (context, state) => '/login'),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) {
-          return MainLayout(child: child);
+
+      // ── Teacher & Parent (FIGMA UI) ─────────────────────────
+      GoRoute(path: '/teacher', builder: (context, state) => const TeacherScreen()),
+      GoRoute(path: '/parent', builder: (context, state) => const ParentScreen()),
+
+      // Chi tiết lớp (MÀN 2) — nhận classId qua `extra`
+      GoRoute(
+        path: '/class-detail',
+        builder: (context, state) {
+          final classId = state.extra as String? ?? 'class-001';
+          return ClassDetailScreen(classId: classId);
         },
-        routes: [
-          GoRoute(path: '/home', builder: (context, state) => const HomePage()),
-          GoRoute(
-            path: '/profile',
-            builder: (context, state) => const ProfilePage(),
-          ),
-          GoRoute(
-            path: '/teacher',
-            builder: (context, state) => const TeacherDashboard(),
-          ),
-          GoRoute(
-            path: '/parent',
-            builder: (context, state) => const ParentDashboard(),
-          ),
-          GoRoute(
-            path: '/admin',
-            builder: (context, state) => const AdminDashboard(),
-          ),
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => const SettingPage(),
-          ),
-          GoRoute(
-            path: '/dashboard',
-            builder: (context, state) => const ClassDashboard(),
-          ),
-          GoRoute(
-            path: '/recording',
-            builder: (context, state) {
-              final params = state.uri.queryParameters;
-              return RecordingScreen(
-                filePath: params['filePath'] ?? '',
-                classId: params['classId'] ?? '',
-                teacherId: params['teacherId'] ?? '',
-              );
-            },
-          ),
-          GoRoute(
-            path: '/extraction-results',
-            builder: (context, state) {
-              final params = state.uri.queryParameters;
-              return ExtractionResultsScreen(
-                voiceId: params['voiceId'] ?? '',
-                teacherId: params['teacherId'] ?? '',
-              );
-            },
-          ),
-        ],
+      ),
+
+      // ── Backend-related screens (giữ nguyên) ────────────────
+      GoRoute(
+        path: '/recording',
+        builder: (context, state) {
+          final params = state.uri.queryParameters;
+          return RecordingScreen(
+            filePath: params['filePath'] ?? '',
+            classId: params['classId'] ?? '',
+            teacherId: params['teacherId'] ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: '/extraction-results',
+        builder: (context, state) {
+          final params = state.uri.queryParameters;
+          return ExtractionResultsScreen(
+            voiceId: params['voiceId'] ?? '',
+            teacherId: params['teacherId'] ?? '',
+          );
+        },
       ),
     ],
   );
