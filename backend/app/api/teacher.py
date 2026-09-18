@@ -35,9 +35,9 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
-from app.core.storage import upload_audio_to_minio
-from app.models.report import (
+from backend.app.core.database import get_db
+from backend.app.core.storage import upload_audio_to_minio
+from backend.app.models.report import (
     ActivityCategory,
     ActivityEntry,
     DailyReport,
@@ -45,14 +45,14 @@ from app.models.report import (
     VoiceRecord,
     VoiceRecordStatus,
 )
-from app.schemas.report import (
+from backend.app.schemas.report import (
     DraftReportCreateRequest,
     TranscriptUpdateRequest,
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
 )
-from app.services.extraction_service import extract_from_transcript
-from app.tasks.process_audio import process_audio_task
+from backend.app.services.extraction_service import extract_from_transcript
+from backend.app.tasks.process_audio import process_audio_task
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import io
 
 from minio import Minio
 
-from app.config import settings
+from backend.app.config import settings
 
 # ---------------------------------------------------------------------------
 # MinIO client (singleton)

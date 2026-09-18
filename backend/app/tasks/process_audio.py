@@ -13,10 +13,10 @@ from urllib.request import urlopen
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.database import SessionLocal
-from app.models.report import VoiceRecord, VoiceRecordStatus
-from app.services.stt_service import stt_service
-from app.tasks.celery_app import celery_app
+from backend.app.core.database import SessionLocal
+from backend.app.models.report import VoiceRecord, VoiceRecordStatus
+from backend.app.services.stt_service import stt_service
+from backend.app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 

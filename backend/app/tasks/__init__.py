@@ -21,8 +21,8 @@ Khởi động worker (concurrency=1 cho PhoWhisper-large để tránh GPU OOM):
         --loglevel=info --concurrency 1 -Q audio
 """
 
-from app.tasks.celery_app import celery_app
-from app.tasks.process_audio import process_audio_task
+from backend.app.tasks.celery_app import celery_app
+from backend.app.tasks.process_audio import process_audio_task
 
 __all__ = [
     "celery_app",

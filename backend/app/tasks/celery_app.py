@@ -4,7 +4,7 @@ import re
 
 from celery import Celery
 
-from app.config import settings
+from backend.app.config import settings
 
 
 def _derive_result_backend(broker_url: str) -> str:

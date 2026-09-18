@@ -14,14 +14,14 @@ Import order matters: Base must be imported before any model so that
 SQLAlchemy's mapper registry is populated correctly.
 """
 
-from app.models.base import Base, TimestampMixin
-from app.models.child import (
+from backend.app.models.base import Base, TimestampMixin
+from backend.app.models.child import (
     Child,
     ChildStatus,
     Parent,
     ParentStatus,
 )
-from app.models.report import (
+from backend.app.models.report import (
     ActivityCategory,
     ActivityEntry,
     DailyReport,
@@ -29,7 +29,7 @@ from app.models.report import (
     VoiceRecord,
     VoiceRecordStatus,
 )
-from app.models.user import (
+from backend.app.models.user import (
     Class_,
     School,
     SchoolStatus,

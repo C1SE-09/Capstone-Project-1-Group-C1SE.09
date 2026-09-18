@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from app.services.stt_service import stt_service
+from backend.app.services.stt_service import stt_service
 from fastapi import APIRouter, HTTPException, UploadFile
 
 # Khởi tạo router cho nhóm endpoint STT (Speech-to-Text)
