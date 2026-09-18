@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import uuid
 
-from backend.app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field
+
+from backend.app.models.report import VoiceRecordStatus
 
 # ===========================================================================
 # VoiceRecord Schemas
