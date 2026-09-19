@@ -1,4 +1,5 @@
 import 'package:adark_frontend/core/routing/app_router.dart';
+import 'package:adark_frontend/core/theme/app_theme.dart';
 import 'package:adark_frontend/data/notifiers.dart';
 import 'package:flutter/material.dart';
 
@@ -17,13 +18,10 @@ class MyApp extends StatelessWidget {
         return MaterialApp.router(
           routerConfig: AppRouter.router,
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.teal,
-              brightness: darkMode ? Brightness.dark : Brightness.light,
-            ),
-          ),
+          // Dùng theme tập trung (màu Figma) thay vì khai báo trực tiếp
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
         );
       },
     );

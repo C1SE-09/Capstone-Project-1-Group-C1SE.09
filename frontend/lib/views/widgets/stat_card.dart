@@ -23,13 +23,14 @@ class StatCard extends StatelessWidget {
     return Card(
         elevation: 2,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 26),
+              Icon(icon, color: color, size: 20),
               const SizedBox(
-                height: 12,
+                height: 6,
               ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -37,7 +38,7 @@ class StatCard extends StatelessWidget {
                 children: [
                   Text(
                     value,
-                    style: textTheme.headlineSmall
+                    style: textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   if (suffix != null) ...[
@@ -53,7 +54,7 @@ class StatCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(
-                height: 4,
+                height: 2,
               ),
               Text(label,
                   style: textTheme.bodyMedium
