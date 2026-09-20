@@ -1,6 +1,22 @@
+SET client_encoding = 'UTF8';
+
 -- Seed data cho KinderLog Test Environment
--- Lần lượt chạy 2 lệnh này để nạp db: docker compose exec api alembic upgrade head
--- & Get-Content -Encoding UTF8 backend/seed.sql | docker compose exec -T db psql -U kinderlog -d kinderlog
+-- HƯỚNG DẪN NẠP DATA KHÔNG BỊ LỖI FONT TIẾNG VIỆT:
+-- 
+-- 1. Chạy Alembic migrations trước:
+--    docker compose exec api alembic upgrade head
+--
+-- 2. Nạp dữ liệu seed vào PostgreSQL:
+--    Cách 1 (Khuyên dùng - Hoạt động chuẩn trên mọi OS / Windows PowerShell / CMD):
+--      docker compose cp backend/seed.sql db:/tmp/seed.sql
+--      docker compose exec db psql -U kinderlog -d kinderlog -f /tmp/seed.sql
+--
+--    Cách 2 (Dành cho Windows PowerShell nếu dùng pipeline `|`):
+--      $OutputEncoding = [System.Text.Encoding]::UTF8; Get-Content -Raw -Encoding UTF8 backend/seed.sql | docker compose exec -T db psql -U kinderlog -d kinderlog
+--
+--    Cách 3 (Dành cho Linux / macOS / Bash):
+--      docker compose exec -T db psql -U kinderlog -d kinderlog < backend/seed.sql
+
 -- 1. Thêm Trường học mẫu (School)
 INSERT INTO school (
     school_id, 
@@ -22,7 +38,14 @@ INSERT INTO school (
     'ACTIVE',
     NOW(),
     NOW()
-) ON CONFLICT (school_id) DO NOTHING;
+) ON CONFLICT (school_id) DO UPDATE SET
+    name = EXCLUDED.name,
+    code = EXCLUDED.code,
+    address = EXCLUDED.address,
+    phone = EXCLUDED.phone,
+    email = EXCLUDED.email,
+    status = EXCLUDED.status,
+    updated_at = NOW();
 
 -- 2. Thêm Lớp học mẫu (Class)
 -- Lớp 1: Lớp Mầm A
@@ -46,7 +69,14 @@ INSERT INTO class (
     true,
     NOW(),
     NOW()
-) ON CONFLICT (class_id) DO NOTHING;
+) ON CONFLICT (class_id) DO UPDATE SET
+    school_id = EXCLUDED.school_id,
+    name = EXCLUDED.name,
+    grade_label = EXCLUDED.grade_label,
+    room_number = EXCLUDED.room_number,
+    capacity = EXCLUDED.capacity,
+    is_active = EXCLUDED.is_active,
+    updated_at = NOW();
 
 -- Lớp 2: Lớp Mầm B
 INSERT INTO class (
@@ -69,7 +99,14 @@ INSERT INTO class (
     true,
     NOW(),
     NOW()
-) ON CONFLICT (class_id) DO NOTHING;
+) ON CONFLICT (class_id) DO UPDATE SET
+    school_id = EXCLUDED.school_id,
+    name = EXCLUDED.name,
+    grade_label = EXCLUDED.grade_label,
+    room_number = EXCLUDED.room_number,
+    capacity = EXCLUDED.capacity,
+    is_active = EXCLUDED.is_active,
+    updated_at = NOW();
 
 -- 3. Thêm Giáo viên mẫu (Teacher)
 -- Giáo viên chủ nhiệm Lớp Mầm A
@@ -97,7 +134,16 @@ INSERT INTO teacher (
     true,
     NOW(),
     NOW()
-) ON CONFLICT (teacher_id) DO NOTHING;
+) ON CONFLICT (teacher_id) DO UPDATE SET
+    school_id = EXCLUDED.school_id,
+    class_id = EXCLUDED.class_id,
+    firebase_uid = EXCLUDED.firebase_uid,
+    full_name = EXCLUDED.full_name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    status = EXCLUDED.status,
+    is_verified = EXCLUDED.is_verified,
+    updated_at = NOW();
 
 -- Giáo viên chủ nhiệm Lớp Mầm B
 INSERT INTO teacher (
@@ -124,7 +170,16 @@ INSERT INTO teacher (
     true,
     NOW(),
     NOW()
-) ON CONFLICT (teacher_id) DO NOTHING;
+) ON CONFLICT (teacher_id) DO UPDATE SET
+    school_id = EXCLUDED.school_id,
+    class_id = EXCLUDED.class_id,
+    firebase_uid = EXCLUDED.firebase_uid,
+    full_name = EXCLUDED.full_name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    status = EXCLUDED.status,
+    is_verified = EXCLUDED.is_verified,
+    updated_at = NOW();
 
 -- 4. Thêm Phụ huynh mẫu (Parent) - 10 phụ huynh cho 10 trẻ
 INSERT INTO parent (
@@ -250,7 +305,14 @@ INSERT INTO parent (
     NOW(),
     NOW()
 )
-ON CONFLICT (parent_id) DO NOTHING;
+ON CONFLICT (parent_id) DO UPDATE SET
+    firebase_uid = EXCLUDED.firebase_uid,
+    full_name = EXCLUDED.full_name,
+    phone = EXCLUDED.phone,
+    email = EXCLUDED.email,
+    status = EXCLUDED.status,
+    is_verified = EXCLUDED.is_verified,
+    updated_at = NOW();
 
 -- 5. Thêm Trẻ mẫu (Child) - 5 trẻ cho mỗi lớp
 INSERT INTO child (
@@ -398,4 +460,13 @@ INSERT INTO child (
     NOW(),
     NOW()
 )
-ON CONFLICT (child_id) DO NOTHING;
+ON CONFLICT (child_id) DO UPDATE SET
+    parent_id = EXCLUDED.parent_id,
+    class_id = EXCLUDED.class_id,
+    full_name = EXCLUDED.full_name,
+    nickname = EXCLUDED.nickname,
+    date_of_birth = EXCLUDED.date_of_birth,
+    gender = EXCLUDED.gender,
+    medical_allergies = EXCLUDED.medical_allergies,
+    status = EXCLUDED.status,
+    updated_at = NOW();
