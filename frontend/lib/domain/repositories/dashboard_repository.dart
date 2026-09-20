@@ -10,8 +10,10 @@
 //     triển khai đúng interface, View KHÔNG cần sửa.
 
 import 'package:adark_frontend/domain/entities/activity_item.dart';
+import 'package:adark_frontend/domain/entities/child.dart';
 import 'package:adark_frontend/domain/entities/child_overview.dart';
 import 'package:adark_frontend/domain/entities/class_dashboard_summary.dart';
+import 'package:adark_frontend/domain/entities/class_report_overview.dart';
 import 'package:adark_frontend/domain/entities/daily_report.dart';
 import 'package:adark_frontend/domain/entities/parent.dart';
 import 'package:adark_frontend/domain/entities/teacher.dart';
@@ -24,11 +26,17 @@ abstract class DashboardRepository {
   /// Thông tin giáo viên đang đăng nhập.
   Future<Teacher> getCurrentTeacher();
 
+  /// Danh sách các lớp giáo viên đang phụ trách.
+  Future<List<ClassReportOverview>> getTeacherClasses();
+
   /// Tổng hợp báo cáo của lớp giáo viên quản lý trong [date].
   Future<ClassDashboardSummary> getClassDashboard(String classId, DateTime date);
 
   /// Các hoạt động gần đây của lớp (timeline) — mới nhất trước.
   Future<List<ActivityItem>> getRecentActivities(String classId, {int limit = 10});
+
+  /// Danh sách trẻ trong lớp — dùng cho màn "Ghi nhận hoạt động".
+  Future<List<Child>> getClassChildren(String classId);
 
   // ──────────────────────────────────────────────────────────
   // Parent
