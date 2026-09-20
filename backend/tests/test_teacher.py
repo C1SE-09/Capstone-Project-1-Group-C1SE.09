@@ -18,12 +18,12 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
-from app.core.database import get_db
+from backend.app.core.database import get_db
 
 # ---------------------------------------------------------------------------
 # App + DB session override
 # ---------------------------------------------------------------------------
-from app.main import app
+from backend.app.main import app
 from fastapi.testclient import TestClient
 
 # Seed IDs that match the DB seed fixtures (same as used in the Flutter test)
