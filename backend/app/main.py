@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.teacher import router as teacher_router
 from app.api.class_data import router as class_data_router
+from app.api.teacher import router as teacher_router
 
 
 @asynccontextmanager

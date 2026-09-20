@@ -16,7 +16,7 @@ router = APIRouter(
 @router.get("/{class_id}")
 def get_class(
     class_id : str,
-    db : Session = Depends(get_db)
+    db : Session = Depends(get_db) # noqa: B008
 ):
     class_data = (
         db.query(Class_)
@@ -44,7 +44,7 @@ def get_class(
 @router.get("/{class_id}/{child_id}")
 def get_children(
     class_id : str,
-    db : Session = Depends(get_db)
+    db : Session = Depends(get_db)  # noqa: B008
 ):
     class_data = (
         db.query(Class_)
@@ -92,7 +92,7 @@ def get_children(
 @router.get("/{class_id}/{teacher_id}")
 def get_teacher(
     class_id : str,
-    db : Session = Depends(get_db)
+    db : Session = Depends(get_db) # noqa: B008
 ):
     class_data = (
         db.query(Class_)
