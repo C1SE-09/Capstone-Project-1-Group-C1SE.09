@@ -11,12 +11,11 @@ import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
-from sqlalchemy.exc import SQLAlchemyError
-
 from app.core.database import SessionLocal
 from app.models.report import VoiceRecord, VoiceRecordStatus
 from app.services.stt_service import stt_service
 from app.tasks.celery_app import celery_app
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 

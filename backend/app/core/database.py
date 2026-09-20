@@ -9,10 +9,9 @@ FastAPI sẽ chạy các endpoint sync trong thread-pool tự động.
 
 from collections.abc import Generator
 
+from app.config import settings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-
-from app.config import settings
 
 # ---------------------------------------------------------------------------
 # Engine (tái sử dụng kết nối qua connection pool)

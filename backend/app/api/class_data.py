@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
 from app.core.database import get_db
 from app.models.child import Child, ChildStatus
 from app.models.user import Class_, Teacher
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 router = APIRouter(
     prefix = "/api/class",

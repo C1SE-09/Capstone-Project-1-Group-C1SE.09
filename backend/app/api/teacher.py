@@ -32,9 +32,6 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from sqlalchemy.orm import Session
-
 from app.core.database import get_db
 from app.core.storage import upload_audio_to_minio
 from app.models.report import (
@@ -53,6 +50,8 @@ from app.schemas.report import (
 )
 from app.services.extraction_service import extract_from_transcript
 from app.tasks.process_audio import process_audio_task
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

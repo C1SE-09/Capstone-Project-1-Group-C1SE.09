@@ -9,9 +9,8 @@ Audio URL trả về là presigned URL public để Celery worker có thể đ�
 
 import io
 
-from minio import Minio
-
 from app.config import settings
+from minio import Minio
 
 # ---------------------------------------------------------------------------
 # MinIO client (singleton)
