@@ -1,7 +1,8 @@
 __pycache__/
 *.py[cod]
 venv
-.envbackend/build.log
+.env
+backend/build.log
 .DS_Store
 .vscode
 .env
