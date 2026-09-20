@@ -21,7 +21,7 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
 class AppRouter {
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/login',
+    initialLocation: '/extraction-results',
     routes: [
       // ── Auth ────────────────────────────────────────────────
       GoRoute(path: '/', redirect: (context, state) => '/login'),
