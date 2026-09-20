@@ -19,9 +19,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class ClassDetailScreen extends StatefulWidget {
-  const ClassDetailScreen({super.key, this.classId = 'class-001'});
+  const ClassDetailScreen({
+    super.key,
+    this.classId = 'class-001',
+    this.showBackButton = true,
+  });
 
   final String classId;
+  final bool showBackButton;
 
   @override
   State<ClassDetailScreen> createState() => _ClassDetailScreenState();
@@ -47,12 +52,15 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chi tiết lớp'),
-        leading: IconButton(
-          tooltip: 'Quay lại',
-          icon: const Icon(Icons.arrow_back_rounded),
-          // context.pop() = quay về màn trước đó (TeacherScreen)
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: widget.showBackButton,
+        leading: widget.showBackButton
+            ? IconButton(
+                tooltip: 'Quay lại',
+                icon: const Icon(Icons.arrow_back_rounded),
+                // Chỉ pop khi màn này được mở bằng route riêng.
+                onPressed: () => context.pop(),
+              )
+            : null,
       ),
       body: ListenableBuilder(
         listenable: _controller,

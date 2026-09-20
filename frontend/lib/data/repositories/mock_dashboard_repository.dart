@@ -15,6 +15,7 @@ import 'package:adark_frontend/domain/entities/child.dart';
 import 'package:adark_frontend/domain/entities/child_overview.dart';
 import 'package:adark_frontend/domain/entities/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class_info.dart';
+import 'package:adark_frontend/domain/entities/class_report_overview.dart';
 import 'package:adark_frontend/domain/entities/daily_report.dart';
 import 'package:adark_frontend/domain/entities/parent.dart';
 import 'package:adark_frontend/domain/entities/report_status.dart';
@@ -30,6 +31,58 @@ class MockDashboardRepository implements DashboardRepository {
   // ══════════════════════════════════════════════════════════
   // Teacher
   // ══════════════════════════════════════════════════════════
+
+  @override
+  Future<List<ClassReportOverview>> getTeacherClasses() async {
+    await _delay();
+    return const [
+      ClassReportOverview(
+        classInfo: ClassInfo(
+          classId: 'class-001',
+          schoolId: 'school-001',
+          name: 'Lớp Mầm 1',
+          gradeLabel: 'Mầm',
+          roomNumber: 'Phòng A1',
+          capacity: 25,
+        ),
+        teacherName: 'Cô Hà',
+        totalChildren: 20,
+        completedCount: 15,
+        draftCount: 3,
+        missingCount: 2,
+      ),
+      ClassReportOverview(
+        classInfo: ClassInfo(
+          classId: 'class-002',
+          schoolId: 'school-001',
+          name: 'Lớp Chồi 1',
+          gradeLabel: 'Chồi',
+          roomNumber: 'Phòng B1',
+          capacity: 24,
+        ),
+        teacherName: 'Cô Lan',
+        totalChildren: 18,
+        completedCount: 12,
+        draftCount: 4,
+        missingCount: 2,
+      ),
+      ClassReportOverview(
+        classInfo: ClassInfo(
+          classId: 'class-003',
+          schoolId: 'school-001',
+          name: 'Lớp Lá 1',
+          gradeLabel: 'Lá',
+          roomNumber: 'Phòng C1',
+          capacity: 22,
+        ),
+        teacherName: 'Cô Mai',
+        totalChildren: 16,
+        completedCount: 16,
+        draftCount: 0,
+        missingCount: 0,
+      ),
+    ];
+  }
 
   @override
   Future<Teacher> getCurrentTeacher() async {
@@ -119,6 +172,62 @@ class MockDashboardRepository implements DashboardRepository {
         type: ActivityType.audioRecorded,
         message: 'Đã ghi âm cho Lê Thị Mèo',
         occurredAt: now.subtract(const Duration(hours: 1)),
+      ),
+    ];
+  }
+
+  @override
+  Future<List<Child>> getClassChildren(String classId) async {
+    await _delay();
+    return const [
+      Child(
+        childId: 'child-001',
+        parentId: 'parent-001',
+        classId: 'class-001',
+        fullName: 'Nguyễn Thị Nhím',
+        nickname: 'Nhím',
+      ),
+      Child(
+        childId: 'child-002',
+        classId: 'class-001',
+        fullName: 'Nguyễn Minh Khang',
+        nickname: 'Khang',
+      ),
+      Child(
+        childId: 'child-003',
+        classId: 'class-001',
+        fullName: 'Lê Thị Mèo',
+        nickname: 'Mèo',
+      ),
+      Child(
+        childId: 'child-004',
+        classId: 'class-001',
+        fullName: 'Trần Gia Hân',
+        nickname: 'Hân',
+      ),
+      Child(
+        childId: 'child-005',
+        classId: 'class-001',
+        fullName: 'Phạm Đức Anh',
+        nickname: 'Đức',
+      ),
+      Child(
+        childId: 'child-006',
+        classId: 'class-001',
+        fullName: 'Vũ Khánh Linh',
+        nickname: 'Linh',
+      ),
+      Child(
+        childId: 'child-007',
+        classId: 'class-001',
+        fullName: 'Phạm Gia Hân',
+        nickname: 'Hân',
+      ),
+      Child(
+        childId: 'child-008',
+        classId: 'class-001',
+        fullName: 'Trần Ngọc Anh',
+        nickname: 'Anh',
       ),
     ];
   }

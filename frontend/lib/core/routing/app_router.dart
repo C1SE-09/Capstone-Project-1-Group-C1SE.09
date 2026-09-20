@@ -7,8 +7,8 @@
 
 import 'package:adark_frontend/presentation/pages/class_detail_screen.dart';
 import 'package:adark_frontend/presentation/pages/login_page.dart';
+import 'package:adark_frontend/presentation/pages/teacher_bottom_navigation.dart';
 import 'package:adark_frontend/presentation/pages/parent_screen.dart';
-import 'package:adark_frontend/presentation/pages/teacher_screen.dart';
 import 'package:adark_frontend/presentation/screens/extraction_results_screen.dart';
 import 'package:adark_frontend/presentation/screens/recording_screen.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +28,10 @@ class AppRouter {
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
       // ── Teacher & Parent (FIGMA UI) ─────────────────────────
-      GoRoute(path: '/teacher', builder: (context, state) => const TeacherScreen()),
+      GoRoute(
+        path: '/teacher',
+        builder: (context, state) => const TeacherBottomNavigation(),
+      ),
       GoRoute(path: '/parent', builder: (context, state) => const ParentScreen()),
 
       // Chi tiết lớp (MÀN 2) — nhận classId qua `extra`
