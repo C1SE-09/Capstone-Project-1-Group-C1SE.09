@@ -14,7 +14,7 @@ MVP Note:
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -156,7 +156,7 @@ def get_teacher_classes(
         child_ids = [c.child_id for c in children]
 
         # Thống kê báo cáo hôm nay
-        today = date.today()
+        today = datetime.now(tz=timezone.utc).date()
         reports = (
             db.query(DailyReport)
             .filter(
@@ -208,7 +208,7 @@ def get_teacher_classes(
 )
 def get_class_dashboard(
     class_id: str,
-    date_param: date | None = Query(default=None, alias="date"),
+    date_param: date | None = Query(default=None, alias="date"),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """
@@ -219,7 +219,7 @@ def get_class_dashboard(
     if class_ is None:
         raise HTTPException(status_code=404, detail="Class not found")
 
-    target_date = date_param or date.today()
+    target_date = date_param or datetime.now(tz=timezone.utc).date()
 
     children = (
         db.query(Child)
@@ -471,7 +471,7 @@ def get_parent_primary_child(
 )
 def get_child_reports(
     child_id: str,
-    date_param: date | None = Query(default=None, alias="date"),
+    date_param: date | None = Query(default=None, alias="date"),  # noqa: B008
     limit: int = Query(default=7, ge=1, le=50),
     db: Session = Depends(get_db),  # noqa: B008
 ):
@@ -483,7 +483,7 @@ def get_child_reports(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    target_date = date_param or date.today()
+    target_date = date_param or datetime.now(tz=timezone.utc).date()
 
     today_report = (
         db.query(DailyReport)
