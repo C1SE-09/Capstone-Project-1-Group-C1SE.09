@@ -1,13 +1,5 @@
 // frontend/lib/presentation/pages/child_recording_screen.dart
 // ================================================================
-// Màn ghi âm cho từng trẻ.
-// 3 trạng thái UI:
-//   1. Chưa ghi âm
-//   2. Đang ghi âm
-//   3. Đã ghi âm
-//
-// Hiện tại đây là mock UI. Sau này thay phần timer/mock bằng
-// package ghi âm thật và upload API; giao diện 3 trạng thái giữ nguyên.
 
 import 'dart:async';
 
@@ -67,7 +59,8 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
 
   void _saveRecording() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Đã lưu bản ghi cho ${widget.child.displayName}.')),
+      SnackBar(
+          content: Text('Đã lưu bản ghi cho ${widget.child.displayName}.')),
     );
   }
 
@@ -220,7 +213,8 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
     );
   }
 
-  Widget _buildStateIcon({required bool isRecording, required bool isRecorded}) {
+  Widget _buildStateIcon(
+      {required bool isRecording, required bool isRecorded}) {
     final color = isRecording
         ? AppColors.warningFg
         : isRecorded
@@ -249,7 +243,23 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
 
   Widget _buildWaveform({required bool isRecording, required bool isRecorded}) {
     final active = isRecording || isRecorded;
-    const heights = <double>[18, 28, 42, 24, 52, 34, 20, 44, 30, 18, 38, 25, 48, 22, 32];
+    const heights = <double>[
+      18,
+      28,
+      42,
+      24,
+      52,
+      34,
+      20,
+      44,
+      30,
+      18,
+      38,
+      25,
+      48,
+      22,
+      32
+    ];
 
     return SizedBox(
       height: 56,
@@ -272,7 +282,8 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
     );
   }
 
-  Widget _buildMainAction({required bool isRecording, required bool isRecorded}) {
+  Widget _buildMainAction(
+      {required bool isRecording, required bool isRecorded}) {
     if (isRecording) {
       return FilledButton.icon(
         onPressed: _stopRecording,
@@ -335,7 +346,8 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
   }
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return (parts.first[0] + parts.last[0]).toUpperCase();

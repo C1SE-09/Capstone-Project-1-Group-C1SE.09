@@ -21,7 +21,7 @@ import 'package:go_router/go_router.dart';
 class ClassDetailScreen extends StatefulWidget {
   const ClassDetailScreen({
     super.key,
-    this.classId = 'class-001',
+    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
     this.showBackButton = true,
   });
 

@@ -10,7 +10,7 @@ import 'package:adark_frontend/views/widgets/loading_widget.dart';
 import 'package:flutter/material.dart';
 
 class ActivityRecordingScreen extends StatefulWidget {
-  const ActivityRecordingScreen({super.key, this.classId = 'class-001'});
+  const ActivityRecordingScreen({super.key, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
 
   final String classId;
 
@@ -45,19 +45,6 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
         automaticallyImplyLeading: false,
         titleSpacing: 20,
         title: const Text('Ghi nhận hoạt động'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: Text(
-              '22/600',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
       ),
       body: ListenableBuilder(
         listenable: _controller,
@@ -81,11 +68,12 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
           child: Text(
-            'Lớp Mầm 1 · 8 trẻ',
-            style: TextStyle(
+            '${_controller.classInfo?.name ?? 'Lớp'} · '
+            '${children.length} trẻ',
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w600,

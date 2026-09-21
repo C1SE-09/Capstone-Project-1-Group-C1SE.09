@@ -1,0 +1,5 @@
+$kind: http-request
+description: Trả về thông tin 1 phụ huynh.
+url: "{{base_url}}/api/parent/{{parent_id_1}}"
+method: GET
+order: 5000

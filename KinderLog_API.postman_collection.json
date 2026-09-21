@@ -1,0 +1,467 @@
+{
+  "info": {
+    "_postman_id": "kinderlog-api-collection",
+    "name": "🏫 KinderLog API",
+    "description": "Postman Collection cho toàn bộ API của KinderLog Backend.\n\n## Base URL\n`http://localhost:8000`\n\n## Seed Data IDs\n| Loại | ID | Tên |\n|---|---|---|\n| School | `aaaaaaaa-0000-0000-0000-000000000001` | Trường Mầm Non Họa Mi |\n| Class A | `aaaaaaaa-0000-0000-0000-000000000001` | Lớp Mầm A |\n| Class B | `aaaaaaaa-0000-0000-0000-000000000002` | Lớp Mầm B |\n| Teacher 1 | `bbbbbbbb-0000-0000-0000-000000000001` | Cô Nguyễn Thị Mai |\n| Teacher 2 | `bbbbbbbb-0000-0000-0000-000000000002` | Cô Trần Thị Lan |\n| Parent 1 | `cccccccc-0000-0000-0000-000000000001` | Trần Văn Tuấn |\n| Child 1 | `dddddddd-0000-0000-0000-000000000001` | Trần Gia Bảo |\n| Child 2 | `dddddddd-0000-0000-0000-000000000002` | Lê Ngọc Ánh |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "teacher_id_1",
+      "value": "bbbbbbbb-0000-0000-0000-000000000001",
+      "type": "string",
+      "description": "Cô Nguyễn Thị Mai - Lớp Mầm A"
+    },
+    {
+      "key": "teacher_id_2",
+      "value": "bbbbbbbb-0000-0000-0000-000000000002",
+      "type": "string",
+      "description": "Cô Trần Thị Lan - Lớp Mầm B"
+    },
+    {
+      "key": "class_id_a",
+      "value": "aaaaaaaa-0000-0000-0000-000000000001",
+      "type": "string",
+      "description": "Lớp Mầm A"
+    },
+    {
+      "key": "class_id_b",
+      "value": "aaaaaaaa-0000-0000-0000-000000000002",
+      "type": "string",
+      "description": "Lớp Mầm B"
+    },
+    {
+      "key": "parent_id_1",
+      "value": "cccccccc-0000-0000-0000-000000000001",
+      "type": "string",
+      "description": "Trần Văn Tuấn"
+    },
+    {
+      "key": "child_id_1",
+      "value": "dddddddd-0000-0000-0000-000000000001",
+      "type": "string",
+      "description": "Trần Gia Bảo - Lớp Mầm A"
+    },
+    {
+      "key": "child_id_2",
+      "value": "dddddddd-0000-0000-0000-000000000002",
+      "type": "string",
+      "description": "Lê Ngọc Ánh - Lớp Mầm A"
+    },
+    {
+      "key": "voice_id",
+      "value": "",
+      "type": "string",
+      "description": "Điền voice_record_id sau khi gọi POST /voice/upload"
+    }
+  ],
+  "item": [
+    {
+      "name": "📊 Dashboard",
+      "description": "Các API dashboard cho Teacher và Parent",
+      "item": [
+        {
+          "name": "GET - Thông tin giáo viên",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teacher/{{teacher_id_1}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teacher", "{{teacher_id_1}}"]
+            },
+            "description": "Trả về thông tin 1 giáo viên.\n\n**Expected Response:**\n```json\n{\n  \"teacher_id\": \"bbbbbbbb-...\",\n  \"full_name\": \"Cô Nguyễn Thị Mai\",\n  \"email\": \"teacher.mai@hoami.edu.vn\"\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Danh sách lớp của giáo viên",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teacher/{{teacher_id_1}}/classes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teacher", "{{teacher_id_1}}", "classes"]
+            },
+            "description": "Trả về danh sách lớp của giáo viên kèm summary báo cáo hôm nay."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Dashboard lớp học",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/class/{{class_id_a}}/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "class", "{{class_id_a}}", "dashboard"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-09-21",
+                  "description": "Ngày cần xem YYYY-MM-DD (mặc định: hôm nay)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Tổng hợp trạng thái báo cáo của lớp trong 1 ngày."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Hoạt động gần đây của lớp",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/class/{{class_id_a}}/activities?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "class", "{{class_id_a}}", "activities"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Số lượng hoạt động trả về (1-50)"
+                }
+              ]
+            },
+            "description": "Timeline hoạt động gần đây: báo cáo đã gửi, nháp, ghi âm mới."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Thông tin phụ huynh",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/parent/{{parent_id_1}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "parent", "{{parent_id_1}}"]
+            },
+            "description": "Trả về thông tin 1 phụ huynh."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Con của phụ huynh (+ lớp + giáo viên)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/parent/{{parent_id_1}}/child",
+              "host": ["{{base_url}}"],
+              "path": ["api", "parent", "{{parent_id_1}}", "child"]
+            },
+            "description": "Trả về đứa con đầu tiên + thông tin lớp + giáo viên."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Báo cáo của trẻ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/child/{{child_id_1}}/reports",
+              "host": ["{{base_url}}"],
+              "path": ["api", "child", "{{child_id_1}}", "reports"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-09-21",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "7",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Trả về báo cáo hôm nay + danh sách báo cáo gần đây của trẻ."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏫 Class Data",
+      "description": "API quản lý thông tin lớp học (prefix: /api/class)",
+      "item": [
+        {
+          "name": "GET - Thông tin lớp học",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/class/{{class_id_a}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "class", "{{class_id_a}}"]
+            },
+            "description": "Trả về thông tin chi tiết 1 lớp học."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Danh sách học sinh trong lớp",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/class/{{class_id_a}}/children",
+              "host": ["{{base_url}}"],
+              "path": ["api", "class", "{{class_id_a}}", "children"]
+            },
+            "description": "Trả về danh sách trẻ đang học (ENROLLED), sắp xếp theo tên."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Danh sách giáo viên trong lớp",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/class/{{class_id_a}}/teachers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "class", "{{class_id_a}}", "teachers"]
+            },
+            "description": "Trả về danh sách giáo viên phụ trách lớp."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎙️ Teacher - Voice & Reports",
+      "description": "API giáo viên: ghi âm, transcript, tạo báo cáo (prefix: /api/teacher)",
+      "item": [
+        {
+          "name": "POST - Upload audio (form-data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('voice_id', json.id);",
+                  "    console.log('voice_id saved:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "File audio (.m4a/.wav/.mp3/.webm), tối đa 25MB"
+                },
+                {
+                  "key": "teacher_id",
+                  "value": "{{teacher_id_1}}",
+                  "type": "text"
+                },
+                {
+                  "key": "class_id",
+                  "value": "{{class_id_a}}",
+                  "type": "text"
+                },
+                {
+                  "key": "child_id",
+                  "value": "{{child_id_1}}",
+                  "type": "text",
+                  "description": "Tùy chọn"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/teacher/voice/upload",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teacher", "voice", "upload"]
+            },
+            "description": "Upload file audio → lưu MinIO → tạo VoiceRecord(PENDING) → dispatch Celery task.\n\n**Response (201):** `{ \"id\": \"<uuid>\", \"status\": \"pending\" }`\n\n**Test script** sẽ tự động lưu `voice_id` vào collection variables."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Chi tiết VoiceRecord",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teacher/voice/{{voice_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teacher", "voice", "{{voice_id}}"],
+              "query": [
+                {
+                  "key": "teacher_id",
+                  "value": "{{teacher_id_1}}",
+                  "description": "Tùy chọn - kiểm tra quyền sở hữu",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Trả về trạng thái và transcript của VoiceRecord.\n\n**Status:** `pending` | `processing` | `completed` | `failed`"
+          },
+          "response": []
+        },
+        {
+          "name": "PUT - Cập nhật transcript",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"edited_transcript\": \"Hôm nay bé Bảo ăn cơm rất ngoan, ngủ trưa đủ giấc 2 tiếng, chơi vui với bạn bè.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/teacher/voice/{{voice_id}}/transcript",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teacher", "voice", "{{voice_id}}", "transcript"]
+            },
+            "description": "Lưu bản transcript đã chỉnh sửa (không mất raw_transcript)."
+          },
+          "response": []
+        },
+        {
+          "name": "POST - Extract thông tin từ transcript",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teacher/voice/{{voice_id}}/extract?teacher_id={{teacher_id_1}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teacher", "voice", "{{voice_id}}", "extract"],
+              "query": [
+                {
+                  "key": "teacher_id",
+                  "value": "{{teacher_id_1}}"
+                }
+              ]
+            },
+            "description": "AI extract thông tin từ transcript thành: meals, sleeping, health, activities, mood.\n\n**Yêu cầu:** VoiceRecord phải ở trạng thái `completed`."
+          },
+          "response": []
+        },
+        {
+          "name": "POST - Tạo báo cáo Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"edited_extraction\": {\n    \"meals\": \"Bé ăn cơm ngoan, ăn hết suất\",\n    \"sleeping\": \"Ngủ trưa 2 tiếng\",\n    \"health\": \"Sức khỏe bình thường\",\n    \"activities\": \"Chơi đất nặn, vẽ tranh\",\n    \"mood\": \"Vui vẻ, hay cười\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/teacher/reports/draft?voice_id={{voice_id}}&teacher_id={{teacher_id_1}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teacher", "reports", "draft"],
+              "query": [
+                {
+                  "key": "voice_id",
+                  "value": "{{voice_id}}"
+                },
+                {
+                  "key": "teacher_id",
+                  "value": "{{teacher_id_1}}"
+                }
+              ]
+            },
+            "description": "Tạo DailyReport (DRAFT) từ extraction. Body tùy chọn - nếu không truyền sẽ dùng extraction đã lưu trong DB.\n\n**Response:** `{ \"report_id\": \"<uuid>\", \"status\": \"draft\" }`"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔊 STT (Speech-to-Text)",
+      "description": "API transcribe trực tiếp",
+      "item": [
+        {
+          "name": "POST - Transcribe audio",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": "",
+                  "description": "File audio (WAV khuyến nghị)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/stt/transcribe",
+              "host": ["{{base_url}}"],
+              "path": ["stt", "transcribe"]
+            },
+            "description": "Transcribe đồng bộ - không dùng MinIO/Celery. Dùng để test nhanh model STT.\n\n**Response:** `{ \"filename\": \"...\", \"text\": \"...\" }`"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔧 Health & Docs",
+      "item": [
+        {
+          "name": "GET - Swagger Docs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": ["{{base_url}}"],
+              "path": ["docs"]
+            },
+            "description": "Mở URL này trong browser để xem Swagger UI."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/openapi.json",
+              "host": ["{{base_url}}"],
+              "path": ["openapi.json"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

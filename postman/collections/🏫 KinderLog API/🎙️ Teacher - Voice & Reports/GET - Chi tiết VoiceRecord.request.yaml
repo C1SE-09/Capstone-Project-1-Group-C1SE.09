@@ -1,0 +1,13 @@
+$kind: http-request
+description: |-
+  Trả về trạng thái và transcript của VoiceRecord.
+
+  **Status:** `pending` | `processing` | `completed` | `failed`
+url: "{{base_url}}/api/teacher/voice/{{voice_id}}"
+method: GET
+queryParams:
+  - key: teacher_id
+    value: "{{teacher_id_1}}"
+    disabled: true
+    description: Tùy chọn - kiểm tra quyền sở hữu
+order: 2000

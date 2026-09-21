@@ -213,6 +213,7 @@ class TestUpdateTranscript:
 
         resp = client.put(
             f"/api/teacher/voice/{fake_id}/transcript",
+            params={"teacher_id": str(TEACHER_ID)},
             json={"edited_transcript": "Bé ăn cơm trưa lúc 11h30 và uống hết sữa."},
         )
         assert resp.status_code == 200, resp.text
@@ -241,7 +242,7 @@ class TestGetVoiceRecord:
         )
         mock_db.query.return_value.filter.return_value.first.return_value = mock_record
 
-        resp = client.get(f"/api/teacher/voice/{fake_id}")
+        resp = client.get(f"/api/teacher/voice/{fake_id}", params={"teacher_id": str(TEACHER_ID)})
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["id"] == str(fake_id)

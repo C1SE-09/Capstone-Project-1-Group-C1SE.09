@@ -1,0 +1,10 @@
+$kind: http-request
+description: |-
+  AI extract thông tin từ transcript thành: meals, sleeping, health, activities, mood.
+
+  **Yêu cầu:** VoiceRecord phải ở trạng thái `completed`.
+url: "{{base_url}}/api/teacher/voice/{{voice_id}}/extract?teacher_id={{teacher_id_1}}"
+method: POST
+queryParams:
+  teacher_id: "{{teacher_id_1}}"
+order: 4000

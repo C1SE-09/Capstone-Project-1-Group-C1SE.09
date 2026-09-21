@@ -1,0 +1,5 @@
+$kind: http-request
+description: Trả về đứa con đầu tiên + thông tin lớp + giáo viên.
+url: "{{base_url}}/api/parent/{{parent_id_1}}/child"
+method: GET
+order: 6000

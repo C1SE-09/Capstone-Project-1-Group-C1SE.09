@@ -1,0 +1,16 @@
+$kind: http-request
+description: |-
+  Transcribe đồng bộ - không dùng MinIO/Celery. Dùng để test nhanh model STT.
+
+  **Response:** `{ "filename": "...", "text": "..." }`
+url: "{{base_url}}/stt/transcribe"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: file
+      key: audio
+      src:
+        - ""
+      description: File audio (WAV khuyến nghị)
+order: 1000

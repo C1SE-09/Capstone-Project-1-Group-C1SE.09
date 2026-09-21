@@ -2,7 +2,7 @@
 // =========================================================
 // Controller cho màn "Tổng quan" của phụ huynh.
 
-import 'package:adark_frontend/data/repositories/mock_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/child_overview.dart';
 import 'package:adark_frontend/domain/entities/daily_report.dart';
 import 'package:adark_frontend/domain/entities/parent.dart';
@@ -12,7 +12,7 @@ import 'package:flutter/foundation.dart';
 
 class ParentHomeController extends ChangeNotifier {
   ParentHomeController({DashboardRepository? repository})
-      : _repo = repository ?? MockDashboardRepository();
+      : _repo = repository ?? HttpDashboardRepository();
 
   final DashboardRepository _repo;
 

@@ -32,7 +32,16 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -46,6 +55,8 @@ from app.models.report import (
     VoiceRecordStatus,
 )
 from app.schemas.report import (
+    ActivityEntryResponse,
+    DailyReportDetailResponse,
     DraftReportCreateRequest,
     TranscriptUpdateRequest,
     VoiceRecordDetailResponse,
@@ -245,7 +256,7 @@ def upload_voice_record(
 )
 def get_voice_record(
     voice_id: uuid.UUID,
-    teacher_id: uuid.UUID | None = None,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordDetailResponse:
     voice_record = (
@@ -255,7 +266,7 @@ def get_voice_record(
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
 
-    if teacher_id and voice_record.teacher_id != teacher_id:
+    if voice_record.teacher_id != teacher_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to access this recording"
         )
@@ -284,7 +295,7 @@ def get_voice_record(
 def update_voice_transcript(
     voice_id: uuid.UUID,
     payload: TranscriptUpdateRequest,
-    teacher_id: uuid.UUID | None = None,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordDetailResponse:
     voice_record = (
@@ -294,7 +305,7 @@ def update_voice_transcript(
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
 
-    if teacher_id and voice_record.teacher_id != teacher_id:
+    if voice_record.teacher_id != teacher_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to update this recording"
         )
@@ -324,7 +335,7 @@ def update_voice_transcript(
 @router.post("/voice/{voice_id}/extract")
 def extract_voice(
     voice_id: uuid.UUID,
-    teacher_id: uuid.UUID,  # TODO: replace with get_current_user when auth is ready
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ):
     # 1. Lấy VoiceRecord từ DB
@@ -368,13 +379,15 @@ def extract_voice(
         "extraction": result,
     }
 
+
 @router.post("/reports/draft")
 def create_report_from_extraction(
-    voice_id: uuid.UUID,
-    teacher_id: uuid.UUID,
-    payload: DraftReportCreateRequest | None = None,
+    payload: DraftReportCreateRequest,
     db: Session = Depends(get_db),  # noqa: B008
 ):
+    voice_id = payload.voice_id
+    teacher_id = payload.teacher_id
+
     # 1. Lấy VoiceRecord
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
@@ -386,10 +399,13 @@ def create_report_from_extraction(
     if voice_record.teacher_id != teacher_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # if not voice_record.child_id:
-    #    raise HTTPException(status_code=400, detail="Please assign a child before creating report")
+    if not voice_record.child_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Vui lòng chỉ định trẻ (child_id) trước khi tạo báo cáo.",
+        )
 
-    if payload and payload.edited_extraction:
+    if payload.edited_extraction:
         result = payload.edited_extraction
         voice_record.extraction_result = result
     else:
@@ -407,10 +423,10 @@ def create_report_from_extraction(
         DailyReport.child_id == voice_record.child_id,
         DailyReport.report_date == today
     ).first()
-    
+
     if existing_report:
         report = existing_report
-        # Xoá các ActivityEntry cũ của báo cáo này trước khi ghi nhận lại
+        # Xóa các ActivityEntry cũ trước khi ghi nhận lại
         db.query(ActivityEntry).filter(
             ActivityEntry.daily_report_id == report.daily_report_id
         ).delete()
@@ -424,7 +440,7 @@ def create_report_from_extraction(
         )
         db.add(report)
         db.flush()
-    
+
     # 4. Map extraction → ActivityEntry
     mapping = [
         ("meals", "MEAL", "Bữa ăn"),
@@ -433,7 +449,7 @@ def create_report_from_extraction(
         ("activities", "PLAY", "Hoạt động"),
         ("mood", "BEHAVIOR", "Tâm trạng"),
     ]
-    
+
     order = 0
     for key, category_str, title in mapping:
         value = result.get(key)
@@ -447,10 +463,82 @@ def create_report_from_extraction(
             )
             db.add(entry)
             order += 1
-    
+
     db.commit()
-    
+
     return {
         "report_id": str(report.daily_report_id),
         "status": report.status.value
     }
+
+
+@router.get("/reports/{report_id}", summary="Chi tiết báo cáo")
+def get_report_detail(
+    report_id: uuid.UUID,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    """Trả về toàn bộ thông tin DailyReport kèm danh sách ActivityEntry."""
+    report = db.query(DailyReport).filter(
+        DailyReport.daily_report_id == report_id
+    ).first()
+
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if report.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this report")
+
+    return DailyReportDetailResponse(
+        report_id=report.daily_report_id,
+        child_id=report.child_id,
+        teacher_id=report.teacher_id,
+        report_date=report.report_date.isoformat(),
+        status=report.status.value,
+        published_at=report.published_at.isoformat() if report.published_at else None,
+        activities=[
+            ActivityEntryResponse(
+                activity_entry_id=e.activity_entry_id,
+                category=e.category.value,
+                title=e.title,
+                description=e.description,
+                entry_order=e.entry_order,
+            )
+            for e in sorted(report.activities, key=lambda x: x.entry_order)
+        ],
+    )
+
+
+@router.post("/reports/{report_id}/publish", summary="Publish báo cáo gửi phụ huynh")
+def publish_report(
+    report_id: uuid.UUID,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    """Chuyển trạng thái báo cáo từ DRAFT → PUBLISHED và ghi nhận published_at."""
+    report = db.query(DailyReport).filter(
+        DailyReport.daily_report_id == report_id
+    ).first()
+
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if report.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Not authorized to publish this report")
+
+    if report.status == DailyReportStatus.PUBLISHED:
+        raise HTTPException(status_code=400, detail="Report đã được publish trước đó")
+
+    if report.status != DailyReportStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Chỉ có thể publish báo cáo ở trạng thái DRAFT")
+
+    report.status = DailyReportStatus.PUBLISHED
+    report.published_at = datetime.now(timezone.utc).date()
+    db.commit()
+    db.refresh(report)
+
+    return {
+        "report_id": str(report.daily_report_id),
+        "status": report.status.value,
+        "published_at": report.published_at.isoformat(),
+    }

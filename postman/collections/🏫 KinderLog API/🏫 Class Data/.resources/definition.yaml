@@ -1,0 +1,3 @@
+$kind: collection
+description: "API quản lý thông tin lớp học (prefix: /api/class)"
+order: 2000

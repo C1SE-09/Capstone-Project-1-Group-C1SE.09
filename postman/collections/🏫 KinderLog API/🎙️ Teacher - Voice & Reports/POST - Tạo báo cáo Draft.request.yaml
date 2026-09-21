@@ -1,0 +1,25 @@
+$kind: http-request
+description: |-
+  Tạo DailyReport (DRAFT) từ extraction. Body tùy chọn - nếu không truyền sẽ dùng extraction đã lưu trong DB.
+
+  **Response:** `{ "report_id": "<uuid>", "status": "draft" }`
+url: "{{base_url}}/api/teacher/reports/draft?voice_id={{voice_id}}&teacher_id={{teacher_id_1}}"
+method: POST
+headers:
+  Content-Type: application/json
+queryParams:
+  voice_id: "{{voice_id}}"
+  teacher_id: "{{teacher_id_1}}"
+body:
+  type: text
+  content: |-
+    {
+      "edited_extraction": {
+        "meals": "Bé ăn cơm ngoan, ăn hết suất",
+        "sleeping": "Ngủ trưa 2 tiếng",
+        "health": "Sức khỏe bình thường",
+        "activities": "Chơi đất nặn, vẽ tranh",
+        "mood": "Vui vẻ, hay cười"
+      }
+    }
+order: 5000

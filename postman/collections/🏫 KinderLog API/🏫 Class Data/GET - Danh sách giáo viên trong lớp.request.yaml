@@ -1,0 +1,5 @@
+$kind: http-request
+description: Trả về danh sách giáo viên phụ trách lớp.
+url: "{{base_url}}/api/class/{{class_id_a}}/teachers"
+method: GET
+order: 3000
