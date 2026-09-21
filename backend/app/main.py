@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.teacher import router as teacher_router
+from app.api.teacher import reports_router, router as teacher_router
 
 
 @asynccontextmanager
@@ -32,7 +32,7 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------------------------
 app.include_router(teacher_router)
-
+app.include_router(reports_router)
 
 @app.get("/")
 async def root():

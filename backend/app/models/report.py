@@ -34,8 +34,9 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import TYPE_CHECKING
+from sqlalchemy import DateTime
 
 from sqlalchemy import (
     JSON,
@@ -86,16 +87,22 @@ class VoiceRecordStatus(str, enum.Enum):
 
 
 class DailyReportStatus(str, enum.Enum):
-    """Publication lifecycle of a DailyReport.
+    """Lifecycle of a DailyReport 
 
-    DRAFT       – created from voice transcription; not yet reviewed by teacher.
-    PUBLISHED   – teacher has reviewed and sent to parents.
-    ARCHIVED    – report is no longer active (e.g., corrected by a newer one).
+    DRAFT  - created from voice transcription; not yet reviewed by teacher.
+    SENT   - teacher reviewed and sent it; the parent has been notified.
+    READ   - the parent has opened it.
+    ARCHIVED - no longer active (e.g. superseded by a correction).
+
+    PUBLISHED is retained only so that un-migrated rows and older clients
+    do not crash. It is deprecated - do not write it in new code.
     """
 
     DRAFT = "draft"
-    PUBLISHED = "published"
+    SENT = "sent"
+    READ = "read"
     ARCHIVED = "archived"
+    PUBLISHED = "published"  # deprecated alias of SENT
 
 
 class ActivityCategory(str, enum.Enum):
@@ -294,7 +301,6 @@ class DailyReport(Base, TimestampMixin):
     summary_text     : AI-generated or teacher-edited summary (Text, nullable)
     status           : DailyReportStatus – draft/published/archived
     published_at     : Timestamp when teacher published the report (nullable)
-
     Constraints
     -----------
     uq_daily_report_child_date : UNIQUE (child_id, report_date)
@@ -381,14 +387,23 @@ class DailyReport(Base, TimestampMixin):
         nullable=False,
         default=DailyReportStatus.DRAFT,
         server_default=DailyReportStatus.DRAFT.value,
-        comment="Publication lifecycle: draft → published → archived",
+        comment="Publication lifecycle: draft → sent → read → archived",
     )
     published_at: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
         comment="Date the teacher published (sent) the report to the parent",
     )
-
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="UTC timestamp when the teacher sent the report to the parent",
+    )
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="UTC timestamp when the parent first opened the report",
+    )
     # --- Relationships ---
     teacher: Mapped[Teacher | None] = relationship(
         "Teacher",

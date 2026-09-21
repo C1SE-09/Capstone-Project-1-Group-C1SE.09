@@ -13,7 +13,7 @@ import uuid
 
 from app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field
-
+from datetime import date, datetime
 # ===========================================================================
 # VoiceRecord Schemas
 # ===========================================================================
@@ -77,4 +77,45 @@ class DraftReportCreateRequest(BaseModel):
         None,
         description="Dữ liệu trích xuất đã chỉnh sửa của giáo viên: {meals, sleeping, health, activities, mood}",
     )
+
+class SendReportResponse(BaseModel):
+    """Result : send 1 report to parent"""
+
+    report_id: uuid.UUID = Field(..., description="UUID của DailyReport")
+    status: str = Field(..., description="Trạng thái sau khi gửi")
+    sent_at: datetime | None = Field(None, description="Thời gian gửi cụ thể (UTC)")
+    child_id: uuid.UUID | None = Field(None, description="UUID cua tre")
+    linked_parents: int = Field(0, description="Số lượng phụ huynh liên kết với trẻ")
+    targeted_devices: int = Field(
+        0,
+        description="Số device nhận tb (0 khi chưa cs FCM token )",
+    )
+
+
+class SendAllRequest(BaseModel):
+    """Payload cho POST /api/teacher/reports/send-all."""
+
+    report_ids: list[uuid.UUID] | None = Field(
+        None, description="Danh sách báo cáo cần gửi. Bỏ trống = bản nháp"
+    )
+    report_date: date | None = Field(
+        None, description="Chỉ gửi báo cáo của ngày này (dùng khi bỏ trống report_ids)"
+    )
+
+
+class SendAllItemResult(BaseModel):
+    """Kq cho từng báo cáo khi gửi hàng loạt."""
+
+    report_id: uuid.UUID
+    result: str = Field(..., description="sent | skipped | failed")
+    detail: str | None = None
+
+
+class SendAllResponse(BaseModel):
+    """Tổng kết kq gửi hàng loạt."""
+
+    sent: int = 0
+    skipped: int = 0
+    failed: int = 0
+    results: list[SendAllItemResult] = Field(default_factory=list)
 
