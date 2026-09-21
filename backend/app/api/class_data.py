@@ -33,18 +33,19 @@ def get_class(
 
     return {
         "class_id": str(class_data.class_id),
+        "school_id": str(class_data.school_id),
         "name": class_data.name,
         "grade_label": class_data.grade_label,
         "room_number": class_data.room_number,
         "capacity": class_data.capacity,
-        "is_activate": class_data.is_active
+        "is_active": class_data.is_active
     }
 
 
 """
 #2 API lấy danh sách học sinh
 """
-@router.get("/{class_id}/{child_id}")
+@router.get("/{class_id}/children")
 def get_children(
     class_id: str,
     db: Session = Depends(get_db)  # noqa: B008
@@ -95,7 +96,7 @@ def get_children(
 """
 #3 API Lấy Danh Sách Giáo Viên
 """
-@router.get("/{class_id}/{teacher_id}")
+@router.get("/{class_id}/teachers")
 def get_teacher(
     class_id: str,
     db: Session = Depends(get_db)  # noqa: B008

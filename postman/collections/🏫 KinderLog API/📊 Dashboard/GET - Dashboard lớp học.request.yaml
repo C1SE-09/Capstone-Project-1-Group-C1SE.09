@@ -1,0 +1,10 @@
+$kind: http-request
+description: Tổng hợp trạng thái báo cáo của lớp trong 1 ngày.
+url: "{{base_url}}/api/class/{{class_id_a}}/dashboard"
+method: GET
+queryParams:
+  - key: date
+    value: 2026-09-21
+    disabled: true
+    description: "Ngày cần xem YYYY-MM-DD (mặc định: hôm nay)"
+order: 3000

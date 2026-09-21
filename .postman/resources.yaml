@@ -2,6 +2,10 @@
 workspace:
   id: 1e8c2ce6-c97a-4ac0-80a6-89065edfd9db
 
+cloudResources:
+  collections:
+    ../postman/collections/🏫 KinderLog API: d7a2577d-7bc2-4cdf-a161-3010e37eb356
+
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:
 #localResources:

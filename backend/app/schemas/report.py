@@ -71,10 +71,44 @@ class VoiceRecordDetailResponse(BaseModel):
 
 
 class DraftReportCreateRequest(BaseModel):
-    """Payload tuỳ chọn khi tạo draft report với dữ liệu trích xuất đã chỉnh sửa."""
+    """Payload khi tạo draft report từ VoiceRecord."""
 
+    voice_id: uuid.UUID = Field(
+        ...,
+        description="UUID của VoiceRecord đã transcribe và extract",
+    )
+    teacher_id: uuid.UUID = Field(
+        ...,
+        description="UUID của giáo viên đang tạo báo cáo",
+    )
     edited_extraction: dict[str, str | None] | None = Field(
         None,
-        description="Dữ liệu trích xuất đã chỉnh sửa của giáo viên: {meals, sleeping, health, activities, mood}",
+        description="Dữ liệu trích xuất đã chỉnh sửa: {meals, sleeping, health, activities, mood}. Nếu null thì dùng extraction_result đã lưu trong DB.",
     )
+
+
+class ActivityEntryResponse(BaseModel):
+    """Response cho một hoạt động trong báo cáo."""
+
+    activity_entry_id: uuid.UUID
+    category: str
+    title: str
+    description: str | None = None
+    entry_order: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DailyReportDetailResponse(BaseModel):
+    """Response chi tiết một DailyReport bao gồm danh sách ActivityEntry."""
+
+    report_id: uuid.UUID
+    child_id: uuid.UUID | None = None
+    teacher_id: uuid.UUID | None = None
+    report_date: str
+    status: str
+    published_at: str | None = None
+    activities: list[ActivityEntryResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
 

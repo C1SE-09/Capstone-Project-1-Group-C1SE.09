@@ -1,12 +1,5 @@
 // frontend/lib/presentation/pages/teacher_screen.dart
 // =========================================================
-// Màn "Tổng quan" của giáo viên (MÀN 1 trong Figma).
-//
-// Điểm quan trọng để "API-ready":
-//   - View KHÔNG tự tạo data, chỉ ĐỌC từ [TeacherHomeController].
-//   - Controller gọi repository (hiện là mock). Đổi mock→API
-//     thì màn hình này KHÔNG cần sửa gì.
-//   - Có nút ← (goback) đưa về trang login.
 
 import 'package:adark_frontend/core/theme/app_theme.dart';
 import 'package:adark_frontend/core/utils/date_formatter.dart';
@@ -34,7 +27,6 @@ class _TeacherScreenState extends State<TeacherScreen> {
   @override
   void initState() {
     super.initState();
-    // Tạo controller → gọi API (mock) lấy dữ liệu
     _controller = TeacherHomeController()..load();
   }
 
@@ -112,7 +104,8 @@ class _TeacherScreenState extends State<TeacherScreen> {
   // ══════════════════════════════════════════════════════════
 
   /// Header: "Chào buổi sáng, Cô Hà" + avatar.
-  Widget _buildGreeting(BuildContext context, Teacher teacher, String className) {
+  Widget _buildGreeting(
+      BuildContext context, Teacher teacher, String className) {
     final timeGreeting = _timeGreeting(DateTime.now().hour);
 
     return Row(
@@ -232,7 +225,8 @@ class _TeacherScreenState extends State<TeacherScreen> {
           const SizedBox(height: 12),
           Text(
             '${s.notCompletedCount} trẻ chưa có báo cáo hôm nay.',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 16),
           // Nút ghi âm
@@ -243,7 +237,8 @@ class _TeacherScreenState extends State<TeacherScreen> {
               onPressed: () {
                 // TODO: điều hướng sang màn ghi âm (file âm thanh thật)
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tính năng ghi âm đang phát triển.')),
+                  const SnackBar(
+                      content: Text('Tính năng ghi âm đang phát triển.')),
                 );
               },
               icon: const Text('🎤', style: TextStyle(fontSize: 18)),
@@ -349,7 +344,8 @@ class _TeacherScreenState extends State<TeacherScreen> {
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(child: Text('👥', style: TextStyle(fontSize: 20))),
+                child: const Center(
+                    child: Text('👥', style: TextStyle(fontSize: 20))),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -510,11 +506,8 @@ class _TeacherScreenState extends State<TeacherScreen> {
 
   /// Lấy chữ cái đầu tên: "Cô Hà" → "CH", "Lê Thị Mèo" → "LM".
   String _initials(String name) {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((s) => s.isNotEmpty)
-        .toList();
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return (parts.first[0] + parts.last[0]).toUpperCase();

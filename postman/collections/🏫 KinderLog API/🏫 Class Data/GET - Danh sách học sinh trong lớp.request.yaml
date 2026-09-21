@@ -1,0 +1,5 @@
+$kind: http-request
+description: Trả về danh sách trẻ đang học (ENROLLED), sắp xếp theo tên.
+url: "{{base_url}}/api/class/{{class_id_a}}/children"
+method: GET
+order: 2000

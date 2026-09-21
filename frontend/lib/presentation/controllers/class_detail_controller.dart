@@ -2,7 +2,7 @@
 // =========================================================
 // Controller cho màn "Chi tiết lớp" (MÀN 2).
 
-import 'package:adark_frontend/data/repositories/mock_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/activity_item.dart';
 import 'package:adark_frontend/domain/entities/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart';
 
 class ClassDetailController extends ChangeNotifier {
   ClassDetailController({DashboardRepository? repository})
-      : _repo = repository ?? MockDashboardRepository();
+      : _repo = repository ?? HttpDashboardRepository();
 
   final DashboardRepository _repo;
 

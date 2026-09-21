@@ -1,9 +1,6 @@
 // frontend/lib/core/routing/app_router.dart
 // =========================================================
 // GoRouter cấu hình toàn bộ điều hướng của app.
-//
-// (Sẽ thêm route /teacher và /parent ở bước cuối,
-//  sau khi xây xong 2 màn hình tương ứng.)
 
 import 'package:adark_frontend/presentation/pages/class_detail_screen.dart';
 import 'package:adark_frontend/presentation/pages/login_page.dart';
@@ -21,7 +18,7 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
 class AppRouter {
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/extraction-results',
+    initialLocation: '/login',
     routes: [
       // ── Auth ────────────────────────────────────────────────
       GoRoute(path: '/', redirect: (context, state) => '/login'),
@@ -32,13 +29,14 @@ class AppRouter {
         path: '/teacher',
         builder: (context, state) => const TeacherBottomNavigation(),
       ),
-      GoRoute(path: '/parent', builder: (context, state) => const ParentScreen()),
+      GoRoute(
+          path: '/parent', builder: (context, state) => const ParentScreen()),
 
       // Chi tiết lớp (MÀN 2) — nhận classId qua `extra`
       GoRoute(
         path: '/class-detail',
         builder: (context, state) {
-          final classId = state.extra as String? ?? 'class-001';
+          final classId = state.extra as String? ?? 'aaaaaaaa-0000-0000-0000-000000000001';
           return ClassDetailScreen(classId: classId);
         },
       ),

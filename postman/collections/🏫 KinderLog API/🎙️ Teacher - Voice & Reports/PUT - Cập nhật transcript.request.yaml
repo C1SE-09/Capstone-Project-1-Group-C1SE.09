@@ -1,0 +1,13 @@
+$kind: http-request
+description: Lưu bản transcript đã chỉnh sửa (không mất raw_transcript).
+url: "{{base_url}}/api/teacher/voice/{{voice_id}}/transcript"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "edited_transcript": "Hôm nay bé Bảo ăn cơm rất ngoan, ngủ trưa đủ giấc 2 tiếng, chơi vui với bạn bè."
+    }
+order: 3000

@@ -1,0 +1,5 @@
+$kind: http-request
+description: Trả về danh sách lớp của giáo viên kèm summary báo cáo hôm nay.
+url: "{{base_url}}/api/teacher/{{teacher_id_1}}/classes"
+method: GET
+order: 2000

@@ -1,0 +1,12 @@
+$kind: http-request
+description: Trả về báo cáo hôm nay + danh sách báo cáo gần đây của trẻ.
+url: "{{base_url}}/api/child/{{child_id_1}}/reports"
+method: GET
+queryParams:
+  - key: date
+    value: 2026-09-21
+    disabled: true
+  - key: limit
+    value: "7"
+    disabled: true
+order: 7000

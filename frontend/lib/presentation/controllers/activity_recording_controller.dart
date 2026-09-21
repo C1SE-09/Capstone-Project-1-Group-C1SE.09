@@ -1,25 +1,31 @@
 // frontend/lib/presentation/controllers/activity_recording_controller.dart
 
-import 'package:adark_frontend/data/repositories/mock_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/domain/entities/child.dart';
-import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
+import 'package:adark_frontend/domain/entities/class_info.dart';
 import 'package:adark_frontend/presentation/controllers/view_state.dart';
 import 'package:flutter/foundation.dart';
 
+/// Controller màn "Ghi nhận hoạt động".
+///
+/// Mặc định dùng [HttpClassDataRepository] (API thật từ class_data.py).
+/// Truyền [ClassDataRepository] khác để test mà không cần gọi mạng.
 class ActivityRecordingController extends ChangeNotifier {
-  ActivityRecordingController({DashboardRepository? repository})
-      : _repository = repository ?? MockDashboardRepository();
+  ActivityRecordingController({ClassDataRepository? repository})
+      : _repository = repository ?? HttpClassDataRepository();
 
-  final DashboardRepository _repository;
+  final ClassDataRepository _repository;
 
   ViewState _state = ViewState.loading;
   String? _error;
   List<Child> _children = const [];
+  ClassInfo? _classInfo;
   String _query = '';
 
   ViewState get state => _state;
   String? get error => _error;
   String get query => _query;
+  ClassInfo? get classInfo => _classInfo;
 
   List<Child> get filteredChildren {
     final normalized = _query.trim().toLowerCase();
@@ -36,7 +42,13 @@ class ActivityRecordingController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      _children = await _repository.getClassChildren(classId);
+      // Lấy song song thông tin lớp + danh sách trẻ.
+      final results = await Future.wait([
+        _repository.getClassInfo(classId),
+        _repository.getClassChildren(classId),
+      ]);
+      _classInfo = results[0] as ClassInfo;
+      _children = results[1] as List<Child>;
       _state = ViewState.success;
     } catch (error) {
       _error = error.toString();

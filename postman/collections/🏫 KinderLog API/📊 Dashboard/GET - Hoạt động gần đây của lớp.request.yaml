@@ -1,0 +1,9 @@
+$kind: http-request
+description: "Timeline hoạt động gần đây: báo cáo đã gửi, nháp, ghi âm mới."
+url: "{{base_url}}/api/class/{{class_id_a}}/activities?limit=10"
+method: GET
+queryParams:
+  - key: limit
+    value: "10"
+    description: Số lượng hoạt động trả về (1-50)
+order: 4000

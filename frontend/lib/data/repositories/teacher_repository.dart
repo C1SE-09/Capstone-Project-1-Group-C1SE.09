@@ -10,6 +10,7 @@
 // - Throws [TeacherRepositoryException] on failure
 
 
+import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
 
 // ---------------------------------------------------------------------------
@@ -177,7 +178,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       : _dio = dio ??
             Dio(
               BaseOptions(
-                baseUrl: baseUrl ?? 'http://10.0.2.2:8000',
+                baseUrl: baseUrl ?? kApiBaseUrl,
                 connectTimeout: const Duration(seconds: 30),
                 receiveTimeout: const Duration(minutes: 5),
               ),
