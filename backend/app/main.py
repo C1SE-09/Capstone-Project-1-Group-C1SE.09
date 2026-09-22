@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints.stt import router as stt_router
-from app.api.teacher import reports_router, router as teacher_router
+from app.api.teacher import reports_router
+from app.api.teacher import router as teacher_router
 
 
 @asynccontextmanager

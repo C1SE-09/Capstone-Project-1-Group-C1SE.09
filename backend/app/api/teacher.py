@@ -572,10 +572,10 @@ def _send_one_report(
     teacher_id: uuid.UUID,
     db: Session,
 ) -> SendReportResponse:
-    """Gß╗¡i mß╗Öt b├ío c├ío. D├╣ng chung cho endpoint 
-    lß║╗ + h├áng loß║ít = lu├┤n chung 1 bß╗Ö quy tß║»c."""
+    """Gửi 1 báo cáo. Dùng chung cho endpoint 
+    lẻ + hàng loạt = luôn chung 1 quy tắc."""
 
-    # 1. 2 request ─æß╗ông thß╗¥i kh├┤ng thß╗â gß╗¡i c├╣ng 1 bß║ún b├ío c├ío.
+    # 1. 2 request đồng thời ko thể gửi cùng 1 bản báo cáo.
     report = (
         db.query(DailyReport)
         .filter(DailyReport.daily_report_id == report_id)
@@ -587,20 +587,20 @@ def _send_one_report(
         db.rollback()
         raise HTTPException(status_code=404, detail="Report not found")
 
-    # 2. Chß╗º sß╗ƒ hß╗»u. Kh├┤ng s├ái `if teacher_id and ...`: bß╗Å qua check khi 
-    # thiß║┐u teacher_id
+    # 2. Chủ sở hữu. Không sài `if teacher_id and ...`: bỏ qua check khi 
+    # thiếu teacher_id
     if report.teacher_id != teacher_id:
         db.rollback()
         raise HTTPException(
             status_code=403, detail="Not authorized to send this report"
         )
 
-    # 3. ─É├ú gß╗¡i rß╗ôi -> 400 
+    # 3. Đã gửi rồi -> Trả 400 
     if report.status == SENT_STATUS:
         db.rollback()
         raise ReportAlreadySentError(report_id)
 
-    # 4. Chß╗ë gß╗¡i ─æ╞░ß╗úc tß╗½ bß║ún nh├íp
+    # 4. Chỉ gửi được từ draft
     if report.status != DailyReportStatus.DRAFT:
         db.rollback()
         raise HTTPException(
@@ -608,12 +608,12 @@ def _send_one_report(
             detail=f"Report cannot be sent from status '{report.status.value}'",
         )
 
-    # 5. Phß║úi c├│ trß║╗ (child_id nullable trong schema).
+    #5.  Phải có trẻ (child_id nullable trong schema)
     if report.child_id is None:
         db.rollback()
         raise HTTPException(status_code=400, detail="Report has no child assigned")
 
-    # 6. Phß║úi c├│ nß╗Öi dung ─æ├ú chß╗æt (>= 1 ActivityEntry).
+    # 6. Phải có nội dung đã chốt (>= 1 ActivityEntry).
     if not report.activities:
         db.rollback()
         raise HTTPException(status_code=400, detail="Report has no finalized content")
@@ -622,7 +622,7 @@ def _send_one_report(
     child_name = (child.nickname or child.full_name) if child else "be"
     linked_parents = 1 if (child and child.parent_id) else 0
 
-    # 7. ─Éß╗òi trß║íng th├íi, save thß╗¥i ─æiß╗âm gß╗¡i, commit TR╞»ß╗ÜC khi tb.
+    # 7. Đổi trạng thái, save thời điểm gửi, commit TRƯỚC khi tb..
     report.status = SENT_STATUS
     report.sent_at = datetime.now(timezone.utc)
     report.published_at = report.sent_at.date()  # sync w frontend
@@ -636,7 +636,7 @@ def _send_one_report(
         report.sent_at,
     )
 
-    # 8. Th├┤ng b├ío SAU commit. Provider lß╗ùi != revert lß║ºn gß╗¡i n├áy.
+    # 8. Thông báo SAU commit. Provider lỗi != revert lần gửi này.
     targeted_devices = 0
     try:
         targeted_devices = notification_service.notify_report_sent(
@@ -667,13 +667,13 @@ def _send_one_report(
     response_model=SendReportResponse,
     summary="Send a daily report to the parent",
     description=(
-        "─Éß╗òi trß║íng th├íi b├ío c├ío tß╗½ draft sang ─æ├ú gß╗¡i, l╞░u thß╗¥i ─æiß╗âm gß╗¡i, "
-        "& k├¡ch hoß║ít tb cho phß╗Ñ huynh sau khi commit."
+        "Đổi trạng thái báo cáo từ draft sang đã gửi, lưu thời điểm gửi "
+        "& kích hoạt tb cho phụ huynh sau khi commit."
     ),
 )
 def send_report(
     report_id: uuid.UUID,
-    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sß║╡n s├áng
+    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
     db: Session = Depends(get_db),  # noqa: B008
 ) -> SendReportResponse:
     return _send_one_report(report_id, teacher_id, db)
@@ -684,13 +684,13 @@ def send_report(
     response_model=SendAllResponse,
     summary="Send multiple draft reports",
     description=(
-        "Send nhiß╗üu report trong 1 lß║ºn, mß╗ùi b├ío c├ío commit ri├¬ng "
-        "Kß║┐t quß║ú trß║ú vß╗ü cho tß╗½ng b├ío c├ío."
+        "Send nhiều report trong 1 lần , mỗi báo cáo có commit riêng "
+        "Kết quả trả về cho từng báo cáo."
     ),
 )
 def send_all_reports(
     payload: SendAllRequest,
-    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sß║╡n s├áng
+    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
     db: Session = Depends(get_db),  # noqa: B008
 ) -> SendAllResponse:
     # 1. Xac dinh danh sach bao cao can gui.

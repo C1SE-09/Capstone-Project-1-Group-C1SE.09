@@ -36,11 +36,11 @@ import enum
 import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import DateTime
 
 from sqlalchemy import (
     JSON,
     Date,
+    Datetime,
     Float,
     ForeignKey,
     Index,

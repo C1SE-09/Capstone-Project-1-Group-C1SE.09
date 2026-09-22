@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import uuid
 
+from datetime import date, datetime
 from app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -115,14 +116,14 @@ class DailyReportDetailResponse(BaseModel):
 class SendReportResponse(BaseModel):
     """Result : send 1 report to parent"""
 
-    report_id: uuid.UUID = Field(..., description="UUID cß╗ºa DailyReport")
-    status: str = Field(..., description="Trß║íng th├íi sau khi gß╗¡i")
-    sent_at: datetime | None = Field(None, description="Thß╗¥i gian gß╗¡i cß╗Ñ thß╗â (UTC)")
+    report_id: uuid.UUID = Field(..., description="UUID cua DailyReport")
+    status: str = Field(..., description="Trạng thái sau khi gửi")
+    sent_at: datetime | None = Field(None, description="Thời gian cụ thể gửi (UTC)")
     child_id: uuid.UUID | None = Field(None, description="UUID cua tre")
-    linked_parents: int = Field(0, description="Sß╗æ l╞░ß╗úng phß╗Ñ huynh li├¬n kß║┐t vß╗¢i trß║╗")
+    linked_parents: int = Field(0, description="Số ph liên kết với trẻ")
     targeted_devices: int = Field(
         0,
-        description="Sß╗æ device nhß║¡n tb (0 khi ch╞░a cs FCM token )",
+        description="Số thiết bị nhận thông báo (0 khi chưa cs FCM token )",
     )
 
 
@@ -130,15 +131,15 @@ class SendAllRequest(BaseModel):
     """Payload cho POST /api/teacher/reports/send-all."""
 
     report_ids: list[uuid.UUID] | None = Field(
-        None, description="Danh s├ích b├ío c├ío cß║ºn gß╗¡i. Bß╗Å trß╗æng = bß║ún nh├íp"
+        None, description="Danh sách báo cáo cần gửi. Bỏ trống = bản nháp"
     )
     report_date: date | None = Field(
-        None, description="Chß╗ë gß╗¡i b├ío c├ío cß╗ºa ng├áy n├áy (d├╣ng khi bß╗Å trß╗æng report_ids)"
+        None, description="Chỉ gửi report của ngày này (dùng khi empty trong report_ids)"
     )
 
 
 class SendAllItemResult(BaseModel):
-    """Kq cho tß╗½ng b├ío c├ío khi gß╗¡i h├áng loß║ít."""
+    """Kq cho từng báo cáo khi gửi hàng loạt."""
 
     report_id: uuid.UUID
     result: str = Field(..., description="sent | skipped | failed")
@@ -146,7 +147,7 @@ class SendAllItemResult(BaseModel):
 
 
 class SendAllResponse(BaseModel):
-    """Tß╗òng kß║┐t kq gß╗¡i h├áng loß║ít."""
+    """Tổng kết kq gửi hàng loạt."""
 
     sent: int = 0
     skipped: int = 0

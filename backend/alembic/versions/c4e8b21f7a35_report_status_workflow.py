@@ -11,16 +11,16 @@ All SQL literals in this file must therefore be UPPERCASE.
 The API still returns lowercase, because the response uses `.value`.
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "c4e8b21f7a35"
-down_revision: Union[str, Sequence[str], None] = "3a6146471483"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "3a6146471483"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
