@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/teacher/pages/teacher_screen.dart
+// frontend/lib/presentation/teacher/pages/teacher_screen.dart
 // =========================================================
 
 import 'package:adark_frontend/core/theme/app_theme.dart';
@@ -7,7 +7,6 @@ import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dar
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/presentation/teacher/controllers/teacher_home_controller.dart';
-import 'package:adark_frontend/presentation/teacher/pages/activity_recording_screen.dart';
 import 'package:adark_frontend/presentation/shared/view_state.dart';
 import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
