@@ -10,7 +10,6 @@ nguyên tắc Clean Architecture — tránh expose trực tiếp ORM objects.
 from __future__ import annotations
 
 import uuid
-
 from datetime import date, datetime
 from app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field
