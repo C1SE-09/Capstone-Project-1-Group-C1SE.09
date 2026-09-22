@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints.stt import router as stt_router
+from app.api.teacher import reports_router
 from app.api.teacher import router as teacher_router
 
 
@@ -37,6 +38,7 @@ app.add_middleware(
 app.include_router(class_router)
 app.include_router(dashboard_router)
 app.include_router(teacher_router)
+app.include_router(reports_router)
 app.include_router(stt_router, prefix="/api/stt", tags=["stt"])
 
 

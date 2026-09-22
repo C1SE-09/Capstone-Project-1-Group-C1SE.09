@@ -10,15 +10,15 @@ nguyên tắc Clean Architecture — tránh expose trực tiếp ORM objects.
 from __future__ import annotations
 
 import uuid
+from datetime import date, datetime
 
 from app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field
 
+
 # ===========================================================================
 # VoiceRecord Schemas
 # ===========================================================================
-
-
 class VoiceRecordUploadResponse(BaseModel):
     """
     Response trả về sau khi upload audio thành công.
@@ -111,4 +111,45 @@ class DailyReportDetailResponse(BaseModel):
     activities: list[ActivityEntryResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+class SendReportResponse(BaseModel):
+    """Result : send 1 report to parent"""
+
+    report_id: uuid.UUID = Field(..., description="UUID cua DailyReport")
+    status: str = Field(..., description="Trạng thái sau khi gửi")
+    sent_at: datetime | None = Field(None, description="Thời gian cụ thể gửi (UTC)")
+    child_id: uuid.UUID | None = Field(None, description="UUID cua tre")
+    linked_parents: int = Field(0, description="Số ph liên kết với trẻ")
+    targeted_devices: int = Field(
+        0,
+        description="Số thiết bị nhận thông báo (0 khi chưa cs FCM token )",
+    )
+
+
+class SendAllRequest(BaseModel):
+    """Payload cho POST /api/teacher/reports/send-all."""
+
+    report_ids: list[uuid.UUID] | None = Field(
+        None, description="Danh sách báo cáo cần gửi. Bỏ trống = bản nháp"
+    )
+    report_date: date | None = Field(
+        None, description="Chỉ gửi report của ngày này (dùng khi empty trong report_ids)"
+    )
+
+
+class SendAllItemResult(BaseModel):
+    """Kq cho từng báo cáo khi gửi hàng loạt."""
+
+    report_id: uuid.UUID
+    result: str = Field(..., description="sent | skipped | failed")
+    detail: str | None = None
+
+
+class SendAllResponse(BaseModel):
+    """Tổng kết kq gửi hàng loạt."""
+
+    sent: int = 0
+    skipped: int = 0
+    failed: int = 0
+    results: list[SendAllItemResult] = Field(default_factory=list)
 

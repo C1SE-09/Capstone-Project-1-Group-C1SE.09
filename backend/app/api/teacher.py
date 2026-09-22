@@ -58,11 +58,16 @@ from app.schemas.report import (
     ActivityEntryResponse,
     DailyReportDetailResponse,
     DraftReportCreateRequest,
+    SendAllItemResult,
+    SendAllRequest,
+    SendAllResponse,
+    SendReportResponse,
     TranscriptUpdateRequest,
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
 )
 from app.services.extraction_service import extract_from_transcript
+from app.services.notification_service import notification_service
 from app.tasks.process_audio import process_audio_task
 
 logger = logging.getLogger(__name__)
@@ -541,4 +546,198 @@ def publish_report(
         "report_id": str(report.daily_report_id),
         "status": report.status.value,
         "published_at": report.published_at.isoformat(),
-    }
+    }
+
+SENT_STATUS = DailyReportStatus.SENT
+reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+class ReportAlreadySentError(HTTPException):
+    """Bao cao da duoc gui truoc do.
+
+    Ke thua HTTPException de endpoint don le tra ve 400 dung theo spec,
+    dong thoi send-all bat rieng exception nay de dem vao `skipped`
+    thay vi `failed` -> retry ca lo khong bi loi.
+    """
+
+    def __init__(self, report_id: uuid.UUID) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Report {report_id} was already sent",
+        )
+
+
+def _send_one_report(
+    report_id: uuid.UUID,
+    teacher_id: uuid.UUID,
+    db: Session,
+) -> SendReportResponse:
+    """Gửi 1 báo cáo. Dùng chung cho endpoint 
+    lẻ + hàng loạt = luôn chung 1 quy tắc."""
+
+    # 1. 2 request đồng thời ko thể gửi cùng 1 bản báo cáo.
+    report = (
+        db.query(DailyReport)
+        .filter(DailyReport.daily_report_id == report_id)
+        .with_for_update()
+        .first()
+    )
+
+    if not report:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # 2. Chủ sở hữu. Không sài `if teacher_id and ...`: bỏ qua check khi 
+    # thiếu teacher_id
+    if report.teacher_id != teacher_id:
+        db.rollback()
+        raise HTTPException(
+            status_code=403, detail="Not authorized to send this report"
+        )
+
+    # 3. Đã gửi rồi -> Trả 400 
+    if report.status == SENT_STATUS:
+        db.rollback()
+        raise ReportAlreadySentError(report_id)
+
+    # 4. Chỉ gửi được từ draft
+    if report.status != DailyReportStatus.DRAFT:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Report cannot be sent from status '{report.status.value}'",
+        )
+
+    #5.  Phải có trẻ (child_id nullable trong schema)
+    if report.child_id is None:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Report has no child assigned")
+
+    # 6. Phải có nội dung đã chốt (>= 1 ActivityEntry).
+    if not report.activities:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Report has no finalized content")
+
+    child = report.child
+    child_name = (child.nickname or child.full_name) if child else "be"
+    linked_parents = 1 if (child and child.parent_id) else 0
+
+    # 7. Đổi trạng thái, save thời điểm gửi, commit TRƯỚC khi tb..
+    report.status = SENT_STATUS
+    report.sent_at = datetime.now(timezone.utc)
+    report.published_at = report.sent_at.date()  # sync w frontend
+    db.commit()
+    db.refresh(report)
+
+    logger.info(
+        "[Send] report_id=%s teacher_id=%s sent_at=%s",
+        report.daily_report_id,
+        teacher_id,
+        report.sent_at,
+    )
+
+    # 8. Thông báo SAU commit. Provider lỗi != revert lần gửi này.
+    targeted_devices = 0
+    try:
+        targeted_devices = notification_service.notify_report_sent(
+            report_id=str(report.daily_report_id),
+            child_id=str(report.child_id),
+            child_name=child_name,
+            linked_parents=linked_parents,
+        )
+    except Exception:
+        logger.exception(
+            "[Send] Notification failed for report_id=%s - report stays '%s'",
+            report.daily_report_id,
+            report.status.value,
+        )
+
+    return SendReportResponse(
+        report_id=report.daily_report_id,
+        status=report.status.value,
+        sent_at=report.sent_at,
+        child_id=report.child_id,
+        linked_parents=linked_parents,
+        targeted_devices=targeted_devices,
+    )
+
+
+@reports_router.post(
+    "/{report_id}/send",
+    response_model=SendReportResponse,
+    summary="Send a daily report to the parent",
+    description=(
+        "Đổi trạng thái báo cáo từ draft sang đã gửi, lưu thời điểm gửi "
+        "& kích hoạt tb cho phụ huynh sau khi commit."
+    ),
+)
+def send_report(
+    report_id: uuid.UUID,
+    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
+    db: Session = Depends(get_db),  # noqa: B008
+) -> SendReportResponse:
+    return _send_one_report(report_id, teacher_id, db)
+
+
+@router.post(
+    "/reports/send-all",
+    response_model=SendAllResponse,
+    summary="Send multiple draft reports",
+    description=(
+        "Send nhiều report trong 1 lần , mỗi báo cáo có commit riêng "
+        "Kết quả trả về cho từng báo cáo."
+    ),
+)
+def send_all_reports(
+    payload: SendAllRequest,
+    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
+    db: Session = Depends(get_db),  # noqa: B008
+) -> SendAllResponse:
+    # 1. Xac dinh danh sach bao cao can gui.
+    if payload.report_ids:
+        target_ids = list(dict.fromkeys(payload.report_ids))  # bo trung, giu thu tu
+    else:
+        query = db.query(DailyReport).filter(
+            DailyReport.teacher_id == teacher_id,
+            DailyReport.status == DailyReportStatus.DRAFT,
+        )
+        if payload.report_date:
+            query = query.filter(DailyReport.report_date == payload.report_date)
+        target_ids = [row.daily_report_id for row in query.all()]
+
+    # 2. Gui tung bao cao, commit rieng tung cai (khong dung 1 transaction lon).
+    results: list[SendAllItemResult] = []
+    sent = skipped = failed = 0
+
+    for target_id in target_ids:
+        try:
+            _send_one_report(target_id, teacher_id, db)
+        except ReportAlreadySentError:
+            # Retry ca lo: bao cao da gui khong phai loi, chi la bo qua.
+            skipped += 1
+            results.append(
+                SendAllItemResult(
+                    report_id=target_id, result="skipped", detail="Already sent"
+                )
+            )
+        except HTTPException as exc:
+            failed += 1
+            results.append(
+                SendAllItemResult(
+                    report_id=target_id, result="failed", detail=str(exc.detail)
+                )
+            )
+        except Exception:
+            db.rollback()
+            logger.exception("[SendAll] Unexpected failure report_id=%s", target_id)
+            failed += 1
+            results.append(
+                SendAllItemResult(
+                    report_id=target_id, result="failed", detail="Unexpected error"
+                )
+            )
+        else:
+            sent += 1
+            results.append(SendAllItemResult(report_id=target_id, result="sent"))
+
+    return SendAllResponse(sent=sent, skipped=skipped, failed=failed, results=results)
