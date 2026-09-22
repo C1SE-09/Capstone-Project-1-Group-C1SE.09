@@ -1,4 +1,4 @@
-// frontend/lib/domain/repositories/dashboard_repository.dart
+﻿// frontend/lib/domain/repositories/dashboard_repository.dart
 // =========================================================
 // INTERFACE (hợp đồng) cho toàn bộ data của màn Tổng quan +
 // màn Phụ huynh.
@@ -7,14 +7,14 @@
 // Hiện tại: HttpDashboardRepository — gọi API FastAPI thật.
 // Để test: truyền implementation khác vào constructor của Controller.
 
-import 'package:adark_frontend/domain/entities/activity_item.dart';
-import 'package:adark_frontend/domain/entities/child.dart';
-import 'package:adark_frontend/domain/entities/child_overview.dart';
-import 'package:adark_frontend/domain/entities/class_dashboard_summary.dart';
-import 'package:adark_frontend/domain/entities/class_report_overview.dart';
-import 'package:adark_frontend/domain/entities/daily_report.dart';
-import 'package:adark_frontend/domain/entities/parent.dart';
-import 'package:adark_frontend/domain/entities/teacher.dart';
+import 'package:adark_frontend/domain/entities/activity/activity_item.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart';
+import 'package:adark_frontend/domain/entities/child/child_overview.dart';
+import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
+import 'package:adark_frontend/domain/entities/class/class_report_overview.dart';
+import 'package:adark_frontend/domain/entities/report/daily_report.dart';
+import 'package:adark_frontend/domain/entities/auth/parent.dart';
+import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 
 abstract class DashboardRepository {
   // ──────────────────────────────────────────────────────────

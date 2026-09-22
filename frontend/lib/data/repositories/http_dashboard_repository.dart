@@ -1,4 +1,4 @@
-// frontend/lib/data/repositories/http_dashboard_repository.dart
+﻿// frontend/lib/data/repositories/http_dashboard_repository.dart
 // =========================================================
 // Triển khai DashboardRepository bằng API THẬT (endpoint
 // dashboard.py + class_data.py). Tất cả method đều gọi Dio.
@@ -11,16 +11,16 @@
 import 'package:adark_frontend/core/utils/api_config.dart';
 
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
-import 'package:adark_frontend/domain/entities/activity_item.dart';
-import 'package:adark_frontend/domain/entities/child.dart';
-import 'package:adark_frontend/domain/entities/child_overview.dart';
-import 'package:adark_frontend/domain/entities/class_dashboard_summary.dart';
-import 'package:adark_frontend/domain/entities/class_info.dart';
-import 'package:adark_frontend/domain/entities/class_report_overview.dart';
-import 'package:adark_frontend/domain/entities/daily_report.dart';
-import 'package:adark_frontend/domain/entities/parent.dart';
-import 'package:adark_frontend/domain/entities/report_status.dart';
-import 'package:adark_frontend/domain/entities/teacher.dart';
+import 'package:adark_frontend/domain/entities/activity/activity_item.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart';
+import 'package:adark_frontend/domain/entities/child/child_overview.dart';
+import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
+import 'package:adark_frontend/domain/entities/class/class_info.dart';
+import 'package:adark_frontend/domain/entities/class/class_report_overview.dart';
+import 'package:adark_frontend/domain/entities/report/daily_report.dart';
+import 'package:adark_frontend/domain/entities/auth/parent.dart';
+import 'package:adark_frontend/domain/entities/report/report_status.dart';
+import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
 import 'package:dio/dio.dart';
 
