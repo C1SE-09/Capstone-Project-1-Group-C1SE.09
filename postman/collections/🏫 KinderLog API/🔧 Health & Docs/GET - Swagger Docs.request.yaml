@@ -1,0 +1,5 @@
+$kind: http-request
+description: Mở URL này trong browser để xem Swagger UI.
+url: "{{base_url}}/docs"
+method: GET
+order: 1000

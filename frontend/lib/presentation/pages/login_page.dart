@@ -51,8 +51,8 @@ class LoginPage extends StatelessWidget {
 
               // ── Login as Teacher ──────────────────────────
               FilledButton(
-               // onPressed: () => context.go('/teacher'),
-                onPressed: () => context.go('/extraction-results'),
+                // onPressed: () => context.go('/teacher'),
+                onPressed: () => context.go('/teacher'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),

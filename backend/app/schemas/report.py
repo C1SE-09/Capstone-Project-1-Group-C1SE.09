@@ -13,7 +13,7 @@ import uuid
 
 from app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field
-from datetime import date, datetime
+
 # ===========================================================================
 # VoiceRecord Schemas
 # ===========================================================================
@@ -71,24 +71,58 @@ class VoiceRecordDetailResponse(BaseModel):
 
 
 class DraftReportCreateRequest(BaseModel):
-    """Payload tuỳ chọn khi tạo draft report với dữ liệu trích xuất đã chỉnh sửa."""
+    """Payload khi tạo draft report từ VoiceRecord."""
 
+    voice_id: uuid.UUID = Field(
+        ...,
+        description="UUID của VoiceRecord đã transcribe và extract",
+    )
+    teacher_id: uuid.UUID = Field(
+        ...,
+        description="UUID của giáo viên đang tạo báo cáo",
+    )
     edited_extraction: dict[str, str | None] | None = Field(
         None,
-        description="Dữ liệu trích xuất đã chỉnh sửa của giáo viên: {meals, sleeping, health, activities, mood}",
+        description="Dữ liệu trích xuất đã chỉnh sửa: {meals, sleeping, health, activities, mood}. Nếu null thì dùng extraction_result đã lưu trong DB.",
     )
+
+
+class ActivityEntryResponse(BaseModel):
+    """Response cho một hoạt động trong báo cáo."""
+
+    activity_entry_id: uuid.UUID
+    category: str
+    title: str
+    description: str | None = None
+    entry_order: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DailyReportDetailResponse(BaseModel):
+    """Response chi tiết một DailyReport bao gồm danh sách ActivityEntry."""
+
+    report_id: uuid.UUID
+    child_id: uuid.UUID | None = None
+    teacher_id: uuid.UUID | None = None
+    report_date: str
+    status: str
+    published_at: str | None = None
+    activities: list[ActivityEntryResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
 
 class SendReportResponse(BaseModel):
     """Result : send 1 report to parent"""
 
-    report_id: uuid.UUID = Field(..., description="UUID của DailyReport")
-    status: str = Field(..., description="Trạng thái sau khi gửi")
-    sent_at: datetime | None = Field(None, description="Thời gian gửi cụ thể (UTC)")
+    report_id: uuid.UUID = Field(..., description="UUID cß╗ºa DailyReport")
+    status: str = Field(..., description="Trß║íng th├íi sau khi gß╗¡i")
+    sent_at: datetime | None = Field(None, description="Thß╗¥i gian gß╗¡i cß╗Ñ thß╗â (UTC)")
     child_id: uuid.UUID | None = Field(None, description="UUID cua tre")
-    linked_parents: int = Field(0, description="Số lượng phụ huynh liên kết với trẻ")
+    linked_parents: int = Field(0, description="Sß╗æ l╞░ß╗úng phß╗Ñ huynh li├¬n kß║┐t vß╗¢i trß║╗")
     targeted_devices: int = Field(
         0,
-        description="Số device nhận tb (0 khi chưa cs FCM token )",
+        description="Sß╗æ device nhß║¡n tb (0 khi ch╞░a cs FCM token )",
     )
 
 
@@ -96,15 +130,15 @@ class SendAllRequest(BaseModel):
     """Payload cho POST /api/teacher/reports/send-all."""
 
     report_ids: list[uuid.UUID] | None = Field(
-        None, description="Danh sách báo cáo cần gửi. Bỏ trống = bản nháp"
+        None, description="Danh s├ích b├ío c├ío cß║ºn gß╗¡i. Bß╗Å trß╗æng = bß║ún nh├íp"
     )
     report_date: date | None = Field(
-        None, description="Chỉ gửi báo cáo của ngày này (dùng khi bỏ trống report_ids)"
+        None, description="Chß╗ë gß╗¡i b├ío c├ío cß╗ºa ng├áy n├áy (d├╣ng khi bß╗Å trß╗æng report_ids)"
     )
 
 
 class SendAllItemResult(BaseModel):
-    """Kq cho từng báo cáo khi gửi hàng loạt."""
+    """Kq cho tß╗½ng b├ío c├ío khi gß╗¡i h├áng loß║ít."""
 
     report_id: uuid.UUID
     result: str = Field(..., description="sent | skipped | failed")
@@ -112,7 +146,7 @@ class SendAllItemResult(BaseModel):
 
 
 class SendAllResponse(BaseModel):
-    """Tổng kết kq gửi hàng loạt."""
+    """Tß╗òng kß║┐t kq gß╗¡i h├áng loß║ít."""
 
     sent: int = 0
     skipped: int = 0

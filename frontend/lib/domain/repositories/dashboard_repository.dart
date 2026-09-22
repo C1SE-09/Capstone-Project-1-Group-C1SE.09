@@ -3,11 +3,9 @@
 // INTERFACE (hợp đồng) cho toàn bộ data của màn Tổng quan +
 // màn Phụ huynh.
 //
-// ĐÂY LÀ ĐIỂM MẤU CHỐT CỦA "API-READY":
-//   - View/Controller chỉ phụ thuộc vào interface này.
-//   - Bây giờ: MockDashboardRepository (data cứng).
-//   - Sau này: HttpDashboardRepository (gọi API thật) — chỉ cần
-//     triển khai đúng interface, View KHÔNG cần sửa.
+// View/Controller chỉ phụ thuộc vào interface này.
+// Hiện tại: HttpDashboardRepository — gọi API FastAPI thật.
+// Để test: truyền implementation khác vào constructor của Controller.
 
 import 'package:adark_frontend/domain/entities/activity_item.dart';
 import 'package:adark_frontend/domain/entities/child.dart';

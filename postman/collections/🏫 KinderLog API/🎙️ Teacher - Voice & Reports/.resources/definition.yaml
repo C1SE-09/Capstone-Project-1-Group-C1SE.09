@@ -1,0 +1,3 @@
+$kind: collection
+description: "API giáo viên: ghi âm, transcript, tạo báo cáo (prefix: /api/teacher)"
+order: 3000

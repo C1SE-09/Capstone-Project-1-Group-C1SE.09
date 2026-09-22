@@ -1,11 +1,7 @@
 // frontend/lib/presentation/controllers/teacher_home_controller.dart
 // =========================================================
-// Controller cho màn "Tổng quan" của giáo viên.
-//
-// KHÔNG import Flutter widget nào (chỉ import foundation cho
-// ChangeNotifier) → có thể test dễ, và tách biệt khỏi UI.
 
-import 'package:adark_frontend/data/repositories/mock_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/teacher.dart';
 import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
@@ -14,7 +10,7 @@ import 'package:flutter/foundation.dart';
 
 class TeacherHomeController extends ChangeNotifier {
   TeacherHomeController({DashboardRepository? repository})
-      : _repo = repository ?? MockDashboardRepository();
+      : _repo = repository ?? HttpDashboardRepository();
 
   final DashboardRepository _repo;
 

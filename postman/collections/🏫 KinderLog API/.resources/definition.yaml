@@ -1,0 +1,28 @@
+$kind: collection
+description: |-
+  Postman Collection cho toàn bộ API của KinderLog Backend.
+
+  ## Base URL
+  `http://localhost:8000`
+
+  ## Seed Data IDs
+  | Loại | ID | Tên |
+  |---|---|---|
+  | School | `aaaaaaaa-0000-0000-0000-000000000001` | Trường Mầm Non Họa Mi |
+  | Class A | `aaaaaaaa-0000-0000-0000-000000000001` | Lớp Mầm A |
+  | Class B | `aaaaaaaa-0000-0000-0000-000000000002` | Lớp Mầm B |
+  | Teacher 1 | `bbbbbbbb-0000-0000-0000-000000000001` | Cô Nguyễn Thị Mai |
+  | Teacher 2 | `bbbbbbbb-0000-0000-0000-000000000002` | Cô Trần Thị Lan |
+  | Parent 1 | `cccccccc-0000-0000-0000-000000000001` | Trần Văn Tuấn |
+  | Child 1 | `dddddddd-0000-0000-0000-000000000001` | Trần Gia Bảo |
+  | Child 2 | `dddddddd-0000-0000-0000-000000000002` | Lê Ngọc Ánh |
+variables:
+  base_url: http://localhost:8000
+  teacher_id_1: bbbbbbbb-0000-0000-0000-000000000001
+  teacher_id_2: bbbbbbbb-0000-0000-0000-000000000002
+  class_id_a: aaaaaaaa-0000-0000-0000-000000000001
+  class_id_b: aaaaaaaa-0000-0000-0000-000000000002
+  parent_id_1: cccccccc-0000-0000-0000-000000000001
+  child_id_1: dddddddd-0000-0000-0000-000000000001
+  child_id_2: dddddddd-0000-0000-0000-000000000002
+  voice_id: ""

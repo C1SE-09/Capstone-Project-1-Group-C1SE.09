@@ -2,7 +2,7 @@
 // =====================================================================
 // Controller cho danh sách lớp trong tab "Báo cáo lớp".
 
-import 'package:adark_frontend/data/repositories/mock_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/class_report_overview.dart';
 import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
 import 'package:adark_frontend/presentation/controllers/view_state.dart';
@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 
 class ClassReportListController extends ChangeNotifier {
   ClassReportListController({DashboardRepository? repository})
-      : _repository = repository ?? MockDashboardRepository();
+      : _repository = repository ?? HttpDashboardRepository();
 
   final DashboardRepository _repository;
 

@@ -1,0 +1,15 @@
+$kind: http-request
+description: |-
+  Trả về thông tin 1 giáo viên.
+
+  **Expected Response:**
+  ```json
+  {
+    "teacher_id": "bbbbbbbb-...",
+    "full_name": "Cô Nguyễn Thị Mai",
+    "email": "teacher.mai@hoami.edu.vn"
+  }
+  ```
+url: "{{base_url}}/api/teacher/{{teacher_id_1}}"
+method: GET
+order: 1000

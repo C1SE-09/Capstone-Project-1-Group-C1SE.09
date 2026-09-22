@@ -1,0 +1,37 @@
+$kind: http-request
+description: |-
+  Upload file audio → lưu MinIO → tạo VoiceRecord(PENDING) → dispatch Celery task.
+
+  **Response (201):** `{ "id": "<uuid>", "status": "pending" }`
+
+  **Test script** sẽ tự động lưu `voice_id` vào collection variables.
+url: "{{base_url}}/api/teacher/voice/upload"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: file
+      key: file
+      src:
+        - ""
+      description: File audio (.m4a/.wav/.mp3/.webm), tối đa 25MB
+    - type: text
+      key: teacher_id
+      value: "{{teacher_id_1}}"
+    - type: text
+      key: class_id
+      value: "{{class_id_a}}"
+    - type: text
+      key: child_id
+      value: "{{child_id_1}}"
+      description: Tùy chọn
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+          const json = pm.response.json();
+          pm.collectionVariables.set('voice_id', json.id);
+          console.log('voice_id saved:', json.id);
+      }
+    language: text/javascript
+order: 1000
