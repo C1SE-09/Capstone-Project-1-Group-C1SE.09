@@ -1,6 +1,6 @@
-import 'package:adark_frontend/core/utils/api_config.dart';
-import 'package:adark_frontend/domain/entities/child.dart';
-import 'package:adark_frontend/domain/entities/class_info.dart';
+﻿import 'package:adark_frontend/core/utils/api_config.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart';
+import 'package:adark_frontend/domain/entities/class/class_info.dart';
 import 'package:dio/dio.dart';
 
 abstract class ClassDataRepository {
