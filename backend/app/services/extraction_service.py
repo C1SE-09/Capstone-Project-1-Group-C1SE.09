@@ -84,7 +84,7 @@ def _numericalize(text: str):
     return [_vocab.get(token, _vocab['<unk>']) for token in tokens]
 
 def _extract_bio_phrases(tokens, pred_labels):
-    """Parse BIO tags thành list phrases theo từng label."""
+    """Parse BIO tags thành list phrases theo từng label.."""
     result = {
         "meals": [],
         "sleeping": [],
