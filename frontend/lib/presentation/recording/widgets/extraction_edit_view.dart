@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/recording/widgets/extraction_edit_view.dart
+// frontend/lib/presentation/recording/widgets/extraction_edit_view.dart
 // ============================================================================
 // Giao diện 1: Thông tin đã nhận diện (6 form fields + "Tạo báo cáo")
 // ============================================================================
@@ -15,6 +15,7 @@ class ExtractionEditView extends StatelessWidget {
     required this.moodController,
     required this.notesController,
     required this.onGoToReview,
+    this.isSubmitting = false,
   });
 
   final TextEditingController mealsController;
@@ -24,6 +25,7 @@ class ExtractionEditView extends StatelessWidget {
   final TextEditingController moodController;
   final TextEditingController notesController;
   final VoidCallback onGoToReview;
+  final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +179,7 @@ class ExtractionEditView extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: onGoToReview,
+                  onPressed: isSubmitting ? null : onGoToReview,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C4D),
                     foregroundColor: Colors.white,
@@ -186,13 +188,22 @@ class ExtractionEditView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
-                    'Tạo báo cáo',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Text(
+                          'Tạo báo cáo',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 10),

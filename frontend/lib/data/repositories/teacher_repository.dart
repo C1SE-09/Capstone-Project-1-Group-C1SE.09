@@ -167,6 +167,18 @@ abstract class TeacherRepositoryBase {
     required String teacherId,
     ExtractionData? editedExtraction,
   });
+
+  /// Create a manual DailyReport (fallback without voice recording).
+  Future<Map<String, dynamic>> createManualReport({
+    required String teacherId,
+    required String childId,
+    String? eating,
+    String? sleeping,
+    String? health,
+    String? activities,
+    String? mood,
+    String? teacherNote,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -359,6 +371,54 @@ class TeacherRepository implements TeacherRepositoryBase {
       if (body == null) {
         throw const TeacherRepositoryException(
           'Server returned an empty draft report response.',
+        );
+      }
+
+      return body;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createManualReport({
+    required String teacherId,
+    required String childId,
+    String? eating,
+    String? sleeping,
+    String? health,
+    String? activities,
+    String? mood,
+    String? teacherNote,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/manual',
+        data: {
+          'teacher_id': teacherId,
+          'child_id': childId,
+          'eating': eating,
+          'sleeping': sleeping,
+          'health': health,
+          'activities': activities,
+          'mood': mood,
+          'teacher_note': teacherNote,
+        },
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty manual report response.',
         );
       }
 

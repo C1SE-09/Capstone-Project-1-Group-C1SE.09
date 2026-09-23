@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/teacher/pages/activity_recording_screen.dart
+// frontend/lib/presentation/teacher/pages/activity_recording_screen.dart
 
 import 'package:adark_frontend/core/theme/app_theme.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
@@ -140,7 +140,7 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
   }
 
   Widget _childCard(Child child, int index) {
-    final hasRecording = index == 0;
+    final hasRecording = _controller.hasReportToday(child.childId);
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(10),
@@ -208,7 +208,11 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
   void _showRecordingMessage(Child child) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ChildRecordingScreen(child: child),
+        builder: (_) => ChildRecordingScreen(
+          child: child,
+          teacherId: 'bbbbbbbb-0000-0000-0000-000000000001',
+          classId: widget.classId,
+        ),
       ),
     );
   }

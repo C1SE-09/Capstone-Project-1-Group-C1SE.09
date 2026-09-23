@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/recording/pages/extraction_results_screen.dart
+// frontend/lib/presentation/recording/pages/extraction_results_screen.dart
 // ============================================================================
 // ExtractionResultsScreen (Task #90 - Extraction Review Flow Coordinator)
 // ============================================================================
@@ -18,17 +18,33 @@ class ExtractionResultsScreen extends StatefulWidget {
     super.key,
     required this.voiceId,
     required this.teacherId,
+    this.childId,
     this.childName,
     this.childInitials,
     this.classTeacherInfo,
+    this.initialStep = _ScreenStep.edit,
+    this.initialMeals,
+    this.initialSleeping,
+    this.initialHealth,
+    this.initialActivities,
+    this.initialMood,
+    this.initialNotes,
     TeacherRepositoryBase? repository,
   }) : _repository = repository;
 
   final String voiceId;
   final String teacherId;
+  final String? childId;
   final String? childName;
   final String? childInitials;
   final String? classTeacherInfo;
+  final _ScreenStep initialStep;
+  final String? initialMeals;
+  final String? initialSleeping;
+  final String? initialHealth;
+  final String? initialActivities;
+  final String? initialMood;
+  final String? initialNotes;
   final TeacherRepositoryBase? _repository;
 
   @override
@@ -95,8 +111,30 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       _isLoading = true;
     });
 
+    if (widget.initialMeals != null ||
+        widget.initialSleeping != null ||
+        widget.initialHealth != null ||
+        widget.initialActivities != null ||
+        widget.initialMood != null ||
+        widget.initialNotes != null) {
+      if (!mounted) return;
+      setState(() {
+        _mealsController.text = widget.initialMeals ?? '';
+        _sleepingController.text = widget.initialSleeping ?? '';
+        _healthController.text = widget.initialHealth ?? '';
+        _activitiesController.text = widget.initialActivities ?? '';
+        _moodController.text = widget.initialMood ?? '';
+        _notesController.text = widget.initialNotes ?? '';
+        _currentStep = widget.initialStep;
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
-      if (widget.voiceId.isNotEmpty && widget.voiceId != 'voice-001') {
+      if (widget.voiceId.isNotEmpty &&
+          widget.voiceId != 'voice-001' &&
+          widget.voiceId != 'manual-report') {
         final extraction = await _repo.extractVoice(
           voiceId: widget.voiceId,
           teacherId: widget.teacherId,
@@ -145,11 +183,77 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
     }
   }
 
-  // Action: Press "Tạo báo cáo" -> Go to Review Step (Image 1)
-  void _goToReviewStep() {
+  // Action: Press "Tạo báo cáo" -> Save draft to DB & Go to Review Step (Image 1)
+  Future<void> _goToReviewStep() async {
+    if (_isSubmitting) return;
+
     setState(() {
-      _currentStep = _ScreenStep.review;
+      _isSubmitting = true;
     });
+
+    try {
+      final effectiveTeacherId = widget.teacherId.isNotEmpty
+          ? widget.teacherId
+          : 'bbbbbbbb-0000-0000-0000-000000000001';
+
+      if (widget.voiceId.isNotEmpty &&
+          widget.voiceId != 'voice-001' &&
+          widget.voiceId != 'manual-report') {
+        final editedExtraction = ExtractionData(
+          meals: _mealsController.text.trim(),
+          sleeping: _sleepingController.text.trim(),
+          health: _healthController.text.trim(),
+          activities: _activitiesController.text.trim(),
+          mood: _moodController.text.trim(),
+        );
+
+        await _repo.createDraftReport(
+          voiceId: widget.voiceId,
+          teacherId: effectiveTeacherId,
+          editedExtraction: editedExtraction,
+        );
+      } else if (widget.childId != null && widget.childId!.isNotEmpty) {
+        await _repo.createManualReport(
+          teacherId: effectiveTeacherId,
+          childId: widget.childId!,
+          eating: _mealsController.text.trim().isNotEmpty
+              ? _mealsController.text.trim()
+              : null,
+          sleeping: _sleepingController.text.trim().isNotEmpty
+              ? _sleepingController.text.trim()
+              : null,
+          health: _healthController.text.trim().isNotEmpty
+              ? _healthController.text.trim()
+              : null,
+          activities: _activitiesController.text.trim().isNotEmpty
+              ? _activitiesController.text.trim()
+              : null,
+          mood: _moodController.text.trim().isNotEmpty
+              ? _moodController.text.trim()
+              : null,
+          teacherNote: _notesController.text.trim().isNotEmpty
+              ? _notesController.text.trim()
+              : null,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _currentStep = _ScreenStep.review;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Không thể tạo bản nháp: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   // Action: Press "Gửi phụ huynh" -> Show Confirmation Bottom Sheet (Image 2)
@@ -172,7 +276,9 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
     });
 
     try {
-      if (widget.voiceId.isNotEmpty && widget.voiceId != 'voice-001') {
+      if (widget.voiceId.isNotEmpty &&
+          widget.voiceId != 'voice-001' &&
+          widget.voiceId != 'manual-report') {
         final editedExtraction = ExtractionData(
           meals: _mealsController.text.trim(),
           sleeping: _sleepingController.text.trim(),
@@ -236,6 +342,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
           moodController: _moodController,
           notesController: _notesController,
           onGoToReview: _goToReviewStep,
+          isSubmitting: _isSubmitting,
         );
 
       case _ScreenStep.review:

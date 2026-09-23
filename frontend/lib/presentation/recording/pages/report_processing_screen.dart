@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/recording/pages/report_processing_screen.dart
+// frontend/lib/presentation/recording/pages/report_processing_screen.dart
 // ============================================================================
 // ReportProcessingScreen – "Đang xử lý báo cáo"
 //
@@ -102,11 +102,25 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
   }
 
   void _navigateToExtraction() {
+    final effectiveTeacherId =
+        (widget.teacherId != null && widget.teacherId!.isNotEmpty)
+            ? widget.teacherId!
+            : 'bbbbbbbb-0000-0000-0000-000000000001';
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => ExtractionResultsScreen(
           voiceId: widget.voiceId ?? 'voice-001',
-          teacherId: widget.teacherId ?? '',
+          teacherId: effectiveTeacherId,
+          childId: widget.child.childId,
+          childName: widget.child.fullName,
+          childInitials: _initials(widget.child.fullName),
+          initialMeals: 'Ăn hết suất, ăn tốt',
+          initialSleeping: '2 tiếng, ngủ ngon',
+          initialHealth: 'Bình thường',
+          initialActivities: 'Chơi ngoan với các bạn trong giờ hoạt động nhóm',
+          initialMood: 'Vui vẻ',
+          initialNotes: 'Bé chơi ngoan, hòa nhập tốt với các bạn.',
         ),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);
