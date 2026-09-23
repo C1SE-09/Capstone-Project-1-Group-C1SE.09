@@ -14,6 +14,7 @@ MVP Note:
 
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -102,7 +103,7 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
 
 @router.get("/api/teacher/{teacher_id}", summary="Thông tin giáo viên")
 def get_teacher(
-    teacher_id: str,
+    teacher_id: uuid.UUID,
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """Trả về thông tin 1 giáo viên (cho màn Tổng quan)."""
@@ -119,7 +120,7 @@ def get_teacher(
     summary="Danh sách lớp giáo viên phụ trách + summary báo cáo",
 )
 def get_teacher_classes(
-    teacher_id: str,
+    teacher_id: uuid.UUID,
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """
@@ -207,7 +208,7 @@ def get_teacher_classes(
     summary="Tổng hợp báo cáo lớp trong 1 ngày",
 )
 def get_class_dashboard(
-    class_id: str,
+    class_id: uuid.UUID,
     date_param: date | None = Query(default=None, alias="date"),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ):
@@ -253,8 +254,15 @@ def get_class_dashboard(
             pending.append(
                 {"child": _child_dict(child), "status": None, "updated_at": None}
             )
-        elif report.status == DailyReportStatus.PUBLISHED:
+        elif report.status in (DailyReportStatus.PUBLISHED, DailyReportStatus.SENT):
             completed += 1
+            pending.append(
+                {
+                    "child": _child_dict(child),
+                    "status": "published",
+                    "updated_at": None,
+                }
+            )
         elif report.status == DailyReportStatus.DRAFT:
             draft += 1
             pending.append(
@@ -289,7 +297,7 @@ def get_class_dashboard(
     summary="Hoạt động gần đây của lớp (timeline)",
 )
 def get_class_activities(
-    class_id: str,
+    class_id: uuid.UUID,
     limit: int = Query(default=10, ge=1, le=50),
     db: Session = Depends(get_db),  # noqa: B008
 ):
@@ -391,7 +399,7 @@ def get_class_activities(
 
 @router.get("/api/parent/{parent_id}", summary="Thông tin phụ huynh")
 def get_parent(
-    parent_id: str,
+    parent_id: uuid.UUID,
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """Trả về thông tin 1 phụ huynh, khớp entity Parent (frontend)."""
@@ -413,7 +421,7 @@ def get_parent(
     summary="Con (duy nhất trong MVP) + lớp + giáo viên",
 )
 def get_parent_primary_child(
-    parent_id: str,
+    parent_id: uuid.UUID,
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """
@@ -470,7 +478,7 @@ def get_parent_primary_child(
     summary="Báo cáo của trẻ: hôm nay + gần đây",
 )
 def get_child_reports(
-    child_id: str,
+    child_id: uuid.UUID,
     date_param: date | None = Query(default=None, alias="date"),  # noqa: B008
     limit: int = Query(default=7, ge=1, le=50),
     db: Session = Depends(get_db),  # noqa: B008

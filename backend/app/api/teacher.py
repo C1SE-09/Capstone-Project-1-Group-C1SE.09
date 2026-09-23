@@ -46,6 +46,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.storage import upload_audio_to_minio
+from app.models.child import Child
 from app.models.report import (
     ActivityCategory,
     ActivityEntry,
@@ -54,10 +55,12 @@ from app.models.report import (
     VoiceRecord,
     VoiceRecordStatus,
 )
+from app.models.user import Teacher
 from app.schemas.report import (
     ActivityEntryResponse,
     DailyReportDetailResponse,
     DraftReportCreateRequest,
+    ManualReportCreateRequest,
     SendAllItemResult,
     SendAllRequest,
     SendAllResponse,
@@ -475,6 +478,108 @@ def create_report_from_extraction(
         "report_id": str(report.daily_report_id),
         "status": report.status.value
     }
+
+
+@router.post(
+    "/reports/manual",
+    response_model=DailyReportDetailResponse,
+    summary="Tạo báo cáo thủ công (Manual Report)",
+    description="Tạo bản nháp báo cáo thủ công cho 1 học sinh mà không cần qua VoiceRecord/AI extraction.",
+)
+def create_manual_report(
+    payload: ManualReportCreateRequest,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> DailyReportDetailResponse:
+    # 1. Kiểm tra giáo viên & học sinh có tồn tại không
+    teacher = db.query(Teacher).filter(Teacher.teacher_id == payload.teacher_id).first()
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Giáo viên không tồn tại.",
+        )
+
+    child = db.query(Child).filter(Child.child_id == payload.child_id).first()
+    if not child:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Học sinh không tồn tại.",
+        )
+
+    # 2. Check trùng lặp báo cáo trong ngày
+    today = datetime.now(timezone.utc).date()
+    existing_report = (
+        db.query(DailyReport)
+        .filter(
+            DailyReport.child_id == payload.child_id,
+            DailyReport.report_date == today,
+        )
+        .first()
+    )
+
+    if existing_report:
+        report = existing_report
+        if payload.teacher_note:
+            report.summary_text = payload.teacher_note
+        db.query(ActivityEntry).filter(
+            ActivityEntry.daily_report_id == report.daily_report_id
+        ).delete()
+    else:
+        # 3. Tạo DailyReport mới với status DRAFT
+        report = DailyReport(
+            child_id=payload.child_id,
+            teacher_id=payload.teacher_id,
+            voice_record_id=None,
+            report_date=today,
+            summary_text=payload.teacher_note,
+            status=DailyReportStatus.DRAFT,
+        )
+        db.add(report)
+        db.flush()
+
+    # 4. Map thông tin thủ công → ActivityEntry
+    fields_mapping = [
+        (payload.eating, ActivityCategory.MEAL, "Bữa ăn"),
+        (payload.sleeping, ActivityCategory.NAP, "Giấc ngủ"),
+        (payload.health, ActivityCategory.HEALTH, "Sức khỏe"),
+        (payload.activities, ActivityCategory.PLAY, "Hoạt động"),
+        (payload.mood, ActivityCategory.BEHAVIOR, "Tâm trạng"),
+        (payload.teacher_note, ActivityCategory.OTHER, "Ghi chú giáo viên"),
+    ]
+
+    order = 0
+    for value, category, title in fields_mapping:
+        if value and value.strip():
+            entry = ActivityEntry(
+                daily_report_id=report.daily_report_id,
+                category=category,
+                title=title,
+                description=value.strip(),
+                entry_order=order,
+            )
+            db.add(entry)
+            order += 1
+
+    db.commit()
+    db.refresh(report)
+
+    return DailyReportDetailResponse(
+        report_id=report.daily_report_id,
+        child_id=report.child_id,
+        teacher_id=report.teacher_id,
+        report_date=report.report_date.isoformat(),
+        status=report.status.value,
+        published_at=report.published_at.isoformat() if report.published_at else None,
+        activities=[
+            ActivityEntryResponse(
+                activity_entry_id=e.activity_entry_id,
+                category=e.category.value,
+                title=e.title,
+                description=e.description,
+                entry_order=e.entry_order,
+            )
+            for e in sorted(report.activities, key=lambda x: x.entry_order)
+        ],
+    )
 
 
 @router.get("/reports/{report_id}", summary="Chi tiết báo cáo")

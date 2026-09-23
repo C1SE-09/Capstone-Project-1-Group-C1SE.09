@@ -87,6 +87,20 @@ class DraftReportCreateRequest(BaseModel):
     )
 
 
+class ManualReportCreateRequest(BaseModel):
+    """Payload cho API tạo báo cáo thủ công (POST /api/teacher/reports/manual)."""
+
+    teacher_id: uuid.UUID = Field(..., description="UUID của giáo viên tạo báo cáo")
+    child_id: uuid.UUID = Field(..., description="UUID của học sinh")
+    eating: str | None = Field(None, description="Nội dung ăn uống")
+    sleeping: str | None = Field(None, description="Nội dung giấc ngủ")
+    health: str | None = Field(None, description="Nội dung sức khỏe")
+    activities: str | None = Field(None, description="Nội dung hoạt động vui chơi/học tập")
+    mood: str | None = Field(None, description="Nội dung tâm trạng")
+    teacher_note: str | None = Field(None, description="Ghi chú thêm của giáo viên")
+
+
+
 class ActivityEntryResponse(BaseModel):
     """Response cho một hoạt động trong báo cáo."""
 

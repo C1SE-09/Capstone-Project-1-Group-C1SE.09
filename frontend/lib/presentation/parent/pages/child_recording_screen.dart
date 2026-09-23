@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/parent/pages/child_recording_screen.dart
+// frontend/lib/presentation/parent/pages/child_recording_screen.dart
 // ================================================================
 
 import 'dart:async';
@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:adark_frontend/core/theme/app_theme.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/transcript_review_screen.dart';
+import 'package:adark_frontend/presentation/teacher/pages/manual_report_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -213,6 +214,32 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
           ),
           const SizedBox(height: 24),
           _buildMainAction(isRecording: isRecording, isRecorded: isRecorded),
+          if (!isRecording && !isRecorded) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ManualReportScreen(
+                      child: widget.child,
+                      teacherId: widget.teacherId,
+                      classId: widget.classId,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.edit_note_rounded),
+              label: const Text('Tạo báo cáo thủ công'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size.fromHeight(46),
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
           if (isRecorded) ...[
             const SizedBox(height: 10),
             OutlinedButton.icon(
