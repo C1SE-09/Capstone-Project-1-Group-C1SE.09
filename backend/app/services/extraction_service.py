@@ -34,15 +34,14 @@ class LSTMClassifier(nn.Module):
         self.fc = nn.Linear(hidden_dim, num_classes)
 
     def forward(self, x):
-        embedd = self.embedding(x)
-        out_put, (hidden, _) = self.lstm(embedd)
-        hidden = hidden[-1]
-        out_put = self.fc(hidden)
-        return out_put
+        embedded = self.embedding(x)
+        output, _ = self.lstm(embedded)  # Giữ toàn bộ hidden states
+        output = self.fc(output)         # Output shape: (batch, seq_len, num_classes)
+        return output
 
 
 # Load model khi import
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "text_classifier_model.pt")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "bio_lstm_model.pt")
 
 _label_to_id = None
 _id_to_label = None
@@ -84,19 +83,56 @@ def _numericalize(text: str):
     tokens = _tokenizer(text)
     return [_vocab.get(token, _vocab['<unk>']) for token in tokens]
 
-
+def _extract_bio_phrases(tokens, pred_labels):
+    """Parse BIO tags thành list phrases theo từng label."""
+    result = {
+        "meals": [],
+        "sleeping": [],
+        "health": [],
+        "activities": [],
+        "mood": []
+    }
+    
+    current_phrase = []
+    current_label = None
+    
+    for token, pred_label in zip(tokens, pred_labels):
+        if pred_label == "O":
+            if current_label and current_phrase:
+                label_name = current_label.replace("B-", "").replace("I-", "").lower()
+                if label_name in result:
+                    result[label_name].append(" ".join(current_phrase))
+                current_phrase = []
+                current_label = None
+        elif pred_label.startswith("B-"):
+            if current_label and current_phrase:
+                label_name = current_label.replace("B-", "").replace("I-", "").lower()
+                if label_name in result:
+                    result[label_name].append(" ".join(current_phrase))
+            current_phrase = [token]
+            current_label = pred_label
+        elif pred_label.startswith("I-") and current_label:
+            current_phrase.append(token)
+    
+    # Xử lý phrase cuối
+    if current_label and current_phrase:
+        label_name = current_label.replace("B-", "").replace("I-", "").lower()
+        if label_name in result:
+            result[label_name].append(" ".join(current_phrase))
+    
+    return result
 # =============== EXTRACTION FUNCTION ===============
 
 def extract_from_transcript(transcript: str) -> dict:
     """
-    Gọi model NLP trích xuất thông tin từ transcript.
+    Gọi model NLP trích xuất thông tin từ transcript (dùng BIO tagging).
 
     Args:
         transcript: Text từ STT
 
     Returns:
         dict: {
-            "meals": str | None,
+            "meals": str | None,      # String duy nhất (nối các phrase bằng ", ")
             "sleeping": str | None,
             "health": str | None,
             "activities": str | None,
@@ -105,29 +141,22 @@ def extract_from_transcript(transcript: str) -> dict:
     """
     _load_model()
 
-    # Tách câu (mỗi dấu chấm/ngắt dòng = 1 câu)
-    sentences = re.split(r'[.\n]+', transcript)
-    sentences = [s.strip() for s in sentences if s.strip()]
+    tokens = _tokenizer(transcript)
+    input_ids = _numericalize(transcript)
 
-    # Khởi tạo kết quả
-    result = {
-        "meals": None,
-        "sleeping": None,
-        "health": None,
-        "activities": None,
-        "mood": None
-    }
+    with torch.no_grad():
+        tensor = torch.tensor([input_ids]).to(_device)
+        output = _model(tensor)
+        predictions = output.argmax(dim=-1)[0]  # shape: (seq_len,)
 
-    for sentence in sentences:
-        with torch.no_grad():
-            nums = _numericalize(sentence)
-            tensor = torch.tensor([nums]).to(_device)
-            output = _model(tensor)
-            pred_id = output.argmax(dim=1).item()
-            label = _id_to_label[pred_id]
-
-            # Gán kết quả (ghi đè nếu có nhiều câu cùng loại)
-            if result[label] is None:
-                result[label] = sentence
+    pred_labels = [_id_to_label[pred.item()] for pred in predictions[:len(tokens)]]
+    
+    # Parse BIO tags
+    phrases_by_label = _extract_bio_phrases(tokens, pred_labels)
+    
+    # Chuyển list → string (nối bằng ", ")
+    result = {}
+    for key, phrases in phrases_by_label.items():
+        result[key] = ", ".join(phrases) if phrases else None
 
     return result
