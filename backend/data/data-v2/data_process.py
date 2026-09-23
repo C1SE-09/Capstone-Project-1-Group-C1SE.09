@@ -44,8 +44,8 @@ def check_normalized_duplicate(data, name):
             print(f"[{count}x] {text}")
 
 def check_cross_duplicates(data1, data2, name1, name2):
-    texts_1 = set(get_text(item) for item in data1)
-    texts_2 = set(get_text(item) for item in data2)
+    texts_1 = {get_text(item) for item in data1}
+    texts_2 = {get_text(item) for item in data2}
 
     duplicate = texts_1 & texts_2
 
