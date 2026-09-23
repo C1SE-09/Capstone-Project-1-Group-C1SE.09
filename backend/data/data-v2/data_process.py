@@ -1,7 +1,7 @@
 import json
-from collections import Counter 
-from pathlib import Path
 import re
+from collections import Counter
+from pathlib import Path
 
 folder = Path(__file__)
 
@@ -67,13 +67,10 @@ def check_structure(data, name):
             invalid_structure += 1
             continue
 
-        if "text" not in item:
-            missing_text += 1
-        elif item["text"] is None or not isinstance(item["text"], str):
+        if "text" not in item or item["text"] is None or not isinstance(item["text"], str):
             missing_text += 1
         elif not item["text"].strip():
             empty_text += 1
-
         if "label" not in item or item["label"] is None:
             missing_label += 1
 

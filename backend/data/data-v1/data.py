@@ -1,7 +1,7 @@
 import json
+import re
 from collections import Counter
 from pathlib import Path
-import re
 
 folder = Path(__file__).parent
 
@@ -98,7 +98,7 @@ def check_cross_duplicates(data1, data2, name1, name2):
         print("\nExamples:")
 
         for text in list(duplicate)[:10]:
-            print(f"\nTEXT:")
+            print("\nTEXT:")
             print(text)
 
             print(f"\n{name1} OUTPUT:")
@@ -120,20 +120,14 @@ def check_structure(data, name):
             continue
 
         # Check transcript
-        if "transcript" not in item:
-            missing_transcript += 1
-
-        elif not isinstance(item["transcript"], str):
+        if "transcript" not in item or not isinstance(item["transcript"], str):
             missing_transcript += 1
 
         elif not item["transcript"].strip():
             empty_transcript += 1
 
         # Check output
-        if "output" not in item:
-            invalid_output += 1
-
-        elif not isinstance(item["output"], dict):
+        if "output" not in item or not isinstance(item["output"], dict):
             invalid_output += 1
 
     print(f"\n{name} - STRUCTURE")
@@ -141,7 +135,6 @@ def check_structure(data, name):
     print(f"Missing/invalid transcript: {missing_transcript}")
     print(f"Empty transcript: {empty_transcript}")
     print(f"Missing/invalid output: {invalid_output}")
-
 
 def check_output_fields(data, name):
     missing_fields = []
