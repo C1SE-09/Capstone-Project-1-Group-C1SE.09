@@ -1,4 +1,5 @@
 import sys
+
 sys.path.insert(0, ".") 
 
 from extraction_service import extract_from_transcript
