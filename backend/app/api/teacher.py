@@ -46,6 +46,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.storage import upload_audio_to_minio
+from app.models.child import Child
 from app.models.report import (
     ActivityCategory,
     ActivityEntry,
@@ -54,6 +55,7 @@ from app.models.report import (
     VoiceRecord,
     VoiceRecordStatus,
 )
+from app.models.user import Teacher
 from app.schemas.report import (
     ActivityEntryResponse,
     DailyReportDetailResponse,
@@ -67,8 +69,6 @@ from app.schemas.report import (
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
 )
-from app.models.child import Child
-from app.models.user import Teacher
 from app.services.extraction_service import extract_from_transcript
 from app.services.notification_service import notification_service
 from app.tasks.process_audio import process_audio_task

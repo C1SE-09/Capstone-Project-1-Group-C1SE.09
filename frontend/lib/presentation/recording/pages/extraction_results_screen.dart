@@ -11,7 +11,7 @@ import 'package:adark_frontend/presentation/recording/widgets/send_report_confir
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-enum _ScreenStep { edit, review, success }
+enum ScreenStep { edit, review, success }
 
 class ExtractionResultsScreen extends StatefulWidget {
   const ExtractionResultsScreen({
@@ -22,7 +22,7 @@ class ExtractionResultsScreen extends StatefulWidget {
     this.childName,
     this.childInitials,
     this.classTeacherInfo,
-    this.initialStep = _ScreenStep.edit,
+    this.initialStep = ScreenStep.edit,
     this.initialMeals,
     this.initialSleeping,
     this.initialHealth,
@@ -38,7 +38,7 @@ class ExtractionResultsScreen extends StatefulWidget {
   final String? childName;
   final String? childInitials;
   final String? classTeacherInfo;
-  final _ScreenStep initialStep;
+  final ScreenStep initialStep;
   final String? initialMeals;
   final String? initialSleeping;
   final String? initialHealth;
@@ -55,7 +55,7 @@ class ExtractionResultsScreen extends StatefulWidget {
 class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   late final TeacherRepositoryBase _repo;
 
-  _ScreenStep _currentStep = _ScreenStep.edit;
+  ScreenStep _currentStep = ScreenStep.edit;
   bool _isLoading = true;
   bool _isSubmitting = false;
 
@@ -240,7 +240,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _currentStep = _ScreenStep.review;
+        _currentStep = ScreenStep.review;
       });
     } catch (e) {
       if (!mounted) return;
@@ -299,7 +299,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _currentStep = _ScreenStep.success;
+        _currentStep = ScreenStep.success;
       });
     } catch (e) {
       if (!mounted) return;
@@ -333,7 +333,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
 
   Widget _buildCurrentStepView(BuildContext context) {
     switch (_currentStep) {
-      case _ScreenStep.edit:
+      case ScreenStep.edit:
         return ExtractionEditView(
           mealsController: _mealsController,
           sleepingController: _sleepingController,
@@ -345,7 +345,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
           isSubmitting: _isSubmitting,
         );
 
-      case _ScreenStep.review:
+      case ScreenStep.review:
         return ReportReviewView(
           childName: _childName,
           childInitials: _childInitials,
@@ -359,13 +359,13 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
           notes: _notesController.text,
           onGoBackToEdit: () {
             setState(() {
-              _currentStep = _ScreenStep.edit;
+              _currentStep = ScreenStep.edit;
             });
           },
           onOpenConfirmSheet: _openConfirmBottomSheet,
         );
 
-      case _ScreenStep.success:
+      case ScreenStep.success:
         return ReportSentSuccessView(
           childName: _childName,
           formattedDate: _currentFormattedDate,
