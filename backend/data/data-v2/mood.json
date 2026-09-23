@@ -1,0 +1,2790 @@
+[
+  {
+    "text": "Cười toe toét suốt cả buổi sáng.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngồi sụt sịt một góc vì nhớ mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Cáu kỉnh, hất tung đồ chơi lung tung.",
+    "label": "mood"
+  },
+  {
+    "text": "Tròn mắt kinh ngạc xem cô làm ảo thuật.",
+    "label": "mood"
+  },
+  {
+    "text": "Đỏ bừng mặt vì xấu hổ.",
+    "label": "mood"
+  },
+  {
+    "text": "Hớn hở khoe đôi giày mới tậu.",
+    "label": "mood"
+  },
+  {
+    "text": "Khóc ré lên đòi bế thốc.",
+    "label": "mood"
+  },
+  {
+    "text": "Bướng bỉnh khoanh tay dỗi hờn.",
+    "label": "mood"
+  },
+  {
+    "text": "Phấn khích hò reo khi chiến thắng.",
+    "label": "mood"
+  },
+  {
+    "text": "Nấp sau lưng cô rụt rè nhìn khách lạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Mặt buồn hiu vì thiếu bạn thân.",
+    "label": "mood"
+  },
+  {
+    "text": "Đắc chí ra mặt lúc được khen giỏi.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng nay bước vào lớp là con cười tươi roi rói, khoanh tay chào cô rệu rã nhưng đáng yêu lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự nhiên đến chiều bé đâm ra cáu bỉnh, ai động vào cũng gạt tay ra dỗi hờn.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc nghe cô kể chuyện cổ tích, cu cậu há hốc miệng tròn xoe mắt chăm chú từng chi tiết.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé nhà mình nhút nhát thấy rõ, cứ thấy đông người là nép chặt vào chân cô không rời.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay tâm trạng con rất phấn chấn, cứ nhảy tưng tưng reo hò suốt giờ chơi ngoài sân.",
+    "label": "mood"
+  },
+  {
+    "text": "Trưa nay nằm trên nệm mà bạn ấy cứ trằn trọc thở dài, mắt rớm nước mắt vì nhớ mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Được cô thưởng dán sticker hình mèo Kitty, mặt bé vênh lên tự hào khoe với các bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Em hơi bối rối đỏ bừng hai má khi bị cả lớp quay lại nhìn lúc lỡ trả lời nhầm câu hỏi.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả buổi sáng cứ lủi thủi ngồi góc phòng nghịch cát một mình, ai rủ cũng lắc đầu từ chối.",
+    "label": "mood"
+  },
+  {
+    "text": "Cu cậu hiếu động quá mức, cứ cười nắc nẻ chạy vòng quanh lớp làm các bạn á khẩu.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị cô nhắc nhở vì tranh đồ chơi với bạn, thế là phụng phịu sụt sịt ra đứng úp mặt vào tường.",
+    "label": "mood"
+  },
+  {
+    "text": "Con gái nay sống tình cảm ghê, thỉnh thoảng lại chạy lại ôm chầm lấy chân cô nựng nịu.",
+    "label": "mood"
+  },
+  {
+    "text": "Tâm trạng con bất ổn từ sáng tới giờ, hễ không vừa ý là lăn đùng ra sàn ăn vạ gào thét.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tò mò hết nấc khi thấy chiếc hộp quà bí mật của cô giáo đặt trên bàn.",
+    "label": "mood"
+  },
+  {
+    "text": "Hơi bẽn lẽn cúi gằm mặt xuống đất khi được cô giáo mời lên bảng hát đơn ca.",
+    "label": "mood"
+  },
+  {
+    "text": "Trông mặt bạn nhỏ cứ xị xuống buồn hiu vì chiếc máy bay đồ chơi bị gãy cánh.",
+    "label": "mood"
+  },
+  {
+    "text": "Khoảnh khắc thổi nến sinh nhật làm em hào hứng vỗ tay cười đùa giòn tan.",
+    "label": "mood"
+  },
+  {
+    "text": "Con tỏ ra bất mãn ra mặt khi bị phân công làm nhóm trưởng trực nhật hôm nay.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng nay mới thả xuống lớp là con mếu máo bám riết lấy vạt áo mẹ, dỗ dành mãi mới nín và chịu vào chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang ngồi chơi xếp hình vui vẻ thì tự nhiên bé giận dỗi hất tung cả tháp gỗ lên chỉ vì bạn kế bên không cho mượn khối trụ màu vàng. Cô phải đến phân tích thiệt hơn thì mặt mới giãn ra đôi chút.",
+    "label": "mood"
+  },
+  {
+    "text": "Khen ngợi tinh thần tự tin của em bé hôm nay nhé. Mọi ngày nhát lắm mà nay dám mạnh dạn xung phong lên cầm micro hát trước đám đông, lại còn nhún nhảy điệu nghệ làm cả lớp vỗ tay rần rần.",
+    "label": "mood"
+  },
+  {
+    "text": "Tội nghiệp con ghê, lúc sáng bị các bạn trêu áo dính mực nên tủi thân khóc sướt mướt ở góc lớp. Các cô phải lấy khăn ướt lau sạch rồi nựng nịu, hứa chiều mua bánh kẹo thì cu cậu mới chịu nín và cười tươi trở lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Tiết học khám phá khoa học về trứng nở làm bé tròn xoe mắt ngạc nhiên tột độ, há hốc miệng kinh ngạc khi thấy chú gà con chui ra. Cả buổi cứ quấn quýt bên lồng kính trầm trồ không ngớt.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng hiểu ai làm gì mà đầu giờ chiều vô lớp thấy mặt cậu nhóc cứ hầm hầm tức tối, ai hỏi gì cũng gạt ngang không thèm trả lời. Phải để cô kéo ra góc riêng tâm sự một hồi thì mới chịu khai nhận là bị em giành đồ chơi ở nhà.",
+    "label": "mood"
+  },
+  {
+    "text": "Hoạt động vẽ tranh tặng mẹ làm bạn nhỏ tập trung và hào hứng vô cùng, đôi mắt lấp lánh niềm vui khi hoàn thành tác phẩm. Lúc đem nộp cho cô, cái mũi cứ hếch lên tự hào đắc chí đáng yêu hết nấc.",
+    "label": "mood"
+  },
+  {
+    "text": "Ban đầu còn rụt rè e ngại khi tham gia trò chơi vận động tập thể, đứng nép sau lưng cô mãi không dám bước ra. Nhưng thấy các bạn chơi vui quá thế là em sà vào cười nắc nẻ, hòa đồng lúc nào không hay.",
+    "label": "mood"
+  },
+  {
+    "text": "Gần cuối giờ chiều, tâm trạng con bắt đầu bồn chồn lo lắng, cứ chốc chốc lại chạy ra cửa ngóng xe đón của mẹ. Thấy bóng dáng quen thuộc là mặt hớn hở hẳn lên, reo hò nhảy cẫng lên mừng rỡ.",
+    "label": "mood"
+  },
+  {
+    "text": "Mấy nay bé hay có biểu hiện ghen tị với em nhỏ hàng xóm được mẹ mua đồ chơi mới nên đến lớp cứ hay hậm hực giận dỗi vô cớ. Các cô đã kiên nhẫn ôm ấp, trò chuyện để con hiểu là mẹ vẫn yêu thương mình nhất.",
+    "label": "mood"
+  },
+  {
+    "text": "Vui vẻ cười đùa.",
+    "label": "mood"
+  },
+  {
+    "text": "Khóc nhè vì nhớ mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Cáu kỉnh, ăn vạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngạc nhiên há hốc miệng.",
+    "label": "mood"
+  },
+  {
+    "text": "Xấu hổ đỏ mặt.",
+    "label": "mood"
+  },
+  {
+    "text": "Hớn hở khoe đồ mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Sợ hãi bám chặt cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Bướng bỉnh giận dỗi.",
+    "label": "mood"
+  },
+  {
+    "text": "Phấn khích reo hò.",
+    "label": "mood"
+  },
+  {
+    "text": "Rụt rè e ngại.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhảy cẫng lên ăn mừng chiến thắng.",
+    "label": "mood"
+  },
+  {
+    "text": "Bám chặt rèm cửa không chịu ra sân.",
+    "label": "mood"
+  },
+  {
+    "text": "Mắt sáng rực khi thấy khay bánh.",
+    "label": "mood"
+  },
+  {
+    "text": "Mếu máo đòi bế lúc vừa thức dậy.",
+    "label": "mood"
+  },
+  {
+    "text": "Giận dỗi quay mặt vào tường.",
+    "label": "mood"
+  },
+  {
+    "text": "Khoái chí đập tay xuống bàn rầm rầm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cúi gằm mặt bẽn lẽn khi có khách.",
+    "label": "mood"
+  },
+  {
+    "text": "Chán nản nằm ườn ra nệm.",
+    "label": "mood"
+  },
+  {
+    "text": "Hét toáng lên kinh ngạc vì bong bóng nổ.",
+    "label": "mood"
+  },
+  {
+    "text": "Cười giòn tan suốt giờ hoạt động góc.",
+    "label": "mood"
+  },
+  {
+    "text": "Tủi thân sụt sịt vì bạn không cho mượn xe.",
+    "label": "mood"
+  },
+  {
+    "text": "Mặt hầm hầm tức tối ném vèo khối gỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Khởi đầu ngày mới, bé cười híp cả mắt vẫy tay chào mẹ đi làm.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang vẽ tranh hăng say thì ẻm bỗng trầm ngâm, chống cằm suy nghĩ ra chiều người lớn lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cu cậu hơi ganh tị khi thấy bạn kế bên được phát phần xoài to hơn.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay con gái cực kỳ dạn dĩ, chủ động ra bắt tay bạn mới chuyển đến.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc bị nhắc vì nói chuyện riêng, mặt bạn ấy đỏ lựng lên vì xấu hổ bối rối.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé nhà mình nay quậy tung trời, hiếu động chạy lăng xăng khắp phòng không biết mệt.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghe tiếng sấm ầm ngoài trời, con sợ xanh mặt vội chạy tới ôm chặt lấy chân cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả chiều nay em cứ lơ ngơ lác ngác, mặt buồn thiu không muốn tham gia trò chơi nào.",
+    "label": "mood"
+  },
+  {
+    "text": "Cháu hớn hở cầm bức tranh vừa tô xong chạy vòng quanh lớp khoe với tất cả mọi người.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang chơi vui thì bị vấp ngã, con nhăn nhó mặt mày òa khóc ăn vạ bắt đền sàn nhà.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy quả bóng bay lơ lửng, bé tò mò nhón gót đưa tay với với đầy vẻ thích thú.",
+    "label": "mood"
+  },
+  {
+    "text": "Hơi nhõng nhẽo lúc ăn xế, nhăn mặt lắc đầu không chịu há miệng nhận muỗng sữa chua.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi cô giáo tuyên dương trước cờ, cái mũi em hếch lên đắc ý trông tự hào vô cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng hiểu sao nay lại nhát cáy thế, thấy bác bảo vệ xách bình nước qua là co rúm người lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn nhỏ tỏ ra cáu kỉnh bực bội khi xếp mãi không xong mô hình tàu hỏa theo ý muốn.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngồi đợi mẹ đón mà mặt bé bồn chồn lo lắng, cứ đi ra đi vào ngóng mãi ngoài cổng.",
+    "label": "mood"
+  },
+  {
+    "text": "Con có vẻ e ngại không dám bước lên bục giảng để trả lời câu đố của cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc thấy cô lôi ra bộ đồ chơi nhà bếp mới toanh, mắt em sáng rỡ lên kinh ngạc.",
+    "label": "mood"
+  },
+  {
+    "text": "Mếu máo sụt sùi nãy giờ chỉ vì lỡ làm rách mất một góc tờ giấy thủ công màu xanh.",
+    "label": "mood"
+  },
+  {
+    "text": "Nay tâm trạng cực lười, nằm vật ra thảm chán nản không thèm ngó ngàng tới rổ đồ chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Cười nắc nẻ như nắc nẻ khi cô làm mặt hề chọc ghẹo, không khí lớp vui vẻ hẳn ra.",
+    "label": "mood"
+  },
+  {
+    "text": "Hậm hực vì thua trong trò chơi giành ghế, em giậm chân bình bịch xì khói đầu.",
+    "label": "mood"
+  },
+  {
+    "text": "Được cô giao nhiệm vụ phát khăn lau tay, bé hăng hái lăng xăng làm việc đầy vẻ kiêu hãnh.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc chia tay các bạn để ra về, em cứ lưu luyến vẫy tay mãi không nỡ quay đi.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự nhiên con rúc đầu vào ngực cô nũng nịu, đòi cô xoa lưng dỗ dành y như em bé sơ sinh.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn chú cún con đi lạc ngoài cổng trường, bé ngẩn ngơ nhìn theo với ánh mắt đầy tò mò.",
+    "label": "mood"
+  },
+  {
+    "text": "Giận dỗi đùn đẩy khay đồ ăn ra xa chỉ vì hôm nay không có món canh trứng yêu thích.",
+    "label": "mood"
+  },
+  {
+    "text": "Em e thẹn gãi đầu gãi tai khi lỡ miệng hát sai nhịp bài hát của lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Đầu giờ sáng mới được mẹ thả xuống sân, con đã khóc ré lên ôm chặt lấy cổ mẹ không chịu buông. Cô phải đem đồ chơi siêu nhân ra dỗ dành một lúc lâu thì em mới nín nấc, rơm rớm nước mắt gật đầu chịu theo cô vào lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang chơi xếp gạch hăng say thì tự nhiên bé mặt đỏ gay gắt, đẩy ngã bạn bên cạnh rồi hét toáng lên cáu bẳn vì bị giành mất viên gạch màu đỏ. Các cô phải tách ra phạt góc, phân giải một lúc thì con mới dịu lại và biết lí nhí xin lỗi.",
+    "label": "mood"
+  },
+  {
+    "text": "Khen ngợi tinh thần hiệp sĩ dũng cảm của em hôm nay nhé. Thấy bạn gái lớp mầm bị ngã khóc, con lật đật chạy lại đỡ bạn dậy, mặt đầy vẻ quan tâm hỏi han 'em có đau không' làm các cô đứng nhìn thấy tự hào lắm luôn.",
+    "label": "mood"
+  },
+  {
+    "text": "Khổ thân bạn nhỏ, trưa nay ngủ dậy không thấy cô bảo mẫu quen thuộc đâu là mặt cứ ngơ ngác sợ hãi, mếu máo chực khóc tìm quanh. Phải đến khi cô ôm vào lòng vỗ về một chốc thì con mới bình tĩnh lại, không còn bồn chồn nữa.",
+    "label": "mood"
+  },
+  {
+    "text": "Tiết tạo hình sáng nay vui nổ trời, bé nhà mình vẽ được một bông hoa méo xệch mà phấn khích nhảy cẫng lên hò reo inh ỏi. Cả buổi cứ cầm tờ giấy khoe khắp các bàn với nụ cười toe toét không ngậm được miệng, năng lượng cực kỳ tích cực.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng hiểu trưa nay ai chọc gì mà cậu nhóc cứ lủi thủi thu lu một góc phòng, mặt mày bí xị chán nản không thèm chơi với ai. Cô ra hỏi han thì lảng đi chỗ khác, mãi sau mới khai là tủi thân vì nay mẹ hứa mua siêu nhân mà quên.",
+    "label": "mood"
+  },
+  {
+    "text": "Buổi sinh hoạt chiều nay có tiết mục xem xiếc thú qua màn hình, con há hốc miệng kinh ngạc, hai mắt chữ O mồm chữ A khi thấy chú khỉ đạp xe. Sự tò mò hiện rõ trên từng nét mặt ngây thơ đáng yêu vô cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Ban đầu ra sân tập múa dân vũ, em còn rụt rè e ngại, đứng chôn chân một chỗ bối rối nhìn các bạn nhảy. Nhưng khi được cô dắt tay vào vòng tròn, nghe điệu nhạc xập xình là ẻm hào hứng lắc lư theo nhịp quên luôn cả sự nhút nhát ban đầu.",
+    "label": "mood"
+  },
+  {
+    "text": "Tâm trạng cuối ngày của bé hôm nay khá là bất ổn, nhõng nhẽo đòi cô bế suốt, đặt xuống là giãy nảy ăn vạ hất tung cả dép. Chắc do nay không được ngủ đủ giấc nên người hơi cáu gắt khó chịu, mẹ về đón nhớ nựng em xíu nha.",
+    "label": "mood"
+  },
+  {
+    "text": "Giao lưu với lớp lớn, bé dạn dĩ xung phong lên kể câu chuyện ngắn mạch lạc to rõ. Lúc nghe tiếng vỗ tay rần rần của các anh chị, hai má con đỏ bừng lên bẽn lẽn nhưng nụ cười mỉm chi thì lộ rõ vẻ tự hào khôn tả.",
+    "label": "mood"
+  },
+  {
+    "text": "Cười tít mắt, chơi ngoan.",
+    "label": "mood"
+  },
+  {
+    "text": "Khóc ngặt nghẽo đòi về.",
+    "label": "mood"
+  },
+  {
+    "text": "Phụng phịu không chịu cất ghế.",
+    "label": "mood"
+  },
+  {
+    "text": "Hào hứng vỗ tay rào rào.",
+    "label": "mood"
+  },
+  {
+    "text": "Lắc đầu nguầy nguậy dỗi cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Mặt mày bí xị cả sáng.",
+    "label": "mood"
+  },
+  {
+    "text": "Trố mắt nhìn bong bóng bay.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhảy cẫng lên sung sướng.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngượng ngùng nấp sau lưng bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "La hét ầm ĩ vì phấn khích.",
+    "label": "mood"
+  },
+  {
+    "text": "Giậm chân bình bịch ăn vạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Thu lu một góc buồn hiu.",
+    "label": "mood"
+  },
+  {
+    "text": "Bữa nay con tươi như hoa, vừa tới cửa đã sà vào lòng cô ôm ấp.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang xếp hình ngon lành tự dưng em quạu cọ, ném hết lego văng tung tóe.",
+    "label": "mood"
+  },
+  {
+    "text": "Khúc hát tập thể, bạn nhỏ hào hứng hát to nhất nhóm, miệng cười khoái chí.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn thấy món đồ chơi xúc xắc mới, hai mắt bé sáng rỡ lên đầy kinh ngạc.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng hiểu sao tự nhiên con lủi thủi ra góc cửa sổ đứng sụt sùi lau nước mắt.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tỏ ra vô cùng bĩu môi bất mãn khi cô báo hết giờ chơi đu quay.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc lỡ làm đổ rổ bóng, mặt em đỏ lựng lên bối rối nhìn quanh.",
+    "label": "mood"
+  },
+  {
+    "text": "Cu cậu hớn hở cầm chiếc áo siêu nhân chạy đi khoe khắp các bàn.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị bạn nhắc nhở, con bướng bỉnh quay ngoắt mặt đi không thèm nói chuyện.",
+    "label": "mood"
+  },
+  {
+    "text": "Em bé có vẻ sợ sệt tiếng sấm, cứ co rúm người lại nhắm tịt hai mắt.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay tâm trạng cực kỳ tốt, hễ ai gọi tên là lại nhoẻn miệng cười duyên.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự dưng dở chứng nhõng nhẽo, cứ bám riết lấy gấu váy cô đòi bế ẵm.",
+    "label": "mood"
+  },
+  {
+    "text": "Trông bộ dạng đắc ý của con lúc ghép xong bức tranh mà ai cũng phì cười.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn ấy hơi e thẹn, lúng túng vò gấu áo khi có cô giáo lớp khác sang thăm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả buổi chiều con cứ hầm hầm tức tối, không ai dỗ được.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc ra sân, bé reo lên mừng rỡ khi phát hiện ra một chú sâu róm trên lá.",
+    "label": "mood"
+  },
+  {
+    "text": "Mô hình tàu hỏa hôm nay được bé nặn xong là tự hào giơ cao khoe chiến tích.",
+    "label": "mood"
+  },
+  {
+    "text": "Em sụt sịt tủi thân vì lỡ tay làm vỡ mất cái bánh bích quy lúc ăn xế.",
+    "label": "mood"
+  },
+  {
+    "text": "Cứ hễ cô bật nhạc sôi động là nhóc tì lại tưng bừng nhảy múa quên trời đất.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang yên đang lành con lăn đùng ra sàn giãy giụa khóc lóc ăn vạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhận được phiếu bé ngoan, em vui sướng ôm hôn cô chụt chụt.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị cô nhắc xếp ghế, bạn nhỏ phụng phịu lầm bầm trong miệng không vui.",
+    "label": "mood"
+  },
+  {
+    "text": "Con đứng ngẩn tò te, há hốc miệng kinh ngạc khi thấy tháp ly nhựa đổ sầm.",
+    "label": "mood"
+  },
+  {
+    "text": "Thái độ hậm hực thấy rõ khi bị thua trong trò chơi thi chạy.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng đầu tuần con còn ngái ngủ, mặt mũi ủ rũ cứ ngáp ngắn ngáp dài.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé sợ xanh mặt, khóc thét lên khi thấy chú chó cảnh đi ngang qua cổng.",
+    "label": "mood"
+  },
+  {
+    "text": "Cười khanh khách không ngừng khi được cô làm trò chơi trốn tìm ú òa.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn nhỏ rụt rè lắm, chỉ dám đứng từ xa nhìn các anh chị lớn chơi kéo co.",
+    "label": "mood"
+  },
+  {
+    "text": "Nguyên buổi sáng mưa lâm râm không được ra ngoài, bé cứ áp mặt vào cửa kính, thở dài thườn thượt buồn chán. Phải đến khi cô bày trò chơi câu cá trong nhà thì em mới lấy lại được tinh thần, vui vẻ trở lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ trả trẻ, tự nhiên con bồn chồn lo lắng, cứ nhón chân ngó ra cổng mãi. Đến lúc mẹ vừa xuất hiện là em mừng rỡ hét toáng lên, lao ra ôm chầm lấy mẹ như lâu ngày không gặp.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang trong giờ tạo hình hăng say, bé vô tình làm rách góc tờ giấy vẽ. Con tủi thân mếu máo chực khóc, cô phải tới động viên và cho dán một bông hoa đè lên thì mặt mới giãn ra, nhoẻn miệng cười.",
+    "label": "mood"
+  },
+  {
+    "text": "Cậu chàng hậm hực tức tối vì bị bạn lớp trưởng phân công dọn dẹp khối gỗ. Cứ giậm chân bình bịch, miệng càu nhàu bực bội, mãi lúc cô ra hòa giải và khen ngợi sự chăm chỉ thì mới chịu hợp tác.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc cô biểu diễn thí nghiệm núi lửa phun trào, cả lớp im phăng phắc, riêng em thì trố mắt há hốc mồm ngạc nhiên tột độ. Xong xuôi em phấn khích nhảy cẫng lên vỗ tay không ngớt.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng nay do mẹ quên để gối ôm yêu thích vào balo, em bé cứ bứt rứt khó chịu, lăn lộn hờn dỗi không chịu nhắm mắt ngủ trưa. Cô phải nằm cạnh vỗ lưng hát ru cả nửa tiếng đồng hồ con mới xuôi xuôi.",
+    "label": "mood"
+  },
+  {
+    "text": "Tham gia thi nhảy bao bố, lúc gần về đích bị vấp ngã xém thua, mặt con đỏ bừng lên vì xấu hổ bối rối. Nhưng khi được cả tổ hò reo cổ vũ, em liền lấy lại tự tin, mạnh mẽ đứng dậy nhảy tiếp.",
+    "label": "mood"
+  },
+  {
+    "text": "Bữa nay lớp có bạn mới khóc nhè, bé nhà mình tỏ ra ra dáng anh lớn lắm, chạy lại xoa đầu dỗ dành bạn nín khóc. Nhìn ánh mắt đầy tình cảm và nụ cười ấm áp của con làm các cô thấy thương vô cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Trò chơi đóng vai bác sĩ bị gián đoạn vì hai cô công chúa cùng tranh nhau tai nghe nhịp tim, bé nhà mình cáu kỉnh giằng mạnh làm bạn khóc thét. Cô phạt đứng góc kiểm điểm thì mặt phụng phịu, rơm rớm nước mắt.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhận được một rổ đầy sticker hình khủng long từ tay cô giáo, em vui sướng đến mức nhảy cẫng lên ôm chầm lấy cô. Cả chiều cứ cười chúm chím ôm rổ sticker nâng niu không cho ai đụng vào.",
+    "label": "mood"
+  },
+  {
+    "text": "Vui sướng vỗ tay rộn ràng cả lên.",
+    "label": "mood"
+  },
+  {
+    "text": "Nằm thút thít xíu xiu trước giờ ngủ.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhăn trán, bực dọc đẩy rổ đồ chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Giật bắn mình vì tiếng còi xe ngoài cổng.",
+    "label": "mood"
+  },
+  {
+    "text": "E lệ vân vê tà áo lúc lên nhận phiếu bé ngoan.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhảy nhót tưng bừng theo nhịp đàn organ.",
+    "label": "mood"
+  },
+  {
+    "text": "Ứa nước mắt buồn thiu chờ mãi chưa thấy ba.",
+    "label": "mood"
+  },
+  {
+    "text": "Chằm chằm nhìn theo đàn kiến bò trên tường.",
+    "label": "mood"
+  },
+  {
+    "text": "Mắt chữ O, mồm chữ A xem bóng bay nước.",
+    "label": "mood"
+  },
+  {
+    "text": "Lăn ra ăn vạ, đập chân tay xuống xốp nệm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cười tít thò lò khoe được điểm mười.",
+    "label": "mood"
+  },
+  {
+    "text": "Rướm lệ núp vội vào sau lưng bạn trưởng lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay em bé dạt dào năng lượng, nụ cười luôn thường trực trên môi từ sáng đến chiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc mới đến lớp, con sầu não ôm riết lấy chiếc gấu bông mẹ đưa không nỡ buông.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự nhiên đang chơi ngoan, nhóc tì lại dở chứng cáu bẳn, quăng luôn khối lego ra xa.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy bong bóng xà phòng bay phấp phới, bé phấn khởi rượt theo reo vang cả góc sân.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị bạn tổ bên mượn tạm cục đất nặn, mặt con sầm lại tỏ rõ vẻ không bằng lòng.",
+    "label": "mood"
+  },
+  {
+    "text": "Cu cậu bẽn lẽn giấu mặt vào hai bàn tay khi được cô hỏi thăm về chiếc kẹp tóc mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Con trầm trồ thích thú, chỉ trỏ rối rít khi phát hiện ra một chú bọ rùa đỏ chót dưới lá.",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ sinh hoạt chiều, bé cứ bồn chồn ngó nghiêng ra phía cửa lớp đợi người nhà tới đón.",
+    "label": "mood"
+  },
+  {
+    "text": "Em tỏ ra hờn tủi, bĩu môi dài ngoẵng vì chia nhóm múa không được chung với bạn thân.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhận được một ngôi sao danh dự, mặt mày con rạng rỡ hẳn lên, ánh mắt lấp lánh tự hào.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn nhỏ có vẻ hơi căng thẳng lúc tham gia trò đi thăng bằng, tay nắm chặt không dám buông.",
+    "label": "mood"
+  },
+  {
+    "text": "Trái với mọi ngày, bữa nay ẻm quậy tung chảo, hết chọc ghẹo bạn này lại quay sang trêu bạn khác.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc nghe tiếng chó sủa văng vẳng, bé giật thót mình rồi rơm rớm nước mắt chạy lại gần cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Khúc xem hoạt hình, cháu say mê dán mắt vào màn hình ti vi, miệng cười mỉm chi liên tục.",
+    "label": "mood"
+  },
+  {
+    "text": "Em hơi rụt rè chưa chịu làm quen ngay, chỉ đứng vịn mép bàn len lén quan sát các anh chị.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang ăn trưa ngon lành, tự dưng con tủi thân khóc òa lên vì lỡ cắn trúng miếng rau dai.",
+    "label": "mood"
+  },
+  {
+    "text": "Cục cưng vô cùng hào hứng với món đồ chơi mới trong góc bếp, lăng xăng xếp dọn không ngơi tay.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị nhắc nhở cất dép, nhóc con vùng vằng khó chịu, hậm hực bước đi ra chiều ấm ức lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả buổi sáng con cứ thơ thẩn nhìn ra trời mưa, nét mặt xìu xuống trông tội nghiệp ghê.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc cô mang mâm hoa quả ra, đôi mắt em sáng rực lên đầy vẻ khao khát háo hức.",
+    "label": "mood"
+  },
+  {
+    "text": "Cháu đỏ mặt tía tai lúng túng khi lỡ làm rơi ly nước nhựa văng tung tóe xuống nền.",
+    "label": "mood"
+  },
+  {
+    "text": "Con hớn hở cầm tay cô dắt đi xem tác phẩm lâu đài cát vừa xây xong với nụ cười chúm chím.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự nhiên bé đâm ra sợ sệt người lạ, có cô giáo thực tập mới vào là em co rúm người lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang yên đang lành, bạn ấy tức tối hét ầm lên chỉ vì không được ưu tiên đi rửa tay trước.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn biểu cảm ngơ ngác, chớp chớp mắt của con khi thấy con lật đật tự đứng dậy mà cưng xỉu.",
+    "label": "mood"
+  },
+  {
+    "text": "Em bé nhảy cẫng lên hò hét sung sướng lúc được cô thông báo chiều nay có tiệc sinh nhật chung.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé nhà mình hôm nay cực kỳ điềm tĩnh, ai giành đồ chơi cũng vui vẻ nhường nhịn không chút sân si.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc mẹ vừa quay lưng bước đi, em òa khóc nức nở, nước mắt ngắn nước mắt dài níu tay cô lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng ra khuôn viên đi dạo, con tình cờ nhìn thấy một chú sâu róm đang bò trên thảm cỏ nhân tạo. Em tròn xoe đôi mắt kinh ngạc, vừa tò mò muốn chạm vào lại vừa rụt tay lại vì sợ hãi.",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ tự do, hai cậu nhóc không thống nhất được ai đóng vai siêu nhân đỏ nên xảy ra xô xát nhẹ. Bé nhà mình giận tím mặt, nằm lăn ra sàn gào khóc ăn vạ bắt cô phân xử bằng được.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay có tiết mục văn nghệ giao lưu, ban đầu con còn e thẹn núp tịt sau rèm cửa không chịu ra. Mãi lúc cô dắt tay lên sân khấu động viên, em mới bẽn lẽn mỉm cười và bắt đầu lắc lư theo nhạc.",
+    "label": "mood"
+  },
+  {
+    "text": "Chiều nay mẹ rước trễ hơn một chút, con bắt đầu sinh ra bồn chồn, cứ đi ra đi vào ngó nghiêng liên tục. Vừa thấy bóng mẹ ngoài cổng là em òa lên khóc nức nở vì tủi thân nghẹn ngào.",
+    "label": "mood"
+  },
+  {
+    "text": "Khúc chia quà bánh cuối tuần, con nhận được chiếc bánh nhỏ hơn nên tỏ thái độ hậm hực ra mặt. Cô phải lại gần thủ thỉ giải thích một hồi lâu thì cái môi đang trề ra mới chịu thu lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Hoạt động làm thiệp hôm nay bé say sưa vô cùng, cặm cụi tô vẽ không thèm để ý xung quanh. Lúc nộp thành quả cho cô giáo, nét mặt con ánh lên sự đắc thắng và tự hào không giấu giếm.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự nhiên trưa nay ngủ dậy ẻm bị gắt ngủ, khóc lóc om sòm không cho ai đụng vào người. Cô đành bế bồng đi rong khắp hành lang dỗ dành một lúc lâu thì con mới dịu lại và chịu uống nước.",
+    "label": "mood"
+  },
+  {
+    "text": "Trong lúc chờ chia cơm, nhóc tì tò mò nhón gót ngó vào khay đồ ăn rồi reo lên sung sướng. Sự phấn khích lộ rõ qua nụ cười toe toét và đôi chân cứ nhảy nhót không ngừng.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc lỡ tay hất đổ cốc sữa của bạn bên cạnh, em luống cuống đứng sững lại, mặt đỏ gay vì bối rối. Cô chưa kịp nói gì con đã rơm rớm nước mắt, khoanh tay cúi đầu lí nhí nói lời xin lỗi.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt cả ngày hôm nay tâm trạng bé cực kỳ thăng hoa, gặp ai cũng vẫy tay chào hỏi ríu rít. Năng lượng tích cực lan tỏa khiến không khí lớp học cũng trở nên rộn rã và tươi vui hẳn lên.",
+    "label": "mood"
+  },
+  {
+    "text": "Tíu tít như chim sẻ cả ngày.",
+    "label": "mood"
+  },
+  {
+    "text": "Bĩu môi cự nự không chịu thu dọn.",
+    "label": "mood"
+  },
+  {
+    "text": "Mặt mày ủ dột, sầu não.",
+    "label": "mood"
+  },
+  {
+    "text": "Reo vang rộn rã ngoài sân cỏ.",
+    "label": "mood"
+  },
+  {
+    "text": "Thẹn thùng lấy tay che kín mặt.",
+    "label": "mood"
+  },
+  {
+    "text": "Vùng vằng đẩy nệm ra chỗ khác.",
+    "label": "mood"
+  },
+  {
+    "text": "Say mê ngước nhìn chong chóng quay.",
+    "label": "mood"
+  },
+  {
+    "text": "Run rẩy nép sát vào mép tường.",
+    "label": "mood"
+  },
+  {
+    "text": "Rạng rỡ bưng khay cơm về bàn.",
+    "label": "mood"
+  },
+  {
+    "text": "Cau có nhăn nhó lúc lau mặt.",
+    "label": "mood"
+  },
+  {
+    "text": "Lém lỉnh nháy mắt trêu chọc bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Nước mắt lưng tròng chờ ba tới rước.",
+    "label": "mood"
+  },
+  {
+    "text": "Bữa nay ẻm cười mỉm chi lỏn lẻn hoài, chắc đang có chuyện gì vui lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhóc con vội thoát khỏi tay mẹ rồi chạy ùa vào lớp với vẻ mặt hân hoan tột độ.",
+    "label": "mood"
+  },
+  {
+    "text": "Lỡ làm đổ tháp ly nhựa, em đứng ngượng nghịu vân vê vạt áo không dám nhìn ai.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy chú mèo mướp đi ngang cửa sổ, đôi mắt bé sáng rực lên đầy vẻ hiếu kỳ.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt giờ nặn tò he, con im bặt và tập trung cao độ, nét mặt cực kỳ nghiêm túc.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị mượn tạm chiếc kẹp tóc màu hồng, cô công chúa tức tưởi khóc nấc lên từng hồi.",
+    "label": "mood"
+  },
+  {
+    "text": "Có vẻ nay trời oi bức nên bạn ấy hơi gắt gỏng, ai đụng vào người là nhíu mày ngay.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa thoáng nghe bài hát quen thuộc, con đã nhảy chân sáo tung tăng quanh lớp học.",
+    "label": "mood"
+  },
+  {
+    "text": "Em bé ngoan ngoãn nằm im để cô xoa lưng, nét mặt thư thái bình yên vô cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng biết ai chọc ghẹo mà mặt cu cậu hằm hằm, môi mím chặt lại trông đến tội.",
+    "label": "mood"
+  },
+  {
+    "text": "Bác giao nước gõ cửa lớn tiếng làm bé giật thót mình, hoảng hốt chạy lại ôm đùi cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhận được một viên kẹo dẻo từ bạn tổ trưởng, em vui vẻ tủm tỉm cười mãi.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt buổi học đàn, con lơ đãng nhìn ra ngoài ban công với ánh mắt khá ỉu xìu.",
+    "label": "mood"
+  },
+  {
+    "text": "Được giao nhiệm vụ chia muỗng ăn xế, nét mặt bạn nhỏ ánh lên vẻ tự hào khó giấu.",
+    "label": "mood"
+  },
+  {
+    "text": "Chắc buồn ngủ quá rồi nên con đâm ra bứt rứt, hay càu nhàu vặt vãnh với bạn kế bên.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngắm nghía chậu mầm đậu xanh vừa nhú, bé dỏng tai lên nghe cô giải thích đầy say mê.",
+    "label": "mood"
+  },
+  {
+    "text": "Khúc chuẩn bị dọn dẹp, em tỏ thái độ bất hợp tác, cứ hứ một tiếng rồi quay ngoắt đi.",
+    "label": "mood"
+  },
+  {
+    "text": "Trộm vía nay ẻm cởi mở lắm, chủ động nắm tay kéo bạn mới vào vòng tròn múa hát.",
+    "label": "mood"
+  },
+  {
+    "text": "Con rơm rớm nước mắt gục đầu xuống gối vì bị vấp cạnh bàn chân đau xíu xiu.",
+    "label": "mood"
+  },
+  {
+    "text": "Em cứ lí nhí trong họng, hai bàn tay đan vào nhau đầy vẻ lúng túng khi lên bảng.",
+    "label": "mood"
+  },
+  {
+    "text": "Ánh mắt long lanh chớp chớp liên tục lúc thấy rổ dâu tây được dọn ra giữa bàn.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay nghịch ngầm cực kỳ, thỉnh thoảng lại lén thò tay nhéo má bạn rồi gượng cười hì hì.",
+    "label": "mood"
+  },
+  {
+    "text": "Dù chưa tới giờ về nhưng con đã thập thò ngoài hành lang, mặt đầy vẻ thấp thỏm nôn nao.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị nhắc không được vẩy nước nheo nhếch, bé xị mặt xuống, thở dài thườn thượt một cái.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả lớp vỗ tay biểu dương làm đôi gò má em ửng hồng lên vì ngượng ngùng dễ thương.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn ấy reo lên oai oái khi đón trúng quả bóng nhựa từ tay cô giáo ném tới.",
+    "label": "mood"
+  },
+  {
+    "text": "Con có vẻ rất an tâm và tin tưởng, cứ dựa đầu vào vai cô thiu thiu nhắm mắt thiếp đi.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang yên đang lành thì lại dở chứng hờn mát, hai tay chống nạnh hất cằm lên trời.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay lớp tổ chức sinh nhật cho một bạn, con vỗ tay rào rào hát theo cực kỳ sung sướng. Đến tiết mục cắt bánh kem, ánh mắt em sáng rỡ lên, háo hức chờ đợi phần của mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng hiểu sao trưa nay gắt ngủ kinh khủng, đặt lưng xuống là con giãy nảy, vung vẩy tay chân khóc váng cả phòng. Cô bảo mẫu phải bế xốc lên vai đi dạo dọc hành lang hát ru rầm rì mãi mới êm.",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ khám phá thiên nhiên, khi thấy cô móc trong hộp ra một con dế mèn, em tái mét mặt mày. Cháu lùi lại ba bước, núp vội ra sau vách tủ vì quá hoảng sợ sinh vật lạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Khen ngợi tinh thần sẻ chia của con ngày hôm nay nhé. Lúc thấy em gái lớp Mầm bị rớt đồ chơi mếu máo, con lật đật nhặt lên đưa lại, miệng còn cười hiền khô an ủi em nữa cơ.",
+    "label": "mood"
+  },
+  {
+    "text": "Bữa nay chia nhóm lắp ráp, vì không được chọn khối màu xanh lá yêu thích nên cu cậu bực dọc ra mặt. Em ném cái phịch rổ đồ nhựa xuống sàn, phồng mang trợn má cự nự không chịu làm chung.",
+    "label": "mood"
+  },
+  {
+    "text": "Chiều mát cô cho ra bãi cát chơi, tự nhiên bé lơ đãng hẳn đi, cứ ngồi vân vê vạt áo nhìn xa xăm. Lại gần hỏi thăm mới biết là con đang thèm ăn kem socola mà mẹ hứa mua từ tuần trước.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang múa hát hăng say thì bị trượt chân ếch, lúc đầu con ngượng nghịu che mặt định khóc nhè. Nhưng thấy các bạn tới đỡ dậy hỏi han, em lại bật cười khanh khách rồi tiếp tục nhún nhảy.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng sớm mẹ đưa tới cửa lớp mà con vẫn còn ngái ngủ, hai mắt nhắm nghiền gục đầu vào vai mẹ quấy khóc nhè nhẹ. Cô ra đón bế vào lòng xoa xoa lưng một chốc thì bé mới chịu mở mắt tỉnh táo lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Trò chơi sắm vai bác sĩ làm em say sưa tột độ, khoác chiếc áo blouse trắng vào là nét mặt trở nên nghiêm trang lém lỉnh. Cứ cầm ống nghe chạy loanh quanh đòi khám bệnh cho hết thảy mọi người trong lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Chiều muộn mây đen kéo tới sấm chớp ầm ĩ, con nóng ruột thấy rõ, cứ chạy ra chạy vào níu lấy vạt áo cô. Khi thấy bóng dáng ba che ô đứng chờ ngoài cổng, nét lo âu tan biến ngay, em mừng rỡ vọt lẹ ra ngoài.",
+    "label": "mood"
+  },
+  {
+    "text": "Hí hửng vuốt ve chiếc váy mới liên tục.",
+    "label": "mood"
+  },
+  {
+    "text": "Giãy nảy không chịu nắm tay bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Mặt bí xị, ngồi im thin thít.",
+    "label": "mood"
+  },
+  {
+    "text": "Sợ sệt, co rúm người lúc nghe tiếng sấm.",
+    "label": "mood"
+  },
+  {
+    "text": "Há hốc mồm xem tranh cá mập.",
+    "label": "mood"
+  },
+  {
+    "text": "Đỏ nhừ hai tai vì ngượng.",
+    "label": "mood"
+  },
+  {
+    "text": "Khóc thút thít, giọt vắn giọt dài.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhảy loi choi quanh sân trường.",
+    "label": "mood"
+  },
+  {
+    "text": "Vùng vằng, đẩy khay cơm ra xa.",
+    "label": "mood"
+  },
+  {
+    "text": "Tủm tỉm cười một mình suốt bữa ăn.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngẩn tò te nhìn bong bóng vỡ.",
+    "label": "mood"
+  },
+  {
+    "text": "Cáu gắt, nhăn nhó ném chiếc thìa nhựa.",
+    "label": "mood"
+  },
+  {
+    "text": "Đầu ngày đến lớp, ẻm mếu xệch miệng bám chặt lấy cổ ba không chịu buông.",
+    "label": "mood"
+  },
+  {
+    "text": "Nay em bé phấn khởi lắm, cứ ôm eo cô hát nghêu ngao không dứt.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy bạn bên cạnh có ô tô đẹp, cu cậu tỏ ra ganh tị, môi trề ra cả tấc.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc được phát phần kẹo dẻo, hai mắt con sáng rỡ lên, cười tít cả mắt.",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ ra chơi, bạn nhỏ cứ thui thủi xếp gỗ một mình, trông vẻ mặt khá ủ rũ.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang tô màu ngon lành tự dưng cháu nổi quạu, quăng luôn hộp sáp văng tung tóe.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghe cô khen chiếc nơ xinh, đôi má bé ửng hồng e thẹn dễ thương vô cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Trộm vía hôm nay tinh thần con cực kỳ sảng khoái, hò hét hăng hái nhất tổ.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự nhiên nghe tiếng chó sủa to ngoài cổng, bạn ấy hoảng hồn vội chạy tót vào lòng cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn thấy chú thỏ trắng xù lông, cả đám xúm lại, riêng em thì trố mắt ngạc nhiên tột độ.",
+    "label": "mood"
+  },
+  {
+    "text": "Con bướng bỉnh mím chặt môi, dứt khoát không chịu há miệng ăn thìa súp nào.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả chiều nay, bé cứ bồn chồn đứng ngồi không yên, chốc chốc lại ngóng ra cửa đợi mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Xếp mãi không được tháp cao, bạn nam đâm ra cáu bẳn, đập tay xuống nền xốp bực dọc.",
+    "label": "mood"
+  },
+  {
+    "text": "Bữa nay con sống tình cảm lắm, lâu lâu lại chạy tới dụi dụi đầu vào vai cô làm nũng.",
+    "label": "mood"
+  },
+  {
+    "text": "Lỡ làm đổ rổ rác nhỏ, em luống cuống tay chân, cúi gằm mặt xuống vì sợ bị la.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa được cô phát cho tấm dán khen thưởng, nhóc tì đã hí hửng nhảy chân sáo về chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang chơi trò đu quay thì bị bạn giành mất, con gái xị mặt xuống, rơm rớm nước mắt tủi thân.",
+    "label": "mood"
+  },
+  {
+    "text": "Khúc xem xiếc thú, cháu há hốc miệng không chớp mắt, dán chặt ánh nhìn vào chú hề.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn chung hôm nay tâm trạng bé khá lười biếng, cứ nằm ườn ra thảm không muốn vận động.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị cô nhắc nhở vì nói chuyện riêng, ẻm giận dỗi phụng phịu quay ngoắt mặt đi chỗ khác.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc hát múa tập thể, con rất nhiệt tình nhún nhảy, miệng cười rinh rích vang cả phòng.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy người lạ bước vào lớp, em bé nhát cáy vội vàng thụt lùi lại, núp tiệt sau lưng bạn trưởng lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Mọi ngày năng động là thế mà nay con cứ thẫn thờ, ánh mắt xa xăm buồn buồn khó tả.",
+    "label": "mood"
+  },
+  {
+    "text": "Đạt được điểm mười bé ngoan, mặt cậu chàng vênh lên đầy vẻ tự mãn, đắc thắng.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng hiểu trưa nay ai giành chỗ mà bé hậm hực gào toáng lên, tay chân giãy giụa liên hồi.",
+    "label": "mood"
+  },
+  {
+    "text": "Trông bộ dạng em lúc được tặng lồng đèn mới cứ ríu rít như chim sẻ, vui không tả xiết.",
+    "label": "mood"
+  },
+  {
+    "text": "Khúc đầu giờ sáng còn nhõng nhẽo rơi lệ, thoắt cái đã hòa vào bầy bạn chơi đùa hăng say.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn nhỏ ngượng ngùng vò vò gấu áo, lí nhí không dám nói lớn khi cô mời phát biểu.",
+    "label": "mood"
+  },
+  {
+    "text": "Trưa nay nằm ngủ, chẳng hiểu sao con cứ nằm trằn trọc thở dài, rớt nước mắt thầm gọi tên mẹ. Cô phải tới vỗ lưng nhè nhẹ, hát ru một lúc lâu thì em mới dịu lòng nín khóc chìm vào giấc.",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ hoạt động góc, hai bạn nam tranh nhau chiếc siêu nhân xanh dẫn đến xô đẩy. Bé nhà mình tức tối đỏ bừng cả mặt, mếu máo ăn vạ nằm lăn đùng ra sàn làm cô phải tách ra khuyên giải một hồi.",
+    "label": "mood"
+  },
+  {
+    "text": "Tiết học khám phá môi trường có mang vào một chú ếch đồng, con sợ tái xanh mặt mày, hét chói tai rồi co rúm người trốn tận góc tủ. Phải để cô bế lên giải thích dế hiền lắm thì em mới dám hé mắt nhìn.",
+    "label": "mood"
+  },
+  {
+    "text": "Khen ngợi em hôm nay vô cùng mạnh dạn và năng nổ nhé. Dù mới chuyển lớp nhưng con không hề bỡ ngỡ, cứ cười tủm tỉm đi bắt tay làm quen từng bạn, tinh thần vui vẻ hoạt bát lắm luôn.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc phát phần ăn xế, vì cô lỡ đưa nhầm cái bát màu xanh không đúng ý thích, ẻm liền dở chứng bướng bỉnh, hất tay cự tuyệt không thèm ăn. Dỗ ngọt gãy lưỡi đổi lại bát hồng thì mặt mới giãn ra.",
+    "label": "mood"
+  },
+  {
+    "text": "Chiều nay có sân khấu múa rối nước, bé phấn khích đến mức nhảy cẫng lên hò la khản cả cổ. Hai mắt em tròn xoe say sưa theo dõi từng cử động của chú Tễu, lâu lâu lại vỗ tay rào rào hâm mộ.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang chơi cầu trượt ngoan ngoãn, không may trượt chân ngã cái oạch đập mông xuống đất. Lúc đầu mặt nhăn nhó chực trào nước mắt, nhưng thấy cô chạy lại xoa xoa là em lại bật cười khanh khách đứng lên chơi tiếp.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng sớm được ba đưa vào tới cửa, con đã lùi lại níu chặt lấy tay ba, ánh mắt lo âu dùng dằng không chịu bước qua cửa. Các cô phải mang rổ bóng bay ra dụ khị thì mới chịu buông tay với vẻ mặt còn hơi miễn cưỡng.",
+    "label": "mood"
+  },
+  {
+    "text": "Lên nhận phiếu bé ngoan cuối tuần, trước mặt bao nhiêu phụ huynh, em đỏ lựng hai tai bối rối thấy rõ. Con cứ cúi gằm mặt, hai chân chéo vào nhau thẹn thùng cưng xỉu, nhận xong là ù té chạy vội về chỗ ngồi.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng biết ai ở nhà hứa mua quà mà cả chiều nay bé cứ bồn chồn ngóng ra cửa kính mãi, mặt đầy nôn nao chờ đợi. Vừa thấp thoáng thấy bóng mẹ, ẻm mừng rỡ hét toáng lên, lao ra như một mũi tên.",
+    "label": "mood"
+  },
+  {
+    "text": "Tươi rói, múa hát tưng bừng cả chiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Bĩu môi dài thượt không chịu dọn cất lego.",
+    "label": "mood"
+  },
+  {
+    "text": "Tiu nghỉu gục đầu xuống bàn vì buồn ngủ.",
+    "label": "mood"
+  },
+  {
+    "text": "Mắt sáng rỡ lúc thấy mâm trái cây.",
+    "label": "mood"
+  },
+  {
+    "text": "Rúm ró sợ sệt khi nghe tiếng máy khoan.",
+    "label": "mood"
+  },
+  {
+    "text": "Vùng vằng đẩy ghế ra xa.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúng túng vò mép áo lúc vấp ngã.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghểnh cổ tò mò xem cô pha màu nước.",
+    "label": "mood"
+  },
+  {
+    "text": "Dậm chân bình bịch đòi ra ngoài sân.",
+    "label": "mood"
+  },
+  {
+    "text": "Mếu xệch miệng lúc mẹ vừa quay đi.",
+    "label": "mood"
+  },
+  {
+    "text": "Cười khúc khích trêu đùa bạn cùng bàn.",
+    "label": "mood"
+  },
+  {
+    "text": "Lủi vào góc tủ, ỉu xìu không muốn nói chuyện.",
+    "label": "mood"
+  },
+  {
+    "text": "Bữa nay con gái vui như tết, miệng cứ líu lo ca hát suốt giờ ra sân.",
+    "label": "mood"
+  },
+  {
+    "text": "Lỡ tay làm rớt miếng dưa hấu, mặt cu cậu ngượng chín cả lên.",
+    "label": "mood"
+  },
+  {
+    "text": "Chẳng rõ ai trêu gì mà bạn nhỏ cứ phồng mang trợn má, giận dỗi không thèm nhìn ai.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghe cô thông báo có tiết bơi, ẻm nhảy chân sáo vòng quanh lớp vì quá ưng ý.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy chú ong bay lạc vào phòng, bé giật thót mình rồi lùi tót về phía sau rèm.",
+    "label": "mood"
+  },
+  {
+    "text": "Nguyên buổi sáng ẻm cứ làu bàu trong miệng, có vẻ hơi khó ở vì thời tiết oi nóng.",
+    "label": "mood"
+  },
+  {
+    "text": "Trộm vía nay con dạn dĩ vô cùng, chủ động đi phân phát muỗng cho từng bạn trong tổ.",
+    "label": "mood"
+  },
+  {
+    "text": "Em rớt nước mắt lã chã, hờn dỗi vì không được xếp ngồi cạnh bạn thân.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn thấy chiếc bánh kem to đùng, đôi mắt con long lanh chớp chớp đầy khao khát.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang chơi vui vẻ tự nhiên nhóc tì đổi thái độ, hất cằm lên trời dứt khoát không nhường đồ chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị dính chút xíu màu nước ra tay mà bé đã mếu máo chực khóc ăn vạ cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Nay tâm trạng con thả lỏng lắm, vừa nhai cơm vừa tủm tỉm cười một mình trông đến ghét.",
+    "label": "mood"
+  },
+  {
+    "text": "Giao lưu với lớp bên cạnh, bạn ấy cứ xoắn xít hai bàn tay vào nhau tỏ vẻ e thẹn.",
+    "label": "mood"
+  },
+  {
+    "text": "Cu cậu chán chường nằm dài trên thảm xốp, thở ngắn than dài vì đợi mãi chưa tới giờ về.",
+    "label": "mood"
+  },
+  {
+    "text": "Đoán chừng nay ngủ chưa đã giấc, thức dậy mặt bé cứ cọc cằn, đụng nhẹ là muốn khóc òa.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc cô đổ cát ra khay, cả đám nháo nhào, riêng em thì dỏng tai lên chú ý quan sát từng tí một.",
+    "label": "mood"
+  },
+  {
+    "text": "Trông cái dáng bẽn lẽn giấu mặt sau lưng bạn khi có người lạ bước vào lớp cưng xỉu luôn.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn nhỏ bất ngờ reo vang rộn rã lúc lật được bức tranh trúng thưởng của trò chơi trí nhớ.",
+    "label": "mood"
+  },
+  {
+    "text": "Con thui thủi ôm gấu bông ra hiên ngồi, mắt buồn rười rượi nhìn ra ngoài cổng.",
+    "label": "mood"
+  },
+  {
+    "text": "Bực bội vì lắp sai khối rubik, nhóc con ném cái rầm xuống đất rồi khoanh tay tức tối.",
+    "label": "mood"
+  },
+  {
+    "text": "Em bé hôm nay quậy như giặc non, chạy lăng xăng phá bĩnh hết nhóm này đến nhóm khác.",
+    "label": "mood"
+  },
+  {
+    "text": "Được cô đeo cho chiếc vòng tay hoa, khuôn mặt ẻm rạng rỡ hẳn, bừng sáng cả góc phòng.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc lỡ làm đổ nước, cháu luống cuống tay chân, cúi rạp người xuống không dám ngẩng lên.",
+    "label": "mood"
+  },
+  {
+    "text": "Nay con tình cảm bất chợt, cứ cọ cọ má vào vai cô làm nũng y hệt con mèo con.",
+    "label": "mood"
+  },
+  {
+    "text": "Mới nghe tiếng trống trường đánh tùng tùng, bé đã bưng tai nhắm tịt mắt sợ hãi.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé tỏ ra vô cùng đắc thắng, ưỡn ngực đi lại trong lớp sau khi xếp xong tháp ly cao vút.",
+    "label": "mood"
+  },
+  {
+    "text": "Khúc ăn xế, con nhăn nhó mặt mày, đẩy khay bánh ra xa với vẻ mặt đầy kháng cự.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn ấy cứ thập thò ngoài hành lang, mắt dáo dác tìm kiếm bóng dáng quen thuộc của ba.",
+    "label": "mood"
+  },
+  {
+    "text": "Đầu giờ sáng ba đưa tới, con còn ngái ngủ nên dùng dằng bấu chặt lấy cổ áo ba không chịu xuống. Cô phải lấy chiếc ô tô đồ chơi chớp đèn ra dụ thì cu cậu mới xuôi xuôi, nhoẻn miệng cười chịu theo cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Trong giờ tạo hình, bé vô tình làm rách đôi cánh con bướm giấy. Thấy vậy con tủi thân òa khóc nức nở, cô phải chạy lại vỗ về, dán thêm lớp băng keo lấp lánh thì khuôn mặt ấy mới tươi tắn trở lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Giờ sinh hoạt ngoài trời, hai bạn nam cãi nhau vì tranh chiếc xe đạp ba bánh. Bé nhà mình giận tím mặt, nằm lăn lộn trên cỏ ăn vạ đập tay đập chân, cô phải nghiêm mặt nhắc nhở một lúc mới chịu đứng lên giảng hòa.",
+    "label": "mood"
+  },
+  {
+    "text": "Khen ngợi tinh thần tự giác và sự kiêu hãnh của con ngày hôm nay. Dù lỡ tay làm đổ khay sữa nhưng con không hề khóc nhè sợ hãi, ngược lại còn bình tĩnh đi lấy khăn lau sạch rồi tự tin xin cô ly mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Buổi chiều có tiết mục xem ảo thuật gia biến hóa ra chim bồ câu, bé há mồm ngớ người ra kinh ngạc tột độ. Xong xuôi em vỗ tay rần rần, cười nắc nẻ phấn khích nhảy chồm lên tận ghế.",
+    "label": "mood"
+  },
+  {
+    "text": "Chiều muộn mây đen kéo tới sấm chớp ầm ĩ, con bồn chồn lo âu ra mặt, cứ chạy ra chạy vào níu lấy vạt áo cô. Khi thấy bóng mẹ che ô đứng chờ ngoài cổng, nét căng thẳng tan biến ngay, em mừng rỡ vọt lẹ ra ngoài.",
+    "label": "mood"
+  },
+  {
+    "text": "Bữa nay chia nhóm lắp ráp, vì không được chọn khối màu xanh lá yêu thích nên cu cậu bực dọc ra mặt. Em phồng mang trợn mắt cự nự không chịu làm chung, phải để cô thủ thỉ khuyên nhủ thì mới bớt hậm hực.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc cô kiểm tra bài múa, em lúng túng quên mất động tác, đứng trân trân trên bục mà hai má đỏ lựng lên vì ngượng. Cô phải xuống tận nơi cầm tay múa mẫu lại thì con mới bớt e thẹn và hòa nhịp cùng các bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Giấc trưa nay con ngủ không sâu giấc, cứ chốc chốc lại giật mình thon thót rồi rên rỉ tìm hơi mẹ. Cô bảo mẫu đành phải nằm sát bên cạnh, xoa đầu dỗ dành râm ran thì em mới thả lỏng cơ mặt chìm vào giấc ngủ.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt cả ngày hôm nay tâm trạng bé cực kỳ thăng hoa, gặp ai cũng vẫy tay chào hỏi ríu rít như chú chim sâu. Năng lượng tích cực và nụ cười rạng rỡ của con làm không khí lớp học cũng trở nên rộn rã lây.",
+    "label": "mood"
+  },
+  {
+    "text": "Tội nghiệp ghê!",
+    "label": "mood"
+  },
+  {
+    "text": "Than ôi thôi!",
+    "label": "mood"
+  },
+  {
+    "text": "Ôi thôi chết rồi!",
+    "label": "mood"
+  },
+  {
+    "text": "Trố mắt ngơ ngác.",
+    "label": "mood"
+  },
+  {
+    "text": "Háo hức ghê lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Lấp ló cười toe.",
+    "label": "mood"
+  },
+  {
+    "text": "Rúc rích bên bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Mím chặt không nói.",
+    "label": "mood"
+  },
+  {
+    "text": "Cúi gằm mặt xuống.",
+    "label": "mood"
+  },
+  {
+    "text": "Nấp sau lưng bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Rụt rè lắm luôn.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngẩn ngơ nhìn quanh.",
+    "label": "mood"
+  },
+  {
+    "text": "Bỗng nghe tiếng cười ngoài sân, cả lớp giật mình quay đầu nhìn ra cửa.",
+    "label": "mood"
+  },
+  {
+    "text": "Chợt nhận ra ai đó nói trúng ý mình, mắt sáng bừng lên gật gù lia lịa.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa tan tiết đã tất bật khoe ngay với cô về chiếc xe đạp mới mẹ mua.",
+    "label": "mood"
+  },
+  {
+    "text": "Mỗi khi cô khen lại cười tít mắt, lon ton khoe với cả nhóm bạn xung quanh.",
+    "label": "mood"
+  },
+  {
+    "text": "Mới đây thôi còn mếu máo, giờ đã cười rúc rích chơi đùa cùng bạn bên cạnh.",
+    "label": "mood"
+  },
+  {
+    "text": "Hồi nãy còn đùa giỡn rộn ràng, chỉ một phút sau đã buồn thiu ngồi thu lu.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi cô giơ bức tranh mới vẽ lên, cả lớp trố mắt nhìn không chớp miệng.",
+    "label": "mood"
+  },
+  {
+    "text": "Mùa này con có vẻ yêu thích hoạt động ngoài trời hơn là ngồi trong lớp học.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt cả tháng con không chịu ngồi yên một chỗ nào, lúc nào cũng lăng xăng khắp nơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Bất chợt ngồi im lặng suốt cả tiết học, cô hỏi han gì cũng không chịu trả lời.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa ngồi yên bỗng tất bật đứng dậy chạy sang nhóm bạn khác chơi cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Cứ mỗi khi tan tiết là lon ton chạy ra cửa đón mẹ, tất bật khoe quà không ngừng nghỉ.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa thấy cô bước vào lớp đã lon ton chạy lại ôm chầm lấy không chịu rời.",
+    "label": "mood"
+  },
+  {
+    "text": "Trước giờ ăn lại lon ton khoe với bạn về hộp cơm có nhiều đồ ngon lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Có vẻ hơi buồn, ngồi thu mình ở góc lớp, không thèm chơi với ai cả.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi nhận thưởng sticker là lon ton nhảy cẫng lên sung sướng reo hò.",
+    "label": "mood"
+  },
+  {
+    "text": "Hết tiết học, ai về thì về, còn em ngồi lại lớp vì mẹ đến trễ, ngóng hoài không thấy.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi nghe nhạc vang lên thì mắt sáng bừng, chân tay nhún nhảy theo nhịp rất tự nhiên.",
+    "label": "mood"
+  },
+  {
+    "text": "Mỗi lần nhắc là mím môi, quay mặt đi chỗ khác không thèm nghe lời ai.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa chơi vui vẻ thì bất chợt nghe tiếng động lạ, giật mình ôm chặt lấy chân cô không dám rời.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô vừa dứt lời là lon ton reo lên sung sướng, cả lớp cũng vỗ tay rối rít theo.",
+    "label": "mood"
+  },
+  {
+    "text": "Cứ thấy bạn khóc là lập tức khóc theo, dễ xúc động lắm, khó dỗ dành.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi cô đọc truyện cổ tích thì lon ton hỏi han lia lịa, tò mò lắm chuyện cô kể.",
+    "label": "mood"
+  },
+  {
+    "text": "Tội nghiệp quá, vừa bị mẹ khiển trách đã thu mình nấp sau cặp sách không dám nhìn ai.",
+    "label": "mood"
+  },
+  {
+    "text": "Bỗng có tiếng chuông reo, cả lớp giật mình, nhưng vài giây sau đã cười rúc rích trở lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi mẹ chưa đến đón, lủi thủi ngồi ở cửa sổ ngóng hoài, thỉnh thoảng lại rơm rớm nước mắt.",
+    "label": "mood"
+  },
+  {
+    "text": "Mới nghe cô giới thiệu trò chơi mới đã hào hứng giơ tay xin phát biểu trước cả lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi bạn trêu chọc, mặt đỏ bừng rồi lon ton chạy đi kể với cô không ngừng.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô vừa mang ra một chiếc hộp màu đỏ, cả lớp lập tức im phăng phắc, mắt ai cũng tròn xoe ngước nhìn, háo hức không giấu nổi. Không khí lớp học như đang nín thở chờ đợi.",
+    "label": "mood"
+  },
+  {
+    "text": "Mới đầu còn lạ lẫm với bạn mới, đứng nép bên cô không dám lại gần. Nhưng chỉ sau mười phút chơi chung là đã cười toe toét, tay nắm chặt tay bạn không chịu rời.",
+    "label": "mood"
+  },
+  {
+    "text": "Vô cớ buồn bã, ngồi thu mình ở góc lớp cả buổi sáng. Cô hỏi han thì chỉ lắc đầu, mắt rưng rưng nước. Chiều tan tiết mới dám kể là nhớ mẹ quá.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa nghe tin mai có bữa tiệc sinh nhật bạn là cả người lon ton nhún nhảy, miệng liến thoắng đòi mẹ mua quà. Đêm về cứ háo hức kể cho cả nhà nghe về buổi tiệc sắp tới.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt buổi cáu kỉnh, không thèm nói chuyện với ai. Khi cô hỏi thì chỉ cúi mặt, môi mím chặt, mắt nhìn xuống đất. Mãi đến chiều mới chịu chia sẻ là giận bạn lấy đồ chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi cô vừa thông báo có khách lạ đến thăm lớp, cả nhóm trẻ đều tỏ ra bỡ ngỡ. Có bé nấp sau lưng cô, có bé thì trố mắt nhìn, có bé thì tò mò lon ton chạy lại gần hỏi han.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô vừa giơ bức tranh mới vẽ lên là cả lớp reo lên ồ, khen ngợi ríu rít. Con tất bật chạy lên xin được cầm, ngắm nghía kỹ lưỡng, ánh mắt lấp lánh niềm vui không giấu nổi.",
+    "label": "mood"
+  },
+  {
+    "text": "Buổi chiều khi mẹ đến đón, con tất bật chạy ra ôm chầm lấy mẹ, mắt sáng bừng. Cả ngày ở lớp đều ngoan, giờ được gặp mẹ thì cười tít mắt, miệng kể lia lịa về bữa trưa với bạn bè.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi thấy bạn mới đến lạ lẫm trong lớp, lon ton chạy lại rủ bạn chơi cùng. Hai bạn chơi chung rất vui, quên cả giờ ăn trưa, đến lúc cô gọi mới giật mình tỉnh ra.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi nghe tiếng nhạc vang lên, cả lớp tự động xếp hàng, ai cũng mắt sáng rỡ, lon ton nhún nhảy theo nhịp. Con đứng đầu hàng, miệng cười toe toét, tay chân múa theo điệu nhạc rất tự nhiên và vui vẻ.",
+    "label": "mood"
+  },
+  {
+    "text": "Giậm chân ầm ầm!",
+    "label": "mood"
+  },
+  {
+    "text": "Trời ơi, lại khóc!",
+    "label": "mood"
+  },
+  {
+    "text": "Hí hoáy lém lỉnh!",
+    "label": "mood"
+  },
+  {
+    "text": "Nhăn mặt phụng phịu.",
+    "label": "mood"
+  },
+  {
+    "text": "Giãy nảy lên ầm ĩ.",
+    "label": "mood"
+  },
+  {
+    "text": "Lủi thủi nép góc.",
+    "label": "mood"
+  },
+  {
+    "text": "Ứa nước mắt rưng rưng.",
+    "label": "mood"
+  },
+  {
+    "text": "Run rẩy cả người.",
+    "label": "mood"
+  },
+  {
+    "text": "Cục cằn lắm luôn!",
+    "label": "mood"
+  },
+  {
+    "text": "Lém lỉnh quá trời.",
+    "label": "mood"
+  },
+  {
+    "text": "Bực bội ghê á!",
+    "label": "mood"
+  },
+  {
+    "text": "Hổn hển chạy tới.",
+    "label": "mood"
+  },
+  {
+    "text": "Ngượng chín mặt khi bị cả lớp nhìn.",
+    "label": "mood"
+  },
+  {
+    "text": "La toáng lên vì không được cho đồ chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Nằm lăn ra sàn vì không vừa ý.",
+    "label": "mood"
+  },
+  {
+    "text": "Tủm tỉm cười một mình suốt cả buổi chiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Xếp hàng mà lon ton nói chuyện với bạn không ngừng.",
+    "label": "mood"
+  },
+  {
+    "text": "Tham ăn quá trời, hết phần bạn lại đòi thêm.",
+    "label": "mood"
+  },
+  {
+    "text": "Lắc đầu nguây nguẩy không chịu nghe lời.",
+    "label": "mood"
+  },
+  {
+    "text": "Trái ý một chút là lập tức ăn vạ ngay tại chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Bác sĩ khám bệnh xong là chạy lại khoe với cô là mình giỏi.",
+    "label": "mood"
+  },
+  {
+    "text": "Đoán trúng bí mật của cô là lon ton nhảy tưng tưng reo hò khắp lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Ánh mắt sáng quắc khi thấy mẹ xuất hiện ngoài cổng.",
+    "label": "mood"
+  },
+  {
+    "text": "Say mê ngắm nghía tranh của bạn vừa vẽ xong.",
+    "label": "mood"
+  },
+  {
+    "text": "Thẹn thùng đỏ mặt khi được cả lớp vỗ tay khen.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhóc tì lăng xăng khắp nơi, không chịu ngồi yên một giây.",
+    "label": "mood"
+  },
+  {
+    "text": "Thái độ nghiêm trọng như đang giải quyết việc lớn.",
+    "label": "mood"
+  },
+  {
+    "text": "Chằm chằm nhìn bạn khóc mà không biết làm gì.",
+    "label": "mood"
+  },
+  {
+    "text": "Phụng phịu ngồi xuống đất vì đòi bánh không được.",
+    "label": "mood"
+  },
+  {
+    "text": "E dè rụt rè khi thấy người lạ bước vào lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Cau mặt nhăn nhó khi bị nhắc nhở phải xếp hàng.",
+    "label": "mood"
+  },
+  {
+    "text": "Lăn qua lăn lại trên giường không chịu ngủ trưa.",
+    "label": "mood"
+  },
+  {
+    "text": "Mọi khi vui vẻ là thế, tự dưng em ngồi thu mình lặng lẽ.",
+    "label": "mood"
+  },
+  {
+    "text": "Chú bướm vừa đậu trên vai, trố mắt nhìn rồi lon ton khoe với bạn bên cạnh xem.",
+    "label": "mood"
+  },
+  {
+    "text": "Rướm cả mắt vì khóc nhưng nhất định không chịu nói lý do.",
+    "label": "mood"
+  },
+  {
+    "text": "Đạt điểm mười trong trò chơi, lon ton reo hò ăn mừng ríu rít.",
+    "label": "mood"
+  },
+  {
+    "text": "Tíu ta tíu tít kể cho cô nghe chuyện vừa xảy ra với bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Thu mình lại lặng lẽ khi thấy bạn lớn hơn đến gần.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghểnh cổ lên khi cô hỏi vì chắc mẩm mình đúng.",
+    "label": "mood"
+  },
+  {
+    "text": "Rúm ró khóc nhè đòi cô bế đi rửa tay cho mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Khoảnh khắc cô thổi bong bóng xà phòng bay tứ tung khắp lớp, cả nhóm trẻ đứng tim hết cả, mắt mở to tròn xoe, tay chân với theo những quả bóng xanh đỏ lượn lờ trên không trung.",
+    "label": "mood"
+  },
+  {
+    "text": "Vị khách lạ vừa bước vào lớp, có bạn lập tức nấp sau lưng cô, có bạn thì lon ton chạy lại bắt tay, có bạn thì đứng trân trân nhìn ngơ ngác.",
+    "label": "mood"
+  },
+  {
+    "text": "Mẹ đi vắng hai ngày, em nhớ da diết, suốt buổi sáng cứ thỉnh thoảng lại rơm rớm nước mắt. Trưa tan tiết thấy mẹ xuất hiện ngoài cổng là lon ton chạy ào tới ôm chầm lấy không buông.",
+    "label": "mood"
+  },
+  {
+    "text": "Mất đồ chơi trên tay vừa bị bạn giật, lúc đầu còn tỏ vẻ bình thường nhưng rồi mắt bắt đầu đỏ hoe, môi mím chặt, cuối cùng bật khóc thật to, nước mắt giàn giụa, dỗ mãi không nín.",
+    "label": "mood"
+  },
+  {
+    "text": "Xây nhà gỗ trong góc lớp một mình, miệt mài xếp các viên gỗ chồng lên nhau, cứ đổ lại đổ, kiên trì xếp đi xếp lại mấy lần, cuối cùng bé cũng xếp được ngôi nhà cao nhất lớp, miệng cười toe toét sung sướng.",
+    "label": "mood"
+  },
+  {
+    "text": "Vào lớp đầu giờ đã thấy buồn bã vô cớ, ngồi thu lu một mình suốt buổi sáng, không chịu chơi với bạn, không chịu ăn sáng, mãi đến gần trưa mới dám thì thầm với cô là nhớ mẹ quá.",
+    "label": "mood"
+  },
+  {
+    "text": "Tin vui cô vừa thông báo sẽ tổ chức đi dã ngoại khiến cả lớp reo hò ầm ĩ, có bạn lon ton nhảy tưng tưng, có bạn thì hỏi han lia lịa, có bạn thì lon ton khoe bạn bên cạnh.",
+    "label": "mood"
+  },
+  {
+    "text": "Bố mẹ đến đón trễ hôm ấy, bé đứng ở cửa sổ ngóng hoài, tay cầm khư khư con gấu bông yêu quý, thỉnh thoảng lại hỏi cô bao giờ mẹ đến, giọng nhõng nhẽo, mắt rưng rưng.",
+    "label": "mood"
+  },
+  {
+    "text": "Ăn trưa hôm ấy, bạn ngồi cạnh vô tình làm đổ tô canh, bé lập tức đứng dậy quát toáng, tay chỉ vào bạn, mặt đỏ gay, mắt long lanh nước mắt vì tức giận, cô phải chạy lại dỗ dành mãi mới nguôi.",
+    "label": "mood"
+  },
+  {
+    "text": "Phát cho mỗi bạn một chiếc kẹp tóc xinh xắn, ai cũng mắt sáng rỡ, lon ton thử gắn lên tóc mình rồi soi gương, cười toe toét suốt cả buổi chiều, ai nhìn cũng muốn khoe.",
+    "label": "mood"
+  },
+  {
+    "text": "Vui vẻ chạy nhảy khắp lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Hớn hở khoe quà mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Buồn thiu ngồi yên một chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Tươi cười rạng rỡ suốt buổi.",
+    "label": "mood"
+  },
+  {
+    "text": "Phấn khích nhảy tưng tưng.",
+    "label": "mood"
+  },
+  {
+    "text": "Rụt rè nép sau lưng bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Cáu kỉnh gạt tay tất cả.",
+    "label": "mood"
+  },
+  {
+    "text": "Hào hứng chạy khắp sân.",
+    "label": "mood"
+  },
+  {
+    "text": "Rạng rỡ vui tươi cả ngày.",
+    "label": "mood"
+  },
+  {
+    "text": "Bĩu môi dỗi hờn cả buổi.",
+    "label": "mood"
+  },
+  {
+    "text": "Mếu máo khóc nhè cả tiết.",
+    "label": "mood"
+  },
+  {
+    "text": "Lạc quan yêu đời ghê.",
+    "label": "mood"
+  },
+  {
+    "text": "Trộm vía hôm nay bé ngoan, ai nhắc gì cũng ngoan ngoãn nghe lời.",
+    "label": "mood"
+  },
+  {
+    "text": "Có vẻ con gái đầu giờ vui vẻ, hoạt bát tham gia mọi hoạt động.",
+    "label": "mood"
+  },
+  {
+    "text": "Từ sáng đến chiều cu Bin tươi cười, miệng cứ rộn ràng kể về quà mới nhận.",
+    "label": "mood"
+  },
+  {
+    "text": "Theo dõi cả buổi, em gái tỏ ra thoải mái, không có dấu hiệu buồn hay quấy.",
+    "label": "mood"
+  },
+  {
+    "text": "Xem ra hôm nay bé khá ổn, chơi ngoan với bạn mà không cần cô nhắc nhiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Đầu giờ chiều tâm trạng con trai tốt, hào hứng tham gia trò chơi vận động.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt buổi sáng bé gái vui vẻ, nụ cười không lúc nào tắt trên môi.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhận xét hôm nay con tươi cười, hoạt bát hơn mọi ngày.",
+    "label": "mood"
+  },
+  {
+    "text": "Ghi nhận cu cậu đầu giờ vui vẻ, lon ton tham gia trò chơi cùng cả lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Cháu gái cáu kỉnh cả buổi, không chịu chia sẻ đồ chơi với bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Đánh giá chung hôm nay bé trai vui vẻ, hợp tác tốt với cô và bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Khái quát tâm trạng con gái đầu giờ khá ổn, không quấy khóc hay gào khóc.",
+    "label": "mood"
+  },
+  {
+    "text": "Em trai khoe với cô về chuyến đi vừa rồi, lon ton nói không ngừng suốt buổi.",
+    "label": "mood"
+  },
+  {
+    "text": "Vui ra mặt khi nhận sticker, bé gái lon ton dán ngay lên áo khoe bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Mừng rỡ reo hò lúc thấy mẹ ngoài cổng, con gái lon ton chạy ào tới ôm chầm.",
+    "label": "mood"
+  },
+  {
+    "text": "Về tâm trạng buổi chiều, cu Bin tỏ ra hơi mệt, lim dim mắt trên bàn.",
+    "label": "mood"
+  },
+  {
+    "text": "Tiếp tục ghi nhận cả buổi hôm nay con trai ngoan, ăn hết phần cơm được khen.",
+    "label": "mood"
+  },
+  {
+    "text": "Chốt lại buổi chiều, em gái tỏ ra vui vẻ, cười rúc rích khi chơi với bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Tóm lại tâm trạng của bé trai ổn định, không có biểu hiện bất thường nào.",
+    "label": "mood"
+  },
+  {
+    "text": "Đúc kết hôm nay cu cậu vui vẻ, hoạt bát tham gia mọi hoạt động trong lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Tường thuật lại, con gái giận dỗi cả buổi chiều vì bị bạn giẫm lên chân.",
+    "label": "mood"
+  },
+  {
+    "text": "Thực tế quan sát được, bé trai hôm nay tỏ ra hơi nhút nhát với người lạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Trực tiếp chứng kiến, em gái khoe với cô về bức tranh mới hoàn thành, mắt sáng rỡ.",
+    "label": "mood"
+  },
+  {
+    "text": "Quan sát cả buổi, cu Bin tỏ ra tập trung, hoàn thành tốt các hoạt động được giao.",
+    "label": "mood"
+  },
+  {
+    "text": "Phải nói hôm nay con tươi cười, lon ton kể cho cô nghe chuyện vừa xảy ra ở lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Theo dõi trong ngày, em trai tỏ ra cáu kỉnh, không chịu hợp tác với bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Kể từ khi mẹ đến đón trễ buổi trước, bé trai quấy khóc cả buổi chiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Sau giấc ngủ trưa, con gái tỉnh dậy lon ton vui vẻ kể cho cô nghe giấc mơ.",
+    "label": "mood"
+  },
+  {
+    "text": "Trộm vía cả ngày hôm nay con khá ngoan, không có biểu hiện quấy khóc hay gào khóc gì. Cô khen mấy lần liền mà con vẫn cười toe toét, mắt sáng rỡ khi được khen.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay bé có vẻ không thoải mái, ngồi yên một góc cả buổi sáng không chịu tham gia trò chơi cùng các bạn. Cô hỏi han thì chỉ lắc đầu, mắt rưng rưng, có lẽ nhớ mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Cu Bin hôm nay hoạt bát hơn mọi ngày, lon ton chạy nhảy khắp lớp không chịu ngồi yên. Giờ ăn cũng tự xúc ăn gần hết phần, cô khen ngợi mà cứ cười tít mắt.",
+    "label": "mood"
+  },
+  {
+    "text": "Em gái vào lớp với khuôn mặt tươi cười, ai hỏi gì cũng đáp lễ phép. Suốt buổi sáng cứ lon ton khoe với cô về chiếc bánh mới mẹ cho, dường như đó là niềm vui lớn nhất.",
+    "label": "mood"
+  },
+  {
+    "text": "Con trai hôm nay tỏ ra khá mệt mỏi, lim dim mắt trên bàn từ sau giờ ăn trưa. Cô cho bé nghỉ ngơi ở góc lớp, ai động vào cũng khó chịu gạt ra, có lẽ thiếu ngủ.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé trai tỏ ra hơi nhút nhát với người lạ đến thăm lớp hôm nay, cứ đứng nép sau lưng cô không dám lại gần. Mãi đến chiều khi khách về mới dám lon ton chạy nhảy bình thường.",
+    "label": "mood"
+  },
+  {
+    "text": "Cháu gái cười rúc rích cả ngày, nụ cười không lúc nào tắt trên môi, ai nhìn cũng phải khen dễ thương. Giờ ăn cũng vui vẻ, không kén chọn như mọi khi, có lẽ hôm nay được điểm mười.",
+    "label": "mood"
+  },
+  {
+    "text": "Em trai khóc nhè cả buổi chiều vì nhớ mẹ, ai dỗ cũng không nín. Cô phải gọi điện cho mẹ đến đón sớm, mới tới nơi mẹ đã dỗ dành xong, có lẽ do mẹ dạo này bận đi làm.",
+    "label": "mood"
+  },
+  {
+    "text": "Con gái hôm nay vui quá trời vì được cô khen về bức tranh mới vẽ, lon ton khoe với cả lớp. Đến giờ ra về còn khoe với mẹ, mắt sáng rỡ, miệng kể lia lịa về bức tranh.",
+    "label": "mood"
+  },
+  {
+    "text": "Em trai vào lớp là lon ton khoe ngay với cô về con chó mới ở nhà nuôi, miệng nói không ngừng nghỉ. Cô cho bé chia sẻ trước lớp, bé vui lắm, cả buổi chiều cứ hớn hở kể về chú chó.",
+    "label": "mood"
+  },
+  {
+    "text": "Cười toe toét cả ngày.",
+    "label": "mood"
+  },
+  {
+    "text": "Khóc nhè cả tiết học.",
+    "label": "mood"
+  },
+  {
+    "text": "Vui vẻ chạy nhảy khắp sân.",
+    "label": "mood"
+  },
+  {
+    "text": "Buồn thiu ngồi im lặng.",
+    "label": "mood"
+  },
+  {
+    "text": "Cáu kỉnh gạt phăng tay.",
+    "label": "mood"
+  },
+  {
+    "text": "Rụt rè nép sau ghế.",
+    "label": "mood"
+  },
+  {
+    "text": "Hớn hở khoe đồ chơi mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Mếu máo khóc đòi mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Phấn khích nhảy cẫng lên.",
+    "label": "mood"
+  },
+  {
+    "text": "Mắt sáng rỡ cả ngày dài.",
+    "label": "mood"
+  },
+  {
+    "text": "Sợ hãi ôm chặt gấu bông.",
+    "label": "mood"
+  },
+  {
+    "text": "Hào hứng giơ tay phát biểu.",
+    "label": "mood"
+  },
+  {
+    "text": "Ghen tị khi bạn được khen.",
+    "label": "mood"
+  },
+  {
+    "text": "Hốt hoảng nép sau lưng cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Bình tĩnh đến lạ lùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Đỏ mặt bẽn lẽn cười.",
+    "label": "mood"
+  },
+  {
+    "text": "Trố mắt nhìn cô ảo thuật.",
+    "label": "mood"
+  },
+  {
+    "text": "Chán nản không chịu chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Giận dữ hất tung đồ chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Bối rối không dám nói.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô đơn ngồi một mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Yên tâm vui vẻ cả buổi.",
+    "label": "mood"
+  },
+  {
+    "text": "Trộm vía, em gái tiến bộ rõ rệt trong tuần qua, không còn cáu kỉnh vô cớ như trước.",
+    "label": "mood"
+  },
+  {
+    "text": "Đầu giờ con trai có vẻ hơi mệt, ít hoạt bát hơn mọi khi.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay cháu gái hòa đồng hơn, sẵn sàng chia sẻ đồ chơi với bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn nhỏ đã biết xin lỗi khi lỡ làm bạn khóc, tiến bộ rõ rệt.",
+    "label": "mood"
+  },
+  {
+    "text": "Vào lớp hôm nay con chưa vào guồng, lim dim mắt ngồi yên không tham gia.",
+    "label": "mood"
+  },
+  {
+    "text": "Có lẽ do đêm qua con ngủ không đủ giấc nên sáng nay mắt lờ đờ cả tiết.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả tháng nay em bé đã tự tin hơn, không còn nép sau lưng cô nữa.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn chung lớp có ba bé cần quan tâm đặc biệt về tâm lý.",
+    "label": "mood"
+  },
+  {
+    "text": "Tháng này đa số các bé đều vui vẻ, hợp tác tốt với cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Có vẻ con đang trong giai đoạn phát triển tốt, ngày càng hoạt bát.",
+    "label": "mood"
+  },
+  {
+    "text": "Thật ra em gái rất nhạy cảm với lời khen, chỉ cần cô khen là vui cả ngày.",
+    "label": "mood"
+  },
+  {
+    "text": "Tuần này tâm trạng cu Bin ổn định hơn so với tuần trước.",
+    "label": "mood"
+  },
+  {
+    "text": "Có thể con đang mệt, nên hôm nay ít hoạt bát hơn mọi khi.",
+    "label": "mood"
+  },
+  {
+    "text": "Sau bữa trưa em bé có dấu hiệu buồn ngủ, mắt lờ đờ trên bàn.",
+    "label": "mood"
+  },
+  {
+    "text": "Chung quy các bé đều ổn, chỉ có vài trường hợp cần theo dõi thêm.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay tâm trạng cả lớp khá tốt, ít xảy ra xung đột.",
+    "label": "mood"
+  },
+  {
+    "text": "Dạo này con gái hay buồn, có thể do gia đình có biến động.",
+    "label": "mood"
+  },
+  {
+    "text": "Con trai đang thích nghi tốt với môi trường mới ở lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Chú ý cô thấy bạn ấy rất thông minh, tiếp thu nhanh mọi hoạt động.",
+    "label": "mood"
+  },
+  {
+    "text": "Mừng quá con đã biết tự xúc ăn, không cần cô đút như trước.",
+    "label": "mood"
+  },
+  {
+    "text": "May thay em bé hôm nay khỏe mạnh, không quấy khóc hay ốm vặt gì.",
+    "label": "mood"
+  },
+  {
+    "text": "Cảm ơn phụ huynh đã phối hợp, tâm trạng con gái ổn định hơn rõ rệt.",
+    "label": "mood"
+  },
+  {
+    "text": "Sau một tuần em bé ít quấy khóc hơn so với tháng trước.",
+    "label": "mood"
+  },
+  {
+    "text": "Tóm lại tình hình tuần qua, các bé đều có tiến bộ rõ rệt về mặt cảm xúc.",
+    "label": "mood"
+  },
+  {
+    "text": "Đỡ lo khi con trai đã ổn định tâm lý, không còn cáu kỉnh vô cớ.",
+    "label": "mood"
+  },
+  {
+    "text": "Qua hai tuần, cháu gái đã quen với lớp và không còn khóc nhè.",
+    "label": "mood"
+  },
+  {
+    "text": "Cuối tháng em bé hòa nhập tốt, vui vẻ với bạn bè.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả tháng qua con trai đã tự tin hơn, không còn rụt rè với người lạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Tốt quá, con gái đã nói được nhiều câu dài hơn, không còn chỉ vài từ.",
+    "label": "mood"
+  },
+  {
+    "text": "Ba tháng qua em bé đã hòa đồng, chơi chung với nhóm bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Mừng là bé trai thích nghi tốt với quy luật lớp, không còn phá phong.",
+    "label": "mood"
+  },
+  {
+    "text": "Rõ ràng con gái đang thích thú với hoạt động ngoài trời hơn là trong lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Vẻ mặt hào hứng cho thấy con vui vì được mẹ kể chuyện trước khi đi học.",
+    "label": "mood"
+  },
+  {
+    "text": "Cuối ngày bé gái có vẻ mệt, ngồi yên một chỗ không chịu chơi đùa.",
+    "label": "mood"
+  },
+  {
+    "text": "Tiết đầu con trai buồn ngủ, lim dim mắt ngồi tựa vào ghế không hoạt động.",
+    "label": "mood"
+  },
+  {
+    "text": "Đến bữa em bé vô cùng hào hứng, miệng liên tục nhai gần hết phần cơm.",
+    "label": "mood"
+  },
+  {
+    "text": "Trong giờ chơi con gái vui vẻ chạy nhảy cùng nhóm bạn thân.",
+    "label": "mood"
+  },
+  {
+    "text": "Suốt giờ học cu Bin chú ý lắng nghe cô giảng bài không chốc chốc nhìn ra ngoài.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc cô đọc truyện cả lớp lắng nghe chăm chú, ai cũng mắt sáng rỡ.",
+    "label": "mood"
+  },
+  {
+    "text": "Được khen bé gái vui ra mặt, lon ton reo lên sung sướng rồi chạy khoe bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Sắp tan học em trai lon ton chạy ra cửa đứng chờ mẹ với khuôn mặt háo hức.",
+    "label": "mood"
+  },
+  {
+    "text": "Buổi trưa con gái ngủ ngon lành, không giật mình hay tỉnh giấc như mọi khi.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa nghe nhạc em bé nhún nhảy theo nhịp, miệng cười toe toét sung sướng.",
+    "label": "mood"
+  },
+  {
+    "text": "Sau bữa ăn con trai tự xếp ghế ngay ngắn rồi chạy đi rửa tay đầu tiên.",
+    "label": "mood"
+  },
+  {
+    "text": "Trước giờ ra chơi cháu gái lon ton kéo bạn mới chơi cùng, không đứng yên một mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Phụ huynh vừa đến đón, bé trai lon ton chạy lại ôm ghì lấy cổ mẹ không chịu rời.",
+    "label": "mood"
+  },
+  {
+    "text": "Vui mừng khi cô khen, em gái cười rúc rích rồi khoe với cả nhóm bạn xung quanh.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa thấy bạn mới, con trai đã lon ton lại gần rủ bạn chơi đùa cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Nói chung con ngoan, không gào khóc hay ăn vạ lần nào.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô đoán chừng bé trai thích hoạt động ngoài trời, cứ ra sân là chạy nhảy khắp nơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô nghĩ lý do con gái buồn là đang thích nghi với việc không có bạn thân ngồi cạnh.",
+    "label": "mood"
+  },
+  {
+    "text": "Rõ ràng con trai đang trong giai đoạn ổn định, không có biểu hiện lạ.",
+    "label": "mood"
+  },
+  {
+    "text": "Tạm thời tâm trạng con gái hôm nay tốt, không có dấu hiệu buồn hay mệt.",
+    "label": "mood"
+  },
+  {
+    "text": "Theo dõi buổi chiều cô thấy em bé có vẻ mệt mỏi, mắt lờ đờ từ sau bữa xế.",
+    "label": "mood"
+  },
+  {
+    "text": "Đa phần tâm trạng cả lớp hôm nay ổn, chỉ có vài bé cần quan tâm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô chú ý em gái dạo này hay buồn, có thể do mới chuyển sang lớp mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Trong tháng qua, con gái đã có tiến bộ rõ rệt về khả năng giao tiếp.",
+    "label": "mood"
+  },
+  {
+    "text": "Cá biệt, bé trai đang trong giai đoạn cáu kỉnh nhẹ, cần quan tâm thêm.",
+    "label": "mood"
+  },
+  {
+    "text": "Trộm vía, cả tuần nay con đều ngoan, không có biểu hiện quấy khóc hay gào khóc gì. Giờ ăn cũng tự xúc gần hết phần, cô khen mấy lần liền mà con vẫn cười toe toét. Mẹ cứ yên tâm.",
+    "label": "mood"
+  },
+  {
+    "text": "Qua một tháng cô thấy em bé đã có tiến bộ rõ rệt về mặt tâm lý. Không còn rụt rè hay khóc nhè khi thấy người lạ như lúc mới vào lớp, giờ đã biết chào hỏi lễ phép và tự tin tham gia mọi hoạt động.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn chung tháng này con trai đang trong giai đoạn ổn định, ít cáu kỉnh vô cớ như tháng trước. Mỗi khi con ngoan cô đều tuyên dương, giờ ăn cũng tự giác hơn, không cần cô nhắc nhiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Quan sát kỹ tuần qua, bé gái hay buồn khi thấy bạn cười vui mà không chơi cùng mình. Cô đã chủ động ghép bé chơi với nhóm bạn thân, giờ con đã vui vẻ trở lại và tự tin hơn rõ rệt.",
+    "label": "mood"
+  },
+  {
+    "text": "Đáng mừng là con gái tiến bộ nhiều trong tháng qua, không còn dỗi hờn khi bạn không cho đồ chơi. Giờ biết xin lỗi khi lỡ làm bạn khóc, cô khen mà con cười toe toét cả ngày.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô ghi nhận hôm nay con trai có dấu hiệu mệt mỏi bất thường, mắt lờ đờ từ sau bữa trưa. Cô đã liên hệ với mẹ, được biết đêm qua con ngủ muộn vì xem ti vi. Mẹ sẽ cho con đi khám nếu mai vẫn mệt, cô theo dõi sát.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả tháng nay em bé đã có nhiều tiến bộ vượt bậc. Không còn khóc nhè khi mẹ đến đón, giờ biết chào tạm biệt cô và bạn trước khi về. Đặc biệt con đã tự tin nói trước lớp, cô rất vui mừng.",
+    "label": "mood"
+  },
+  {
+    "text": "Từ đầu tuần cô thấy con gái có biểu hiện khác thường, hay ngồi yên một mình không chơi với ai. Cô hỏi han thì bé chỉ lắc đầu, không chịu chia sẻ. Cô sẽ chủ động liên hệ gia đình để tìm hiểu thêm và cập nhật cho mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Cảm ơn phụ huynh, cả ngày hôm nay con trai rất ngoan, ai nhắc gì cũng ngoan ngoãn nghe lời. Giờ ăn cũng không kén chọn như mọi khi, cô khen mà con cứ cười tít mắt. Con đang tiến bộ rõ rệt.",
+    "label": "mood"
+  },
+  {
+    "text": "Qua quan sát tháng qua, em bé đã hòa nhập tốt với các bạn trong lớp. Không còn khóc nhè khi bị bạn giẫm lên chân, giờ biết nhường nhịn và chia sẻ đồ chơi với bạn. Cô rất vui vì sự tiến bộ này của con.",
+    "label": "mood"
+  },
+  {
+    "text": "Hôm nay cô nhận thấy con gái có dấu hiệu ghen tị khi thấy bạn được cô khen nhiều. Môi mím chặt, mắt nhìn xuống đất, cả buổi không chịu chơi với ai. Cô đã âm cần giải thích và khen con về một việc khác, con mới vui lại.",
+    "label": "mood"
+  },
+  {
+    "text": "Gần đây em trai có biểu hiện cáu kỉnh bất thường. Ai động vào đồ của con cũng gạt tay ra cáu, không chịu chia sẻ với bạn. Cô đã chủ động gặp mẹ trao đổi, có thể do gia đình đang có biến động nên con chưa quen.",
+    "label": "mood"
+  },
+  {
+    "text": "Niềm vui của cô là con gái không còn khóc nhè khi mẹ đi vắng nữa. Bé đã quen với việc cô và các bạn chơi cùng, giờ thậm chí còn hướng dẫn bạn mới nữa. Cô rất vui vì sự tiến bộ này.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô khẳng định tình hình tuần qua, em bé đã có tiến bộ rõ rệt về khả năng tự lập. Không cần cô giúp nhiều, con đã tự xúc ăn, tự xếp đồ chơi vào đúng chỗ. Đặc biệt con đã biết dọn dẹp sau khi chơi xong.",
+    "label": "mood"
+  },
+  {
+    "text": "Về cơ bản, tâm trạng cả lớp đều tốt hôm nay, không có xung đột lớn nào xảy ra. Có vài bé giận dỗi nhau vì giành đồ chơi nhưng cô đã xử lý ngay, các bé đã làm hò và chơi chung bình thường.",
+    "label": "mood"
+  },
+  {
+    "text": "Quan sát kỹ cả tuần, cô thấy con trai có biểu hiện lo lắng khi thấy mẹ đến muộn. Cứ canh cửa sổ ngóng hoài, thỉnh thoảng lại hỏi cô bao giờ mẹ đến. Cô đã an ủi và hứa sẽ gọi điện báo mẹ đến sớm hơn.",
+    "label": "mood"
+  },
+  {
+    "text": "Kết quả tuần qua, con trai rất tích cực, ai hỏi gì cũng giơ tay xin trả lời. Mỗi khi con ngoan cô lại động viên, giờ ăn cũng hết phần không để thừa. Đặc biệt con đã biết giúp bạn xếp đồ chơi, cô rất tự hào.",
+    "label": "mood"
+  },
+  {
+    "text": "Vui vui vui, lon ton suốt ngày.",
+    "label": "mood"
+  },
+  {
+    "text": "Khóc ngằn ngặt, ướt hết áo.",
+    "label": "mood"
+  },
+  {
+    "text": "Gào khóc ầm ĩ vì giành đồ.",
+    "label": "mood"
+  },
+  {
+    "text": "Mắt tròn xoe, miệng chữ O.",
+    "label": "mood"
+  },
+  {
+    "text": "Cụp mắt ngại ngùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Rạng rỡ khoe mũ mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Run cầm cập vì sợ.",
+    "label": "mood"
+  },
+  {
+    "text": "Dỗi hờn, quay ngoắt đi.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhảy tưng tưng reo hò.",
+    "label": "mood"
+  },
+  {
+    "text": "Lấp ló sau cánh cửa.",
+    "label": "mood"
+  },
+  {
+    "text": "Buồn thiu ngồi ỉu xìu.",
+    "label": "mood"
+  },
+  {
+    "text": "Hất mặt kiêu ngạo.",
+    "label": "mood"
+  },
+  {
+    "text": "Chồm người xem cho kỹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghểnh cổ đợi người thân.",
+    "label": "mood"
+  },
+  {
+    "text": "Dậm chân bình bịch cáu bẳn.",
+    "label": "mood"
+  },
+  {
+    "text": "Tươi rói khoe bóp mới.",
+    "label": "mood"
+  },
+  {
+    "text": "Co rúm người vì sợ hãi.",
+    "label": "mood"
+  },
+  {
+    "text": "Lấp liếm nhìn qua kẽ tay.",
+    "label": "mood"
+  },
+  {
+    "text": "Hát vuốt ca cả buổi.",
+    "label": "mood"
+  },
+  {
+    "text": "Rơm rớm nước mắt khóc thút thít.",
+    "label": "mood"
+  },
+  {
+    "text": "Hăng hái lon ton khắp nơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Bĩu môi khó chịu.",
+    "label": "mood"
+  },
+  {
+    "text": "Điềm nhiên như không có chuyện gì.",
+    "label": "mood"
+  },
+  {
+    "text": "Chăm chú dõi mắt nhìn theo.",
+    "label": "mood"
+  },
+  {
+    "text": "An tâm dựa vai cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Vào lớp đầu giờ con cười toe toét, lăng xăng chạy khắp phòng chào hỏi mọi người.",
+    "label": "mood"
+  },
+  {
+    "text": "Con trai ngồi buồn bã ở góc sân, tay chống cằm nhìn bạn bè chơi đùa.",
+    "label": "mood"
+  },
+  {
+    "text": "Trông thấy cô lôi ra một con rối tay, nhóc tì ngỡ ngàng đứng trân trân ngắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị bạn cười vì nói ngọng, cậu nhóc đỏ bừng mặt quay ngoắt đi chỗ khác.",
+    "label": "mood"
+  },
+  {
+    "text": "Tới giờ chiều con hớn hở khoe với cô chiếc vòng tay mới mẹ mua, mắt sáng long lanh.",
+    "label": "mood"
+  },
+  {
+    "text": "Em gái tỏ ra ghen tị khi thấy bạn cạnh bên được cô khen thưởng nhiều hơn mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Sắp tan học con bồn chồn đứng ngồi không yên, thỉnh thoảng chạy lại cửa sổ hỏi han cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang vui thì bạn lấy mất viên bi, nhóc tì đỏ gay mặt giằng mạnh.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghe cô cất giọng hát bài mới, cậu nhóc mắt sáng rỡ giơ tay xin hát cùng.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy bác sửa ống nước ngoài hành lang, em bé nép mình sát vào tường không dám nhúc nhích.",
+    "label": "mood"
+  },
+  {
+    "text": "Cả buổi chiều con cứ lờ đờ ngồi yên, ánh mắt xa xăm nhìn về phía cửa sổ.",
+    "label": "mood"
+  },
+  {
+    "text": "Tự nhiên em bé đâm ra gắt gỏng, cứ hờn dỗi với bất kỳ ai đến gần mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghe tin mai có dã ngoại, bạn nhỏ phấn khích nhảy tưng tưng tại chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Được cô mời chia sẻ đồ vật yêu thích, em hơi ngại ngùng không dám đứng dậy.",
+    "label": "mood"
+  },
+  {
+    "text": "Trong giờ chơi tự do, cậu nhóc lăng xăng chạy khắp sân không ngừng nghỉ.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa đánh rơi cả tháp gỗ xuống sàn, em bé sững người đứng trân trân tại chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé hăng hái xin phụ cô dọn cốc nước sau giờ uống sữa với nụ cười rạng rỡ.",
+    "label": "mood"
+  },
+  {
+    "text": "Không được cô chọn lên bảng trước, cậu nhóc bĩu môi dài ngoẵng tỏ ra bất mãn.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang ngồi chơi ngoan bỗng nghe tiếng cốc vỡ ngoài hành lang, bé giật bắn mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Em tủi thân rơm rớm nước mắt khi thấy bạn được tặng còn mình thì không.",
+    "label": "mood"
+  },
+  {
+    "text": "Buổi chiều con vô cùng hào hứng tham gia hoạt động nặn đất sét cùng cả nhóm.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhóc tì lặng lẽ ngồi ở ghế đá cuối sân, mặt buồn hiu không thèm chơi với ai.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc cô khen \"Con vẽ đẹp quá!\", nhóc tì ửng hồng đôi má e thẹn cười.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy đàn cá vàng bơi lượn trong hồ, đôi mắt con sáng rỡ đầy vẻ thích thú.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc bạn ngồi cạnh giẫm lên tay, nhóc tì tức tối giận dỗi cả buổi chiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Con lon ton chạy lại ôm chầm lấy cô khi mẹ vừa rời khỏi cổng trường.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhìn thấy cô lấy ra hộp bút màu mới toanh, cu cậu háo hức nhảy chân sáo tại chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Nghe tiếng cưa máy kêu rít ngoài cổng, em bé tỏ ra sợ sệt nép sau lưng cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Cậu nhóc rạng rỡ sung sướng khi được cả lớp vỗ tay chúc mừng sinh nhật.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn nhỏ nằm ườn trên tấm thảm xốp, cứ ỉu xìu không chịu ngồi dậy.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang học bỗng cô mang vào con búp bê mới, riêng em trố mắt ngơ ngác nhìn chăm chú.",
+    "label": "mood"
+  },
+  {
+    "text": "Được mẹ hứa chiều đón sớm, bé cười rúc rích suốt cả giờ học chiều.",
+    "label": "mood"
+  },
+  {
+    "text": "Cu cậu hờn dỗi ném cả rổ bóng nhựa xuống nền vì bị thua cuộc chơi.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé bối rối không biết trả lời khi cô hỏi tên bạn thân của mình.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang chơi xếp hình tự nhiên mệt quá, em bé lăn ra sàn lim dim ngủ ngay tại chỗ.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy chú nhện lớn giăng tơ ngoài hiên, em nhón gót nhìn rồi lùi nhanh ra xa.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi nhận sticker hình bướm cô vừa tặng, đôi má con đỏ hồng lên vì sung sướng.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé bĩu môi khó chịu khi phải chờ đến lượt mình trong trò xếp hàng.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc bị ong vàng vo ve quanh đầu, con bình tĩnh đứng im không khóc ré lên.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa nghe nhạc thiếu nhi vang lên, chân tay cu cậu nhún nhảy rộn ràng theo điệu.",
+    "label": "mood"
+  },
+  {
+    "text": "Con phụng phịu nằm ườn ra nệm vì không được mẹ mua cặp tóc mới như bạn.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi về đích cuộc thi nhảy bao bố, em bé reo lên sung sướng ôm cổ cô.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc giờ ăn xế đến, cu cậu lon ton chạy ra bàn với vẻ mặt háo hức lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô bé nhút nhát đứng nép sau tủ đồ, mắt dáo dác nhìn đoàn học sinh tham quan.",
+    "label": "mood"
+  },
+  {
+    "text": "Cậu bé hớn hở khoe với cô về con mèo mới mẹ mua ở nhà.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé gái ngồi im nhìn dòng nước chảy qua máng xối, ánh mắt rất trầm lắng.",
+    "label": "mood"
+  },
+  {
+    "text": "Con giận dữ đập tay xuống bàn khi nghe tin trò chơi yêu thích bị hoãn.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô giới thiệu trò chơi đuổi bắt mới, cậu bé trai đứng ngồi không yên.",
+    "label": "mood"
+  },
+  {
+    "text": "Đôi mắt con tràn ngập nỗi lo âu khi nghe tin bà ngoại phải vào viện.",
+    "label": "mood"
+  },
+  {
+    "text": "Bị cô trách nhẹ vì lỡ vẽ bậy lên tường, cu cậu cúi gằm mặt xuống vẻ hối lỗi.",
+    "label": "mood"
+  },
+  {
+    "text": "Bạn ấy nở nụ cười rạng rỡ khi nghe cô đọc tên mình trong danh sách bé ngoan.",
+    "label": "mood"
+  },
+  {
+    "text": "Phát hiện cục bông gòn trắng trên bàn, con tò mò nhón gót chạm nhẹ vào.",
+    "label": "mood"
+  },
+  {
+    "text": "Thấy hộp cơm gạo lứt mẹ nấu ở nhà mang đến, cu cậu mắt sáng rỡ lon ton giới thiệu.",
+    "label": "mood"
+  },
+  {
+    "text": "Bé có vẻ lo sợ khi phải đi qua hành lang vắng để đến phòng ngủ trưa.",
+    "label": "mood"
+  },
+  {
+    "text": "Được nhận phiếu bé ngoan đầu tuần, con sung sướng nhảy cẫng lên vỗ tay.",
+    "label": "mood"
+  },
+  {
+    "text": "Nhóc con lặng lẽ ngồi ở góc cầu thang, không chịu tham gia trò chơi nào.",
+    "label": "mood"
+  },
+  {
+    "text": "Vừa chơi đùa vui vẻ thì tự nhiên con im lặng, ngồi co ro vào góc cửa.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi được cô khuyến khích, em dạn dĩ giơ tay phát biểu ý kiến trước cả lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Sáng nay vào lớp, con trai cười toe toét ôm chầm lấy cô rồi khoe ngay chiếc xe ô tô đồ chơi mẹ mới mua. Cả buổi sáng con vui vẻ khoe với từng bạn, ai cũng trầm trồ khen ngợi làm con càng thêm phấn khởi.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang xếp hình ngoan thì tự dưng cu cậu bực bội, hất đổ cả tháp ly vì bạn chen vào chỗ. Cô tách hai bạn ra dỗ dành, nhắc nhở luật chơi thì em mới chịu xây lại từ đầu và ngồi chơi chung hòa thuận.",
+    "label": "mood"
+  },
+  {
+    "text": "Khi cô bật ti vi lên chiếu clip gấu trúc lăn từ vườn thú, cả lớp im phăng phắc. Riêng em thì trố mắt há hốc miệng, hai tay bấu chặt vào ghế không dám tin vào mắt mình vì quá thích thú.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc chơi nhảy bao bố ngoài sân, con tỏ ra vô cùng hào hứng. Đến lượt mình nhảy, em lon ton chạy tới ôm bao bố rồi nhảy cẫng lên, miệng cười toe toét reo hò không ngừng.",
+    "label": "mood"
+  },
+  {
+    "text": "Mới đến lớp đã thấy con gái ngồi thu lu ở góc bàn, mếu máo không thèm chơi với ai. Cô lại gần hỏi han thì bé chỉ lắc đầu, mãi đến gần trưa mới chịu thì thầm là tối qua mẹ la mắng.",
+    "label": "mood"
+  },
+  {
+    "text": "Trước giờ ăn xế, con tỏ ra bồn chồn lo lắng, cứ chốc chốc lại đi vòng quanh lớp ngó ra hiên. Đến lúc cô mang vào khay bánh mì nóng hổi là em reo hò sung sướng, lon ton xếp hàng đầu tiên đòi phần.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc cô thả vào lớp một chú cào cào xanh, em tỏ ra vừa tò mò vừa sợ hãi. Em đứng cách xa nhón gót xem, tay nắm chặt vạt áo rồi bỗng dưng hét toáng khi cào cào nhảy sang hướng khác. Cô phải đậy hộp lại rồi giải thích chú cào cào hiền lắm thì em mới thôi run rẩy.",
+    "label": "mood"
+  },
+  {
+    "text": "Lần đầu được cô giao nhiệm vụ phát cơm cho cả lớp, cu cậu vô cùng phấn khởi và tự hào. Suốt buổi trưa con lon ton bưng từng khay cơm phát cho từng bạn, miệng cười toe toét và ưỡn ngực đầy kiêu hãnh.",
+    "label": "mood"
+  },
+  {
+    "text": "Tuy mới đến lớp được tuần nhưng em bé đã quen dần với mọi người, không còn rụt rè nhiều như trước. Chiều nay con tự giác xếp đồ chơi vào rổ sau khi chơi xong, miệng còn hát líu lo khiến các cô vui lây.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc ăn xong phần cơm, con tỏ ra vô cùng hào hứng vì được cô khen ăn giỏi. Em vênh mặt lên tự hào khoe với cả nhóm bạn là mình vừa ăn hết ba bát cơm, mắt sáng rỡ như sao.",
+    "label": "mood"
+  },
+  {
+    "text": "Buổi chiều mưa tầm tã, con trai ngồi lim dim ngủ gật ở góc cửa sổ. Cô phải đặt gối nhỏ cho con tựa, ai đụng vào cũng khó chịu cau mày gạt ra, có vẻ đêm qua con thức khuya xem hoạt hình cùng mẹ.",
+    "label": "mood"
+  },
+  {
+    "text": "Lúc chia tay mẹ đầu giờ, con trai òa khóc nức nở bám chặt lấy vạt áo mẹ không chịu buông. Cô phải dùng chú khỉ bông nhảy nhót để dụ dỗ, hứa chiều cho ăn bim bim thì cu cậu mới chịu nín và đi theo cô vào lớp.",
+    "label": "mood"
+  },
+  {
+    "text": "Đang tô màu, con vô tình làm lem ra ngoài tờ giấy. Em tỏ ra bối rối, đỏ mặt ngại ngùng nhìn quanh không biết phải làm sao. Cô chạy lại an ủi và gợi ý vẽ thêm hình để che đi vết lem, con mới thở phào nhẹ nhõm.",
+    "label": "mood"
+  },
+  {
+    "text": "Cô khen ngợi cậu nhóc hôm nay thật ngoan nhé. Lúc thấy bạn cùng tổ quên đem khăn lau, em lập tức chạy lại chia sẻ khăn của mình, còn ân cần nhắc bạn lau sạch tay. Cả lớp vỗ tay còn em cười tít mắt tự hào lắm.",
+    "label": "mood"
+  },
+  {
+    "text": "Trưa nay mẹ hứa đến đón sớm nhưng vẫn trễ, con bắt đầu mếu máo quấy khóc trong phòng ngủ. Cô phải bế bồng con đi dạo khắp hành lang, hứa gọi điện nhắc mẹ đến thật nhanh thì em mới chịu nín nấc và ngồi yên ôm gấu bông.",
+    "label": "mood"
+  },
+  {
+    "text": "Đến giờ ra về mà con vẫn còn mải chơi chưa chịu cất đồ. Cô nhắc nhở thì em phụng phịu bĩu môi, khoanh tay tỏ vẻ bất mãn. Mãi khi cô giải thích nhẹ nhàng rằng bạn khác đang chờ được về, con mới chịu miễn cưỡng xếp đồ.",
+    "label": "mood"
+  },
+  {
+    "text": "Trong lúc xem hoạt hình cổ tích, đôi mắt con tròn xoe ngạc nhiên tột độ khi thấy cô tiên bay lượn trên màn hình. Em há hốc miệng không chớp mắt, lâu lâu lại vỗ tay reo hò sung sướng vì quá thích thú.",
+    "label": "mood"
+  }
+]
