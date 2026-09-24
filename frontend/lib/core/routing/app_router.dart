@@ -1,4 +1,4 @@
-﻿// frontend/lib/core/routing/app_router.dart
+// frontend/lib/core/routing/app_router.dart
 // =========================================================
 // GoRouter cấu hình toàn bộ điều hướng của app.
 
@@ -69,6 +69,10 @@ class AppRouter {
           return ExtractionResultsScreen(
             voiceId: params['voiceId'] ?? '',
             teacherId: params['teacherId'] ?? '',
+            childId: params['childId'],
+            childName: params['childName'],
+            childInitials: params['childInitials'],
+            classTeacherInfo: params['classTeacherInfo'],
           );
         },
       ),

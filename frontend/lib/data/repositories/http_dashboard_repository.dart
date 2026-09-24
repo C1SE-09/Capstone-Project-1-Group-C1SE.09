@@ -1,4 +1,4 @@
-﻿// frontend/lib/data/repositories/http_dashboard_repository.dart
+// frontend/lib/data/repositories/http_dashboard_repository.dart
 // =========================================================
 // Triển khai DashboardRepository bằng API THẬT (endpoint
 // dashboard.py + class_data.py). Tất cả method đều gọi Dio.
@@ -37,8 +37,8 @@ class HttpDashboardRepository implements DashboardRepository {
             Dio(
               BaseOptions(
                 baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 15),
+                connectTimeout: const Duration(seconds: 30),
+                receiveTimeout: const Duration(seconds: 30),
               ),
             );
 

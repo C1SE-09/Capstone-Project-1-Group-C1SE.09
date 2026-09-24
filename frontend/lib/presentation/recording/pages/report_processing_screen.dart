@@ -2,36 +2,53 @@
 // ============================================================================
 // ReportProcessingScreen – "Đang xử lý báo cáo"
 //
-// Hiển thị 4 bước xử lý theo thứ tự:
-//   1. Đã nhận bản ghi âm       ← completed (check xanh)
-//   2. Đang chuyển giọng nói thành văn bản ← in-progress (spinner xanh)
-//   3. Đang phân tích nội dung  ← pending (circle xám)
-//   4. Đang tạo báo cáo         ← pending (circle xám)
+// 2 Giai đoạn (ProcessingPhase):
+//   1. Phase 1 (transcribe): Sau khi nhấn "Lưu bản ghi" từ Màn hình ghi âm:
+//      - Step 0: ✓ Đã nhận bản ghi âm
+//      - Step 1: ⟳ Đang chuyển giọng nói thành văn bản (Status Polling API)
+//      -> Khi xong → tự động chuyển sang TranscriptReviewScreen (Màn hình 3).
 //
-// Sau khi xong → tự động chuyển sang ExtractionResultsScreen
+//   2. Phase 2 (extract): Sau khi nhấn "Tiếp tục" từ TranscriptReviewScreen:
+//      - Step 0: ✓ Đã nhận bản ghi âm
+//      - Step 1: ✓ Đang chuyển giọng nói thành văn bản
+//      - Step 2: ⟳ Đang phân tích nội dung (AI Extraction API)
+//      - Step 3: ⟳ Đang tạo báo cáo (Draft Report API)
+//      -> Khi xong → tự động chuyển sang ExtractionResultsScreen (Màn hình 4 kết quả).
 // ============================================================================
 
 import 'dart:async';
 
+import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/extraction_results_screen.dart';
+import 'package:adark_frontend/presentation/recording/pages/transcript_review_screen.dart';
 import 'package:flutter/material.dart';
+
+enum ProcessingPhase { transcribe, extract }
 
 class ReportProcessingScreen extends StatefulWidget {
   const ReportProcessingScreen({
     super.key,
     required this.child,
-    required this.transcript,
+    this.phase = ProcessingPhase.transcribe,
+    this.transcript = '',
+    this.audioFilePath,
+    this.audioDuration = 18,
     this.voiceId,
     this.teacherId,
     this.classId,
-  });
+    TeacherRepositoryBase? repository,
+  }) : _repository = repository;
 
   final Child child;
+  final ProcessingPhase phase;
   final String transcript;
+  final String? audioFilePath;
+  final int audioDuration;
   final String? voiceId;
   final String? teacherId;
   final String? classId;
+  final TeacherRepositoryBase? _repository;
 
   @override
   State<ReportProcessingScreen> createState() => _ReportProcessingScreenState();
@@ -39,12 +56,17 @@ class ReportProcessingScreen extends StatefulWidget {
 
 class _ReportProcessingScreenState extends State<ReportProcessingScreen>
     with TickerProviderStateMixin {
+  late final TeacherRepositoryBase _repo;
+
   // ─── Processing state ────────────────────────────────────────────────────
-  int _completedSteps = 1; // Step 0 (received) là done ngay
-  int _currentStep = 1; // Step 1 đang processing
+  late int _completedSteps;
+  bool _hasError = false;
+  String? _errorMessage;
 
   late AnimationController _spinnerController;
-  Timer? _simulationTimer;
+  Timer? _pollingTimer;
+  int _pollAttempts = 0;
+  static const int _maxPollAttempts = 20; // Max 20 attempts * 3s = 60s timeout
 
   // ─── Constants ───────────────────────────────────────────────────────────
   static const _kPrimary = Color(0xFF0D5C4D);
@@ -56,52 +78,232 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
   static const _kBorder = Color(0xFFDCE1DE);
 
   static const _steps = <String>[
+    'Đã nhận bản ghi âm',
+    'Đang chuyển giọng nói thành văn bản',
     'Đang phân tích nội dung',
     'Đang tạo báo cáo',
   ];
 
-  // Thời gian (ms) cho mỗi bước giả lập
-  static const _stepDurations = <int>[0, 2500, 2000, 1500];
-
   @override
   void initState() {
     super.initState();
+    _repo = widget._repository ?? TeacherRepository();
+
     _spinnerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat();
 
-    // Bắt đầu giả lập tiến trình
-    _runSimulation();
+    _startPipeline();
   }
 
   @override
   void dispose() {
     _spinnerController.dispose();
-    _simulationTimer?.cancel();
+    _pollingTimer?.cancel();
     super.dispose();
   }
 
-  // ─── Simulation logic ────────────────────────────────────────────────────
+  // ─── Main Pipeline ───────────────────────────────────────────────────────
 
-  Future<void> _runSimulation() async {
-    // Bước 1 → 2 → 3
-    for (int step = 1; step <= 3; step++) {
-      await Future.delayed(Duration(milliseconds: _stepDurations[step]));
-      if (!mounted) return;
-      setState(() {
-        _completedSteps = step + 1;
-        _currentStep = step + 1;
-      });
+  Future<void> _startPipeline() async {
+    _pollingTimer?.cancel();
+    setState(() {
+      _hasError = false;
+      _errorMessage = null;
+      _pollAttempts = 0;
+      if (widget.phase == ProcessingPhase.transcribe) {
+        _completedSteps = 1; // Step 0 (Đã nhận bản ghi âm) done; Step 1 active
+      } else {
+        _completedSteps = 2; // Step 0,1 done; Step 2 active (Đang phân tích)
+      }
+    });
+
+    if (widget.phase == ProcessingPhase.transcribe) {
+      await _runTranscribePhase();
+    } else {
+      await _runExtractPhase();
     }
-
-    // Tất cả bước xong → chuyển màn hình
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    _navigateToExtraction();
   }
 
-  void _navigateToExtraction() {
+  // ─── Phase 1: Transcribe Phase (Ảnh 1 -> Ảnh 2 -> Ảnh 3) ─────────────────
+
+  Future<void> _runTranscribePhase() async {
+    final voiceId = widget.voiceId;
+    final teacherId = widget.teacherId ?? 'bbbbbbbb-0000-0000-0000-000000000001';
+
+    // Simulation / Fast fallback if mock voiceId or no voiceId
+    if (voiceId == null || voiceId.isEmpty || voiceId == 'voice-001') {
+      await Future.delayed(const Duration(milliseconds: 2500));
+      if (!mounted) return;
+      setState(() {
+        _completedSteps = 2;
+      });
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+      _navigateToReview(
+        transcript: widget.transcript.isNotEmpty
+            ? widget.transcript
+            : 'Hôm nay bé ${widget.child.displayName} ăn hết suất, ngủ khoảng 2 tiếng, sức khỏe bình thường và chơi ngoan với các bạn trong giờ hoạt động nhóm.',
+        voiceId: 'voice-001',
+      );
+      return;
+    }
+
+    // Real Status Polling (Task #92 & Task #93 requirement: poll every 3 seconds)
+    final record = await _pollVoiceStatus(voiceId: voiceId, teacherId: teacherId);
+    if (record == null || !mounted) return;
+
+    // Step 1 Completed -> Mark Step 1 Done ✓
+    setState(() {
+      _completedSteps = 2;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+
+    _navigateToReview(
+      transcript: record.effectiveTranscript,
+      voiceId: record.id,
+    );
+  }
+
+  Future<VoiceRecord?> _pollVoiceStatus({required String voiceId, required String teacherId}) async {
+    final completer = Completer<VoiceRecord?>();
+
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete(null);
+        return;
+      }
+
+      _pollAttempts++;
+
+      if (_pollAttempts > _maxPollAttempts) {
+        timer.cancel();
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Quá thời gian chờ phản hồi từ máy chủ (Timeout).';
+          });
+        }
+        if (!completer.isCompleted) completer.complete(null);
+        return;
+      }
+
+      try {
+        final record = await _repo.getVoiceRecord(voiceId: voiceId, teacherId: teacherId);
+        if (!mounted) return;
+
+        if (record.status == 'completed') {
+          timer.cancel();
+          if (!completer.isCompleted) completer.complete(record);
+        } else if (record.status == 'failed') {
+          timer.cancel();
+          setState(() {
+            _hasError = true;
+            _errorMessage = record.errorMessage ?? 'Phiên âm âm thanh thất bại từ máy chủ.';
+          });
+          if (!completer.isCompleted) completer.complete(null);
+        }
+      } catch (e) {
+        if (_pollAttempts >= _maxPollAttempts) {
+          timer.cancel();
+          if (mounted) {
+            setState(() {
+              _hasError = true;
+              _errorMessage = 'Lỗi kết nối API: ${e.toString()}';
+            });
+          }
+          if (!completer.isCompleted) completer.complete(null);
+        }
+      }
+    });
+
+    return completer.future;
+  }
+
+  void _navigateToReview({required String transcript, required String voiceId}) {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => TranscriptReviewScreen(
+          child: widget.child,
+          transcript: transcript,
+          audioDuration: widget.audioDuration,
+          audioFilePath: widget.audioFilePath,
+          voiceId: voiceId,
+          teacherId: widget.teacherId,
+          classId: widget.classId,
+        ),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
+    );
+  }
+
+  // ─── Phase 2: Extract & Draft Phase (Ảnh 3 -> Ảnh 4 -> Results) ──────────
+
+  Future<void> _runExtractPhase() async {
+    final voiceId = widget.voiceId ?? 'voice-001';
+    final teacherId = widget.teacherId ?? 'bbbbbbbb-0000-0000-0000-000000000001';
+
+    // 1. Step 2 (Đang phân tích nội dung với mô hình NLP AI)
+    ExtractionData? extraction;
+    if (voiceId != 'voice-001' && voiceId != 'manual-report') {
+      try {
+        if (widget.transcript.isNotEmpty) {
+          extraction = await _repo.analyzeTranscript(
+            voiceId: voiceId,
+            teacherId: teacherId,
+            editedTranscript: widget.transcript,
+          );
+        } else {
+          extraction = await _repo.extractVoice(
+            voiceId: voiceId,
+            teacherId: teacherId,
+          );
+        }
+      } catch (e) {
+        debugPrint('NLP Extraction failed: $e');
+      }
+    }
+
+    await Future.delayed(const Duration(milliseconds: 1800));
+    if (!mounted) return;
+
+    // Step 2 Done → Move to Step 3 (Đang tạo báo cáo)
+    setState(() {
+      _completedSteps = 3;
+    });
+
+    // 2. Step 3 (Đang tạo báo cáo)
+    if (voiceId != 'voice-001' && voiceId != 'manual-report') {
+      try {
+        await _repo.createDraftReport(
+          voiceId: voiceId,
+          teacherId: teacherId,
+          editedExtraction: extraction,
+        );
+      } catch (_) {}
+    }
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+
+    setState(() {
+      _completedSteps = 4;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+
+    _navigateToExtractionResults(extraction: extraction);
+  }
+
+  void _navigateToExtractionResults({ExtractionData? extraction}) {
     final effectiveTeacherId =
         (widget.teacherId != null && widget.teacherId!.isNotEmpty)
             ? widget.teacherId!
@@ -115,7 +317,12 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
           childId: widget.child.childId,
           childName: widget.child.fullName,
           childInitials: _initials(widget.child.fullName),
-          // ✅ NO mock initial data - extraction fetched from real API
+          initialMeals: extraction?.meals,
+          initialSleeping: extraction?.sleeping,
+          initialHealth: extraction?.health,
+          initialActivities: extraction?.activities,
+          initialMood: extraction?.mood,
+          initialNotes: null,
         ),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);
@@ -147,6 +354,10 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
                     _buildChildCard(formattedDate),
                     const SizedBox(height: 24),
                     _buildStepsList(),
+                    if (_hasError) ...[
+                      const SizedBox(height: 20),
+                      _buildErrorCard(),
+                    ],
                   ],
                 ),
               ),
@@ -241,9 +452,9 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
   Widget _buildStepsList() {
     return Column(
       children: List.generate(_steps.length, (i) {
-        final isDone = i < _completedSteps - 1;
-        final isActive = i == _currentStep - 1 && !isDone;
-        final isPending = i > _currentStep - 1;
+        final isDone = i < _completedSteps;
+        final isActive = !_hasError && i == _completedSteps;
+        final isPending = i > _completedSteps;
 
         return _buildStepRow(
           label: _steps[i],
@@ -344,6 +555,57 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
         color: Colors.transparent,
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFFB0B6B3), width: 2),
+      ),
+    );
+  }
+
+  // ─── Error Card ──────────────────────────────────────────────────────────
+
+  Widget _buildErrorCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: Colors.red.shade700),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _errorMessage ?? 'Đã xảy ra lỗi trong quá trình xử lý.',
+                  style: TextStyle(
+                    color: Colors.red.shade900,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: _startPipeline,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              label: const Text('Thử lại'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

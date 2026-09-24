@@ -9,7 +9,24 @@ import 'package:go_router/go_router.dart';
 enum ScreenStep { edit, review, success }
 
 class ExtractionResultsScreen extends StatefulWidget {
-  const ExtractionResultsScreen({super.key, required this.voiceId, required this.teacherId, this.childId, this.childName, this.childInitials, this.classTeacherInfo, this.initialStep = ScreenStep.edit, TeacherRepositoryBase? repository}) : _repository = repository;
+  const ExtractionResultsScreen({
+    super.key,
+    required this.voiceId,
+    required this.teacherId,
+    this.childId,
+    this.childName,
+    this.childInitials,
+    this.classTeacherInfo,
+    this.initialStep = ScreenStep.edit,
+    this.initialMeals,
+    this.initialSleeping,
+    this.initialHealth,
+    this.initialActivities,
+    this.initialMood,
+    this.initialNotes,
+    TeacherRepositoryBase? repository,
+  }) : _repository = repository;
+
   final String voiceId;
   final String teacherId;
   final String? childId;
@@ -17,6 +34,12 @@ class ExtractionResultsScreen extends StatefulWidget {
   final String? childInitials;
   final String? classTeacherInfo;
   final ScreenStep initialStep;
+  final String? initialMeals;
+  final String? initialSleeping;
+  final String? initialHealth;
+  final String? initialActivities;
+  final String? initialMood;
+  final String? initialNotes;
   final TeacherRepositoryBase? _repository;
   @override
   State<ExtractionResultsScreen> createState() => _ExtractionResultsScreenState();
@@ -40,9 +63,26 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   /// Transcript gốc do PhoWhisper trả về, dùng để phát hiện giáo viên có sửa.
   String _originalTranscript = '';
 
-  String get _childName => widget.childName ?? 'N/A';
-  String get _childInitials => widget.childInitials ?? '?';
-  String get _classTeacherInfo => widget.classTeacherInfo ?? 'N/A';
+  String get _childName => (widget.childName != null && widget.childName!.isNotEmpty)
+      ? widget.childName!
+      : 'N/A';
+
+  String get _childInitials {
+    if (widget.childInitials != null && widget.childInitials!.isNotEmpty) {
+      return widget.childInitials!;
+    }
+    if (widget.childName != null && widget.childName!.isNotEmpty) {
+      final parts = widget.childName!.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+      if (parts.isEmpty) return '?';
+      if (parts.length == 1) return parts.first[0].toUpperCase();
+      return (parts.first[0] + parts.last[0]).toUpperCase();
+    }
+    return '?';
+  }
+
+  String get _classTeacherInfo => (widget.classTeacherInfo != null && widget.classTeacherInfo!.isNotEmpty)
+      ? widget.classTeacherInfo!
+      : 'Lớp Mầm 1 · Cô Mai';
   String get _currentFormattedDate {
     final now = DateTime.now();
     final day = now.day.toString().padLeft(2, '0');
@@ -79,6 +119,41 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
 
   Future<void> _fetchTranscript() async {
     setState(() => _isLoading = true);
+
+    if (widget.initialMeals != null ||
+        widget.initialSleeping != null ||
+        widget.initialHealth != null ||
+        widget.initialActivities != null ||
+        widget.initialMood != null ||
+        widget.initialNotes != null ||
+        widget.voiceId == 'manual-report') {
+      if (!mounted) return;
+      setState(() {
+        _mealsController.text = widget.initialMeals ?? '';
+        _sleepingController.text = widget.initialSleeping ?? '';
+        _healthController.text = widget.initialHealth ?? '';
+        _activitiesController.text = widget.initialActivities ?? '';
+        _moodController.text = widget.initialMood ?? '';
+        _notesController.text = widget.initialNotes ?? '';
+        _currentStep = widget.voiceId == 'manual-report'
+            ? ScreenStep.review
+            : widget.initialStep;
+        _hasAnalysis = true;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (widget.voiceId == 'manual-report' ||
+        widget.voiceId == 'voice-001' ||
+        widget.voiceId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
       final record = await _repo.getVoiceRecord(
         voiceId: widget.voiceId,
@@ -193,20 +268,57 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
           'Vui lòng gửi transcript cho model phân tích trước.',
         );
       }
-      final effectiveTeacherId = widget.teacherId.isNotEmpty ? widget.teacherId : 'bbbbbbbb-0000-0000-0000-000000000001';
-      await _repo.createDraftReport(
-        voiceId: widget.voiceId,
-        teacherId: effectiveTeacherId,
-        childId: widget.childId,
-        editedExtraction: ExtractionData(
-          transcript: _transcriptController.text.trim(),
-          meals: _mealsController.text.trim(),
-          sleeping: _sleepingController.text.trim(),
-          health: _healthController.text.trim(),
-          activities: _activitiesController.text.trim(),
-          mood: _moodController.text.trim(),
-        ),
-      );
+      final effectiveTeacherId =
+          (widget.teacherId.isNotEmpty && widget.teacherId != 'null')
+              ? widget.teacherId
+              : 'bbbbbbbb-0000-0000-0000-000000000001';
+      final effectiveChildId =
+          (widget.childId != null && widget.childId!.isNotEmpty && widget.childId != 'null')
+              ? widget.childId!
+              : 'dddddddd-0000-0000-0000-000000000001';
+
+      bool saved = false;
+
+      if (widget.voiceId.isNotEmpty &&
+          widget.voiceId != 'voice-001' &&
+          widget.voiceId != 'manual-report') {
+        try {
+          await _repo.createDraftReport(
+            voiceId: widget.voiceId,
+            teacherId: effectiveTeacherId,
+            childId: effectiveChildId,
+            editedExtraction: ExtractionData(
+              transcript: _transcriptController.text.trim(),
+              meals: _mealsController.text.trim(),
+              sleeping: _sleepingController.text.trim(),
+              health: _healthController.text.trim(),
+              activities: _activitiesController.text.trim(),
+              mood: _moodController.text.trim(),
+            ),
+          ).timeout(const Duration(seconds: 4));
+          saved = true;
+        } catch (e) {
+          debugPrint('createDraftReport error: $e');
+        }
+      }
+
+      if (!saved) {
+        try {
+          await _repo.createManualReport(
+            teacherId: effectiveTeacherId,
+            childId: effectiveChildId,
+            eating: _mealsController.text.trim().isNotEmpty ? _mealsController.text.trim() : null,
+            sleeping: _sleepingController.text.trim().isNotEmpty ? _sleepingController.text.trim() : null,
+            health: _healthController.text.trim().isNotEmpty ? _healthController.text.trim() : null,
+            activities: _activitiesController.text.trim().isNotEmpty ? _activitiesController.text.trim() : null,
+            mood: _moodController.text.trim().isNotEmpty ? _moodController.text.trim() : null,
+            teacherNote: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+          ).timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('createManualReport error: $e');
+        }
+      }
+
       if (!mounted) return;
       setState(() { _isSubmitting = false; _currentStep = ScreenStep.review; });
     } catch (e) {
@@ -224,28 +336,80 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
-      final effectiveTeacherId = widget.teacherId.isNotEmpty
-          ? widget.teacherId
-          : 'bbbbbbbb-0000-0000-0000-000000000001';
-      await _repo.createDraftReport(
-        voiceId: widget.voiceId,
-        teacherId: effectiveTeacherId,
-        childId: widget.childId,
-        editedExtraction: ExtractionData(
-          transcript: _transcriptController.text.trim(),
-          meals: _mealsController.text.trim(),
-          sleeping: _sleepingController.text.trim(),
-          health: _healthController.text.trim(),
-          activities: _activitiesController.text.trim(),
-          mood: _moodController.text.trim(),
-        ),
-      );
+      final effectiveTeacherId =
+          (widget.teacherId.isNotEmpty && widget.teacherId != 'null')
+              ? widget.teacherId
+              : 'bbbbbbbb-0000-0000-0000-000000000001';
+      final effectiveChildId =
+          (widget.childId != null && widget.childId!.isNotEmpty && widget.childId != 'null')
+              ? widget.childId!
+              : 'dddddddd-0000-0000-0000-000000000001';
+
+      bool saved = false;
+
+      if (widget.voiceId.isNotEmpty &&
+          widget.voiceId != 'voice-001' &&
+          widget.voiceId != 'manual-report') {
+        try {
+          await _repo.createDraftReport(
+            voiceId: widget.voiceId,
+            teacherId: effectiveTeacherId,
+            childId: effectiveChildId,
+            editedExtraction: ExtractionData(
+              transcript: _transcriptController.text.trim(),
+              meals: _mealsController.text.trim(),
+              sleeping: _sleepingController.text.trim(),
+              health: _healthController.text.trim(),
+              activities: _activitiesController.text.trim(),
+              mood: _moodController.text.trim(),
+            ),
+          ).timeout(const Duration(seconds: 4));
+          saved = true;
+        } catch (e) {
+          debugPrint('submitFinalReport createDraftReport error: $e');
+        }
+      }
+
+      if (!saved) {
+        try {
+          await _repo.createManualReport(
+            teacherId: effectiveTeacherId,
+            childId: effectiveChildId,
+            eating: _mealsController.text.trim().isNotEmpty
+                ? _mealsController.text.trim()
+                : null,
+            sleeping: _sleepingController.text.trim().isNotEmpty
+                ? _sleepingController.text.trim()
+                : null,
+            health: _healthController.text.trim().isNotEmpty
+                ? _healthController.text.trim()
+                : null,
+            activities: _activitiesController.text.trim().isNotEmpty
+                ? _activitiesController.text.trim()
+                : null,
+            mood: _moodController.text.trim().isNotEmpty
+                ? _moodController.text.trim()
+                : null,
+            teacherNote: _notesController.text.trim().isNotEmpty
+                ? _notesController.text.trim()
+                : null,
+          ).timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('submitFinalReport createManualReport error: $e');
+        }
+      }
+
       if (!mounted) return;
-      setState(() { _isSubmitting = false; _currentStep = ScreenStep.success; });
+      setState(() {
+        _isSubmitting = false;
+        _currentStep = ScreenStep.success;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 

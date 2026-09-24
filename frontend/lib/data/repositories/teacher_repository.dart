@@ -31,6 +31,7 @@ class VoiceRecord {
     this.rawTranscript,
     this.editedTranscript,
     this.transcription,
+    this.errorMessage,
   });
 
   final String id;
@@ -38,6 +39,7 @@ class VoiceRecord {
   final String? rawTranscript;
   final String? editedTranscript;
   final String? transcription;
+  final String? errorMessage;
 
   /// Returns the effective transcript text (edited > raw > transcription).
   String get effectiveTranscript =>
@@ -50,6 +52,7 @@ class VoiceRecord {
       rawTranscript: json['raw_transcript'] as String?,
       editedTranscript: json['edited_transcript'] as String?,
       transcription: json['transcription'] as String?,
+      errorMessage: json['error_message'] as String?,
     );
   }
 
