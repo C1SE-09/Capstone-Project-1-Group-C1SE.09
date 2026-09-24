@@ -50,6 +50,7 @@ class AppRouter {
             filePath: params['filePath'] ?? '',
             classId: params['classId'] ?? '',
             teacherId: params['teacherId'] ?? '',
+            childId: params['childId'],
           );
         },
       ),

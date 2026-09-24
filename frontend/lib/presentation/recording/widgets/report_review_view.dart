@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/recording/widgets/report_review_view.dart
+// frontend/lib/presentation/recording/widgets/report_review_view.dart
 // ============================================================================
 // Giao diện 2: Báo cáo hoạt động (Nguyễn Thị Nhím + "Chỉnh sửa" & "Gửi phụ huynh")
 // ============================================================================
@@ -12,6 +12,7 @@ class ReportReviewView extends StatelessWidget {
     required this.childInitials,
     required this.classTeacherInfo,
     required this.formattedDate,
+    required this.transcript,
     required this.meals,
     required this.sleeping,
     required this.health,
@@ -26,6 +27,7 @@ class ReportReviewView extends StatelessWidget {
   final String childInitials;
   final String classTeacherInfo;
   final String formattedDate;
+  final String transcript;
   final String meals;
   final String sleeping;
   final String health;
@@ -127,6 +129,31 @@ class ReportReviewView extends StatelessWidget {
                       ],
                     ),
                   ],
+                ),
+                const SizedBox(height: 20),
+
+                // Transcript Display Card
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F8F6),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE8ECE9)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.text_fields_rounded, size: 18, color: Color(0xFF5E6560)),
+                          SizedBox(width: 8),
+                          Text('Nội dung ghi âm', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF434A45))),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(transcript, style: const TextStyle(fontSize: 14, color: Color(0xFF1E2522), height: 1.5)),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -312,11 +339,11 @@ class ReportReviewView extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      value.isEmpty ? 'Bình thường' : value,
-                      style: const TextStyle(
+                      value.isEmpty ? '(Chưa có dữ liệu)' : value,
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E2522),
+                        color: value.isEmpty ? Color(0xFFA0A6A2) : Color(0xFF1E2522),
                         height: 1.3,
                       ),
                     ),

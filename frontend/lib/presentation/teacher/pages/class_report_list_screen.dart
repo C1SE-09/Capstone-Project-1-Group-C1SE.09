@@ -6,11 +6,11 @@
 import 'package:adark_frontend/core/theme/app_theme.dart';
 import 'package:adark_frontend/domain/entities/class/class_report_overview.dart';
 import 'package:adark_frontend/presentation/teacher/controllers/class_report_list_controller.dart';
+import 'package:adark_frontend/presentation/teacher/pages/class_detail_screen.dart';
 import 'package:adark_frontend/presentation/shared/view_state.dart';
 import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class ClassReportListScreen extends StatefulWidget {
   const ClassReportListScreen({super.key});
@@ -74,15 +74,30 @@ class _ClassReportListScreenState extends State<ClassReportListScreen> {
 
   Widget _classCard(ClassReportOverview item) {
     final progress = item.progress.clamp(0.0, 1.0).toDouble();
+    final classId = item.classInfo.classId.trim();
+
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push(
-          '/class-detail',
-          extra: item.classInfo.classId,
-        ),
+        onTap: () {
+          if (classId.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Không có mã lớp hợp lệ để mở chi tiết.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return;
+          }
+
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ClassDetailScreen(classId: classId),
+            ),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

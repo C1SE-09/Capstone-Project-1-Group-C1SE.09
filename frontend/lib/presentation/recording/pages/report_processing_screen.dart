@@ -115,12 +115,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
           childId: widget.child.childId,
           childName: widget.child.fullName,
           childInitials: _initials(widget.child.fullName),
-          initialMeals: 'Ăn hết suất, ăn tốt',
-          initialSleeping: '2 tiếng, ngủ ngon',
-          initialHealth: 'Bình thường',
-          initialActivities: 'Chơi ngoan với các bạn trong giờ hoạt động nhóm',
-          initialMood: 'Vui vẻ',
-          initialNotes: 'Bé chơi ngoan, hòa nhập tốt với các bạn.',
+          // ✅ NO mock initial data - extraction fetched from real API
         ),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);

@@ -1,8 +1,3 @@
-// frontend/lib/presentation/recording/pages/extraction_results_screen.dart
-// ============================================================================
-// ExtractionResultsScreen (Task #90 - Extraction Review Flow Coordinator)
-// ============================================================================
-
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/presentation/recording/widgets/extraction_edit_view.dart';
 import 'package:adark_frontend/presentation/recording/widgets/report_review_view.dart';
@@ -14,24 +9,7 @@ import 'package:go_router/go_router.dart';
 enum ScreenStep { edit, review, success }
 
 class ExtractionResultsScreen extends StatefulWidget {
-  const ExtractionResultsScreen({
-    super.key,
-    required this.voiceId,
-    required this.teacherId,
-    this.childId,
-    this.childName,
-    this.childInitials,
-    this.classTeacherInfo,
-    this.initialStep = ScreenStep.edit,
-    this.initialMeals,
-    this.initialSleeping,
-    this.initialHealth,
-    this.initialActivities,
-    this.initialMood,
-    this.initialNotes,
-    TeacherRepositoryBase? repository,
-  }) : _repository = repository;
-
+  const ExtractionResultsScreen({super.key, required this.voiceId, required this.teacherId, this.childId, this.childName, this.childInitials, this.classTeacherInfo, this.initialStep = ScreenStep.edit, TeacherRepositoryBase? repository}) : _repository = repository;
   final String voiceId;
   final String teacherId;
   final String? childId;
@@ -39,27 +17,19 @@ class ExtractionResultsScreen extends StatefulWidget {
   final String? childInitials;
   final String? classTeacherInfo;
   final ScreenStep initialStep;
-  final String? initialMeals;
-  final String? initialSleeping;
-  final String? initialHealth;
-  final String? initialActivities;
-  final String? initialMood;
-  final String? initialNotes;
   final TeacherRepositoryBase? _repository;
-
   @override
-  State<ExtractionResultsScreen> createState() =>
-      _ExtractionResultsScreenState();
+  State<ExtractionResultsScreen> createState() => _ExtractionResultsScreenState();
 }
 
 class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   late final TeacherRepositoryBase _repo;
-
   ScreenStep _currentStep = ScreenStep.edit;
   bool _isLoading = true;
   bool _isSubmitting = false;
-
-  // Controllers for the 6 fields
+  bool _isReanalyzing = false;
+  bool _hasAnalysis = false;
+  late final TextEditingController _transcriptController;
   late final TextEditingController _mealsController;
   late final TextEditingController _sleepingController;
   late final TextEditingController _healthController;
@@ -67,11 +37,12 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   late final TextEditingController _moodController;
   late final TextEditingController _notesController;
 
-  // Child Info – dynamic from caller or fallback to mockup defaults
-  String get _childName => widget.childName ?? 'Nguyễn Thị Nhím';
-  String get _childInitials => widget.childInitials ?? 'TN';
-  String get _classTeacherInfo => widget.classTeacherInfo ?? 'Lớp Mầm 1 · Cô Hà';
+  /// Transcript gốc do PhoWhisper trả về, dùng để phát hiện giáo viên có sửa.
+  String _originalTranscript = '';
 
+  String get _childName => widget.childName ?? 'N/A';
+  String get _childInitials => widget.childInitials ?? '?';
+  String get _classTeacherInfo => widget.classTeacherInfo ?? 'N/A';
   String get _currentFormattedDate {
     final now = DateTime.now();
     final day = now.day.toString().padLeft(2, '0');
@@ -84,19 +55,19 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   void initState() {
     super.initState();
     _repo = widget._repository ?? TeacherRepository();
-
+    _transcriptController = TextEditingController();
     _mealsController = TextEditingController();
     _sleepingController = TextEditingController();
     _healthController = TextEditingController();
     _activitiesController = TextEditingController();
     _moodController = TextEditingController();
     _notesController = TextEditingController();
-
-    _fetchExtraction();
+    _fetchTranscript();
   }
 
   @override
   void dispose() {
+    _transcriptController.dispose();
     _mealsController.dispose();
     _sleepingController.dispose();
     _healthController.dispose();
@@ -106,235 +77,188 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchExtraction() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    if (widget.initialMeals != null ||
-        widget.initialSleeping != null ||
-        widget.initialHealth != null ||
-        widget.initialActivities != null ||
-        widget.initialMood != null ||
-        widget.initialNotes != null) {
+  Future<void> _fetchTranscript() async {
+    setState(() => _isLoading = true);
+    try {
+      final record = await _repo.getVoiceRecord(
+        voiceId: widget.voiceId,
+        teacherId: widget.teacherId,
+      );
       if (!mounted) return;
       setState(() {
-        _mealsController.text = widget.initialMeals ?? '';
-        _sleepingController.text = widget.initialSleeping ?? '';
-        _healthController.text = widget.initialHealth ?? '';
-        _activitiesController.text = widget.initialActivities ?? '';
-        _moodController.text = widget.initialMood ?? '';
-        _notesController.text = widget.initialNotes ?? '';
-        _currentStep = widget.initialStep;
+        _originalTranscript = record.effectiveTranscript;
+        _transcriptController.text = record.effectiveTranscript;
+        _mealsController.clear();
+        _sleepingController.clear();
+        _healthController.clear();
+        _activitiesController.clear();
+        _moodController.clear();
+        _notesController.clear();
+        _hasAnalysis = false;
         _isLoading = false;
       });
-      return;
-    }
-
-    try {
-      if (widget.voiceId.isNotEmpty &&
-          widget.voiceId != 'voice-001' &&
-          widget.voiceId != 'manual-report') {
-        final extraction = await _repo.extractVoice(
-          voiceId: widget.voiceId,
-          teacherId: widget.teacherId,
-        );
-
-        if (!mounted) return;
-        setState(() {
-          _mealsController.text = extraction.meals ?? 'Ăn hết suất, ăn tốt';
-          _sleepingController.text = extraction.sleeping ?? '2 tiếng, ngủ ngon';
-          _healthController.text = extraction.health ?? 'Bình thường';
-          _activitiesController.text =
-              extraction.activities ?? 'Chơi ngoan với các bạn trong giờ hoạt động nhóm';
-          _moodController.text = extraction.mood ?? 'Vui vẻ';
-          _notesController.text =
-              'Bé chơi ngoan, hòa nhập tốt với các bạn trong giờ hoạt động nhóm.';
-          _isLoading = false;
-        });
-      } else {
-        await Future.delayed(const Duration(milliseconds: 300));
-        if (!mounted) return;
-        setState(() {
-          _mealsController.text = 'Ăn hết suất, ăn tốt';
-          _sleepingController.text = '2 tiếng, ngủ ngon';
-          _healthController.text = 'Bình thường';
-          _activitiesController.text =
-              'Chơi ngoan với các bạn trong giờ hoạt động nhóm';
-          _moodController.text = 'Vui vẻ';
-          _notesController.text =
-              'Bé chơi ngoan, hòa nhập tốt với các bạn trong giờ hoạt động nhóm.';
-          _isLoading = false;
-        });
-      }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _mealsController.text = 'Ăn hết suất, ăn tốt';
-        _sleepingController.text = '2 tiếng, ngủ ngon';
-        _healthController.text = 'Bình thường';
-        _activitiesController.text =
-            'Chơi ngoan với các bạn trong giờ hoạt động nhóm';
-        _moodController.text = 'Vui vẻ';
-        _notesController.text =
-            'Bé chơi ngoan, hòa nhập tốt với các bạn trong giờ hoạt động nhóm.';
-        _isLoading = false;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Không thể tải transcript PhoWhisper: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      Future.delayed(const Duration(seconds: 2)).then((_) {
+        if (mounted) Navigator.of(context).pop();
       });
     }
   }
 
-  // Action: Press "Tạo báo cáo" -> Save draft to DB & Go to Review Step (Image 1)
-  Future<void> _goToReviewStep() async {
-    if (_isSubmitting) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
 
+  /// Chỉ chạy model sau khi giáo viên đã kiểm tra/chỉnh transcript.
+  Future<void> _analyzeTranscript() async {
+    if (_isReanalyzing || _isSubmitting) return;
+    final edited = _transcriptController.text.trim();
+    if (edited.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Transcript đang trống, không thể gửi phân tích.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isReanalyzing = true);
     try {
       final effectiveTeacherId = widget.teacherId.isNotEmpty
           ? widget.teacherId
           : 'bbbbbbbb-0000-0000-0000-000000000001';
 
-      if (widget.voiceId.isNotEmpty &&
-          widget.voiceId != 'voice-001' &&
-          widget.voiceId != 'manual-report') {
-        final editedExtraction = ExtractionData(
-          meals: _mealsController.text.trim(),
-          sleeping: _sleepingController.text.trim(),
-          health: _healthController.text.trim(),
-          activities: _activitiesController.text.trim(),
-          mood: _moodController.text.trim(),
-        );
+      final extraction = await _repo.analyzeTranscript(
+        voiceId: widget.voiceId,
+        teacherId: effectiveTeacherId,
+        editedTranscript: edited,
+      );
 
-        await _repo.createDraftReport(
-          voiceId: widget.voiceId,
-          teacherId: effectiveTeacherId,
-          editedExtraction: editedExtraction,
+      if (!mounted) return;
+      if (_transcriptController.text.trim() != edited) {
+        setState(() => _isReanalyzing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transcript đã thay đổi trong lúc phân tích. Hãy gửi lại nội dung mới.'),
+            backgroundColor: Colors.orange,
+          ),
         );
-      } else if (widget.childId != null && widget.childId!.isNotEmpty) {
-        await _repo.createManualReport(
-          teacherId: effectiveTeacherId,
-          childId: widget.childId!,
-          eating: _mealsController.text.trim().isNotEmpty
-              ? _mealsController.text.trim()
-              : null,
-          sleeping: _sleepingController.text.trim().isNotEmpty
-              ? _sleepingController.text.trim()
-              : null,
-          health: _healthController.text.trim().isNotEmpty
-              ? _healthController.text.trim()
-              : null,
-          activities: _activitiesController.text.trim().isNotEmpty
-              ? _activitiesController.text.trim()
-              : null,
-          mood: _moodController.text.trim().isNotEmpty
-              ? _moodController.text.trim()
-              : null,
-          teacherNote: _notesController.text.trim().isNotEmpty
-              ? _notesController.text.trim()
-              : null,
-        );
+        return;
       }
-
-      if (!mounted) return;
       setState(() {
-        _isSubmitting = false;
-        _currentStep = ScreenStep.review;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isSubmitting = false;
+        _originalTranscript = edited;
+        _mealsController.text = extraction.meals ?? '';
+        _sleepingController.text = extraction.sleeping ?? '';
+        _healthController.text = extraction.health ?? '';
+        _activitiesController.text = extraction.activities ?? '';
+        _moodController.text = extraction.mood ?? '';
+        _hasAnalysis = true;
+        _isReanalyzing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã phân tích transcript đã chỉnh sửa.'),
+          backgroundColor: Color(0xFF0D5C4D),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isReanalyzing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Không thể tạo bản nháp: $e'),
+          content: Text('Không thể phân tích lại: $e'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  // Action: Press "Gửi phụ huynh" -> Show Confirmation Bottom Sheet (Image 2)
-  void _openConfirmBottomSheet() {
-    showSendReportConfirmSheet(
-      context: context,
-      childName: _childName,
-      childInitials: _childInitials,
-      formattedDate: _currentFormattedDate,
-      onConfirmSend: _submitFinalReport,
-    );
-  }
-
-  // Action: Press "Gửi báo cáo" in Modal -> Submit & Go to Success Screen (Image 3)
-  Future<void> _submitFinalReport() async {
+  Future<void> _goToReviewStep() async {
     if (_isSubmitting) return;
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
+    if (_originalTranscript.isNotEmpty &&
+        _transcriptController.text.trim() != _originalTranscript) {
+      _originalTranscript = _transcriptController.text.trim();
+    }
+    setState(() => _isSubmitting = true);
     try {
-      if (widget.voiceId.isNotEmpty &&
-          widget.voiceId != 'voice-001' &&
-          widget.voiceId != 'manual-report') {
-        final editedExtraction = ExtractionData(
+      if (!_hasAnalysis) {
+        throw const TeacherRepositoryException(
+          'Vui lòng gửi transcript cho model phân tích trước.',
+        );
+      }
+      final effectiveTeacherId = widget.teacherId.isNotEmpty ? widget.teacherId : 'bbbbbbbb-0000-0000-0000-000000000001';
+      await _repo.createDraftReport(
+        voiceId: widget.voiceId,
+        teacherId: effectiveTeacherId,
+        childId: widget.childId,
+        editedExtraction: ExtractionData(
+          transcript: _transcriptController.text.trim(),
           meals: _mealsController.text.trim(),
           sleeping: _sleepingController.text.trim(),
           health: _healthController.text.trim(),
           activities: _activitiesController.text.trim(),
           mood: _moodController.text.trim(),
-        );
-
-        await _repo.createDraftReport(
-          voiceId: widget.voiceId,
-          teacherId: widget.teacherId,
-          editedExtraction: editedExtraction,
-        );
-      } else {
-        await Future.delayed(const Duration(milliseconds: 400));
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _isSubmitting = false;
-        _currentStep = ScreenStep.success;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isSubmitting = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lỗi: $e'),
-          backgroundColor: Colors.red,
         ),
       );
+      if (!mounted) return;
+      setState(() { _isSubmitting = false; _currentStep = ScreenStep.review; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Không thể tạo bản nháp: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  void _openConfirmBottomSheet() {
+    showSendReportConfirmSheet(context: context, childName: _childName, childInitials: _childInitials, formattedDate: _currentFormattedDate, onConfirmSend: _submitFinalReport);
+  }
+
+  Future<void> _submitFinalReport() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      final effectiveTeacherId = widget.teacherId.isNotEmpty
+          ? widget.teacherId
+          : 'bbbbbbbb-0000-0000-0000-000000000001';
+      await _repo.createDraftReport(
+        voiceId: widget.voiceId,
+        teacherId: effectiveTeacherId,
+        childId: widget.childId,
+        editedExtraction: ExtractionData(
+          transcript: _transcriptController.text.trim(),
+          meals: _mealsController.text.trim(),
+          sleeping: _sleepingController.text.trim(),
+          health: _healthController.text.trim(),
+          activities: _activitiesController.text.trim(),
+          mood: _moodController.text.trim(),
+        ),
+      );
+      if (!mounted) return;
+      setState(() { _isSubmitting = false; _currentStep = ScreenStep.success; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const backgroundColor = Color(0xFFF9F8F3);
-
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF0D5C4D)),
-              )
-            : _buildCurrentStepView(context),
-      ),
-    );
+    return Scaffold(backgroundColor: const Color(0xFFF9F8F3), body: SafeArea(child: _isLoading ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D5C4D))) : _buildCurrentStepView(context)));
   }
 
   Widget _buildCurrentStepView(BuildContext context) {
     switch (_currentStep) {
       case ScreenStep.edit:
         return ExtractionEditView(
+          transcriptController: _transcriptController,
           mealsController: _mealsController,
           sleepingController: _sleepingController,
           healthController: _healthController,
@@ -342,35 +266,27 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
           moodController: _moodController,
           notesController: _notesController,
           onGoToReview: _goToReviewStep,
-          isSubmitting: _isSubmitting,
-        );
-
-      case ScreenStep.review:
-        return ReportReviewView(
-          childName: _childName,
-          childInitials: _childInitials,
-          classTeacherInfo: _classTeacherInfo,
-          formattedDate: _currentFormattedDate,
-          meals: _mealsController.text,
-          sleeping: _sleepingController.text,
-          health: _healthController.text,
-          activities: _activitiesController.text,
-          mood: _moodController.text,
-          notes: _notesController.text,
-          onGoBackToEdit: () {
-            setState(() {
-              _currentStep = ScreenStep.edit;
-            });
+          onReanalyze: _analyzeTranscript,
+          hasAnalysis: _hasAnalysis,
+          onTranscriptChanged: () {
+            if (_hasAnalysis) {
+              setState(() {
+                _hasAnalysis = false;
+                _mealsController.clear();
+                _sleepingController.clear();
+                _healthController.clear();
+                _activitiesController.clear();
+                _moodController.clear();
+              });
+            }
           },
-          onOpenConfirmSheet: _openConfirmBottomSheet,
+          isSubmitting: _isSubmitting,
+          isReanalyzing: _isReanalyzing,
         );
-
+      case ScreenStep.review:
+        return ReportReviewView(childName: _childName, childInitials: _childInitials, classTeacherInfo: _classTeacherInfo, formattedDate: _currentFormattedDate, transcript: _transcriptController.text, meals: _mealsController.text, sleeping: _sleepingController.text, health: _healthController.text, activities: _activitiesController.text, mood: _moodController.text, notes: _notesController.text, onGoBackToEdit: () => setState(() => _currentStep = ScreenStep.edit), onOpenConfirmSheet: _openConfirmBottomSheet);
       case ScreenStep.success:
-        return ReportSentSuccessView(
-          childName: _childName,
-          formattedDate: _currentFormattedDate,
-          onBackToHome: () => context.go('/teacher'),
-        );
+        return ReportSentSuccessView(childName: _childName, formattedDate: _currentFormattedDate, onBackToHome: () => context.go('/teacher'));
     }
   }
 }
