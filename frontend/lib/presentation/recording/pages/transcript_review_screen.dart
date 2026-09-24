@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/recording/pages/transcript_review_screen.dart
+// frontend/lib/presentation/recording/pages/transcript_review_screen.dart
 // ============================================================================
 // TranscriptReviewScreen – "Xem lại nội dung"
 //
@@ -119,6 +119,7 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
       MaterialPageRoute(
         builder: (_) => ReportProcessingScreen(
           child: widget.child,
+          phase: ProcessingPhase.extract,
           transcript: finalTranscript,
           voiceId: widget.voiceId,
           teacherId: widget.teacherId,

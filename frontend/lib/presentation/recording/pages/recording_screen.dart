@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/recording/pages/recording_screen.dart
+// frontend/lib/presentation/recording/pages/recording_screen.dart
 // ==========================================================
 // Task #58: RecordingScreen
 //
@@ -20,7 +20,9 @@
 import 'dart:typed_data';
 
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/extraction_results_screen.dart';
+import 'package:adark_frontend/presentation/recording/pages/report_processing_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -33,6 +35,9 @@ class RecordingScreen extends StatefulWidget {
     required this.classId,
     required this.teacherId,
     this.childId,
+    this.childName,
+    this.childInitials,
+    this.classTeacherInfo,
     this.fileBytes,
     this.fileName,
     TeacherRepositoryBase? repository,
@@ -55,6 +60,9 @@ class RecordingScreen extends StatefulWidget {
 
   /// UUID of the child associated with this recording.
   final String? childId;
+  final String? childName;
+  final String? childInitials;
+  final String? classTeacherInfo;
 
   /// Injected for testing; defaults to [TeacherRepository].
   final TeacherRepositoryBase? _repository;
@@ -135,17 +143,27 @@ class _RecordingScreenState extends State<RecordingScreen>
       if (!mounted) return;
       _result = record;
 
-      if (record.status == 'completed') {
-        _transcriptController.text = record.effectiveTranscript;
-        setState(() {
-          _state = _UploadState.ready;
-        });
-      } else {
-        setState(() {
-          _state = _UploadState.transcribing;
-        });
-        _pollStatus(record.id);
-      }
+      final childObj = Child(
+        childId: widget.childId ?? '11111111-1111-1111-1111-111111111111',
+        fullName: widget.childName ?? 'Bé Nguyễn Văn A',
+        gender: 'male',
+        dateOfBirth: DateTime(2021, 5, 10),
+      );
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ReportProcessingScreen(
+            child: childObj,
+            phase: ProcessingPhase.transcribe,
+            voiceId: record.id,
+            teacherId: widget.teacherId,
+            classId: widget.classId,
+            audioFilePath: widget.filePath,
+            transcript: record.effectiveTranscript,
+            repository: _repo,
+          ),
+        ),
+      );
     } on TeacherRepositoryException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -161,35 +179,37 @@ class _RecordingScreenState extends State<RecordingScreen>
     }
   }
 
-  Future<void> _pollStatus(String voiceId) async {
-    while (mounted && _state == _UploadState.transcribing) {
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted || _state != _UploadState.transcribing) break;
 
-      try {
-        final updated = await _repo.getVoiceRecord(
-          voiceId: voiceId,
-          teacherId: widget.teacherId,
-        );
 
-        if (!mounted) break;
-        if (updated.status == 'completed') {
-          _transcriptController.text = updated.effectiveTranscript;
-          setState(() {
-            _result = updated;
-            _state = _UploadState.ready;
-          });
-          break;
-        } else if (updated.status == 'failed') {
-          setState(() {
-            _state = _UploadState.failed;
-            _errorMessage = 'Phiên âm âm thanh thất bại.';
-          });
-          break;
-        }
-      } catch (_) {
-        // Polling retry
-      }
+  void _navigateToExtractionResults(String voiceId) {
+    if (!mounted) return;
+    try {
+      final childNameParam = widget.childName != null
+          ? '&childName=${Uri.encodeComponent(widget.childName!)}'
+          : '';
+      final childInitialsParam = widget.childInitials != null
+          ? '&childInitials=${Uri.encodeComponent(widget.childInitials!)}'
+          : '';
+      final classTeacherParam = widget.classTeacherInfo != null
+          ? '&classTeacherInfo=${Uri.encodeComponent(widget.classTeacherInfo!)}'
+          : '';
+
+      context.pushReplacement(
+        '/extraction-results?voiceId=$voiceId&teacherId=${widget.teacherId}&childId=${widget.childId ?? ''}$childNameParam$childInitialsParam$classTeacherParam',
+      );
+    } catch (_) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => ExtractionResultsScreen(
+            voiceId: voiceId,
+            teacherId: widget.teacherId,
+            childId: widget.childId,
+            childName: widget.childName,
+            childInitials: widget.childInitials,
+            classTeacherInfo: widget.classTeacherInfo,
+          ),
+        ),
+      );
     }
   }
 
@@ -435,61 +455,25 @@ class _RecordingScreenState extends State<RecordingScreen>
     );
   }
 
-  /// Transcribing: AI model processing spinner while waiting for Celery worker.
+  /// Transcribing: Uses ReportProcessingScreen (phase 1) instead of single spinner.
   Widget _buildTranscribingBody(ColorScheme cs, TextTheme tt) {
-    return Center(
-      key: const ValueKey('transcribing'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Pulse animation for AI transcription
-            FadeTransition(
-              opacity: _pulseController,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 54,
-                  color: cs.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Hệ thống đang phiên âm…',
-              style: tt.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: cs.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Mô hình PhoWhisper đang chuyển đổi âm thanh thành văn bản.',
-              style: tt.bodySmall?.copyWith(
-                color: cs.onSurface.withAlpha((0.6 * 255).round()),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: 36,
-              height: 36,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-              ),
-            ),
-          ],
-        ),
-      ),
+    final childObj = Child(
+      childId: widget.childId ?? '11111111-1111-1111-1111-111111111111',
+      fullName: widget.childName ?? 'Bé Nguyễn Văn A',
+      gender: 'male',
+      dateOfBirth: DateTime(2021, 5, 10),
+    );
+
+    return ReportProcessingScreen(
+      key: const ValueKey('transcribing_processing_screen'),
+      child: childObj,
+      phase: ProcessingPhase.transcribe,
+      voiceId: _result?.id,
+      teacherId: widget.teacherId,
+      classId: widget.classId,
+      audioFilePath: widget.filePath,
+      transcript: _result?.effectiveTranscript ?? '',
+      repository: _repo,
     );
   }
 
@@ -652,20 +636,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               onPressed: () {
                 final voiceId = _result?.id;
                 if (voiceId != null && voiceId.isNotEmpty) {
-                  try {
-                    context.push(
-                      '/extraction-results?voiceId=$voiceId&teacherId=${widget.teacherId}',
-                    );
-                  } catch (_) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ExtractionResultsScreen(
-                          voiceId: voiceId,
-                          teacherId: widget.teacherId,
-                        ),
-                      ),
-                    );
-                  }
+                  _navigateToExtractionResults(voiceId);
                 }
               },
               icon: const Icon(Icons.auto_awesome_rounded),

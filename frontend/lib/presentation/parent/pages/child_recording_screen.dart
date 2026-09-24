@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:adark_frontend/core/theme/app_theme.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/recording_screen.dart';
+import 'package:adark_frontend/presentation/teacher/pages/manual_report_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -186,6 +187,9 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
         classId: widget.classId ?? 'aaaaaaaa-0000-0000-0000-000000000001',
         teacherId: widget.teacherId ?? 'bbbbbbbb-0000-0000-0000-000000000001',
         childId: widget.child.childId,
+        childName: widget.child.fullName,
+        childInitials: _initials(widget.child.fullName),
+        classTeacherInfo: 'Lớp Mầm 1 · Cô Mai',
       ),
     ));
   }
@@ -200,7 +204,7 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
   Widget _buildRecordingCard() {
     final isRec = _state == ChildRecordingState.recording;
     final isRec2 = _state == ChildRecordingState.recorded;
-    return Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFDCE1DE))), child: Column(children: [Icon(isRec ? Icons.mic_rounded : isRec2 ? Icons.check_circle_outline_rounded : Icons.mic_none_rounded, size: 56, color: isRec ? const Color(0xFF0D5C4D) : isRec2 ? Colors.green : AppColors.textSecondary), const SizedBox(height: 12), Text(isRec ? 'Đang ghi âm...' : isRec2 ? 'Ghi âm hoàn tất' : 'Sẵn sàng ghi âm', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)), const SizedBox(height: 4), Text(_formatDuration(_duration), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 1.5)), const SizedBox(height: 24), _buildMainAction(isRecording: isRec, isRecorded: isRec2), if (!isRec && !isRec2) ...[const SizedBox(height: 10), OutlinedButton.icon(onPressed: _pickAudioFile, icon: const Icon(Icons.folder_open_rounded), label: const Text('Chọn file ghi âm'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))], if (isRec2) ...[const SizedBox(height: 10), OutlinedButton.icon(onPressed: _recordAgain, icon: const Icon(Icons.refresh_rounded), label: const Text('Ghi lại'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))]  ]));
+    return Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFDCE1DE))), child: Column(children: [Icon(isRec ? Icons.mic_rounded : isRec2 ? Icons.check_circle_outline_rounded : Icons.mic_none_rounded, size: 56, color: isRec ? const Color(0xFF0D5C4D) : isRec2 ? Colors.green : AppColors.textSecondary), const SizedBox(height: 12), Text(isRec ? 'Đang ghi âm...' : isRec2 ? 'Ghi âm hoàn tất' : 'Sẵn sàng ghi âm', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)), const SizedBox(height: 4), Text(_formatDuration(_duration), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 1.5)), const SizedBox(height: 24), _buildMainAction(isRecording: isRec, isRecorded: isRec2), if (!isRec && !isRec2) ...[const SizedBox(height: 10), OutlinedButton.icon(onPressed: _pickAudioFile, icon: const Icon(Icons.folder_open_rounded), label: const Text('Chọn file ghi âm'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))), const SizedBox(height: 10), OutlinedButton.icon(onPressed: () { Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ManualReportScreen(child: widget.child, teacherId: widget.teacherId, classId: widget.classId))); }, icon: const Icon(Icons.edit_note_rounded), label: const Text('Tạo báo cáo thủ công'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))], if (isRec2) ...[const SizedBox(height: 10), OutlinedButton.icon(onPressed: _recordAgain, icon: const Icon(Icons.refresh_rounded), label: const Text('Ghi lại'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))]  ]));
   }
 
   Widget _buildMainAction({required bool isRecording, required bool isRecorded}) {

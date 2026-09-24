@@ -1,4 +1,4 @@
-﻿import 'package:adark_frontend/core/utils/api_config.dart';
+import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
 import 'package:dio/dio.dart';
@@ -20,8 +20,8 @@ class HttpClassDataRepository implements ClassDataRepository {
   HttpClassDataRepository({Dio? dio, String? baseUrl})
       : _dio = dio ?? Dio(BaseOptions(
           baseUrl: baseUrl ?? kApiBaseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 15),
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
         ));
 
   final Dio _dio;

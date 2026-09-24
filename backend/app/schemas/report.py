@@ -66,6 +66,9 @@ class VoiceRecordDetailResponse(BaseModel):
     transcription: str | None = Field(
         None, description="Bản dịch hiệu lực (edited hoặc raw)"
     )
+    error_message: str | None = Field(
+        None, description="Thông báo lỗi chi tiết khi trạng thái là FAILED"
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,6 +83,10 @@ class DraftReportCreateRequest(BaseModel):
     teacher_id: uuid.UUID = Field(
         ...,
         description="UUID của giáo viên đang tạo báo cáo",
+    )
+    child_id: uuid.UUID | None = Field(
+        None,
+        description="UUID của học sinh (nếu voice_record chưa đính kèm child_id)",
     )
     edited_extraction: dict[str, str | None] | None = Field(
         None,
