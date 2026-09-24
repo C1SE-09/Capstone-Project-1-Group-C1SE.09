@@ -5,7 +5,10 @@ Tự động chọn GPU CUDA hoặc CPU fallback, hỗ trợ Singleton Lazy-Load
 
 import logging
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import threading
 from typing import Literal
 
@@ -47,6 +50,58 @@ def cuda_available() -> bool:
         return False
 
 
+def _ffmpeg_available() -> bool:
+    """Kiểm tra ffmpeg có sẵn trên hệ thống."""
+    return shutil.which("ffmpeg") is not None
+
+
+def _convert_to_wav(src_path: str) -> str | None:
+    """
+    Chuyển audio (.m4a/.mp3/.webm/...) sang WAV 16kHz mono bằng ffmpeg.
+
+    Trả về đường dẫn file WAV mới, hoặc None nếu không chuyển được.
+    """
+    if not _ffmpeg_available():
+        return None
+
+    dst_fd, dst_path = tempfile.mkstemp(suffix=".wav")
+    os.close(dst_fd)
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                src_path,
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-f",
+                "wav",
+                dst_path,
+            ],
+            check=True,
+            capture_output=True,
+            timeout=300,
+        )
+        if os.path.getsize(dst_path) == 0:
+            os.remove(dst_path)
+            return None
+        return dst_path
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+        logger.warning("[STT] Không chuyển được audio sang WAV: %s", exc)
+        if os.path.exists(dst_path):
+            try:
+                os.remove(dst_path)
+            except OSError:
+                pass
+        return None
+
+
 class STTService:
     """Lớp dịch vụ nạp model PhoWhisper và nhận dạng giọng nói."""
 
@@ -85,6 +140,25 @@ class STTService:
         if os.path.getsize(audio_path) == 0:
             raise ValueError(f"File audio rỗng: {audio_path}")
 
+        # Chuẩn hoá sang WAV trước khi nhận dạng để hỗ trợ .m4a/.mp3/.webm...
+        normalized_path = None
+        target_path = audio_path
+        if not audio_path.lower().endswith(".wav"):
+            normalized_path = _convert_to_wav(audio_path)
+            if normalized_path:
+                target_path = normalized_path
+
+        try:
+            return self._transcribe_path(target_path)
+        finally:
+            if normalized_path and os.path.exists(normalized_path):
+                try:
+                    os.remove(normalized_path)
+                except OSError:
+                    pass
+
+    def _transcribe_path(self, audio_path: str) -> str:
+        """Chạy model PhoWhisper trên một file audio đã đọc được."""
         try:
             segments, _ = self.model.transcribe(
                 audio_path,
@@ -109,7 +183,7 @@ class STTService:
                 self.model = WhisperModel(
                     self.model_id, device="cpu", compute_type="int8", cpu_threads=0
                 )
-                return self.transcribe(audio_path)
+                return self._transcribe_path(audio_path)
             raise
 
 

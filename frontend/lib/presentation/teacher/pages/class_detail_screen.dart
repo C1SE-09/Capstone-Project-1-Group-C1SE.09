@@ -38,7 +38,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = ClassDetailController()..load(widget.classId);
+    _controller = ClassDetailController();
+    _controller.load(widget.classId);
   }
 
   @override
@@ -229,7 +230,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 Text(
                   status == null
                       ? 'Chưa có báo cáo'
-                      : '${status.label} · ${formatHHMM(item.updatedAt!)}',
+                      : item.updatedAt != null
+                          ? '${status.label} · ${formatHHMM(item.updatedAt!)}'
+                          : status.label,
                   style: const TextStyle(
                     color: AppColors.textTertiary,
                     fontSize: 13,

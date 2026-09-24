@@ -341,51 +341,106 @@ def update_voice_transcript(
 
 
 @router.post("/voice/{voice_id}/extract")
-def extract_voice(
+def get_voice_extraction(
     voice_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ):
-    # 1. Lấy VoiceRecord từ DB
+    """
+    Lấy kết quả extraction (đã chạy trong Celery task).
+    Extraction được thực hiện tự động khi transcription xong,
+    không cần gọi extraction API riêng.
+    """
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
     )
 
-    # 2. Check not found
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
 
-    # 3. Verify ownership
     if voice_record.teacher_id != teacher_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to access this recording"
         )
 
-    # 4. Check status == "done"
+    # Kiểm tra transcription đã hoàn tất
     if voice_record.status != VoiceRecordStatus.COMPLETED:
-        raise HTTPException(status_code=400, detail="Transcript not ready")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Transcription not completed yet (status: {voice_record.status.value})"
+        )
 
-    # 5. Lấy transcript (edited > raw)
-    transcript = (
-        voice_record.edited_transcript
-        or voice_record.raw_transcript
-        or voice_record.transcription
-    )
-    if not transcript:
-        raise HTTPException(status_code=400, detail="No transcript found")
-
-    # 6. Gọi extraction
-    result = extract_from_transcript(transcript)
-
-    # 7. Lưu vào DB
-    voice_record.extraction_result = result
-    db.commit()
-
-    # 8. Return
+    # Chỉ trả transcript từ PhoWhisper. Không chạy/đọc extraction ở bước này;
+    # mô hình NLP được gọi riêng sau khi giáo viên xác nhận transcript.
     return {
-        "voice_id": voice_id,
-        "extraction": result,
+        "voice_id": str(voice_id),
+        "status": voice_record.status.value,
+        "transcript": voice_record.edited_transcript or voice_record.raw_transcript or voice_record.transcription,
+        "extraction": None,
     }
+
+
+@router.post("/voice/{voice_id}/analyze")
+@router.post("/voice/{voice_id}/re-extract")
+def re_extract_from_edited_transcript(
+    voice_id: uuid.UUID,
+    payload: TranscriptUpdateRequest,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    """Chạy NLP trên transcript đã được giáo viên kiểm tra/chỉnh sửa.
+
+    Endpoint này là bước phân tích có chủ ý sau bước PhoWhisper — không được
+    gọi tự động khi audio mới hoàn tất phiên âm.
+    """
+    voice_record = (
+        db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
+    )
+
+    if not voice_record:
+        raise HTTPException(status_code=404, detail="VoiceRecord not found")
+
+    if voice_record.teacher_id != teacher_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update this recording"
+        )
+
+    if voice_record.status != VoiceRecordStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Transcription not completed yet (status: {voice_record.status.value})"
+        )
+
+    # Re-extract từ transcript đã chỉnh sửa. Chỉ persist nếu model chạy thành công.
+    try:
+        new_extraction = extract_from_transcript(payload.edited_transcript)
+        # Model chỉ trả về các nhãn thực thể (meals/sleeping/...), nên bổ sung
+        # transcript đã chỉnh sửa để frontend không ghi đè thành null.
+        new_extraction["transcript"] = payload.edited_transcript
+        voice_record.edited_transcript = payload.edited_transcript
+        voice_record.transcription = payload.edited_transcript
+        voice_record.extraction_result = new_extraction
+        db.commit()
+        db.refresh(voice_record)
+        logger.info(
+            "[ReExtract] VoiceRecord %s re-extracted từ edited transcript",
+            voice_id
+        )
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[ReExtract] Lỗi re-extract VoiceRecord %s", voice_id)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Re-extraction failed: {exc!s}"
+        ) from exc
+
+    return {
+        "voice_id": str(voice_id),
+        "status": voice_record.status.value,
+        "transcript": voice_record.edited_transcript or voice_record.raw_transcript,
+        "extraction": new_extraction,
+    }
+
 
 
 @router.post("/reports/draft")
@@ -415,6 +470,14 @@ def create_report_from_extraction(
 
     if payload.edited_extraction:
         result = payload.edited_extraction
+        submitted_transcript = result.get("transcript")
+        if not submitted_transcript or submitted_transcript != (
+            voice_record.edited_transcript or voice_record.raw_transcript or voice_record.transcription
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Transcript changed after analysis; analyze the edited transcript before creating the report.",
+            )
         voice_record.extraction_result = result
     else:
         result = voice_record.extraction_result

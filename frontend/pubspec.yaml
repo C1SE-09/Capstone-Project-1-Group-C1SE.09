@@ -46,6 +46,12 @@ dependencies:
   # File picker for selecting local audio files
   file_picker: ^8.1.4
 
+  # Audio recording plugin
+  record: 6.0.0
+
+  # Temp directory for copying assets before upload
+  path_provider: ^2.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -72,6 +78,7 @@ flutter:
   assets:
     - lib/assets/images/
     - assets/audio/
+    - assets/audio_test/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

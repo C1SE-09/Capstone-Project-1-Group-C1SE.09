@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Quyền truy cập Internet (bắt buộc để gọi API) -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Quyền ghi âm cho plugin record -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <application
         android:label="adark_frontend"

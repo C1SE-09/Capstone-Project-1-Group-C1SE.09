@@ -17,6 +17,8 @@
 //     ),
 //   ));
 
+import 'dart:typed_data';
+
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/presentation/recording/pages/extraction_results_screen.dart';
 import 'package:flutter/material.dart';
@@ -30,17 +32,29 @@ class RecordingScreen extends StatefulWidget {
     required this.filePath,
     required this.classId,
     required this.teacherId,
+    this.childId,
+    this.fileBytes,
+    this.fileName,
     TeacherRepositoryBase? repository,
   }) : _repository = repository;
 
   /// Absolute path to the audio file that was recorded.
   final String filePath;
 
+  /// Optional audio bytes when the recording is selected from browser/web.
+  final Uint8List? fileBytes;
+
+  /// Original file name used when sending bytes from a web upload.
+  final String? fileName;
+
   /// UUID of the class this recording belongs to.
   final String classId;
 
   /// UUID of the teacher (MVP: passed in directly).
   final String teacherId;
+
+  /// UUID of the child associated with this recording.
+  final String? childId;
 
   /// Injected for testing; defaults to [TeacherRepository].
   final TeacherRepositoryBase? _repository;
@@ -105,8 +119,11 @@ class _RecordingScreenState extends State<RecordingScreen>
     try {
       final record = await _repo.uploadAudio(
         filePath: widget.filePath,
+        fileBytes: widget.fileBytes,
+        fileName: widget.fileName,
         classId: widget.classId,
         teacherId: widget.teacherId,
+        childId: widget.childId,
         onProgress: (sent, total) {
           if (!mounted) return;
           setState(() {

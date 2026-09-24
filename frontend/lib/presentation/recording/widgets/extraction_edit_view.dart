@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 class ExtractionEditView extends StatelessWidget {
   const ExtractionEditView({
     super.key,
+    required this.transcriptController,
     required this.mealsController,
     required this.sleepingController,
     required this.healthController,
@@ -15,9 +16,14 @@ class ExtractionEditView extends StatelessWidget {
     required this.moodController,
     required this.notesController,
     required this.onGoToReview,
+    this.onReanalyze,
+    this.hasAnalysis = false,
+    this.onTranscriptChanged,
     this.isSubmitting = false,
+    this.isReanalyzing = false,
   });
 
+  final TextEditingController transcriptController;
   final TextEditingController mealsController;
   final TextEditingController sleepingController;
   final TextEditingController healthController;
@@ -25,7 +31,13 @@ class ExtractionEditView extends StatelessWidget {
   final TextEditingController moodController;
   final TextEditingController notesController;
   final VoidCallback onGoToReview;
+
+  /// Chạy lại model phân tích trên transcript đã chỉnh sửa.
+  final VoidCallback? onReanalyze;
+  final bool hasAnalysis;
+  final VoidCallback? onTranscriptChanged;
   final bool isSubmitting;
+  final bool isReanalyzing;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +111,7 @@ class ExtractionEditView extends StatelessWidget {
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'ADARK đã điền giúp bạn dựa trên bàn ghi âm. Bạn có thể chỉnh sửa thủ công.',
+                          'Kiểm tra và chỉnh sửa transcript PhoWhisper trước. Khi nội dung đã đúng, bấm "Gửi cho model phân tích" để tạo các mục báo cáo.',
                           style: TextStyle(
                             fontSize: 13.5,
                             color: Color(0xFF47544C),
@@ -112,11 +124,76 @@ class ExtractionEditView extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // 1. Ăn uống
+                // 0. Nội dung ghi âm (Transcript PhoWhisper) - NGUỒN DUY NHẤT ĐƯỢC SỬA
+                _buildInputField(
+                  label: 'Nội dung ghi âm (PhoWhisper)',
+                  icon: Icons.text_fields_rounded,
+                  controller: transcriptController,
+                  maxLines: 4,
+                  hint: 'Chỉnh sửa nội dung nhận diện được tại đây',
+                  onChanged: (_) => onTranscriptChanged?.call(),
+                ),
+                const SizedBox(height: 10),
+
+                // Nút chạy lại model phân tích trên transcript đã sửa
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    onPressed: isSubmitting || isReanalyzing
+                        ? null
+                        : onReanalyze,
+                    icon: isReanalyzing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF0D5C4D),
+                            ),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 20),
+                    label: Text(
+                      isReanalyzing
+                          ? 'Đang phân tích...'
+                          : hasAnalysis
+                              ? 'Gửi lại cho model phân tích'
+                              : 'Gửi cho model phân tích',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0D5C4D),
+                      backgroundColor: const Color(0xFFEFF4F1),
+                      side: const BorderSide(color: Color(0xFFBBD3CB)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                if (hasAnalysis) ...[
+                const Text(
+                  'Kết quả phân tích từ model',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF757B77),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 1. Ăn uống (kết quả model - chỉ đọc)
                 _buildInputField(
                   label: 'Ăn uống',
                   icon: Icons.flatware_outlined,
                   controller: mealsController,
+                  readOnly: true,
                 ),
                 const SizedBox(height: 16),
 
@@ -125,6 +202,7 @@ class ExtractionEditView extends StatelessWidget {
                   label: 'Giấc ngủ',
                   icon: Icons.nightlight_round_outlined,
                   controller: sleepingController,
+                  readOnly: true,
                 ),
                 const SizedBox(height: 16),
 
@@ -133,6 +211,7 @@ class ExtractionEditView extends StatelessWidget {
                   label: 'Sức khỏe',
                   icon: Icons.favorite_border_rounded,
                   controller: healthController,
+                  readOnly: true,
                 ),
                 const SizedBox(height: 16),
 
@@ -141,6 +220,7 @@ class ExtractionEditView extends StatelessWidget {
                   label: 'Hoạt động',
                   icon: Icons.grid_view_rounded,
                   controller: activitiesController,
+                  readOnly: true,
                 ),
                 const SizedBox(height: 16),
 
@@ -149,6 +229,7 @@ class ExtractionEditView extends StatelessWidget {
                   label: 'Tâm trạng',
                   icon: Icons.sentiment_satisfied_alt_outlined,
                   controller: moodController,
+                  readOnly: true,
                 ),
                 const SizedBox(height: 16),
 
@@ -160,6 +241,7 @@ class ExtractionEditView extends StatelessWidget {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 24),
+                ],
               ],
             ),
           ),
@@ -179,7 +261,7 @@ class ExtractionEditView extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: isSubmitting ? null : onGoToReview,
+                  onPressed: isSubmitting || !hasAnalysis ? null : onGoToReview,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C4D),
                     foregroundColor: Colors.white,
@@ -243,6 +325,9 @@ class ExtractionEditView extends StatelessWidget {
     required IconData icon,
     required TextEditingController controller,
     int maxLines = 1,
+    String? hint,
+    bool readOnly = false,
+    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,6 +344,14 @@ class ExtractionEditView extends StatelessWidget {
                 color: Color(0xFF434A45),
               ),
             ),
+            if (readOnly) ...[
+              const Spacer(),
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 15,
+                color: Color(0xFFA0A6A2),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 8),
@@ -266,14 +359,18 @@ class ExtractionEditView extends StatelessWidget {
           controller: controller,
           maxLines: maxLines,
           minLines: maxLines > 1 ? maxLines : 1,
-          style: const TextStyle(
+          readOnly: readOnly,
+          onChanged: onChanged,
+          style: TextStyle(
             fontSize: 15,
-            color: Color(0xFF1E2522),
+            color: readOnly ? const Color(0xFF5E6560) : const Color(0xFF1E2522),
             fontWeight: FontWeight.w400,
           ),
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: readOnly ? const Color(0xFFF4F4F1) : Colors.white,
+            hintText: hint,
+            hintStyle: const TextStyle(color: Color(0xFFA0A6A2)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -284,8 +381,10 @@ class ExtractionEditView extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF0D5C4D),
+              borderSide: BorderSide(
+                color: readOnly
+                    ? const Color(0xFFDCE1DE)
+                    : const Color(0xFF0D5C4D),
                 width: 1.5,
               ),
             ),

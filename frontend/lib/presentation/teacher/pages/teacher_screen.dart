@@ -7,6 +7,7 @@ import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dar
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/presentation/teacher/controllers/teacher_home_controller.dart';
+import 'package:adark_frontend/presentation/teacher/pages/class_detail_screen.dart';
 import 'package:adark_frontend/presentation/shared/view_state.dart';
 import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
@@ -330,7 +331,13 @@ class _TeacherScreenState extends State<TeacherScreen> {
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => context.push('/class-detail', extra: s.classInfo.classId),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ClassDetailScreen(classId: s.classInfo.classId),
+                ),
+              );
+            },
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
@@ -451,7 +458,9 @@ class _TeacherScreenState extends State<TeacherScreen> {
                 if (item.updatedAt != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    '${status?.label ?? 'Chưa có báo cáo'} · ${formatHHMM(item.updatedAt!)}',
+                    item.updatedAt != null
+                        ? '${status?.label ?? 'Chưa có báo cáo'} · ${formatHHMM(item.updatedAt!)}'
+                        : (status?.label ?? 'Chưa có báo cáo'),
                     style: const TextStyle(
                       color: AppColors.textTertiary,
                       fontSize: 13,

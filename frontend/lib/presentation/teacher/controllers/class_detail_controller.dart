@@ -27,6 +27,16 @@ class ClassDetailController extends ChangeNotifier {
   List<ActivityItem> get activities => _activities;
 
   Future<void> load(String classId) async {
+    final trimmed = classId.trim();
+    if (trimmed.isEmpty) {
+      _error = 'Mã lớp không hợp lệ';
+      _state = ViewState.error;
+      _summary = null;
+      _activities = const [];
+      notifyListeners();
+      return;
+    }
+
     _state = ViewState.loading;
     _error = null;
     notifyListeners();
@@ -34,8 +44,8 @@ class ClassDetailController extends ChangeNotifier {
     try {
       // Lấy song song (không cần đợi lần lượt) tổng hợp + hoạt động
       final results = await Future.wait([
-        _repo.getClassDashboard(classId, DateTime.now()),
-        _repo.getRecentActivities(classId),
+        _repo.getClassDashboard(trimmed, DateTime.now()),
+        _repo.getRecentActivities(trimmed),
       ]);
 
       _summary = results[0] as ClassDashboardSummary;
