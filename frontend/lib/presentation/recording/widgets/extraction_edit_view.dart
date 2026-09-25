@@ -124,123 +124,118 @@ class ExtractionEditView extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // 0. Nội dung ghi âm (Transcript PhoWhisper) - NGUỒN DUY NHẤT ĐƯỢC SỬA
-                _buildInputField(
-                  label: 'Nội dung ghi âm (PhoWhisper)',
-                  icon: Icons.text_fields_rounded,
-                  controller: transcriptController,
-                  maxLines: 4,
-                  hint: 'Chỉnh sửa nội dung nhận diện được tại đây',
-                  onChanged: (_) => onTranscriptChanged?.call(),
-                ),
-                const SizedBox(height: 10),
+                // // 0. Nội dung ghi âm (Transcript PhoWhisper) - NGUỒN DUY NHẤT ĐƯỢC SỬA
+                // _buildInputField(
+                //   label: 'Nội dung ghi âm (PhoWhisper)',
+                //   icon: Icons.text_fields_rounded,
+                //   controller: transcriptController,
+                //   maxLines: 4,
+                //   hint: 'Chỉnh sửa nội dung nhận diện được tại đây',
+                //   onChanged: (_) => onTranscriptChanged?.call(),
+                // ),
+                // const SizedBox(height: 10),
+                //
+                // // Nút chạy lại model phân tích trên transcript đã sửa
+                // SizedBox(
+                //   width: double.infinity,
+                //   height: 46,
+                //   child: OutlinedButton.icon(
+                //     onPressed: isSubmitting || isReanalyzing
+                //         ? null
+                //         : onReanalyze,
+                //     icon: isReanalyzing
+                //         ? const SizedBox(
+                //             width: 16,
+                //             height: 16,
+                //             child: CircularProgressIndicator(
+                //               strokeWidth: 2,
+                //               color: Color(0xFF0D5C4D),
+                //             ),
+                //           )
+                //         : const Icon(Icons.refresh_rounded, size: 20),
+                //     label: Text(
+                //       isReanalyzing
+                //           ? 'Đang phân tích...'
+                //           : hasAnalysis
+                //               ? 'Gửi lại cho model phân tích'
+                //               : 'Gửi cho model phân tích',
+                //       style: const TextStyle(
+                //         fontSize: 14.5,
+                //         fontWeight: FontWeight.w600,
+                //       ),
+                //     ),
+                //     style: OutlinedButton.styleFrom(
+                //       foregroundColor: const Color(0xFF0D5C4D),
+                //       backgroundColor: const Color(0xFFEFF4F1),
+                //       side: const BorderSide(color: Color(0xFFBBD3CB)),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(12),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                // const SizedBox(height: 20),
 
-                // Nút chạy lại model phân tích trên transcript đã sửa
-                SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: OutlinedButton.icon(
-                    onPressed: isSubmitting || isReanalyzing
-                        ? null
-                        : onReanalyze,
-                    icon: isReanalyzing
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF0D5C4D),
-                            ),
-                          )
-                        : const Icon(Icons.refresh_rounded, size: 20),
-                    label: Text(
-                      isReanalyzing
-                          ? 'Đang phân tích...'
-                          : hasAnalysis
-                              ? 'Gửi lại cho model phân tích'
-                              : 'Gửi cho model phân tích',
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0D5C4D),
-                      backgroundColor: const Color(0xFFEFF4F1),
-                      side: const BorderSide(color: Color(0xFFBBD3CB)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                ...[
+                  const Text(
+                    'Kết quả phân tích từ model',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF757B77),
+                      letterSpacing: 0.3,
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 12),
 
-                if (hasAnalysis) ...[
-                const Text(
-                  'Kết quả phân tích từ model',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF757B77),
-                    letterSpacing: 0.3,
+                  // 1. Ăn uống (kết quả model - chỉ đọc)
+                  _buildInputField(
+                    label: 'Ăn uống',
+                    icon: Icons.flatware_outlined,
+                    controller: mealsController,
                   ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
-                // 1. Ăn uống (kết quả model - chỉ đọc)
-                _buildInputField(
-                  label: 'Ăn uống',
-                  icon: Icons.flatware_outlined,
-                  controller: mealsController,
-                  readOnly: true,
-                ),
-                const SizedBox(height: 16),
+                  // 2. Giấc ngủ
+                  _buildInputField(
+                    label: 'Giấc ngủ',
+                    icon: Icons.nightlight_round_outlined,
+                    controller: sleepingController,
+                  ),
+                  const SizedBox(height: 16),
 
-                // 2. Giấc ngủ
-                _buildInputField(
-                  label: 'Giấc ngủ',
-                  icon: Icons.nightlight_round_outlined,
-                  controller: sleepingController,
-                  readOnly: true,
-                ),
-                const SizedBox(height: 16),
+                  // 3. Sức khỏe
+                  _buildInputField(
+                    label: 'Sức khỏe',
+                    icon: Icons.favorite_border_rounded,
+                    controller: healthController,
+                  ),
+                  const SizedBox(height: 16),
 
-                // 3. Sức khỏe
-                _buildInputField(
-                  label: 'Sức khỏe',
-                  icon: Icons.favorite_border_rounded,
-                  controller: healthController,
-                  readOnly: true,
-                ),
-                const SizedBox(height: 16),
+                  // 4. Hoạt động
+                  _buildInputField(
+                    label: 'Hoạt động',
+                    icon: Icons.grid_view_rounded,
+                    controller: activitiesController,
+                  ),
+                  const SizedBox(height: 16),
 
-                // 4. Hoạt động
-                _buildInputField(
-                  label: 'Hoạt động',
-                  icon: Icons.grid_view_rounded,
-                  controller: activitiesController,
-                  readOnly: true,
-                ),
-                const SizedBox(height: 16),
+                  // 5. Tâm trạng
+                  _buildInputField(
+                    label: 'Tâm trạng',
+                    icon: Icons.sentiment_satisfied_alt_outlined,
+                    controller: moodController,
+                  ),
+                  const SizedBox(height: 16),
 
-                // 5. Tâm trạng
-                _buildInputField(
-                  label: 'Tâm trạng',
-                  icon: Icons.sentiment_satisfied_alt_outlined,
-                  controller: moodController,
-                  readOnly: true,
-                ),
-                const SizedBox(height: 16),
-
-                // 6. Ghi chú
-                _buildInputField(
-                  label: 'Ghi chú',
-                  icon: Icons.edit_note_rounded,
-                  controller: notesController,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
+                  // 6. Ghi chú
+                  _buildInputField(
+                    label: 'Ghi chú',
+                    icon: Icons.edit_note_rounded,
+                    controller: notesController,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ],
             ),
@@ -261,7 +256,7 @@ class ExtractionEditView extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: isSubmitting || !hasAnalysis ? null : onGoToReview,
+                  onPressed: isSubmitting ? null : onGoToReview,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C4D),
                     foregroundColor: Colors.white,

@@ -21,19 +21,8 @@ class LoginPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Logo / ảnh nền
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Image.asset(
-                  'lib/assets/images/background.jpg',
-                  height: 180,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              const SizedBox(height: 32),
-
               Text(
-                'ADARK',
+                'KinderLog',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,

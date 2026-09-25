@@ -66,7 +66,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
   late AnimationController _spinnerController;
   Timer? _pollingTimer;
   int _pollAttempts = 0;
-  static const int _maxPollAttempts = 20; // Max 20 attempts * 3s = 60s timeout
+  static const int _maxPollAttempts = 200; // Max 200 attempts * 3s = 600s timeout
 
   // ─── Constants ───────────────────────────────────────────────────────────
   static const _kPrimary = Color(0xFF0D5C4D);

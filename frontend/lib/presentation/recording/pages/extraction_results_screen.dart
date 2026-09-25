@@ -24,6 +24,7 @@ class ExtractionResultsScreen extends StatefulWidget {
     this.initialActivities,
     this.initialMood,
     this.initialNotes,
+    this.initialTranscript,
     TeacherRepositoryBase? repository,
   }) : _repository = repository;
 
@@ -40,6 +41,7 @@ class ExtractionResultsScreen extends StatefulWidget {
   final String? initialActivities;
   final String? initialMood;
   final String? initialNotes;
+  final String? initialTranscript;
   final TeacherRepositoryBase? _repository;
   @override
   State<ExtractionResultsScreen> createState() => _ExtractionResultsScreenState();
@@ -52,6 +54,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   bool _isSubmitting = false;
   bool _isReanalyzing = false;
   bool _hasAnalysis = false;
+  String _analyzedTranscript = '';
   late final TextEditingController _transcriptController;
   late final TextEditingController _mealsController;
   late final TextEditingController _sleepingController;
@@ -129,6 +132,10 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
         widget.voiceId == 'manual-report') {
       if (!mounted) return;
       setState(() {
+        final seededTranscript = (widget.initialTranscript ?? '').trim();
+        _transcriptController.text = seededTranscript;
+        _originalTranscript = seededTranscript;
+        _analyzedTranscript = seededTranscript;
         _mealsController.text = widget.initialMeals ?? '';
         _sleepingController.text = widget.initialSleeping ?? '';
         _healthController.text = widget.initialHealth ?? '';
@@ -161,8 +168,12 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       );
       if (!mounted) return;
       setState(() {
+        if (_transcriptController.text.trim().isEmpty) {
+          _transcriptController.text = record.effectiveTranscript;
+          _originalTranscript = record.effectiveTranscript;
+        }
         _originalTranscript = record.effectiveTranscript;
-        _transcriptController.text = record.effectiveTranscript;
+        _analyzedTranscript = _transcriptController.text.trim();
         _mealsController.clear();
         _sleepingController.clear();
         _healthController.clear();
@@ -229,6 +240,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       }
       setState(() {
         _originalTranscript = edited;
+        _analyzedTranscript = edited;
         _mealsController.text = extraction.meals ?? '';
         _sleepingController.text = extraction.sleeping ?? '';
         _healthController.text = extraction.health ?? '';
@@ -261,13 +273,10 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
         _transcriptController.text.trim() != _originalTranscript) {
       _originalTranscript = _transcriptController.text.trim();
     }
+    _analyzedTranscript = _transcriptController.text.trim();
     setState(() => _isSubmitting = true);
     try {
-      if (!_hasAnalysis) {
-        throw const TeacherRepositoryException(
-          'Vui lòng gửi transcript cho model phân tích trước.',
-        );
-      }
+      _hasAnalysis = true;
       final effectiveTeacherId =
           (widget.teacherId.isNotEmpty && widget.teacherId != 'null')
               ? widget.teacherId
@@ -448,7 +457,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
           isReanalyzing: _isReanalyzing,
         );
       case ScreenStep.review:
-        return ReportReviewView(childName: _childName, childInitials: _childInitials, classTeacherInfo: _classTeacherInfo, formattedDate: _currentFormattedDate, transcript: _transcriptController.text, meals: _mealsController.text, sleeping: _sleepingController.text, health: _healthController.text, activities: _activitiesController.text, mood: _moodController.text, notes: _notesController.text, onGoBackToEdit: () => setState(() => _currentStep = ScreenStep.edit), onOpenConfirmSheet: _openConfirmBottomSheet);
+        return ReportReviewView(childName: _childName, childInitials: _childInitials, classTeacherInfo: _classTeacherInfo, formattedDate: _currentFormattedDate, transcript: _analyzedTranscript, meals: _mealsController.text, sleeping: _sleepingController.text, health: _healthController.text, activities: _activitiesController.text, mood: _moodController.text, notes: _notesController.text, onGoBackToEdit: () => setState(() => _currentStep = ScreenStep.edit), onOpenConfirmSheet: _openConfirmBottomSheet);
       case ScreenStep.success:
         return ReportSentSuccessView(childName: _childName, formattedDate: _currentFormattedDate, onBackToHome: () => context.go('/teacher'));
     }
