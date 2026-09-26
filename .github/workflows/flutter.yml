@@ -21,6 +21,10 @@ jobs:
       working-directory: ./frontend
       run: flutter pub get
 
+    - name: Generate localizations
+      working-directory: ./frontend
+      run: flutter gen-l10n
+
     - name: Run Flutter Analyze
       working-directory: ./frontend
       run: flutter analyze
