@@ -170,7 +170,7 @@
   "audioRecording": "Audio Recording",
   "identifiedContent": "Identified Content",
   "checkInstruction": "Check and correct if identification is inaccurate before continuing.",
-  "continue": "Continue",
+  "continueAction": "Continue",
 
   "manualReport": "Create Manual Report",
   "enterAtLeastOne": "Please enter at least one report item.",

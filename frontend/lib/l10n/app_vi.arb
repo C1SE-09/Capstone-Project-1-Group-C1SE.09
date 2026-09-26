@@ -170,7 +170,7 @@
   "audioRecording": "Bản ghi âm",
   "identifiedContent": "Nội dung nhận diện",
   "checkInstruction": "Kiểm tra và sửa lại nếu nhận diện chưa chính xác trước khi tiếp tục.",
-  "continue": "Tiếp tục",
+  "continueAction": "Tiếp tục",
 
   "manualReport": "Tạo báo cáo thủ công",
   "enterAtLeastOne": "Vui lòng nhập ít nhất một mục nội dung báo cáo.",

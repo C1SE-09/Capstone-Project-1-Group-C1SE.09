@@ -430,7 +430,7 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
             ),
           ),
           child: Text(
-            l10n.continue,
+            l10n.continueAction,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
