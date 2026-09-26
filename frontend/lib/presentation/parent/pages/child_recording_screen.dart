@@ -7,6 +7,7 @@ import 'package:adark_frontend/presentation/teacher/pages/manual_report_screen.d
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -43,11 +44,12 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
   }
 
   Future<void> _startRecording() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       if (kIsWeb) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ghi âm trên web chưa được hỗ trợ. Hãy chọn file âm thanh hoặc chạy trên thiết bị.'), backgroundColor: Colors.orange),
+          SnackBar(content: Text(l10n.webNotSupported), backgroundColor: Colors.orange),
         );
         return;
       }
@@ -75,18 +77,19 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không có quyền ghi âm'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.noPermission), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi ghi âm: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(l10n.recordingError(e.toString())), backgroundColor: Colors.red),
       );
     }
   }
 
   Future<void> _stopRecording() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       _timer?.cancel();
       final path = await _audioRecorder.stop();
@@ -109,19 +112,19 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File ghi âm vừa tạo không thể đọc được.'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.fileReadError), backgroundColor: Colors.red),
         );
         return;
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lỗi lưu file ghi âm'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.fileSaveError), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi dừng ghi âm: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(l10n.stopRecordingError(e.toString())), backgroundColor: Colors.red),
       );
     }
   }
@@ -136,16 +139,18 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
   }
 
   void _saveRecording() {
+    final l10n = AppLocalizations.of(context)!;
     if (_recordingPath != null) {
       _uploadSelectedFile(_recordingPath!);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chưa có file ghi âm'), backgroundColor: Colors.red),
+        SnackBar(content: Text(l10n.noRecordingFile), backgroundColor: Colors.red),
       );
     }
   }
 
   Future<void> _pickAudioFile() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final result = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: false);
       if (result != null && result.files.isNotEmpty) {
@@ -169,7 +174,7 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi chọn file: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(l10n.pickFileError(e.toString())), backgroundColor: Colors.red),
       );
     }
   }
@@ -196,24 +201,195 @@ class _ChildRecordingScreenState extends State<ChildRecordingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: AppColors.background, appBar: AppBar(backgroundColor: AppColors.background, title: const Text('Ghi âm hoạt động'), leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => context.pop())), body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 32), child: Column(children: [_buildChildHeader(), const SizedBox(height: 28), _buildRecordingCard(), const SizedBox(height: 20), _buildInstruction()]))));
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        title: Text(l10n.childRecording),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop()
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            children: [
+              _buildChildHeader(l10n),
+              const SizedBox(height: 28),
+              _buildRecordingCard(l10n),
+              const SizedBox(height: 20),
+              _buildInstruction(l10n),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget _buildChildHeader() => Row(children: [CircleAvatar(radius: 26, backgroundColor: const Color(0xFF0D5C4D), child: Text(_initials(widget.child.fullName), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600))), const SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.child.fullName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)), const Text('Ghi nhận hoạt động hôm nay', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))]))]);
+  Widget _buildChildHeader(AppLocalizations l10n) => Row(
+    children: [
+      CircleAvatar(
+        radius: 26,
+        backgroundColor: const Color(0xFF0D5C4D),
+        child: Text(
+          _initials(widget.child.fullName),
+          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+      ),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.child.fullName,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            ),
+            Text(
+              l10n.recordActivityHint,
+              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 
-  Widget _buildRecordingCard() {
+  Widget _buildRecordingCard(AppLocalizations l10n) {
     final isRec = _state == ChildRecordingState.recording;
     final isRec2 = _state == ChildRecordingState.recorded;
-    return Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFDCE1DE))), child: Column(children: [Icon(isRec ? Icons.mic_rounded : isRec2 ? Icons.check_circle_outline_rounded : Icons.mic_none_rounded, size: 56, color: isRec ? const Color(0xFF0D5C4D) : isRec2 ? Colors.green : AppColors.textSecondary), const SizedBox(height: 12), Text(isRec ? 'Đang ghi âm...' : isRec2 ? 'Ghi âm hoàn tất' : 'Sẵn sàng ghi âm', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)), const SizedBox(height: 4), Text(_formatDuration(_duration), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 1.5)), const SizedBox(height: 24), _buildMainAction(isRecording: isRec, isRecorded: isRec2), if (!isRec && !isRec2) ...[const SizedBox(height: 10), OutlinedButton.icon(onPressed: _pickAudioFile, icon: const Icon(Icons.folder_open_rounded), label: const Text('Chọn file ghi âm'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))), const SizedBox(height: 10), OutlinedButton.icon(onPressed: () { Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ManualReportScreen(child: widget.child, teacherId: widget.teacherId, classId: widget.classId))); }, icon: const Icon(Icons.edit_note_rounded), label: const Text('Tạo báo cáo thủ công'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))], if (isRec2) ...[const SizedBox(height: 10), OutlinedButton.icon(onPressed: _recordAgain, icon: const Icon(Icons.refresh_rounded), label: const Text('Ghi lại'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, minimumSize: const Size.fromHeight(46), side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))]  ]));
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDCE1DE)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            isRec ? Icons.mic_rounded : isRec2 ? Icons.check_circle_outline_rounded : Icons.mic_none_rounded,
+            size: 56,
+            color: isRec ? const Color(0xFF0D5C4D) : isRec2 ? Colors.green : AppColors.textSecondary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isRec ? l10n.recordingInProgress : isRec2 ? l10n.recordingComplete : l10n.readyToRecord,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _formatDuration(_duration),
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 1.5),
+          ),
+          const SizedBox(height: 24),
+          _buildMainAction(isRecording: isRec, isRecorded: isRec2, l10n: l10n),
+          if (!isRec && !isRec2) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _pickAudioFile,
+              icon: const Icon(Icons.folder_open_rounded),
+              label: Text(l10n.selectAudioFile),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size.fromHeight(46),
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => ManualReportScreen(
+                    child: widget.child,
+                    teacherId: widget.teacherId,
+                    classId: widget.classId,
+                  ),
+                ));
+              },
+              icon: const Icon(Icons.edit_note_rounded),
+              label: Text(l10n.createManualReport),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size.fromHeight(46),
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+          if (isRec2) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _recordAgain,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(l10n.recordAgain),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size.fromHeight(46),
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
-  Widget _buildMainAction({required bool isRecording, required bool isRecorded}) {
-    if (isRecorded) return FilledButton.icon(onPressed: _saveRecording, icon: const Icon(Icons.upload_rounded), label: const Text('Upload & Phân tích'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C4D), minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
-    if (isRecording) return FilledButton.icon(onPressed: _stopRecording, icon: const Icon(Icons.stop_rounded), label: const Text('Dừng ghi âm'), style: FilledButton.styleFrom(backgroundColor: Colors.red, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
-    return FilledButton.icon(onPressed: _startRecording, icon: const Icon(Icons.mic_rounded), label: const Text('Bắt đầu ghi âm'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C4D), minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+  Widget _buildMainAction({required bool isRecording, required bool isRecorded, required AppLocalizations l10n}) {
+    if (isRecorded) {
+      return FilledButton.icon(
+        onPressed: _saveRecording,
+        icon: const Icon(Icons.upload_rounded),
+        label: Text(l10n.uploadAnalyze),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF0D5C4D),
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+    if (isRecording) {
+      return FilledButton.icon(
+        onPressed: _stopRecording,
+        icon: const Icon(Icons.stop_rounded),
+        label: Text(l10n.stopRecording),
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.red,
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+    return FilledButton.icon(
+      onPressed: _startRecording,
+      icon: const Icon(Icons.mic_rounded),
+      label: Text(l10n.startRecording),
+      style: FilledButton.styleFrom(
+        backgroundColor: const Color(0xFF0D5C4D),
+        minimumSize: const Size.fromHeight(52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
-  Widget _buildInstruction() => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textTertiary), const SizedBox(width: 8), Expanded(child: Text('Bản ghi âm sẽ được dùng để tạo báo cáo hoạt động cho phụ huynh.', style: TextStyle(color: AppColors.textTertiary, fontSize: 12, height: 1.4)))]);
+  Widget _buildInstruction(AppLocalizations l10n) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textTertiary),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          l10n.recordingInstruction,
+          style: const TextStyle(color: AppColors.textTertiary, fontSize: 12, height: 1.4),
+        ),
+      ),
+    ],
+  );
 
   String _formatDuration(Duration v) {
     final m = v.inMinutes.remainder(60).toString().padLeft(2, '0');

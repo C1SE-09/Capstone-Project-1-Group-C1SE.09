@@ -1,4 +1,3 @@
-// frontend/lib/presentation/teacher/pages/manual_report_screen.dart
 // ============================================================================
 // ManualReportScreen (Task #83 - Manual Report Creation Form)
 // ============================================================================
@@ -8,6 +7,7 @@ import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/extraction_results_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ManualReportScreen extends StatefulWidget {
   const ManualReportScreen({
@@ -66,6 +66,7 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
   }
 
   Future<void> _submitManualReport() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_isSubmitting) return;
 
     final meals = _mealsController.text.trim();
@@ -82,8 +83,8 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
         mood.isEmpty &&
         notes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng nhập ít nhất một mục nội dung báo cáo.'),
+        SnackBar(
+          content: Text(l10n.enterAtLeastOne),
           backgroundColor: Colors.orange,
         ),
       );
@@ -133,7 +134,7 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
 
       final errorMessage = e is TeacherRepositoryException
           ? e.message
-          : 'Không thể tạo báo cáo thủ công. Vui lòng thử lại.';
+          : l10n.cannotCreateManual;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -154,6 +155,7 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     const backgroundColor = Color(0xFFF9F8F3);
 
     return Scaffold(
@@ -165,9 +167,9 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1E2522)),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Tạo báo cáo thủ công',
-          style: TextStyle(
+        title: Text(
+          l10n.manualReport,
+          style: const TextStyle(
             color: Color(0xFF1E2522),
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -185,7 +187,7 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Header thẻ học sinh được chọn
-                    _buildChildHeaderCard(),
+                    _buildChildHeaderCard(l10n),
                     const SizedBox(height: 16),
 
                     // Notice Banner
@@ -206,7 +208,7 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Nhập trực tiếp các thông tin nhật ký hoạt động cho ${widget.child.displayName}.',
+                              l10n.manualReportHint(widget.child.displayName),
                               style: const TextStyle(
                                 fontSize: 13.5,
                                 color: Color(0xFF47544C),
@@ -221,55 +223,55 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
 
                     // 1. Ăn uống
                     _buildInputField(
-                      label: 'Ăn uống',
+                      label: l10n.meals,
                       icon: Icons.flatware_outlined,
                       controller: _mealsController,
-                      hintText: 'Ví dụ: Ăn hết suất, ăn ngoan...',
+                      hintText: l10n.mealsHint,
                     ),
                     const SizedBox(height: 16),
 
                     // 2. Giấc ngủ
                     _buildInputField(
-                      label: 'Giấc ngủ',
+                      label: l10n.sleeping,
                       icon: Icons.nightlight_round_outlined,
                       controller: _sleepingController,
-                      hintText: 'Ví dụ: Ngủ 2 tiếng, ngủ ngon...',
+                      hintText: l10n.sleepingHint,
                     ),
                     const SizedBox(height: 16),
 
                     // 3. Sức khỏe
                     _buildInputField(
-                      label: 'Sức khỏe',
+                      label: l10n.health,
                       icon: Icons.favorite_border_rounded,
                       controller: _healthController,
-                      hintText: 'Ví dụ: Sức khỏe bình thường...',
+                      hintText: l10n.healthHint,
                     ),
                     const SizedBox(height: 16),
 
                     // 4. Hoạt động
                     _buildInputField(
-                      label: 'Hoạt động',
+                      label: l10n.activities,
                       icon: Icons.grid_view_rounded,
                       controller: _activitiesController,
-                      hintText: 'Ví dụ: Chơi ngoan với các bạn...',
+                      hintText: l10n.activitiesHint,
                     ),
                     const SizedBox(height: 16),
 
                     // 5. Tâm trạng
                     _buildInputField(
-                      label: 'Tâm trạng',
+                      label: l10n.mood,
                       icon: Icons.sentiment_satisfied_alt_outlined,
                       controller: _moodController,
-                      hintText: 'Ví dụ: Vui vẻ, hào hứng...',
+                      hintText: l10n.moodHint,
                     ),
                     const SizedBox(height: 16),
 
                     // 6. Ghi chú
                     _buildInputField(
-                      label: 'Ghi chú giáo viên',
+                      label: l10n.teacherNotes,
                       icon: Icons.edit_note_rounded,
                       controller: _notesController,
-                      hintText: 'Ví dụ: Lời nhắn dành cho phụ huynh...',
+                      hintText: l10n.notesHint,
                       maxLines: 3,
                     ),
                     const SizedBox(height: 24),
@@ -307,9 +309,9 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text(
-                          'Tạo báo cáo',
-                          style: TextStyle(
+                      : Text(
+                          l10n.createReport,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -323,7 +325,7 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
     );
   }
 
-  Widget _buildChildHeaderCard() {
+  Widget _buildChildHeaderCard(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -358,9 +360,9 @@ class _ManualReportScreenState extends State<ManualReportScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Lớp Mầm 1 · Tạo báo cáo thủ công',
-                  style: TextStyle(
+                Text(
+                  l10n.manualReportChildHeader,
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12.5,
                   ),

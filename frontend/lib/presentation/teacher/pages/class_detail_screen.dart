@@ -16,6 +16,7 @@ import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/status_badge.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class ClassDetailScreen extends StatefulWidget {
@@ -50,13 +51,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chi tiết lớp'),
+        title: Text(l10n.classDetail),
         automaticallyImplyLeading: widget.showBackButton,
         leading: widget.showBackButton
             ? IconButton(
-                tooltip: 'Quay lại',
+                tooltip: l10n.back,
                 icon: const Icon(Icons.arrow_back_rounded),
                 // Chỉ pop khi màn này được mở bằng route riêng.
                 onPressed: () => context.pop(),
@@ -68,22 +70,22 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         builder: (context, _) {
           return switch (_controller.state) {
             ViewState.loading =>
-              const LoadingWidget(message: 'Đang tải dữ liệu…'),
+              LoadingWidget(message: l10n.loading),
             ViewState.error => AppErrorWidget(
-                message: _controller.error ?? 'Đã có lỗi xảy ra.',
+                message: _controller.error ?? l10n.error,
                 onRetry: () => _controller.load(widget.classId),
               ),
-            ViewState.success => _buildContent(),
+            ViewState.success => _buildContent(l10n),
           };
         },
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations l10n) {
     final summary = _controller.summary;
     if (summary == null) {
-      return const Center(child: Text('Không có dữ liệu.'));
+      return Center(child: Text(l10n.noData));
     }
 
     return SingleChildScrollView(
@@ -91,11 +93,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildClassCard(summary),
+          _buildClassCard(summary, l10n),
           const SizedBox(height: 24),
-          _buildPendingSection(summary),
+          _buildPendingSection(summary, l10n),
           const SizedBox(height: 24),
-          _buildTimeline(),
+          _buildTimeline(l10n),
         ],
       ),
     );
@@ -106,7 +108,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   // ══════════════════════════════════════════════════════════
 
   /// Card "Lớp của tôi".
-  Widget _buildClassCard(ClassDashboardSummary s) {
+  Widget _buildClassCard(ClassDashboardSummary s, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -139,7 +141,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${s.totalChildren} trẻ · ${s.teacherName}',
+                  '${s.totalChildren} ${l10n.children} · ${s.teacherName}',
                   style: const TextStyle(
                     color: AppColors.textTertiary,
                     fontSize: 13,
@@ -154,12 +156,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   }
 
   /// "Cần xử lý" + danh sách đầy đủ các trẻ chưa hoàn thành.
-  Widget _buildPendingSection(ClassDashboardSummary s) {
+  Widget _buildPendingSection(ClassDashboardSummary s, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Cần xử lý',
+          l10n.pending,
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 16,
@@ -168,7 +170,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         ),
         const SizedBox(height: 2),
         Text(
-          '${s.pendingChildren.length} trẻ cần xử lý hôm nay',
+          '${s.pendingChildren.length} ${l10n.pendingCount}',
           style: const TextStyle(
             color: AppColors.textTertiary,
             fontSize: 13,
@@ -184,7 +186,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           child: Column(
             children: [
               for (int i = 0; i < s.pendingChildren.length; i++) ...[
-                _pendingTile(s.pendingChildren[i]),
+                _pendingTile(s.pendingChildren[i], l10n),
                 if (i != s.pendingChildren.length - 1)
                   const Divider(height: 1, color: AppColors.divider),
               ],
@@ -195,7 +197,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
   }
 
-  Widget _pendingTile(ChildReportItem item) {
+  Widget _pendingTile(ChildReportItem item, AppLocalizations l10n) {
     final status = item.status;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -229,7 +231,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 const SizedBox(height: 2),
                 Text(
                   status == null
-                      ? 'Chưa có báo cáo'
+                      ? l10n.noReport
                       : item.updatedAt != null
                           ? '${status.label} · ${formatHHMM(item.updatedAt!)}'
                           : status.label,
@@ -242,7 +244,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             ),
           ),
           StatusBadge(
-            label: status?.label ?? 'Chưa có',
+            label: status?.label ?? l10n.noReport,
             type: _statusTypeFor(status),
           ),
         ],
@@ -251,14 +253,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   }
 
   /// "Hoạt động gần đây" — TIMELINE (điểm mới trong bài này).
-  Widget _buildTimeline() {
+  Widget _buildTimeline(AppLocalizations l10n) {
     final activities = _controller.activities;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Hoạt động gần đây',
-          style: TextStyle(
+        Text(
+          l10n.recentActivity,
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,

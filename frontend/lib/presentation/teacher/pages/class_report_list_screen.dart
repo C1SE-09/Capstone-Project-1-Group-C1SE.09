@@ -11,6 +11,7 @@ import 'package:adark_frontend/presentation/shared/view_state.dart';
 import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ClassReportListScreen extends StatefulWidget {
   const ClassReportListScreen({super.key});
@@ -36,43 +37,44 @@ class _ClassReportListScreenState extends State<ClassReportListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Báo cáo lớp'),
+        title: Text(l10n.classReport),
       ),
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
           return switch (_controller.state) {
-            ViewState.loading => const LoadingWidget(message: 'Đang tải danh sách lớp…'),
+            ViewState.loading => LoadingWidget(message: l10n.loadingClasses),
             ViewState.error => AppErrorWidget(
-                message: _controller.error ?? 'Không thể tải danh sách lớp.',
+                message: _controller.error ?? l10n.errorList,
                 onRetry: _controller.load,
               ),
-            ViewState.success => _buildContent(),
+            ViewState.success => _buildContent(l10n),
           };
         },
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations l10n) {
     final classes = _controller.classes;
     if (classes.isEmpty) {
-      return const Center(child: Text('Chưa có lớp nào được phân công.'));
+      return Center(child: Text(l10n.noClassesAssigned));
     }
 
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       itemCount: classes.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _classCard(classes[index]),
+      itemBuilder: (context, index) => _classCard(classes[index], l10n),
     );
   }
 
-  Widget _classCard(ClassReportOverview item) {
+  Widget _classCard(ClassReportOverview item, AppLocalizations l10n) {
     final progress = item.progress.clamp(0.0, 1.0).toDouble();
     final classId = item.classInfo.classId.trim();
 
@@ -84,8 +86,8 @@ class _ClassReportListScreenState extends State<ClassReportListScreen> {
         onTap: () {
           if (classId.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Không có mã lớp hợp lệ để mở chi tiết.'),
+              SnackBar(
+                content: Text(l10n.noValidClassId),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -132,8 +134,8 @@ class _ClassReportListScreenState extends State<ClassReportListScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${item.classInfo.gradeLabel ?? 'Lớp'} · '
-                          '${item.classInfo.roomNumber ?? 'Chưa có phòng'}',
+                          '${item.classInfo.gradeLabel ?? l10n.className} · '
+                          '${item.classInfo.roomNumber ?? l10n.roomNumber}',
                           style: const TextStyle(
                             color: AppColors.textTertiary,
                             fontSize: 13,
@@ -152,7 +154,7 @@ class _ClassReportListScreenState extends State<ClassReportListScreen> {
               Row(
                 children: [
                   Text(
-                    '${item.completedCount}/${item.totalChildren} báo cáo đã gửi',
+                    '${item.completedCount}/${item.totalChildren} ${l10n.reportsSent}',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 13,
@@ -185,17 +187,17 @@ class _ClassReportListScreenState extends State<ClassReportListScreen> {
                 runSpacing: 6,
                 children: [
                   _summaryChip(
-                    '${item.totalChildren} trẻ',
+                    '${item.totalChildren} ${l10n.childrenCount}',
                     AppColors.primaryLight,
                     AppColors.primary,
                   ),
                   _summaryChip(
-                    '${item.draftCount} bản nháp',
+                    '${item.draftCount} ${l10n.draftCount}',
                     AppColors.warningBg,
                     AppColors.warningFg,
                   ),
                   _summaryChip(
-                    '${item.missingCount} chưa có',
+                    '${item.missingCount} ${l10n.notRecordedCount}',
                     AppColors.surfaceAlt,
                     AppColors.textSecondary,
                   ),

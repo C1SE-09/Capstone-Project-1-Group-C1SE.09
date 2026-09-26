@@ -1,4 +1,3 @@
-// frontend/lib/presentation/recording/pages/transcript_review_screen.dart
 // ============================================================================
 // TranscriptReviewScreen – "Xem lại nội dung"
 //
@@ -13,6 +12,7 @@ import 'dart:async';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/report_processing_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class TranscriptReviewScreen extends StatefulWidget {
   const TranscriptReviewScreen({
@@ -142,28 +142,29 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: _kBackground,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(l10n),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildAudioPlayer(),
+                    _buildAudioPlayer(l10n),
                     const SizedBox(height: 24),
-                    _buildTranscriptSection(),
+                    _buildTranscriptSection(l10n),
                     const SizedBox(height: 12),
-                    _buildHint(),
+                    _buildHint(l10n),
                   ],
                 ),
               ),
             ),
-            _buildBottomBar(),
+            _buildBottomBar(l10n),
           ],
         ),
       ),
@@ -172,7 +173,7 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
 
   // ─── Header ──────────────────────────────────────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 20, 8),
       child: Row(
@@ -187,9 +188,9 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Xem lại nội dung',
-                  style: TextStyle(
+                Text(
+                  l10n.reviewContent,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: _kTextPrimary,
@@ -211,7 +212,7 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
 
   // ─── Audio Player ─────────────────────────────────────────────────────────
 
-  Widget _buildAudioPlayer() {
+  Widget _buildAudioPlayer(AppLocalizations l10n) {
     final progress = widget.audioDuration > 0
         ? _playedSeconds / widget.audioDuration
         : 0.0;
@@ -219,9 +220,9 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Bản ghi âm',
-          style: TextStyle(
+        Text(
+          l10n.audioRecording,
+          style: const TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w500,
             color: _kTextSecondary,
@@ -317,16 +318,16 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
 
   // ─── Transcript Section ──────────────────────────────────────────────────
 
-  Widget _buildTranscriptSection() {
+  Widget _buildTranscriptSection(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Nội dung nhận diện',
-              style: TextStyle(
+            Text(
+              l10n.identifiedContent,
+              style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w500,
                 color: _kTextSecondary,
@@ -348,7 +349,7 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
                   const Icon(Icons.edit_outlined, size: 15, color: _kTextGreen),
                   const SizedBox(width: 4),
                   Text(
-                    _isEditing ? 'Xong' : 'Chỉnh sửa',
+                    _isEditing ? l10n.done : l10n.edit,
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
@@ -395,10 +396,10 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
 
   // ─── Hint ────────────────────────────────────────────────────────────────
 
-  Widget _buildHint() {
-    return const Text(
-      'Kiểm tra và sửa lại nếu nhận diện chưa chính xác trước khi tiếp tục.',
-      style: TextStyle(
+  Widget _buildHint(AppLocalizations l10n) {
+    return Text(
+      l10n.checkInstruction,
+      style: const TextStyle(
         fontSize: 12.5,
         color: _kTextSecondary,
         height: 1.4,
@@ -408,7 +409,7 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
 
   // ─── Bottom Bar ──────────────────────────────────────────────────────────
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: const BoxDecoration(
@@ -428,9 +429,9 @@ class _TranscriptReviewScreenState extends State<TranscriptReviewScreen> {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text(
-            'Tiếp tục',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          child: Text(
+            l10n.continue,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ),

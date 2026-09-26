@@ -8,6 +8,7 @@ import 'package:adark_frontend/presentation/shared/view_state.dart';
 import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class ActivityRecordingScreen extends StatefulWidget {
@@ -40,12 +41,13 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         automaticallyImplyLeading: true,
         titleSpacing: 20,
-        title: const Text('Ghi nhận hoạt động'),
+        title: Text(l10n.activityRecording),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/teacher'),
@@ -56,19 +58,19 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
         builder: (context, _) {
           return switch (_controller.state) {
             ViewState.loading =>
-              const LoadingWidget(message: 'Đang tải danh sách trẻ…'),
+              LoadingWidget(message: l10n.loadingList),
             ViewState.error => AppErrorWidget(
-                message: _controller.error ?? 'Không thể tải danh sách trẻ.',
+                message: _controller.error ?? l10n.errorList,
                 onRetry: () => _controller.load(widget.classId),
               ),
-            ViewState.success => _buildContent(),
+            ViewState.success => _buildContent(l10n),
           };
         },
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations l10n) {
     final children = _controller.filteredChildren;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,8 +78,8 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
           child: Text(
-            '${_controller.classInfo?.name ?? 'Lớp'} · '
-            '${children.length} trẻ',
+            '${_controller.classInfo?.name ?? l10n.className} · '
+            '${children.length} ${l10n.childrenCount}',
             style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 15,
@@ -85,11 +87,11 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 0, 20, 14),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
           child: Text(
-            'Chọn trẻ để bắt đầu ghi nhận',
-            style: TextStyle(
+            l10n.selectChild,
+            style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -102,7 +104,7 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
             controller: _searchController,
             onChanged: _controller.setQuery,
             decoration: InputDecoration(
-              hintText: 'Tìm trẻ...',
+              hintText: l10n.searchChild,
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _controller.query.isEmpty
                   ? null
@@ -126,20 +128,20 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
         const SizedBox(height: 14),
         Expanded(
           child: children.isEmpty
-              ? const Center(child: Text('Không tìm thấy trẻ phù hợp.'))
+              ? Center(child: Text(l10n.noChildFound))
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   itemCount: children.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) =>
-                      _childCard(children[index], index),
+                      _childCard(children[index], l10n),
                 ),
         ),
       ],
     );
   }
 
-  Widget _childCard(Child child, int index) {
+  Widget _childCard(Child child, AppLocalizations l10n) {
     final hasRecording = _controller.hasReportToday(child.childId);
     return Material(
       color: Colors.white,
@@ -178,8 +180,8 @@ class _ActivityRecordingScreenState extends State<ActivityRecordingScreen> {
                     const SizedBox(height: 3),
                     Text(
                       hasRecording
-                          ? 'Đã ghi nhận hôm nay'
-                          : 'Chưa ghi nhận hôm nay',
+                          ? l10n.childRecorded
+                          : l10n.childNotRecorded,
                       style: TextStyle(
                         color: hasRecording
                             ? AppColors.primary

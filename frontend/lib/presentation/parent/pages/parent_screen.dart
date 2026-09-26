@@ -15,6 +15,7 @@ import 'package:adark_frontend/presentation/shared/view_state.dart';
 import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class ParentScreen extends StatefulWidget {
@@ -41,11 +42,12 @@ class _ParentScreenState extends State<ParentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trang phụ huynh'),
+        title: Text(l10n.parentTitle),
         leading: IconButton(
-          tooltip: 'Đăng xuất / về trang đăng nhập',
+          tooltip: l10n.backToLogin,
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/login'), // ← NÚT GOBACK
         ),
@@ -55,24 +57,24 @@ class _ParentScreenState extends State<ParentScreen> {
         builder: (context, _) {
           return switch (_controller.state) {
             ViewState.loading =>
-              const LoadingWidget(message: 'Đang tải dữ liệu…'),
+              LoadingWidget(message: l10n.loading),
             ViewState.error => AppErrorWidget(
-                message: _controller.error ?? 'Đã có lỗi xảy ra.',
+                message: _controller.error ?? l10n.error,
                 onRetry: _controller.load,
               ),
-            ViewState.success => _buildContent(context),
+            ViewState.success => _buildContent(context, l10n),
           };
         },
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, AppLocalizations l10n) {
     final parent = _controller.parent;
     final childOverview = _controller.childOverview;
 
     if (parent == null || childOverview == null) {
-      return const Center(child: Text('Không có dữ liệu.'));
+      return Center(child: Text(l10n.noData));
     }
 
     return SingleChildScrollView(
@@ -80,15 +82,15 @@ class _ParentScreenState extends State<ParentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildGreeting(parent.fullName),
+          _buildGreeting(parent.fullName, l10n),
           const SizedBox(height: 20),
-          _buildReadyBanner(childOverview),
+          _buildReadyBanner(childOverview, l10n),
           const SizedBox(height: 20),
-          _buildChildCard(childOverview),
+          _buildChildCard(childOverview, l10n),
           const SizedBox(height: 24),
-          _buildTodayReport(),
+          _buildTodayReport(l10n),
           const SizedBox(height: 24),
-          _buildRecentReports(),
+          _buildRecentReports(l10n),
         ],
       ),
     );
@@ -99,13 +101,13 @@ class _ParentScreenState extends State<ParentScreen> {
   // ══════════════════════════════════════════════════════════
 
   /// "Xin chào, Phụ huynh bé Nhím".
-  Widget _buildGreeting(String name) {
+  Widget _buildGreeting(String name, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Xin chào,',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        Text(
+          l10n.helloParent,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         const SizedBox(height: 2),
         Text(
@@ -121,12 +123,12 @@ class _ParentScreenState extends State<ParentScreen> {
   }
 
   /// Banner xanh "Báo cáo hôm nay... đã sẵn sàng".
-  Widget _buildReadyBanner(ChildOverview overview) {
+  Widget _buildReadyBanner(ChildOverview overview, AppLocalizations l10n) {
     final todayReport = _controller.todayReport;
 
     // Chỉ hiện banner nếu báo cáo hôm nay đã Published.
     if (todayReport == null || todayReport.status != ReportStatus.published) {
-      return _emptyBanner(overview);
+      return _emptyBanner(overview, l10n);
     }
 
     return Container(
@@ -152,7 +154,7 @@ class _ParentScreenState extends State<ParentScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Báo cáo hôm nay của ${overview.child.fullName} đã sẵn sàng',
+                  l10n.childTodayReport(overview.child.fullName),
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 14,
@@ -162,8 +164,10 @@ class _ParentScreenState extends State<ParentScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${overview.teacherName} đã gửi báo cáo hoạt động ngày '
-                  '${formatDDMMYYYY(todayReport.reportDate)}.',
+                  l10n.teacherSentReport(
+                    overview.teacherName,
+                    formatDDMMYYYY(todayReport.reportDate),
+                  ),
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 13,
@@ -178,7 +182,7 @@ class _ParentScreenState extends State<ParentScreen> {
     );
   }
 
-  Widget _emptyBanner(ChildOverview overview) {
+  Widget _emptyBanner(ChildOverview overview, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -191,7 +195,7 @@ class _ParentScreenState extends State<ParentScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Hôm nay chưa có báo cáo cho ${overview.child.fullName}.',
+              l10n.noReportToday(overview.child.fullName),
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
           ),
@@ -201,7 +205,7 @@ class _ParentScreenState extends State<ParentScreen> {
   }
 
   /// Card con: avatar + tên + "Lớp Mầm 1 · Cô Hà".
-  Widget _buildChildCard(ChildOverview overview) {
+  Widget _buildChildCard(ChildOverview overview, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -236,7 +240,7 @@ class _ParentScreenState extends State<ParentScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${overview.className} · ${overview.teacherName}',
+                  l10n.childCard(overview.className, overview.teacherName),
                   style: const TextStyle(
                     color: AppColors.textTertiary,
                     fontSize: 13,
@@ -251,18 +255,18 @@ class _ParentScreenState extends State<ParentScreen> {
   }
 
   /// "Báo cáo hôm nay".
-  Widget _buildTodayReport() {
+  Widget _buildTodayReport(AppLocalizations l10n) {
     final todayReport = _controller.todayReport;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle('Báo cáo hôm nay'),
+        _SectionTitle(l10n.todayReport),
         const SizedBox(height: 12),
         _reportTile(
           icon: Icons.description_outlined,
-          title: todayReport == null ? 'Chưa có báo cáo' : 'Đã có báo cáo',
+          title: todayReport == null ? l10n.noReport : l10n.reportReady,
           subtitle: todayReport == null
-              ? 'Giáo viên chưa gửi báo cáo hôm nay.'
+              ? l10n.noTodayReport
               : formatDDMMYYYY(todayReport.reportDate),
           highlighted: todayReport != null,
         ),
@@ -271,12 +275,12 @@ class _ParentScreenState extends State<ParentScreen> {
   }
 
   /// "Báo cáo gần đây" — danh sách.
-  Widget _buildRecentReports() {
+  Widget _buildRecentReports(AppLocalizations l10n) {
     final reports = _controller.recentReports;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle('Báo cáo gần đây'),
+        _SectionTitle(l10n.recentReports),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
@@ -402,4 +406,3 @@ class _SectionTitle extends StatelessWidget {
     );
   }
 }
-

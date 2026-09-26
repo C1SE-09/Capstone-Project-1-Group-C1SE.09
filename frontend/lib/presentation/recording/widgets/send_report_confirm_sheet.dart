@@ -1,9 +1,9 @@
-﻿// frontend/lib/presentation/recording/widgets/send_report_confirm_sheet.dart
-// ============================================================================
+﻿// ============================================================================
 // Modal Bottom Sheet: Gửi báo cáo cho phụ huynh? (Giao diện 3)
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 Future<void> showSendReportConfirmSheet({
   required BuildContext context,
@@ -17,6 +17,7 @@ Future<void> showSendReportConfirmSheet({
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (BuildContext ctx) {
+      final l10n = AppLocalizations.of(ctx)!;
       return Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -41,9 +42,9 @@ Future<void> showSendReportConfirmSheet({
             const SizedBox(height: 20),
 
             // Title
-            const Text(
-              'Gửi báo cáo cho phụ huynh?',
-              style: TextStyle(
+            Text(
+              l10n.sendReportConfirm,
+              style: const TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1E2522),
@@ -86,7 +87,7 @@ Future<void> showSendReportConfirmSheet({
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Báo cáo ngày $formattedDate',
+                        l10n.reportPreview(formattedDate),
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF757B77),
@@ -100,9 +101,9 @@ Future<void> showSendReportConfirmSheet({
             const SizedBox(height: 16),
 
             // Helper Notice
-            const Text(
-              'Phụ huynh sẽ nhận được thông báo khi báo cáo được gửi.',
-              style: TextStyle(
+            Text(
+              l10n.parentWillNotify,
+              style: const TextStyle(
                 fontSize: 13.5,
                 color: Color(0xFF5E6560),
               ),
@@ -124,9 +125,9 @@ Future<void> showSendReportConfirmSheet({
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Hủy',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.cancel,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -152,9 +153,9 @@ Future<void> showSendReportConfirmSheet({
                         ),
                       ),
                       icon: const Icon(Icons.near_me_rounded, size: 18),
-                      label: const Text(
-                        'Gửi báo cáo',
-                        style: TextStyle(
+                      label: Text(
+                        l10n.sendToParent,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),

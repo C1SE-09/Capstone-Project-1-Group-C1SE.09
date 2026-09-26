@@ -3,7 +3,9 @@
 // Màn hình đăng nhập (MVP): tạm thời có 2 nút để vào vai
 // Teacher và Parent. Sau này thay bằng Firebase Auth thật.
 
+import 'package:adark_frontend/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class LoginPage extends StatelessWidget {
@@ -12,6 +14,7 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: SafeArea(
@@ -22,7 +25,7 @@ class LoginPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'KinderLog',
+                l10n.appName,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
@@ -30,7 +33,7 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Quản lý báo cáo mầm non',
+                l10n.appSubtitle,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -40,12 +43,11 @@ class LoginPage extends StatelessWidget {
 
               // ── Login as Teacher ──────────────────────────
               FilledButton(
-                // onPressed: () => context.go('/teacher'),
                 onPressed: () => context.go('/teacher'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('Đăng nhập Giáo viên'),
+                child: Text(l10n.loginAsTeacher),
               ),
               const SizedBox(height: 12),
 
@@ -55,7 +57,7 @@ class LoginPage extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('Đăng nhập Phụ huynh'),
+                child: Text(l10n.loginAsParent),
               ),
             ],
           ),

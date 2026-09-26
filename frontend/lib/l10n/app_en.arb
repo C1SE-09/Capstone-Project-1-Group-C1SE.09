@@ -1,0 +1,312 @@
+{
+  "@@locale": "en",
+  "appName": "KinderLog",
+  "appSubtitle": "Preschool Report Management",
+
+  "loginAsTeacher": "Login as Teacher",
+  "loginAsParent": "Login as Parent",
+
+  "overview": "Overview",
+  "logout": "Logout",
+  "backToLogin": "Back to Login",
+
+  "loading": "Loading data…",
+  "loadingList": "Loading list…",
+  "error": "An error occurred.",
+  "errorList": "Unable to load list.",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "save": "Save",
+  "saving": "Saving…",
+  "done": "Done",
+  "edit": "Edit",
+  "delete": "Delete",
+  "yes": "Yes",
+  "no": "No",
+
+  "noData": "No data available.",
+  "noResults": "No results found.",
+
+  "oops": "Oops!",
+
+  "goodMorning": "Good morning,",
+  "goodAfternoon": "Good afternoon,",
+  "goodEvening": "Good evening,",
+
+  "teacherTitle": "Teacher Page",
+  "parentTitle": "Parent Page",
+
+  "helloParent": "Hello,",
+
+  "todayProgress": "Today's Progress",
+  "reportCompleted": "report(s) completed",
+  "childNotReported": "child(ren) without report today.",
+
+  "totalChildren": "Children in class",
+  "completed": "Completed",
+  "draft": "Draft",
+  "notRecorded": "Not recorded",
+
+  "myClass": "My Class",
+  "classDetail": "Class Details",
+  "back": "Back",
+  "children": "children",
+  "teacher": "Teacher",
+
+  "pending": "Pending",
+  "pendingCount": "child(ren) need processing today",
+  "recentActivity": "Recent Activity",
+
+  "noReport": "No report",
+  "reportReady": "Report available",
+
+  "startRecording": "Start Recording",
+  "recording": "Recording Lesson",
+  "recordingActivity": "Record Activity",
+  "recordActivityHint": "Record today's activity",
+
+  "activityRecording": "Activity Recording",
+  "selectChild": "Select a child to start recording",
+  "searchChild": "Search child...",
+  "childRecorded": "Recorded today",
+  "childNotRecorded": "Not recorded today",
+  "noChildFound": "No matching child found.",
+
+  "classReport": "Class Reports",
+  "loadingClasses": "Loading class list…",
+  "noClassesAssigned": "No classes assigned yet.",
+  "reportsSent": "report(s) sent",
+  "childrenCount": "children",
+  "draftCount": "draft(s)",
+  "notRecordedCount": "not recorded",
+  "className": "Class",
+  "roomNumber": "No room assigned",
+  "noValidClassId": "No valid class ID to open details.",
+
+  "childRecording": "Activity Recording",
+  "readyToRecord": "Ready to record",
+  "recordingInProgress": "Recording...",
+  "recordingComplete": "Recording complete",
+  "stopRecording": "Stop Recording",
+  "selectAudioFile": "Select audio file",
+  "recordAgain": "Record again",
+  "uploadAnalyze": "Upload & Analyze",
+  "createManualReport": "Create manual report",
+  "recordingInstruction": "The recording will be used to create activity reports for parents.",
+  "noPermission": "Recording permission not granted",
+  "recordingError": "Recording error: {error}",
+  "@recordingError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "stopRecordingError": "Stop recording error: {error}",
+  "@stopRecordingError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "fileReadError": "The recorded file cannot be read.",
+  "fileSaveError": "Error saving recording file",
+  "noRecordingFile": "No recording file",
+  "pickFileError": "File selection error: {error}",
+  "@pickFileError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "webNotSupported": "Recording on web is not supported. Please select an audio file or run on a device.",
+
+  "confirmAudioFile": "Confirm Audio File",
+  "confirmUpload": "Confirm & Upload",
+  "goBack": "Go Back",
+  "uploading": "Uploading…",
+  "uploadingProgress": "Uploading… {percent}%",
+  "@uploadingProgress": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "uploadInstruction": "Please do not close the app while uploading.",
+  "uploadSuccess": "Upload & Transcription Complete",
+  "uploadFailed": "Upload Failed",
+  "retryUpload": "Retry",
+
+  "transcriptSaved": "Transcript edit saved!",
+  "transcriptSaveFailed": "Save failed: {error}",
+  "@transcriptSaveFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "proceedExtract": "Proceed to Extract",
+  "transcriptTitle": "Transcription Text",
+  "edited": "Edited",
+  "noTranscriptData": "No transcription data yet...",
+  "characterCount": "{count} characters",
+  "@characterCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "processing": "Processing Report",
+  "stepReceived": "Audio received",
+  "stepTranscribing": "Converting speech to text",
+  "stepAnalyzing": "Analyzing content",
+  "stepCreating": "Creating report",
+  "processingTimeout": "Server response timeout.",
+  "transcriptionFailed": "Audio transcription failed from server.",
+  "connectionError": "API connection error: {error}",
+  "@connectionError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "canLeaveScreen": "You can leave this screen. We will notify you when the report is ready.",
+
+  "reviewContent": "Review Content",
+  "audioRecording": "Audio Recording",
+  "identifiedContent": "Identified Content",
+  "checkInstruction": "Check and correct if identification is inaccurate before continuing.",
+  "continue": "Continue",
+
+  "manualReport": "Create Manual Report",
+  "enterAtLeastOne": "Please enter at least one report item.",
+  "createReport": "Create Report",
+  "cannotCreateManual": "Unable to create manual report. Please try again.",
+  "manualReportChildHeader": "Class 1 · Create Manual Report",
+  "manualReportHint": "Enter activity log information directly for {childName}.",
+  "@manualReportHint": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "meals": "Meals",
+  "sleeping": "Sleep",
+  "health": "Health",
+  "activities": "Activities",
+  "mood": "Mood",
+  "notes": "Notes",
+  "teacherNotes": "Teacher Notes",
+  "mealsHint": "Example: Ate all food, ate well...",
+  "sleepingHint": "Example: Slept 2 hours, slept well...",
+  "healthHint": "Example: Normal health...",
+  "activitiesHint": "Example: Played nicely with friends...",
+  "moodHint": "Example: Happy, enthusiastic...",
+  "notesHint": "Example: Message for parents...",
+
+  "extractionResults": "Extracted Information",
+  "checkBeforeCreate": "Check before creating report",
+  "checkTranscript": "Check and edit PhoWhisper transcript first. When content is correct, tap \"Send for Analysis\" to create report items.",
+  "extractionTitle": "Analysis Results from Model",
+  "transcriptField": "Audio Transcript",
+  "analyzing": "Analyzing...",
+  "reanalyze": "Send back for analysis",
+  "sendToAnalyze": "Send for Analysis",
+  "cancelReport": "Cancel Report",
+  "cannotLoadTranscript": "Unable to load PhoWhisper transcript: {error}",
+  "@cannotLoadTranscript": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "transcriptEmpty": "Transcript is empty, cannot send for analysis.",
+  "transcriptChanged": "Transcript changed during analysis. Please send the new content.",
+  "analyzeSuccess": "Edited transcript analyzed.",
+  "reanalyzeFailed": "Unable to reanalyze: {error}",
+  "@reanalyzeFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "cannotCreateDraft": "Unable to create draft: {error}",
+  "@cannotCreateDraft": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+
+  "reportReview": "Activity Report",
+  "transcriptContent": "Recording Content",
+  "noUnusualIssues": "No unusual issues",
+  "noDataYet": "(No data yet)",
+  "sendToParent": "Send to Parent",
+  "sendReportConfirm": "Send report to parent?",
+  "parentWillNotify": "Parent will receive a notification when the report is sent.",
+  "reportPreview": "Report for {date}",
+  "@reportPreview": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+
+  "reportSent": "Report Sent",
+  "parentNotified": "{childName}'s parent has been notified about the report on {date}.",
+  "@parentNotified": {
+    "placeholders": {
+      "childName": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
+  "backToHome": "Back to Home",
+
+  "parentDashboard": "Parent Page",
+  "childTodayReport": "{childName}'s today's report is ready",
+  "@childTodayReport": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "teacherSentReport": "{teacherName} sent the activity report for {date}.",
+  "@teacherSentReport": {
+    "placeholders": {
+      "teacherName": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
+  "noReportToday": "No report for {childName} today.",
+  "@noReportToday": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "childCard": "{className} · {teacherName}",
+  "@childCard": {
+    "placeholders": {
+      "className": {"type": "String"},
+      "teacherName": {"type": "String"}
+    }
+  },
+  "todayReport": "Today's Report",
+  "noTodayReport": "Teacher has not sent a report today.",
+  "recentReports": "Recent Reports",
+
+  "reportSentActivity": "{childName}'s report has been sent",
+  "@reportSentActivity": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "reportReviewingActivity": "{childName}'s report is pending review",
+  "@reportReviewingActivity": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "audioRecordedActivity": "Audio recorded for {childName}",
+  "@audioRecordedActivity": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+
+  "errorGeneric": "An error occurred during processing.",
+  "errorSubmit": "Error: {error}",
+  "@errorSubmit": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  }
+}

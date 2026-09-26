@@ -1,4 +1,3 @@
-// frontend/lib/presentation/recording/pages/report_processing_screen.dart
 // ============================================================================
 // ReportProcessingScreen – "Đang xử lý báo cáo"
 //
@@ -23,6 +22,7 @@ import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/extraction_results_screen.dart';
 import 'package:adark_frontend/presentation/recording/pages/transcript_review_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 enum ProcessingPhase { transcribe, extract }
 
@@ -77,12 +77,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
   static const _kTextGreen = Color(0xFF1B6E60);
   static const _kBorder = Color(0xFFDCE1DE);
 
-  static const _steps = <String>[
-    'Đã nhận bản ghi âm',
-    'Đang chuyển giọng nói thành văn bản',
-    'Đang phân tích nội dung',
-    'Đang tạo báo cáo',
-  ];
+  List<String> _steps = [];
 
   @override
   void initState() {
@@ -95,6 +90,15 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
     )..repeat();
 
     _startPipeline();
+  }
+
+  void _initSteps(AppLocalizations l10n) {
+    _steps = [
+      l10n.stepReceived,
+      l10n.stepTranscribing,
+      l10n.stepAnalyzing,
+      l10n.stepCreating,
+    ];
   }
 
   @override
@@ -169,6 +173,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
   }
 
   Future<VoiceRecord?> _pollVoiceStatus({required String voiceId, required String teacherId}) async {
+    final l10n = AppLocalizations.of(context)!;
     final completer = Completer<VoiceRecord?>();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
@@ -185,7 +190,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
         if (mounted) {
           setState(() {
             _hasError = true;
-            _errorMessage = 'Quá thời gian chờ phản hồi từ máy chủ (Timeout).';
+            _errorMessage = l10n.processingTimeout;
           });
         }
         if (!completer.isCompleted) completer.complete(null);
@@ -203,7 +208,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
           timer.cancel();
           setState(() {
             _hasError = true;
-            _errorMessage = record.errorMessage ?? 'Phiên âm âm thanh thất bại từ máy chủ.';
+            _errorMessage = record.errorMessage ?? l10n.transcriptionFailed;
           });
           if (!completer.isCompleted) completer.complete(null);
         }
@@ -213,7 +218,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
           if (mounted) {
             setState(() {
               _hasError = true;
-              _errorMessage = 'Lỗi kết nối API: ${e.toString()}';
+              _errorMessage = l10n.connectionError(e.toString());
             });
           }
           if (!completer.isCompleted) completer.complete(null);
@@ -336,6 +341,9 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    _initSteps(l10n);
+
     final now = DateTime.now();
     final formattedDate =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
@@ -345,24 +353,24 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(l10n),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: Column(
                   children: [
-                    _buildChildCard(formattedDate),
+                    _buildChildCard(formattedDate, l10n),
                     const SizedBox(height: 24),
-                    _buildStepsList(),
+                    _buildStepsList(l10n),
                     if (_hasError) ...[
                       const SizedBox(height: 20),
-                      _buildErrorCard(),
+                      _buildErrorCard(l10n),
                     ],
                   ],
                 ),
               ),
             ),
-            _buildBottomNotice(),
+            _buildBottomNotice(l10n),
           ],
         ),
       ),
@@ -371,7 +379,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
   // ─── Header ──────────────────────────────────────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 20, 8),
       child: Row(
@@ -383,9 +391,9 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           const SizedBox(width: 4),
-          const Text(
-            'Đang xử lý báo cáo',
-            style: TextStyle(
+          Text(
+            l10n.processing,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: _kTextPrimary,
@@ -399,7 +407,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
   // ─── Child Info Card ─────────────────────────────────────────────────────
 
-  Widget _buildChildCard(String formattedDate) {
+  Widget _buildChildCard(String formattedDate, AppLocalizations l10n) {
     final initials = _initials(widget.child.fullName);
 
     return Container(
@@ -437,7 +445,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
               ),
               const SizedBox(height: 3),
               Text(
-                'Lớp Mầm 1 · $formattedDate',
+                '${l10n.className} Mầm 1 · $formattedDate',
                 style: const TextStyle(fontSize: 13, color: _kTextSecondary),
               ),
             ],
@@ -449,7 +457,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
   // ─── Steps List ──────────────────────────────────────────────────────────
 
-  Widget _buildStepsList() {
+  Widget _buildStepsList(AppLocalizations l10n) {
     return Column(
       children: List.generate(_steps.length, (i) {
         final isDone = i < _completedSteps;
@@ -561,7 +569,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
   // ─── Error Card ──────────────────────────────────────────────────────────
 
-  Widget _buildErrorCard() {
+  Widget _buildErrorCard(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -577,7 +585,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  _errorMessage ?? 'Đã xảy ra lỗi trong quá trình xử lý.',
+                  _errorMessage ?? l10n.errorGeneric,
                   style: TextStyle(
                     color: Colors.red.shade900,
                     fontWeight: FontWeight.w600,
@@ -594,7 +602,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
             child: ElevatedButton.icon(
               onPressed: _startPipeline,
               icon: const Icon(Icons.refresh_rounded, size: 20),
-              label: const Text('Thử lại'),
+              label: Text(l10n.retry),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
@@ -612,7 +620,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
   // ─── Bottom Notice ───────────────────────────────────────────────────────
 
-  Widget _buildBottomNotice() {
+  Widget _buildBottomNotice(AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       padding: const EdgeInsets.all(14),
@@ -626,10 +634,10 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
           const Icon(Icons.wifi_tethering_rounded,
               color: _kTextGreen, size: 20),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Bạn có thể rời màn hình này. Chúng tôi sẽ thông báo khi báo cáo sẵn sàng.',
-              style: TextStyle(
+              l10n.canLeaveScreen,
+              style: const TextStyle(
                 fontSize: 13.5,
                 color: Color(0xFF47544C),
                 height: 1.4,

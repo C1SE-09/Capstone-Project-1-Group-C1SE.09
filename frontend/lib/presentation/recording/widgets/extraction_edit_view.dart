@@ -4,6 +4,7 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ExtractionEditView extends StatelessWidget {
   const ExtractionEditView({
@@ -41,6 +42,7 @@ class ExtractionEditView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // Top Navigation Header
@@ -61,20 +63,20 @@ class ExtractionEditView extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      'Thông tin đã nhận diện',
-                      style: TextStyle(
+                      l10n.extractionResults,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E2522),
                         height: 1.2,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Kiểm tra trước khi tạo báo cáo',
-                      style: TextStyle(
+                      l10n.checkBeforeCreate,
+                      style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF757B77),
                       ),
@@ -102,17 +104,17 @@ class ExtractionEditView extends StatelessWidget {
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         Icons.auto_awesome_rounded,
                         color: Color(0xFF1B6E60),
                         size: 20,
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Kiểm tra và chỉnh sửa transcript PhoWhisper trước. Khi nội dung đã đúng, bấm "Gửi cho model phân tích" để tạo các mục báo cáo.',
-                          style: TextStyle(
+                          l10n.checkTranscript,
+                          style: const TextStyle(
                             fontSize: 13.5,
                             color: Color(0xFF47544C),
                             height: 1.4,
@@ -124,62 +126,21 @@ class ExtractionEditView extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // // 0. Nội dung ghi âm (Transcript PhoWhisper) - NGUỒN DUY NHẤT ĐƯỢC SỬA
-                // _buildInputField(
-                //   label: 'Nội dung ghi âm (PhoWhisper)',
-                //   icon: Icons.text_fields_rounded,
-                //   controller: transcriptController,
-                //   maxLines: 4,
-                //   hint: 'Chỉnh sửa nội dung nhận diện được tại đây',
-                //   onChanged: (_) => onTranscriptChanged?.call(),
-                // ),
-                // const SizedBox(height: 10),
-                //
-                // // Nút chạy lại model phân tích trên transcript đã sửa
-                // SizedBox(
-                //   width: double.infinity,
-                //   height: 46,
-                //   child: OutlinedButton.icon(
-                //     onPressed: isSubmitting || isReanalyzing
-                //         ? null
-                //         : onReanalyze,
-                //     icon: isReanalyzing
-                //         ? const SizedBox(
-                //             width: 16,
-                //             height: 16,
-                //             child: CircularProgressIndicator(
-                //               strokeWidth: 2,
-                //               color: Color(0xFF0D5C4D),
-                //             ),
-                //           )
-                //         : const Icon(Icons.refresh_rounded, size: 20),
-                //     label: Text(
-                //       isReanalyzing
-                //           ? 'Đang phân tích...'
-                //           : hasAnalysis
-                //               ? 'Gửi lại cho model phân tích'
-                //               : 'Gửi cho model phân tích',
-                //       style: const TextStyle(
-                //         fontSize: 14.5,
-                //         fontWeight: FontWeight.w600,
-                //       ),
-                //     ),
-                //     style: OutlinedButton.styleFrom(
-                //       foregroundColor: const Color(0xFF0D5C4D),
-                //       backgroundColor: const Color(0xFFEFF4F1),
-                //       side: const BorderSide(color: Color(0xFFBBD3CB)),
-                //       shape: RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(12),
-                //       ),
-                //     ),
-                //   ),
-                // ),
-                // const SizedBox(height: 20),
+                // Transcript Field (read-only, raw PhoWhisper output)
+                _buildInputField(
+                  label: l10n.transcriptField,
+                  icon: Icons.text_fields_rounded,
+                  controller: transcriptController,
+                  readOnly: true,
+                  maxLines: 3,
+                  hint: l10n.noTranscriptData,
+                ),
+                const SizedBox(height: 20),
 
                 ...[
-                  const Text(
-                    'Kết quả phân tích từ model',
-                    style: TextStyle(
+                  Text(
+                    l10n.extractionTitle,
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF757B77),
@@ -190,7 +151,7 @@ class ExtractionEditView extends StatelessWidget {
 
                   // 1. Ăn uống (kết quả model - chỉ đọc)
                   _buildInputField(
-                    label: 'Ăn uống',
+                    label: l10n.meals,
                     icon: Icons.flatware_outlined,
                     controller: mealsController,
                   ),
@@ -198,7 +159,7 @@ class ExtractionEditView extends StatelessWidget {
 
                   // 2. Giấc ngủ
                   _buildInputField(
-                    label: 'Giấc ngủ',
+                    label: l10n.sleeping,
                     icon: Icons.nightlight_round_outlined,
                     controller: sleepingController,
                   ),
@@ -206,7 +167,7 @@ class ExtractionEditView extends StatelessWidget {
 
                   // 3. Sức khỏe
                   _buildInputField(
-                    label: 'Sức khỏe',
+                    label: l10n.health,
                     icon: Icons.favorite_border_rounded,
                     controller: healthController,
                   ),
@@ -214,7 +175,7 @@ class ExtractionEditView extends StatelessWidget {
 
                   // 4. Hoạt động
                   _buildInputField(
-                    label: 'Hoạt động',
+                    label: l10n.activities,
                     icon: Icons.grid_view_rounded,
                     controller: activitiesController,
                   ),
@@ -222,7 +183,7 @@ class ExtractionEditView extends StatelessWidget {
 
                   // 5. Tâm trạng
                   _buildInputField(
-                    label: 'Tâm trạng',
+                    label: l10n.mood,
                     icon: Icons.sentiment_satisfied_alt_outlined,
                     controller: moodController,
                   ),
@@ -230,7 +191,7 @@ class ExtractionEditView extends StatelessWidget {
 
                   // 6. Ghi chú
                   _buildInputField(
-                    label: 'Ghi chú',
+                    label: l10n.notes,
                     icon: Icons.edit_note_rounded,
                     controller: notesController,
                     maxLines: 3,
@@ -274,9 +235,9 @@ class ExtractionEditView extends StatelessWidget {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text(
-                          'Tạo báo cáo',
-                          style: TextStyle(
+                      : Text(
+                          l10n.createReport,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -299,9 +260,9 @@ class ExtractionEditView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
-                    'Hủy báo cáo',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.cancelReport,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),

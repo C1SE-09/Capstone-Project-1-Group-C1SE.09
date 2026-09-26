@@ -4,6 +4,7 @@ import 'package:adark_frontend/presentation/recording/widgets/report_review_view
 import 'package:adark_frontend/presentation/recording/widgets/report_sent_success_view.dart';
 import 'package:adark_frontend/presentation/recording/widgets/send_report_confirm_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 enum ScreenStep { edit, review, success }
@@ -121,6 +122,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   }
 
   Future<void> _fetchTranscript() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isLoading = true);
 
     if (widget.initialMeals != null ||
@@ -188,7 +190,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Không thể tải transcript PhoWhisper: $e'),
+          content: Text(l10n.cannotLoadTranscript(e.toString())),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 4),
         ),
@@ -203,12 +205,13 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
 
   /// Chỉ chạy model sau khi giáo viên đã kiểm tra/chỉnh transcript.
   Future<void> _analyzeTranscript() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_isReanalyzing || _isSubmitting) return;
     final edited = _transcriptController.text.trim();
     if (edited.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Transcript đang trống, không thể gửi phân tích.'),
+        SnackBar(
+          content: Text(l10n.transcriptEmpty),
           backgroundColor: Colors.orange,
         ),
       );
@@ -231,8 +234,8 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       if (_transcriptController.text.trim() != edited) {
         setState(() => _isReanalyzing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Transcript đã thay đổi trong lúc phân tích. Hãy gửi lại nội dung mới.'),
+          SnackBar(
+            content: Text(l10n.transcriptChanged),
             backgroundColor: Colors.orange,
           ),
         );
@@ -250,9 +253,9 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
         _isReanalyzing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã phân tích transcript đã chỉnh sửa.'),
-          backgroundColor: Color(0xFF0D5C4D),
+        SnackBar(
+          content: Text(l10n.analyzeSuccess),
+          backgroundColor: const Color(0xFF0D5C4D),
         ),
       );
     } catch (e) {
@@ -260,7 +263,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       setState(() => _isReanalyzing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Không thể phân tích lại: $e'),
+          content: Text(l10n.reanalyzeFailed(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -268,6 +271,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   }
 
   Future<void> _goToReviewStep() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_isSubmitting) return;
     if (_originalTranscript.isNotEmpty &&
         _transcriptController.text.trim() != _originalTranscript) {
@@ -333,7 +337,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Không thể tạo bản nháp: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.cannotCreateDraft(e.toString())), backgroundColor: Colors.red));
     }
   }
 
@@ -342,6 +346,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
   }
 
   Future<void> _submitFinalReport() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
@@ -417,7 +422,7 @@ class _ExtractionResultsScreenState extends State<ExtractionResultsScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(l10n.errorSubmit(e.toString())), backgroundColor: Colors.red),
       );
     }
   }

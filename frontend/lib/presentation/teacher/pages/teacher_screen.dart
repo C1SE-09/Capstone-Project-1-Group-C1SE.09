@@ -13,6 +13,7 @@ import 'package:adark_frontend/presentation/shared/widgets/app_error_widget.dart
 import 'package:adark_frontend/presentation/shared/widgets/loading_widget.dart';
 import 'package:adark_frontend/presentation/shared/widgets/status_badge.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class TeacherScreen extends StatefulWidget {
@@ -37,10 +38,17 @@ class _TeacherScreenState extends State<TeacherScreen> {
     super.dispose();
   }
 
+  String _timeGreeting(int hour, AppLocalizations l10n) {
+    if (hour < 12) return l10n.goodMorning;
+    if (hour < 18) return l10n.goodAfternoon;
+    return l10n.goodEvening;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: _buildAppBar(context),
+      appBar: _buildAppBar(context, l10n),
       // ListenableBuilder: tự rebuild khi controller notifyListeners()
       body: ListenableBuilder(
         listenable: _controller,
@@ -48,12 +56,12 @@ class _TeacherScreenState extends State<TeacherScreen> {
           // Dựa vào state để hiển thị loading / error / content
           return switch (_controller.state) {
             ViewState.loading =>
-              const LoadingWidget(message: 'Đang tải dữ liệu…'),
+              LoadingWidget(message: l10n.loading),
             ViewState.error => AppErrorWidget(
-                message: _controller.error ?? 'Đã có lỗi xảy ra.',
+                message: _controller.error ?? l10n.error,
                 onRetry: _controller.load,
               ),
-            ViewState.success => _buildContent(context),
+            ViewState.success => _buildContent(context, l10n),
           };
         },
       ),
@@ -61,11 +69,11 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   /// AppBar với nút ← goback về trang login.
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, AppLocalizations l10n) {
     return AppBar(
-      title: const Text('Tổng quan'),
+      title: Text(l10n.overview),
       leading: IconButton(
-        tooltip: 'Đăng xuất / về trang đăng nhập',
+        tooltip: l10n.backToLogin,
         icon: const Icon(Icons.arrow_back_rounded),
         onPressed: () => context.go('/login'), // ← NÚT GOBACK
       ),
@@ -73,12 +81,12 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   /// Nội dung chính khi đã có dữ liệu.
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, AppLocalizations l10n) {
     final summary = _controller.summary;
     final teacher = _controller.teacher;
 
     if (summary == null || teacher == null) {
-      return const Center(child: Text('Không có dữ liệu.'));
+      return Center(child: Text(l10n.noData));
     }
 
     return SingleChildScrollView(
@@ -86,15 +94,15 @@ class _TeacherScreenState extends State<TeacherScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildGreeting(context, teacher, summary.classInfo.name),
+          _buildGreeting(context, teacher, summary.classInfo.name, l10n),
           const SizedBox(height: 20),
-          _buildProgressCard(context, summary),
+          _buildProgressCard(context, summary, l10n),
           const SizedBox(height: 24),
-          _buildStatsRow(context, summary),
+          _buildStatsRow(context, summary, l10n),
           const SizedBox(height: 24),
-          _buildMyClass(context, summary),
+          _buildMyClass(context, summary, l10n),
           const SizedBox(height: 24),
-          _buildPendingList(context, summary),
+          _buildPendingList(context, summary, l10n),
         ],
       ),
     );
@@ -106,8 +114,8 @@ class _TeacherScreenState extends State<TeacherScreen> {
 
   /// Header: "Chào buổi sáng, Cô Hà" + avatar.
   Widget _buildGreeting(
-      BuildContext context, Teacher teacher, String className) {
-    final timeGreeting = _timeGreeting(DateTime.now().hour);
+      BuildContext context, Teacher teacher, String className, AppLocalizations l10n) {
+    final timeGreeting = _timeGreeting(DateTime.now().hour, l10n);
 
     return Row(
       children: [
@@ -160,7 +168,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   /// Card "Tiến độ hôm nay" + thanh tiến độ + nút ghi âm.
-  Widget _buildProgressCard(BuildContext context, ClassDashboardSummary s) {
+  Widget _buildProgressCard(BuildContext context, ClassDashboardSummary s, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -177,9 +185,9 @@ class _TeacherScreenState extends State<TeacherScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Tiến độ hôm nay',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          Text(
+            l10n.todayProgress,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 12),
           Row(
@@ -195,7 +203,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
                 ),
               ),
               Text(
-                ' / ${s.totalChildren} báo cáo hoàn thành',
+                ' / ${s.totalChildren} ${l10n.reportCompleted}',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 14,
@@ -225,7 +233,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            '${s.notCompletedCount} trẻ chưa có báo cáo hôm nay.',
+            '${s.notCompletedCount} ${l10n.childNotReported}',
             style:
                 const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
@@ -239,9 +247,9 @@ class _TeacherScreenState extends State<TeacherScreen> {
                 '/teacher/activity-recording?classId=${s.classInfo.classId}',
               ),
               icon: const Text('🎤', style: TextStyle(fontSize: 18)),
-              label: const Text(
-                'Bắt đầu ghi âm',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              label: Text(
+                l10n.startRecording,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -258,7 +266,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   /// Hàng 4 ô thống kê: Tổng / Đã hoàn thành / Bản nháp / Chưa ghi nhận.
-  Widget _buildStatsRow(BuildContext context, ClassDashboardSummary s) {
+  Widget _buildStatsRow(BuildContext context, ClassDashboardSummary s, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -266,13 +274,13 @@ class _TeacherScreenState extends State<TeacherScreen> {
       ),
       child: Row(
         children: [
-          _statBox(context, '${s.totalChildren}', 'Trẻ trong\nlớp'),
+          _statBox(context, '${s.totalChildren}', l10n.totalChildren),
           _statDivider(),
-          _statBox(context, '${s.completedCount}', 'Đã hoàn\nthành'),
+          _statBox(context, '${s.completedCount}', l10n.completed),
           _statDivider(),
-          _statBox(context, '${s.draftCount}', 'Bản nháp'),
+          _statBox(context, '${s.draftCount}', l10n.draft),
           _statDivider(),
-          _statBox(context, '${s.missingCount}', 'Chưa\nghi nhận'),
+          _statBox(context, '${s.missingCount}', l10n.notRecorded),
         ],
       ),
     );
@@ -313,13 +321,13 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   /// "Lớp của tôi" — card thông tin lớp.
-  Widget _buildMyClass(BuildContext context, ClassDashboardSummary s) {
+  Widget _buildMyClass(BuildContext context, ClassDashboardSummary s, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Lớp của tôi',
-          style: TextStyle(
+        Text(
+          l10n.myClass,
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -367,7 +375,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${s.totalChildren} trẻ · ${s.teacherName}',
+                          '${s.totalChildren} ${l10n.children} · ${s.teacherName}',
                           style: const TextStyle(
                             color: AppColors.textTertiary,
                             fontSize: 13,
@@ -386,16 +394,16 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   /// "Cần xử lý" — danh sách trẻ chưa hoàn thành báo cáo.
-  Widget _buildPendingList(BuildContext context, ClassDashboardSummary s) {
+  Widget _buildPendingList(BuildContext context, ClassDashboardSummary s, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Cần xử lý',
-              style: TextStyle(
+            Text(
+              l10n.pending,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -413,7 +421,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
           child: Column(
             children: [
               for (int i = 0; i < s.pendingChildren.length; i++) ...[
-                _pendingTile(s.pendingChildren[i]),
+                _pendingTile(s.pendingChildren[i], l10n),
                 if (i != s.pendingChildren.length - 1)
                   const Divider(height: 1, color: AppColors.divider),
               ],
@@ -424,7 +432,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
     );
   }
 
-  Widget _pendingTile(ChildReportItem item) {
+  Widget _pendingTile(ChildReportItem item, AppLocalizations l10n) {
     final status = item.status;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -459,8 +467,8 @@ class _TeacherScreenState extends State<TeacherScreen> {
                   const SizedBox(height: 2),
                   Text(
                     item.updatedAt != null
-                        ? '${status?.label ?? 'Chưa có báo cáo'} · ${formatHHMM(item.updatedAt!)}'
-                        : (status?.label ?? 'Chưa có báo cáo'),
+                        ? '${status?.label ?? l10n.noReport} · ${formatHHMM(item.updatedAt!)}'
+                        : (status?.label ?? l10n.noReport),
                     style: const TextStyle(
                       color: AppColors.textTertiary,
                       fontSize: 13,
@@ -472,7 +480,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
           ),
           // Badge trạng thái (tái dùng StatusBadge có sẵn)
           StatusBadge(
-            label: status?.label ?? 'Chưa có',
+            label: status?.label ?? l10n.noReport,
             type: _statusTypeFor(status),
           ),
         ],
@@ -495,13 +503,6 @@ class _TeacherScreenState extends State<TeacherScreen> {
       case null:
         return StatusType.error; // "Chưa có"
     }
-  }
-
-  /// "Chào buổi sáng/chiều/tối" theo giờ.
-  String _timeGreeting(int hour) {
-    if (hour < 12) return 'Chào buổi sáng,';
-    if (hour < 18) return 'Chào buổi chiều,';
-    return 'Chào buổi tối,';
   }
 
   /// Lấy chữ cái đầu tên: "Cô Hà" → "CH", "Lê Thị Mèo" → "LM".

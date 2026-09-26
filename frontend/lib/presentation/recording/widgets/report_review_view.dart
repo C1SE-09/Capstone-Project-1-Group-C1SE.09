@@ -1,9 +1,9 @@
-// frontend/lib/presentation/recording/widgets/report_review_view.dart
 // ============================================================================
 // Giao diện 2: Báo cáo hoạt động (Nguyễn Thị Nhím + "Chỉnh sửa" & "Gửi phụ huynh")
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ReportReviewView extends StatelessWidget {
   const ReportReviewView({
@@ -39,6 +39,7 @@ class ReportReviewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // Header
@@ -60,9 +61,9 @@ class ReportReviewView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Báo cáo hoạt động',
-                      style: TextStyle(
+                    Text(
+                      l10n.reportReview,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E2522),
@@ -143,11 +144,11 @@ class ReportReviewView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.text_fields_rounded, size: 18, color: Color(0xFF5E6560)),
-                          SizedBox(width: 8),
-                          Text('Nội dung ghi âm', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF434A45))),
+                          const Icon(Icons.text_fields_rounded, size: 18, color: Color(0xFF5E6560)),
+                          const SizedBox(width: 8),
+                          Text(l10n.transcriptContent, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF434A45))),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -168,31 +169,31 @@ class ReportReviewView extends StatelessWidget {
                     children: [
                       _buildReviewItem(
                         icon: Icons.flatware_outlined,
-                        label: 'Ăn uống',
+                        label: l10n.meals,
                         value: meals,
                         showDivider: true,
                       ),
                       _buildReviewItem(
                         icon: Icons.nightlight_round_outlined,
-                        label: 'Giấc ngủ',
+                        label: l10n.sleeping,
                         value: sleeping,
                         showDivider: true,
                       ),
                       _buildReviewItem(
                         icon: Icons.favorite_border_rounded,
-                        label: 'Sức khỏe',
+                        label: l10n.health,
                         value: health,
                         showDivider: true,
                       ),
                       _buildReviewItem(
                         icon: Icons.grid_view_rounded,
-                        label: 'Hoạt động',
+                        label: l10n.activities,
                         value: activities,
                         showDivider: true,
                       ),
                       _buildReviewItem(
                         icon: Icons.sentiment_satisfied_alt_outlined,
-                        label: 'Tâm trạng',
+                        label: l10n.mood,
                         value: mood,
                         showDivider: false,
                       ),
@@ -202,9 +203,9 @@ class ReportReviewView extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Teacher Notes Card
-                const Text(
-                  'Ghi chú giáo viên',
-                  style: TextStyle(
+                Text(
+                  l10n.teacherNotes,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF6B726E),
@@ -220,7 +221,7 @@ class ReportReviewView extends StatelessWidget {
                     border: Border.all(color: const Color(0xFFE8ECE9)),
                   ),
                   child: Text(
-                    notes.isEmpty ? 'Không có vấn đề bất thường' : notes,
+                    notes.isEmpty ? l10n.noUnusualIssues : notes,
                     style: const TextStyle(
                       fontSize: 14.5,
                       color: Color(0xFF2C322E),
@@ -258,9 +259,9 @@ class ReportReviewView extends StatelessWidget {
                       ),
                     ),
                     icon: const Icon(Icons.edit_outlined, size: 18),
-                    label: const Text(
-                      'Chỉnh sửa',
-                      style: TextStyle(
+                    label: Text(
+                      l10n.edit,
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -285,9 +286,9 @@ class ReportReviewView extends StatelessWidget {
                       ),
                     ),
                     icon: const Icon(Icons.near_me_rounded, size: 18),
-                    label: const Text(
-                      'Gửi phụ huynh',
-                      style: TextStyle(
+                    label: Text(
+                      l10n.sendToParent,
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -339,11 +340,11 @@ class ReportReviewView extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      value.isEmpty ? '(Chưa có dữ liệu)' : value,
+                      value.isEmpty ? l10n.noDataYet : value,
                       style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
-                        color: value.isEmpty ? Color(0xFFA0A6A2) : Color(0xFF1E2522),
+                        color: value.isEmpty ? const Color(0xFFA0A6A2) : const Color(0xFF1E2522),
                         height: 1.3,
                       ),
                     ),

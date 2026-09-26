@@ -8,6 +8,7 @@ import 'package:adark_frontend/presentation/teacher/pages/activity_recording_scr
 import 'package:adark_frontend/presentation/teacher/pages/class_report_list_screen.dart';
 import 'package:adark_frontend/presentation/teacher/pages/teacher_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class TeacherBottomNavigation extends StatefulWidget {
   const TeacherBottomNavigation({super.key, this.initialIndex = 0});
@@ -40,6 +41,7 @@ class _TeacherBottomNavigationState extends State<TeacherBottomNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       // IndexedStack giữ nguyên trạng thái từng tab khi chuyển qua lại.
       body: IndexedStack(
@@ -52,16 +54,21 @@ class _TeacherBottomNavigationState extends State<TeacherBottomNavigation> {
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.primaryLight,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
-            label: 'Tổng quan',
+            icon: const Icon(Icons.dashboard_outlined),
+            selectedIcon: const Icon(Icons.dashboard_rounded),
+            label: l10n.overview,
           ),
           NavigationDestination(
-            icon: Icon(Icons.assessment_outlined),
-            selectedIcon: Icon(Icons.assessment_rounded),
-            label: 'Báo cáo lớp',
+            icon: const Icon(Icons.assessment_outlined),
+            selectedIcon: const Icon(Icons.assessment_rounded),
+            label: l10n.classReport,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.mic_none_rounded),
+            selectedIcon: const Icon(Icons.mic_rounded),
+            label: l10n.activityRecording,
           ),
         ],
       ),

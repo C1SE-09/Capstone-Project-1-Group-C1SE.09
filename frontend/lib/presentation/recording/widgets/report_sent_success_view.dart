@@ -1,9 +1,9 @@
-﻿// frontend/lib/presentation/recording/widgets/report_sent_success_view.dart
-// ============================================================================
+﻿// ============================================================================
 // Giao diện 4: Đã gửi báo cáo thành công
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ReportSentSuccessView extends StatelessWidget {
   const ReportSentSuccessView({
@@ -19,6 +19,7 @@ class ReportSentSuccessView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -45,9 +46,9 @@ class ReportSentSuccessView extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Main Heading
-          const Text(
-            'Đã gửi báo cáo',
-            style: TextStyle(
+          Text(
+            l10n.reportSent,
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Color(0xFF1E2522),
@@ -65,16 +66,8 @@ class ReportSentSuccessView extends StatelessWidget {
                 height: 1.4,
               ),
               children: [
-                const TextSpan(text: 'Phụ huynh của '),
                 TextSpan(
-                  text: childName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E2522),
-                  ),
-                ),
-                TextSpan(
-                  text: ' đã được thông báo về báo cáo ngày $formattedDate.',
+                  text: l10n.parentNotified(childName, formattedDate),
                 ),
               ],
             ),
@@ -96,9 +89,9 @@ class ReportSentSuccessView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text(
-                'Về trang chủ',
-                style: TextStyle(
+              child: Text(
+                l10n.backToHome,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),

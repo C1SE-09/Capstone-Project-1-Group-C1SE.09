@@ -1,0 +1,313 @@
+{
+  "@@locale": "vi",
+  "appName": "KinderLog",
+  "appSubtitle": "Quản lý báo cáo mầm non",
+
+  "loginAsTeacher": "Đăng nhập Giáo viên",
+  "loginAsParent": "Đăng nhập Phụ huynh",
+
+  "overview": "Tổng quan",
+  "logout": "Đăng xuất",
+  "backToLogin": "Quay lại trang đăng nhập",
+
+  "loading": "Đang tải dữ liệu…",
+  "loadingList": "Đang tải danh sách…",
+  "error": "Đã có lỗi xảy ra.",
+  "errorList": "Không thể tải danh sách.",
+  "retry": "Thử lại",
+  "cancel": "Hủy",
+  "ok": "OK",
+  "save": "Lưu",
+  "saving": "Đang lưu…",
+  "done": "Xong",
+  "edit": "Chỉnh sửa",
+  "delete": "Xóa",
+  "yes": "Có",
+  "no": "Không",
+
+  "noData": "Không có dữ liệu.",
+  "noResults": "Không tìm thấy kết quả.",
+
+  "oops": "Oops!",
+
+  "goodMorning": "Chào buổi sáng,",
+  "goodAfternoon": "Chào buổi chiều,",
+  "goodEvening": "Chào buổi tối,",
+
+  "teacherTitle": "Trang giáo viên",
+  "parentTitle": "Trang phụ huynh",
+
+  "helloParent": "Xin chào,",
+
+  "todayProgress": "Tiến độ hôm nay",
+  "reportCompleted": "báo cáo hoàn thành",
+  "childNotReported": "trẻ chưa có báo cáo hôm nay.",
+
+  "totalChildren": "Trẻ trong lớp",
+  "completed": "Đã hoàn thành",
+  "draft": "Bản nháp",
+  "notRecorded": "Chưa ghi nhận",
+
+  "myClass": "Lớp của tôi",
+  "classDetail": "Chi tiết lớp",
+  "back": "Quay lại",
+  "children": "trẻ",
+  "teacher": "Cô/Giáo viên",
+
+  "pending": "Cần xử lý",
+  "pendingCount": "trẻ cần xử lý hôm nay",
+  "recentActivity": "Hoạt động gần đây",
+
+  "noReport": "Chưa có báo cáo",
+  "reportReady": "Đã có báo cáo",
+
+  "startRecording": "Bắt đầu ghi âm",
+  "recording": "Ghi âm bài giảng",
+  "recordingActivity": "Ghi nhận hoạt động",
+  "recordActivityHint": "Ghi nhận hoạt động hôm nay",
+
+  "activityRecording": "Ghi nhận hoạt động",
+  "selectChild": "Chọn trẻ để bắt đầu ghi nhận",
+  "searchChild": "Tìm trẻ...",
+  "childRecorded": "Đã ghi nhận hôm nay",
+  "childNotRecorded": "Chưa ghi nhận hôm nay",
+  "noChildFound": "Không tìm thấy trẻ phù hợp.",
+
+  "classReport": "Báo cáo lớp",
+  "loadingClasses": "Đang tải danh sách lớp…",
+  "noClassesAssigned": "Chưa có lớp nào được phân công.",
+  "reportsSent": "báo cáo đã gửi",
+  "childrenCount": "trẻ",
+  "draftCount": "bản nháp",
+  "notRecordedCount": "chưa có",
+  "className": "Lớp",
+  "roomNumber": "Chưa có phòng",
+  "noValidClassId": "Không có mã lớp hợp lệ để mở chi tiết.",
+
+  "childRecording": "Ghi âm hoạt động",
+  "readyToRecord": "Sẵn sàng ghi âm",
+  "recordingInProgress": "Đang ghi âm...",
+  "recordingComplete": "Ghi âm hoàn tất",
+  "stopRecording": "Dừng ghi âm",
+  "selectAudioFile": "Chọn file ghi âm",
+  "recordAgain": "Ghi lại",
+  "uploadAnalyze": "Upload & Phân tích",
+  "createManualReport": "Tạo báo cáo thủ công",
+  "recordingInstruction": "Bản ghi âm sẽ được dùng để tạo báo cáo hoạt động cho phụ huynh.",
+  "noPermission": "Không có quyền ghi âm",
+  "recordingError": "Lỗi ghi âm: {error}",
+  "@recordingError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "stopRecordingError": "Lỗi dừng ghi âm: {error}",
+  "@stopRecordingError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "fileReadError": "File ghi âm vừa tạo không thể đọc được.",
+  "fileSaveError": "Lỗi lưu file ghi âm",
+  "noRecordingFile": "Chưa có file ghi âm",
+  "pickFileError": "Lỗi chọn file: {error}",
+  "@pickFileError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "webNotSupported": "Ghi âm trên web chưa được hỗ trợ. Hãy chọn file âm thanh hoặc chạy trên thiết bị.",
+
+  "confirmAudioFile": "Xác nhận tệp âm thanh",
+  "confirmUpload": "Xác nhận & Tải lên",
+  "goBack": "Trở lại",
+  "uploading": "Đang tải lên…",
+  "uploadingProgress": "Đang tải lên… {percent}%",
+  "@uploadingProgress": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "uploadInstruction": "Vui lòng không đóng ứng dụng trong khi tải lên.",
+  "uploadSuccess": "Tải lên & Phiên âm hoàn tất",
+  "uploadFailed": "Tải lên thất bại",
+  "retryUpload": "Thử lại",
+
+  "transcriptSaved": "Đã lưu bản chỉnh sửa phiên âm!",
+  "transcriptSaveFailed": "Lưu thất bại: {error}",
+  "@transcriptSaveFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "proceedExtract": "Tiến hành trích xuất",
+  "transcriptTitle": "Văn bản phiên âm",
+  "edited": "Đã chỉnh sửa",
+  "noTranscriptData": "Chưa có dữ liệu phiên âm...",
+  "characterCount": "{count} ký tự",
+  "@characterCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "processing": "Đang xử lý báo cáo",
+  "stepReceived": "Đã nhận bản ghi âm",
+  "stepTranscribing": "Đang chuyển giọng nói thành văn bản",
+  "stepAnalyzing": "Đang phân tích nội dung",
+  "stepCreating": "Đang tạo báo cáo",
+  "processingTimeout": "Quá thời gian chờ phản hồi từ máy chủ (Timeout).",
+  "transcriptionFailed": "Phiên âm âm thanh thất bại từ máy chủ.",
+  "connectionError": "Lỗi kết nối API: {error}",
+  "@connectionError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "canLeaveScreen": "Bạn có thể rời màn hình này. Chúng tôi sẽ thông báo khi báo cáo sẵn sàng.",
+
+  "reviewContent": "Xem lại nội dung",
+  "audioRecording": "Bản ghi âm",
+  "identifiedContent": "Nội dung nhận diện",
+  "checkInstruction": "Kiểm tra và sửa lại nếu nhận diện chưa chính xác trước khi tiếp tục.",
+  "continue": "Tiếp tục",
+
+  "manualReport": "Tạo báo cáo thủ công",
+  "enterAtLeastOne": "Vui lòng nhập ít nhất một mục nội dung báo cáo.",
+  "createReport": "Tạo báo cáo",
+  "cannotCreateManual": "Không thể tạo báo cáo thủ công. Vui lòng thử lại.",
+  "manualReportChildHeader": "Lớp Mầm 1 · Tạo báo cáo thủ công",
+  "manualReportHint": "Nhập trực tiếp các thông tin nhật ký hoạt động cho {childName}.",
+  "@manualReportHint": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "meals": "Ăn uống",
+  "sleeping": "Giấc ngủ",
+  "health": "Sức khỏe",
+  "activities": "Hoạt động",
+  "mood": "Tâm trạng",
+  "notes": "Ghi chú",
+  "teacherNotes": "Ghi chú giáo viên",
+  "mealsHint": "Ví dụ: Ăn hết suất, ăn ngoan...",
+  "sleepingHint": "Ví dụ: Ngủ 2 tiếng, ngủ ngon...",
+  "healthHint": "Ví dụ: Sức khỏe bình thường...",
+  "activitiesHint": "Ví dụ: Chơi ngoan với các bạn...",
+  "moodHint": "Ví dụ: Vui vẻ, hào hứng...",
+  "notesHint": "Ví dụ: Lời nhắn dành cho phụ huynh...",
+
+  "extractionResults": "Thông tin đã nhận diện",
+  "checkBeforeCreate": "Kiểm tra trước khi tạo báo cáo",
+  "checkTranscript": "Kiểm tra và chỉnh sửa transcript PhoWhisper trước. Khi nội dung đã đúng, bấm \"Gửi cho model phân tích\" để tạo các mục báo cáo.",
+  "extractionTitle": "Kết quả phân tích từ model",
+  "transcriptField": "Bản ghi âm (transcript)",
+  "analyzing": "Đang phân tích...",
+  "reanalyze": "Gửi lại cho model phân tích",
+  "sendToAnalyze": "Gửi cho model phân tích",
+  "cancelReport": "Hủy báo cáo",
+  "cannotLoadTranscript": "Không thể tải transcript PhoWhisper: {error}",
+  "@cannotLoadTranscript": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "transcriptEmpty": "Transcript đang trống, không thể gửi phân tích.",
+  "transcriptChanged": "Transcript đã thay đổi trong lúc phân tích. Hãy gửi lại nội dung mới.",
+  "analyzeSuccess": "Đã phân tích transcript đã chỉnh sửa.",
+  "reanalyzeFailed": "Không thể phân tích lại: {error}",
+  "@reanalyzeFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "cannotCreateDraft": "Không thể tạo bản nháp: {error}",
+  "@cannotCreateDraft": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+
+  "reportReview": "Báo cáo hoạt động",
+  "transcriptContent": "Nội dung ghi âm",
+  "noUnusualIssues": "Không có vấn đề bất thường",
+  "noDataYet": "(Chưa có dữ liệu)",
+  "sendToParent": "Gửi phụ huynh",
+  "sendReportConfirm": "Gửi báo cáo cho phụ huynh?",
+  "parentWillNotify": "Phụ huynh sẽ nhận được thông báo khi báo cáo được gửi.",
+  "reportPreview": "Báo cáo ngày {date}",
+  "@reportPreview": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "cancel": "Hủy",
+  "send": "Gửi báo cáo",
+  "reportSent": "Đã gửi báo cáo",
+  "parentNotified": "Phụ huynh của {childName} đã được thông báo về báo cáo ngày {date}.",
+  "@parentNotified": {
+    "placeholders": {
+      "childName": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
+  "backToHome": "Về trang chủ",
+
+  "parentDashboard": "Trang phụ huynh",
+  "childTodayReport": "Báo cáo hôm nay của {childName} đã sẵn sàng",
+  "@childTodayReport": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "teacherSentReport": "{teacherName} đã gửi báo cáo hoạt động ngày {date}.",
+  "@teacherSentReport": {
+    "placeholders": {
+      "teacherName": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
+  "noReportToday": "Hôm nay chưa có báo cáo cho {childName}.",
+  "@noReportToday": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "childCard": "{className} · {teacherName}",
+  "@childCard": {
+    "placeholders": {
+      "className": {"type": "String"},
+      "teacherName": {"type": "String"}
+    }
+  },
+  "todayReport": "Báo cáo hôm nay",
+  "noTodayReport": "Giáo viên chưa gửi báo cáo hôm nay.",
+  "recentReports": "Báo cáo gần đây",
+
+  "reportSentActivity": "Báo cáo của {childName} đã được gửi",
+  "@reportSentActivity": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "reportReviewingActivity": "Báo cáo của {childName} đang chờ xem lại",
+  "@reportReviewingActivity": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+  "audioRecordedActivity": "Đã ghi âm cho {childName}",
+  "@audioRecordedActivity": {
+    "placeholders": {
+      "childName": {"type": "String"}
+    }
+  },
+
+  "errorGeneric": "Đã xảy ra lỗi trong quá trình xử lý.",
+  "errorSubmit": "Lỗi: {error}",
+  "@errorSubmit": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  }
+}

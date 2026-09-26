@@ -24,6 +24,7 @@ import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/presentation/recording/pages/extraction_results_screen.dart';
 import 'package:adark_frontend/presentation/recording/pages/report_processing_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 enum _UploadState { idle, uploading, transcribing, ready, failed }
@@ -118,6 +119,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   // ------------------------------------------------------------------
 
   Future<void> _startUpload() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _state = _UploadState.uploading;
       _progress = 0.0;
@@ -179,8 +181,6 @@ class _RecordingScreenState extends State<RecordingScreen>
     }
   }
 
-
-
   void _navigateToExtractionResults(String voiceId) {
     if (!mounted) return;
     try {
@@ -214,6 +214,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   }
 
   Future<void> _saveTranscript() async {
+    final l10n = AppLocalizations.of(context)!;
     final result = _result;
     if (result == null) return;
 
@@ -236,7 +237,7 @@ class _RecordingScreenState extends State<RecordingScreen>
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã lưu bản chỉnh sửa phiên âm!')),
+        SnackBar(content: Text(l10n.transcriptSaved)),
       );
     } on TeacherRepositoryException catch (e) {
       if (!mounted) return;
@@ -244,7 +245,7 @@ class _RecordingScreenState extends State<RecordingScreen>
         _isSaving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lưu thất bại: ${e.message}')),
+        SnackBar(content: Text(l10n.transcriptSaveFailed(e.message))),
       );
     } catch (e) {
       if (!mounted) return;
@@ -252,7 +253,7 @@ class _RecordingScreenState extends State<RecordingScreen>
         _isSaving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
+        SnackBar(content: Text('${l10n.errorSubmit(e.toString())}')),
       );
     }
   }
@@ -267,11 +268,12 @@ class _RecordingScreenState extends State<RecordingScreen>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Ghi âm bài giảng'),
+        title: Text(l10n.recording),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -281,13 +283,13 @@ class _RecordingScreenState extends State<RecordingScreen>
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
           child: switch (_state) {
-            _UploadState.idle => _buildIdleBody(colorScheme, textTheme),
+            _UploadState.idle => _buildIdleBody(colorScheme, textTheme, l10n),
             _UploadState.uploading =>
-              _buildUploadingBody(colorScheme, textTheme),
+              _buildUploadingBody(colorScheme, textTheme, l10n),
             _UploadState.transcribing =>
               _buildTranscribingBody(colorScheme, textTheme),
-            _UploadState.ready => _buildReadyBody(colorScheme, textTheme),
-            _UploadState.failed => _buildFailedBody(colorScheme, textTheme),
+            _UploadState.ready => _buildReadyBody(colorScheme, textTheme, l10n),
+            _UploadState.failed => _buildFailedBody(colorScheme, textTheme, l10n),
           },
         ),
       ),
@@ -299,7 +301,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   // ------------------------------------------------------------------
 
   /// Idle: show file info, Confirm button, and Back button.
-  Widget _buildIdleBody(ColorScheme cs, TextTheme tt) {
+  Widget _buildIdleBody(ColorScheme cs, TextTheme tt, AppLocalizations l10n) {
     final fileName = widget.filePath.split(RegExp(r'[\\/]')).last;
 
     return Center(
@@ -325,7 +327,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             ),
             const SizedBox(height: 28),
             Text(
-              'Xác nhận tệp âm thanh',
+              l10n.confirmAudioFile,
               style: tt.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -367,9 +369,9 @@ class _RecordingScreenState extends State<RecordingScreen>
               child: FilledButton.icon(
                 onPressed: _startUpload,
                 icon: const Icon(Icons.check_circle_outline_rounded),
-                label: const Text(
-                  'Xác nhận & Tải lên',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                label: Text(
+                  l10n.confirmUpload,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -381,9 +383,9 @@ class _RecordingScreenState extends State<RecordingScreen>
               child: OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text(
-                  'Trở lại',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                label: Text(
+                  l10n.goBack,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                 ),
               ),
             ),
@@ -394,7 +396,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   }
 
   /// Uploading: progress bar + percentage, buttons disabled.
-  Widget _buildUploadingBody(ColorScheme cs, TextTheme tt) {
+  Widget _buildUploadingBody(ColorScheme cs, TextTheme tt, AppLocalizations l10n) {
     final isIndeterminate = _progress < 0;
     final pct = isIndeterminate ? null : (_progress * 100).toStringAsFixed(0);
 
@@ -416,7 +418,9 @@ class _RecordingScreenState extends State<RecordingScreen>
             ),
             const SizedBox(height: 32),
             Text(
-              isIndeterminate ? 'Đang tải lên…' : 'Đang tải lên… $pct%',
+              isIndeterminate
+                  ? l10n.uploading
+                  : l10n.uploadingProgress(pct != null ? int.parse(pct) : 0),
               style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 24),
@@ -438,12 +442,12 @@ class _RecordingScreenState extends State<RecordingScreen>
               child: FilledButton.icon(
                 onPressed: null, // disabled during upload
                 icon: const Icon(Icons.cloud_upload_outlined),
-                label: const Text('Tải lên & phiên âm'),
+                label: Text(l10n.confirmUpload),
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Vui lòng không đóng ứng dụng trong khi tải lên.',
+              l10n.uploadInstruction,
               style: tt.bodySmall?.copyWith(
                 color: cs.onSurface.withAlpha((0.5 * 255).round()),
               ),
@@ -478,7 +482,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   }
 
   /// Ready: Transcript is loaded! Display editable text field + Save button + Proceed to Extract.
-  Widget _buildReadyBody(ColorScheme cs, TextTheme tt) {
+  Widget _buildReadyBody(ColorScheme cs, TextTheme tt, AppLocalizations l10n) {
     return SingleChildScrollView(
       key: const ValueKey('ready'),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -506,7 +510,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tải lên & Phiên âm hoàn tất',
+                      l10n.uploadSuccess,
                       style: tt.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: cs.onSurface,
@@ -530,7 +534,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Văn bản phiên âm',
+                l10n.transcriptTitle,
                 style: tt.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: cs.onSurface,
@@ -545,7 +549,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Đã chỉnh sửa',
+                    l10n.edited,
                     style: tt.labelSmall?.copyWith(
                       color: cs.onPrimaryContainer,
                       fontWeight: FontWeight.w600,
@@ -570,7 +574,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             buildCounter: (context,
                 {required currentLength, required isFocused, maxLength}) {
               return Text(
-                '$currentLength ký tự',
+                l10n.characterCount(currentLength),
                 style: tt.bodySmall?.copyWith(
                   color: cs.onSurface.withAlpha((0.6 * 255).round()),
                   fontWeight: FontWeight.w500,
@@ -578,7 +582,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               );
             },
             decoration: InputDecoration(
-              hintText: 'Chưa có dữ liệu phiên âm...',
+              hintText: l10n.noTranscriptData,
               filled: true,
               fillColor:
                   cs.surfaceContainerHighest.withAlpha((0.5 * 255).round()),
@@ -616,7 +620,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                     )
                   : const Icon(Icons.save_rounded),
               label: Text(
-                _isSaving ? 'Đang lưu…' : 'Lưu bản chỉnh sửa',
+                _isSaving ? l10n.saving : l10n.save,
                 style:
                     const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
@@ -640,9 +644,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                 }
               },
               icon: const Icon(Icons.auto_awesome_rounded),
-              label: const Text(
-                'Tiến hành trích xuất',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              label: Text(
+                l10n.proceedExtract,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: cs.primary,
@@ -659,7 +663,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             child: OutlinedButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back_rounded),
-              label: const Text('Quay lại trang chủ'),
+              label: Text(l10n.goBack),
             ),
           ),
         ],
@@ -668,7 +672,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   }
 
   /// Failed: error message + Retry button.
-  Widget _buildFailedBody(ColorScheme cs, TextTheme tt) {
+  Widget _buildFailedBody(ColorScheme cs, TextTheme tt, AppLocalizations l10n) {
     return Center(
       key: const ValueKey('failed'),
       child: Padding(
@@ -692,7 +696,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             ),
             const SizedBox(height: 24),
             Text(
-              'Tải lên thất bại',
+              l10n.uploadFailed,
               style: tt.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: cs.error,
@@ -708,7 +712,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                _errorMessage ?? 'Lỗi không xác định.',
+                _errorMessage ?? l10n.errorGeneric,
                 style: tt.bodyMedium?.copyWith(
                   color: cs.onErrorContainer,
                 ),
@@ -723,9 +727,9 @@ class _RecordingScreenState extends State<RecordingScreen>
               child: FilledButton.icon(
                 onPressed: _retry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text(
-                  'Thử lại',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                label: Text(
+                  l10n.retryUpload,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: cs.error,
@@ -737,7 +741,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             // Cancel / go back
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Huỷ'),
+              child: Text(l10n.cancel),
             ),
           ],
         ),

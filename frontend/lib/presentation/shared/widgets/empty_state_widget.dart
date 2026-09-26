@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class EmptyStateWidget extends StatelessWidget {
-  final String title;
-  final String message;
-  final IconData icon;
+  final String? title;
+  final String? message;
+  final IconData? icon;
   final Widget? action;
 
   const EmptyStateWidget({
     super.key,
-    this.title = 'No Data Found',
-    this.message = 'There is nothing to show here at the moment.',
-    this.icon = Icons.inbox_outlined,
+    this.title,
+    this.message,
+    this.icon,
     this.action,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -23,19 +25,19 @@ class EmptyStateWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              icon,
+              icon ?? Icons.inbox_outlined,
               size: 80,
               color: Theme.of(context).colorScheme.outlineVariant,
             ),
             const SizedBox(height: 24),
             Text(
-              title,
+              title ?? l10n.noData,
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              message,
+              message ?? '',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
