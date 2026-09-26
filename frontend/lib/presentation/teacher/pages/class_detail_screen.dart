@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/teacher/pages/class_detail_screen.dart
+// frontend/lib/presentation/teacher/pages/class_detail_screen.dart
 // =========================================================
 // Màn "Chi tiết lớp" (MÀN 2 trong Figma):
 //   - Card lớp

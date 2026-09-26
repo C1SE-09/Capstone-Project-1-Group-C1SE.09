@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/parent/pages/parent_screen.dart
+// frontend/lib/presentation/parent/pages/parent_screen.dart
 // =========================================================
 // Màn "Tổng quan" của phụ huynh (MÀN 3 trong Figma).
 //

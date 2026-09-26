@@ -172,30 +172,35 @@ class ReportReviewView extends StatelessWidget {
                         label: l10n.meals,
                         value: meals,
                         showDivider: true,
+                        l10n: l10n,
                       ),
                       _buildReviewItem(
                         icon: Icons.nightlight_round_outlined,
                         label: l10n.sleeping,
                         value: sleeping,
                         showDivider: true,
+                        l10n: l10n,
                       ),
                       _buildReviewItem(
                         icon: Icons.favorite_border_rounded,
                         label: l10n.health,
                         value: health,
                         showDivider: true,
+                        l10n: l10n,
                       ),
                       _buildReviewItem(
                         icon: Icons.grid_view_rounded,
                         label: l10n.activities,
                         value: activities,
                         showDivider: true,
+                        l10n: l10n,
                       ),
                       _buildReviewItem(
                         icon: Icons.sentiment_satisfied_alt_outlined,
                         label: l10n.mood,
                         value: mood,
                         showDivider: false,
+                        l10n: l10n,
                       ),
                     ],
                   ),
@@ -308,6 +313,7 @@ class ReportReviewView extends StatelessWidget {
     required String label,
     required String value,
     required bool showDivider,
+    required AppLocalizations l10n,
   }) {
     return Column(
       children: [

@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/auth/login_page.dart
+// frontend/lib/presentation/auth/login_page.dart
 // =========================================================
 // Màn hình đăng nhập (MVP): tạm thời có 2 nút để vào vai
 // Teacher và Parent. Sau này thay bằng Firebase Auth thật.

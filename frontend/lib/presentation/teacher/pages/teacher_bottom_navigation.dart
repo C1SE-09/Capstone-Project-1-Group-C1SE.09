@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/teacher/pages/teacher_bottom_navigation.dart
+// frontend/lib/presentation/teacher/pages/teacher_bottom_navigation.dart
 // ================================================================
 // Khung điều hướng chính dành cho giáo viên.
 // 3 tab: Tổng quan / Báo cáo lớp / Ghi nhận hoạt động.

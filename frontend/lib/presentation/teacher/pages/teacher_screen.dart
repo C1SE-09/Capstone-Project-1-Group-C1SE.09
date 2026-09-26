@@ -176,7 +176,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             offset: const Offset(0, 12),
             blurRadius: 40,
           ),

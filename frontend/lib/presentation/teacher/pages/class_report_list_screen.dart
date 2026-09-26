@@ -1,4 +1,4 @@
-﻿// frontend/lib/presentation/teacher/pages/class_report_list_screen.dart
+// frontend/lib/presentation/teacher/pages/class_report_list_screen.dart
 // ================================================================
 // Tab "Báo cáo lớp": liệt kê các lớp giáo viên đang phụ trách.
 // Bấm một lớp → mở chi tiết báo cáo của lớp đó.
