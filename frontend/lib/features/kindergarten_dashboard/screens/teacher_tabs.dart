@@ -1,0 +1,561 @@
+import 'package:flutter/material.dart';
+import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
+import 'package:adark_frontend/domain/entities/activity/activity_item.dart' as legacy_activity;
+import 'package:adark_frontend/domain/entities/report/daily_report.dart' as legacy_report;
+import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart' as legacy_dashboard;
+import 'package:adark_frontend/domain/entities/class/class_info.dart' as legacy_class;
+import 'package:adark_frontend/domain/entities/auth/teacher.dart' as legacy_teacher;
+import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
+
+import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+
+class OverviewScreen extends StatefulWidget {
+  const OverviewScreen({super.key, required this.onOpenReport, required this.onHistory, required this.onHealth, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository});
+  final ValueChanged<String> onOpenReport;
+  final VoidCallback onHistory;
+  final VoidCallback onHealth;
+  final String classId;
+  final HttpDashboardRepository? repository;
+  @override
+  State<OverviewScreen> createState() => _OverviewScreenState();
+}
+
+class _OverviewScreenState extends State<OverviewScreen> {
+  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
+  late Future<_OverviewData> future;
+  @override
+  void initState() { super.initState(); future = _load(); }
+  // Loads live teacher, class summary and activity timeline.
+  Future<_OverviewData> _load() async {
+    final values = await Future.wait([repository.getCurrentTeacher(), repository.getClassDashboard(widget.classId, DateTime.now()), repository.getRecentActivities(widget.classId)]);
+    return _OverviewData(values[0] as legacy_teacher.Teacher, values[1] as legacy_dashboard.ClassDashboardSummary, values[2] as List<legacy_activity.ActivityItem>);
+  }
+  // Renders overview loading, error and data states.
+  @override
+  Widget build(BuildContext context) => FutureBuilder<_OverviewData>(future: future, builder: (context, snapshot) {
+    if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+    if (snapshot.hasError || snapshot.data == null) return Center(child: TextButton(onPressed: () => setState(() => future = _load()), child: const Text('Không tải được tổng quan · Thử lại')));
+    final data = snapshot.data;
+    if (data == null) return const Center(child: Text('Không có dữ liệu tổng quan.'));
+    final total = data.dashboard.totalChildren;
+    final healthCount = data.dashboard.pendingChildren.where((item) => item.child.medicalAllergies?.trim().isNotEmpty == true).length;
+    final activity = data.activities;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      children: [
+        Text(_longDate(DateTime.now()), style: Theme.of(context).textTheme.bodyMedium),
+        Text('Chào ${data.teacher.fullName}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
+        const SizedBox(height: 18),
+        KCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              ProgressRing(value: data.dashboard.completedCount, total: total),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tiến độ hôm nay', style: Theme.of(context).textTheme.bodyMedium),
+                    Text('${data.dashboard.completedCount}/$total báo cáo đã gửi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text.rich(
+                      TextSpan(children: [
+                        const TextSpan(text: 'Còn '),
+                        TextSpan(text: '${data.dashboard.notCompletedCount} trẻ', style: const TextStyle(fontWeight: FontWeight.w600, color: KColors.ink)),
+                        const TextSpan(text: ' chưa có báo cáo.'),
+                      ]),
+                      style: const TextStyle(fontSize: 13, color: KColors.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.45,
+          children: [
+            StatCard(value: total, label: 'Tổng số trẻ', icon: Icons.groups_outlined),
+            StatCard(value: data.dashboard.completedCount, label: 'Đã gửi', icon: Icons.check_circle_outline, tone: KColors.ok),
+            StatCard(value: data.dashboard.draftCount, label: 'Bản nháp', icon: Icons.edit_outlined, tone: KColors.info),
+            StatCard(value: healthCount, label: 'Cảnh báo sức khỏe', icon: Icons.monitor_heart_outlined, tone: KColors.warn, onTap: widget.onHealth),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            const Expanded(child: Text('Hoạt động gần đây', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+            TextButton(onPressed: widget.onHistory, child: const Text('Xem tất cả', style: TextStyle(fontSize: 13))),
+          ],
+        ),
+        KCard(
+          child: Column(
+            children: [
+              for (var index = 0; index < activity.length; index++) ...[
+                InkWell(
+                  onTap: () => widget.onOpenReport(_activityChildName(activity[index].message)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Avatar(name: _activityChildName(activity[index].message)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_activityChildName(activity[index].message), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                              Text(activity[index].message, style: Theme.of(context).textTheme.bodySmall),
+                            ],
+                          ),
+                        ),
+                        StatusBadge(_activityStatus(activity[index])),
+                        const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
+                      ],
+                    ),
+                  ),
+                ),
+                if (index < activity.length - 1) const Divider(),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  });
+}
+
+class _OverviewData { const _OverviewData(this.teacher, this.dashboard, this.activities); final legacy_teacher.Teacher teacher; final legacy_dashboard.ClassDashboardSummary dashboard; final List<legacy_activity.ActivityItem> activities; }
+
+class ClassListScreen extends StatefulWidget {
+  const ClassListScreen({super.key, required this.initialHealthOnly, required this.onRecord, required this.onEdit, required this.children, this.className = 'Lớp', this.schoolName = 'Chưa có thông tin trường', this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
+  final bool initialHealthOnly;
+  final ValueChanged<Child> onRecord;
+  final ValueChanged<Child> onEdit;
+  final List<Child> children;
+  final String classId;
+  final String className;
+  final String schoolName;
+
+  @override
+  State<ClassListScreen> createState() => _ClassListScreenState();
+}
+
+class _ClassListScreenState extends State<ClassListScreen> {
+  String query = '';
+  late bool healthOnly = widget.initialHealthOnly;
+
+  @override
+  void didUpdateWidget(covariant ClassListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialHealthOnly != oldWidget.initialHealthOnly) healthOnly = widget.initialHealthOnly;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = widget.children.where((child) {
+      final matches = child.name.toLowerCase().contains(query.toLowerCase());
+      return matches && (!healthOnly || child.severity != Severity.none);
+    }).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Lớp ${widget.className}', style: Theme.of(context).textTheme.headlineMedium),
+              Text(widget.schoolName, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 14),
+              SearchField(hint: 'Tìm theo tên bé…', onChanged: (value) => setState(() => query = value)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [
+                  FilterChipButton(label: 'Tất cả', selected: !healthOnly, onTap: () => setState(() => healthOnly = false)),
+                  FilterChipButton(label: 'Cảnh báo sức khỏe', warn: true, selected: healthOnly, onTap: () => setState(() => healthOnly = true)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: Text('${widget.children.length} trẻ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: KColors.inkSoft))),
+                  Text('${widget.children.where((c) => {ReportStatus.none, ReportStatus.draft, ReportStatus.attention}.contains(c.status)).length} chưa xong', style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: list.isEmpty
+              ? const Center(child: Text('Không tìm thấy trẻ phù hợp.', style: TextStyle(color: KColors.inkFaint)))
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  children: [
+                    KCard(
+                      child: Column(
+                        children: [
+                          for (var index = 0; index < list.length; index++) ...[
+                            _ChildRow(child: list[index], onTap: () => _showActions(list[index])),
+                            if (index < list.length - 1) const Divider(),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _showActions(Child child) {
+    showKSheet(
+      context,
+      Column(
+        children: [
+          Row(
+            children: [
+              Avatar(name: child.name, size: 44),
+              const SizedBox(width: 12),
+              Expanded(child: Text(child.name, style: Theme.of(context).textTheme.titleMedium)),
+              StatusBadge(child.status),
+            ],
+          ),
+          const SizedBox(height: 20),
+          KButton(label: 'Ghi âm', icon: Icons.mic_none, large: true, onPressed: () {
+            Navigator.pop(context);
+            widget.onRecord(child);
+          }),
+          const SizedBox(height: 10),
+          KButton(label: 'Soạn báo cáo', icon: Icons.edit_outlined, secondary: true, onPressed: () {
+            Navigator.pop(context);
+            widget.onEdit(child);
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChildRow extends StatelessWidget {
+  const _ChildRow({required this.child, required this.onTap});
+  final Child child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Avatar(name: child.name),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(child: Text(child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                      if (child.allergy != null) const Padding(padding: EdgeInsets.only(left: 5), child: Icon(Icons.warning_amber_rounded, size: 15, color: KColors.warn)),
+                    ],
+                  ),
+                  if (child.severity != Severity.none)
+                    Text('Sức khỏe: ${child.severity.label}', style: Theme.of(context).textTheme.bodySmall)
+                  else if (child.allergy != null)
+                    Text('Dị ứng: ${child.allergy}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: KColors.warn)),
+                ],
+              ),
+            ),
+            StatusBadge(child.status),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class HistoryScreen extends StatefulWidget {
+  const HistoryScreen({super.key, required this.onOpenReport, required this.children, this.repository});
+  final ValueChanged<String> onOpenReport;
+  final List<Child> children;
+  final HttpDashboardRepository? repository;
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  String query = '';
+  String filter = 'Tất cả';
+  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
+  late Future<List<_HistoryRow>> future;
+  @override
+  void initState() { super.initState(); future = _load(); }
+  // Loads the latest report history for each roster child.
+  Future<List<_HistoryRow>> _load() async { final rows = <_HistoryRow>[]; for (final child in widget.children) { final reports = await repository.getRecentReports(child.id); for (final report in reports) { rows.add(_HistoryRow(child, report)); } } return rows; }
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<_HistoryRow>>(future: future, builder: (context, snapshot) {
+    if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+    if (snapshot.hasError) return Center(child: TextButton(onPressed: () => setState(() => future = _load()), child: const Text('Không tải được lịch sử · Thử lại')));
+    final historyRows = snapshot.data ?? const <_HistoryRow>[];
+    final groupsMap = <String, List<_HistoryRow>>{};
+    for (final row in historyRows) { groupsMap.putIfAbsent(_shortDate(row.report.reportDate), () => []).add(row); }
+    bool allowed(ReportStatus status) => switch (filter) {
+          'Bản nháp' => status == ReportStatus.draft,
+          'Đã gửi' => status == ReportStatus.submitted || status == ReportStatus.attention,
+          'Đã đọc' => status == ReportStatus.read,
+          _ => true,
+        };
+    final groups = groupsMap.entries.map((entry) => MapEntry(entry.key, entry.value.where((row) => row.child.name.toLowerCase().contains(query.toLowerCase()) && allowed(uiReportStatusFromBackend(row.report.status.name))).toList())).where((entry) => entry.value.isNotEmpty).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Lịch sử báo cáo', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 14),
+              SearchField(hint: 'Tìm theo tên bé…', onChanged: (value) => setState(() => query = value)),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['Tất cả', 'Bản nháp', 'Đã gửi', 'Đã đọc']
+                      .map((value) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChipButton(label: value, selected: filter == value, onTap: () => setState(() => filter = value)),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: groups.isEmpty
+              ? const Center(child: Text('Không có báo cáo nào khớp với bộ lọc này.', style: TextStyle(color: KColors.inkFaint)))
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                  children: [
+                    for (final group in groups) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+                        child: Text(group.key, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: KColors.inkFaint, letterSpacing: .4)),
+                      ),
+                      KCard(
+                        child: Column(
+                          children: [
+                            for (var index = 0; index < group.value.length; index++) ...[
+                              InkWell(
+                                onTap: () => widget.onOpenReport(group.value[index].child.name),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Row(
+                                    children: [
+                                      Avatar(name: group.value[index].child.name),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(group.value[index].child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                            Text('Sức khỏe: ${group.value[index].child.severity.label}', style: Theme.of(context).textTheme.bodySmall),
+                                          ],
+                                        ),
+                                      ),
+                                      StatusBadge(uiReportStatusFromBackend(group.value[index].report.status.name)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (index < group.value.length - 1) const Divider(),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  });
+}
+
+class _HistoryRow { const _HistoryRow(this.child, this.report); final Child child; final legacy_report.DailyReport report; }
+
+class AccountScreen extends StatefulWidget {
+  const AccountScreen({super.key, required this.onLogout, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository, this.classRepository});
+  final VoidCallback onLogout;
+  final String classId;
+  final HttpDashboardRepository? repository;
+  final HttpClassDataRepository? classRepository;
+
+  @override
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  String size = 'Vừa';
+  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
+  late final HttpClassDataRepository classRepository = widget.classRepository ?? HttpClassDataRepository();
+  late Future<_AccountData> future;
+  @override
+  void initState() { super.initState(); future = _load(); }
+  // Loads teacher profile, class metadata and roster count.
+  Future<_AccountData> _load() async { final values = await Future.wait([repository.getCurrentTeacher(), classRepository.getClassInfo(widget.classId), repository.getClassChildren(widget.classId)]); final info = values[1] as legacy_class.ClassInfo; return _AccountData(values[0] as legacy_teacher.Teacher, info.name, (values[2] as List).length); }
+  @override
+  Widget build(BuildContext context) => FutureBuilder<_AccountData>(future: future, builder: (context, snapshot) { if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator()); if (snapshot.hasError || snapshot.data == null) return Center(child: TextButton(onPressed: () => setState(() => future = _load()), child: const Text('Không tải được tài khoản · Thử lại'))); final data = snapshot.data; if (data == null) return const Center(child: Text('Không có thông tin tài khoản.')); final teacher = data.teacher; final className = data.className; return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      children: [
+        Text('Tài khoản', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 14),
+        KCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Avatar(name: teacher.fullName, size: 56),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(teacher.fullName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    Text('Giáo viên · Lớp $className', style: const TextStyle(fontSize: 13, color: KColors.inkSoft)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const _GroupTitle('Thông tin'),
+        KCard(
+          child: Column(
+            children: [
+              _AccountRow(icon: Icons.phone_outlined, label: 'Số điện thoại', value: teacher.phone ?? 'Chưa cập nhật'),
+              const Divider(),
+              _AccountRow(icon: Icons.school_outlined, label: 'Lớp phụ trách', value: 'Lớp $className'),
+              const Divider(),
+              _AccountRow(icon: Icons.groups_outlined, label: 'Số trẻ', value: '${data.childCount} trẻ'),
+            ],
+          ),
+        ),
+        const _GroupTitle('Tùy chỉnh'),
+        KCard(
+          child: Column(
+            children: [
+              const _AccountRow(icon: Icons.key_outlined, label: 'Đổi mật khẩu', chevron: true),
+              const Divider(),
+              const _AccountRow(icon: Icons.notifications_outlined, label: 'Thông báo đẩy', value: 'Chưa hỗ trợ'),
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
+                    const Row(children: [Icon(Icons.text_fields, size: 19, color: KColors.inkSoft), SizedBox(width: 12), Text('Cỡ chữ')]),
+                    const SizedBox(height: 12),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'Nhỏ', label: Text('Nhỏ')),
+                        ButtonSegment(value: 'Vừa', label: Text('Vừa')),
+                        ButtonSegment(value: 'Lớn', label: Text('Lớn')),
+                      ],
+                      selected: {size},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (value) => setState(() => size = value.first),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              const _AccountRow(icon: Icons.info_outline, label: 'Về KinderLog', value: 'v1.0.0'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        KButton(label: 'Đăng xuất', icon: Icons.logout, secondary: true, large: true, onPressed: _confirmLogout),
+      ],
+    );
+  });
+
+  void _confirmLogout() {
+    showKSheet(
+      context,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Đăng xuất khỏi KinderLog?', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text('Bạn sẽ cần chọn vai trò lại khi quay lại.', style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(context))),
+              const SizedBox(width: 12),
+              Expanded(child: KButton(label: 'Đăng xuất', icon: Icons.logout, onPressed: widget.onLogout)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountData { const _AccountData(this.teacher, this.className, this.childCount); final legacy_teacher.Teacher teacher; final String className; final int childCount; }
+
+class _GroupTitle extends StatelessWidget {
+  const _GroupTitle(this.title);
+  final String title;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
+        child: Text(title, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
+      );
+}
+
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({required this.icon, required this.label, this.value, this.chevron = false});
+  final IconData icon;
+  final String label;
+  final String? value;
+  final bool chevron;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        child: Row(
+          children: [
+            Icon(icon, size: 19, color: KColors.inkSoft),
+            const SizedBox(width: 12),
+            Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
+            if (value != null) Text(value!, style: Theme.of(context).textTheme.bodySmall),
+            if (chevron) const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
+          ],
+        ),
+      );
+}
+
+// Formats today's date for the Vietnamese dashboard.
+String _longDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+// Formats report history section dates.
+String _shortDate(DateTime d) => _longDate(d);
+// Extracts a displayed child name from an activity message when present.
+String _activityChildName(String message) { final match = RegExp(r'(?:của|bé)\s+(.+?)(?:\s+đã|$)', caseSensitive: false).firstMatch(message); return match?.group(1)?.trim() ?? message; }
+// Maps repository activity type to a visible report status.
+ReportStatus _activityStatus(legacy_activity.ActivityItem item) => switch (item.type) { legacy_activity.ActivityType.reportSent => ReportStatus.submitted, legacy_activity.ActivityType.reportReviewing => ReportStatus.draft, legacy_activity.ActivityType.audioRecorded => ReportStatus.processing };

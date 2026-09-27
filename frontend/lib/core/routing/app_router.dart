@@ -1,85 +1,30 @@
-// frontend/lib/core/routing/app_router.dart
-// =========================================================
-// GoRouter cấu hình toàn bộ điều hướng của app.
-
-import 'package:adark_frontend/presentation/teacher/pages/class_detail_screen.dart';
-import 'package:adark_frontend/presentation/auth/login_page.dart';
-import 'package:adark_frontend/presentation/teacher/pages/activity_recording_screen.dart';
-import 'package:adark_frontend/presentation/teacher/pages/teacher_bottom_navigation.dart';
-import 'package:adark_frontend/presentation/parent/pages/parent_screen.dart';
-import 'package:adark_frontend/presentation/recording/pages/extraction_results_screen.dart';
-import 'package:adark_frontend/presentation/recording/pages/recording_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'root',
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+final GoRouter appRouter = GoRouter(
+  navigatorKey: _rootNavigatorKey,
+  initialLocation: '/login',
+  routes: [
+    GoRoute(path: '/', redirect: (context, state) => '/login'),
+    GoRoute(path: '/login', builder: (context, state) => const _LoginRoute()),
+    GoRoute(path: '/class-select', builder: (context, state) => Scaffold(body: SafeArea(child: ClassSelectScreen(onPick: (classId) => appRouter.go(Uri(path: '/teacher', queryParameters: {'classId': classId}).toString()))))),
+    GoRoute(path: '/teacher', builder: (context, state) => TeacherShell(onLogout: _goLogin, classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001')),
+    GoRoute(path: '/parent', builder: (context, state) => const ParentFlow()),
+  ],
 );
 
-class AppRouter {
-  static final router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
-    initialLocation: '/login',
-    routes: [
-      // ── Auth ────────────────────────────────────────────────
-      GoRoute(path: '/', redirect: (context, state) => '/login'),
-      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+void _goLogin() => appRouter.go('/login');
 
-      // ── Teacher & Parent (FIGMA UI) ─────────────────────────
-      GoRoute(
-        path: '/teacher',
-        builder: (context, state) => const TeacherBottomNavigation(initialIndex: 0),
-      ),
-      GoRoute(
-          path: '/parent', builder: (context, state) => const ParentScreen()),
-      // Chi tiết lớp (MÀN 2) — nhận classId qua `extra`
-      GoRoute(
-        path: '/class-detail',
-        builder: (context, state) {
-          final classId = state.extra as String? ?? 'aaaaaaaa-0000-0000-0000-000000000001';
-          return ClassDetailScreen(classId: classId);
-        },
-      ),
+class _LoginRoute extends StatelessWidget {
+  const _LoginRoute();
 
-      // ── Backend-related screens ──────────────────────────────
-      GoRoute(
-        path: '/recording',
-        builder: (context, state) {
-          final params = state.uri.queryParameters;
-          return RecordingScreen(
-            filePath: params['filePath'] ?? '',
-            classId: params['classId'] ?? '',
-            teacherId: params['teacherId'] ?? '',
-            childId: params['childId'],
-          );
-        },
-      ),
-      GoRoute(
-        path: '/teacher/activity-recording',
-        builder: (context, state) {
-          final classId = state.uri.queryParameters['classId'] ??
-              'aaaaaaaa-0000-0000-0000-000000000001';
-          return ActivityRecordingScreen(classId: classId);
-        },
-      ),
-      GoRoute(
-        path: '/extraction-results',
-        builder: (context, state) {
-          final params = state.uri.queryParameters;
-          return ExtractionResultsScreen(
-            voiceId: params['voiceId'] ?? '',
-            teacherId: params['teacherId'] ?? '',
-            childId: params['childId'],
-            childName: params['childName'],
-            childInitials: params['childInitials'],
-            classTeacherInfo: params['classTeacherInfo'],
-          );
-        },
-      ),
-
-      // ── Các màn hình mới (TranscriptReviewScreen, ReportProcessingScreen)
-      // được điều hướng qua Navigator.push do nhận Child object trực tiếp.
-      // Không cần GoRoute riêng cho chúng.
-    ],
-  );
+  @override
+  Widget build(BuildContext context) => Scaffold(body: SafeArea(child: LoginScreen(
+        onLogin: (role) => appRouter.go(role.name == 'teacher' ? '/class-select' : '/parent'),
+      )));
 }
