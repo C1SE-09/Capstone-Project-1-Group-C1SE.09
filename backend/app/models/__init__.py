@@ -24,9 +24,13 @@ from app.models.child import (
 from app.models.report import (
     ActivityCategory,
     ActivityEntry,
+    BroadcastReportStatus,
+    ClassBroadcastReport,
     DailyReport,
     DailyReportStatus,
+    DailyReportType,
     VoiceRecord,
+    VoiceRecordScope,
     VoiceRecordStatus,
 )
 from app.models.user import (
@@ -41,11 +45,14 @@ __all__ = [
     "ActivityCategory",
     "ActivityEntry",
     "Base",
+    "BroadcastReportStatus",
     "Child",
     "ChildStatus",
     "Class_",
+    "ClassBroadcastReport",
     "DailyReport",
     "DailyReportStatus",
+    "DailyReportType",
     "Parent",
     "ParentStatus",
     "School",
@@ -54,5 +61,6 @@ __all__ = [
     "TeacherStatus",
     "TimestampMixin",
     "VoiceRecord",
+    "VoiceRecordScope",
     "VoiceRecordStatus",
 ]

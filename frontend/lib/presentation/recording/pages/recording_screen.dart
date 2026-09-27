@@ -271,7 +271,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Ghi âm bài giảng'),
+        title: const Text('Tải lên ghi âm'),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
