@@ -69,7 +69,10 @@ from app.schemas.report import (
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
 )
-from app.services.extraction_service import extract_from_transcript
+from app.services.extraction_service import (
+    extract_from_transcript,
+    extract_multi_person,
+)
 from app.services.notification_service import notification_service
 from app.services.validation_service import ValidationError, validate_transcript_content
 from app.tasks.process_audio import process_audio_task
@@ -447,21 +450,65 @@ def re_extract_from_edited_transcript(
             detail=ve.message
         ) from ve
 
-    # Re-extract từ transcript đã chỉnh sửa. Chỉ persist nếu model chạy thành công.
+    # ================================================================
+    # EXTRACT: Single child vs Multi-child mode
+    # child_id có giá trị → ghi âm đơn → extract_from_transcript()
+    # child_id = NULL    → ghi âm cả lớp → extract_multi_person()
+    # ================================================================
     try:
-        new_extraction = extract_from_transcript(payload.edited_transcript)
-        # Model chỉ trả về các nhãn thực thể (meals/sleeping/...), nên bổ sung
-        # transcript đã chỉnh sửa để frontend không ghi đè thành null.
-        new_extraction["transcript"] = payload.edited_transcript
+        if voice_record.child_id:
+            # --- Single child mode ---
+            new_extraction = extract_from_transcript(payload.edited_transcript)
+            new_extraction["transcript"] = payload.edited_transcript
+            new_extraction["_mode"] = "single_child"
+            new_extraction["_child_id"] = str(voice_record.child_id)
+        else:
+            # --- Multi-child mode ---
+            # Lấy tất cả bé trong lớp của giáo viên
+            children = db.query(Child).all()
+            
+            if not children:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Không tìm thấy học sinh nào trong lớp để matching."
+                )
+            
+            multi_result = extract_multi_person(
+                transcript=payload.edited_transcript,
+                children=children,
+                min_confidence=0.3,
+            )
+            
+            # Đóng gói kết quả multi-child
+            new_extraction = {
+                "transcript": payload.edited_transcript,
+                "_mode": "multi_child",
+                "segments": multi_result["segments"],
+                "child_extractions": multi_result["child_extractions"],
+                "unique_children_matched": list(multi_result["child_extractions"].keys()),
+                "ambiguous_segments": multi_result["ambiguous_segments"],
+                "unmatched_segments": multi_result["unmatched_segments"],
+                # Legacy fields (null cho multi-child)
+                "meals": None,
+                "sleeping": None,
+                "health": None,
+                "activities": None,
+                "mood": None,
+            }
+        
+        # Persist extraction
         voice_record.edited_transcript = payload.edited_transcript
         voice_record.transcription = payload.edited_transcript
         voice_record.extraction_result = new_extraction
         db.commit()
         db.refresh(voice_record)
         logger.info(
-            "[ReExtract] VoiceRecord %s re-extracted từ edited transcript",
-            voice_id
+            "[ReExtract] VoiceRecord %s re-extracted (mode=%s)",
+            voice_id,
+            new_extraction.get("_mode", "unknown")
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         db.rollback()
         logger.exception("[ReExtract] Lỗi re-extract VoiceRecord %s", voice_id)
