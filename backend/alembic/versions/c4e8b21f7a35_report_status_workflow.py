@@ -14,7 +14,6 @@ The API still returns lowercase, because the response uses `.value`.
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-
 from alembic import op
 
 # revision identifiers, used by Alembic.

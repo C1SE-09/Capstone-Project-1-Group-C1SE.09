@@ -18,14 +18,13 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.core.database import get_db
 
 # ---------------------------------------------------------------------------
 # App + DB session override
 # ---------------------------------------------------------------------------
 from app.main import app
+from fastapi.testclient import TestClient
 
 # Seed IDs that match the DB seed fixtures (same as used in the Flutter test)
 TEACHER_ID = uuid.UUID("bbbbbbbb-0000-0000-0000-000000000001")
