@@ -80,6 +80,13 @@ def _child_dict(child: Child) -> dict[str, Any]:
 
 def _report_dict(report: DailyReport) -> dict[str, Any]:
     """Chuyển 1 DailyReport → dict khớp entity DailyReport (frontend)."""
+    category_map: dict[str, str] = {}
+    if report.activities:
+        for e in report.activities:
+            cat = e.category.value if hasattr(e.category, "value") else str(e.category)
+            if e.description:
+                category_map[cat.lower()] = e.description
+
     return {
         "daily_report_id": str(report.daily_report_id),
         "teacher_id": str(report.teacher_id) if report.teacher_id else None,
@@ -93,6 +100,25 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
         "published_at": (
             report.published_at.isoformat() if report.published_at else None
         ),
+        "activities": [
+            {
+                "activity_entry_id": str(e.activity_entry_id),
+                "category": e.category.value
+                if hasattr(e.category, "value")
+                else str(e.category),
+                "title": e.title,
+                "description": e.description,
+                "entry_order": e.entry_order,
+            }
+            for e in sorted(report.activities, key=lambda x: x.entry_order)
+        ]
+        if report.activities
+        else [],
+        "eating": category_map.get("meal"),
+        "sleeping": category_map.get("nap"),
+        "health": category_map.get("health"),
+        "activities_text": category_map.get("play"),
+        "mood": category_map.get("behavior"),
     }
 
 
@@ -107,9 +133,7 @@ def get_teacher(
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """Trả về thông tin 1 giáo viên (cho màn Tổng quan)."""
-    teacher = (
-        db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
-    )
+    teacher = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
     return _teacher_dict(teacher)
@@ -127,9 +151,7 @@ def get_teacher_classes(
     Trả về danh sách lớp của giáo viên kèm summary báo cáo hôm nay,
     khớp entity ClassReportOverview ở frontend.
     """
-    teacher = (
-        db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
-    )
+    teacher = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
 
@@ -173,14 +195,12 @@ def get_teacher_classes(
         completed = sum(
             1
             for c in child_ids
-            if c in by_child
-            and by_child[c].status == DailyReportStatus.PUBLISHED
+            if c in by_child and by_child[c].status == DailyReportStatus.PUBLISHED
         )
         draft = sum(
             1
             for c in child_ids
-            if c in by_child
-            and by_child[c].status == DailyReportStatus.DRAFT
+            if c in by_child and by_child[c].status == DailyReportStatus.DRAFT
         )
         missing = total - completed - draft
 
@@ -276,9 +296,7 @@ def get_class_dashboard(
     missing = total - completed - draft
 
     # Tên giáo viên chủ nhiệm (nếu có)
-    teacher = (
-        db.query(Teacher).filter(Teacher.class_id == class_id).first()
-    )
+    teacher = db.query(Teacher).filter(Teacher.class_id == class_id).first()
     teacher_name = teacher.full_name if teacher else ""
 
     return {
@@ -323,11 +341,13 @@ def get_class_activities(
         db.query(DailyReport)
         .filter(
             DailyReport.child_id.in_(child_ids),
-            DailyReport.status.in_([
-                DailyReportStatus.PUBLISHED,
-                DailyReportStatus.SENT,
-                DailyReportStatus.READ,
-            ]),
+            DailyReport.status.in_(
+                [
+                    DailyReportStatus.PUBLISHED,
+                    DailyReportStatus.SENT,
+                    DailyReportStatus.READ,
+                ]
+            ),
         )
         .order_by(DailyReport.created_at.desc())
         .limit(limit)
@@ -340,7 +360,9 @@ def get_class_activities(
                 "type": "reportSent",
                 "message": f"Báo cáo của {child_name} đã được gửi",
                 "occurred_at": (
-                    r.created_at.isoformat() if r.created_at else r.report_date.isoformat()
+                    r.created_at.isoformat()
+                    if r.created_at
+                    else r.report_date.isoformat()
                 ),
             }
         )
@@ -363,7 +385,9 @@ def get_class_activities(
                 "type": "reportReviewing",
                 "message": f"Báo cáo của {child_name} đang chờ xem lại",
                 "occurred_at": (
-                    r.created_at.isoformat() if r.created_at else r.report_date.isoformat()
+                    r.created_at.isoformat()
+                    if r.created_at
+                    else r.report_date.isoformat()
                 ),
             }
         )
@@ -382,9 +406,7 @@ def get_class_activities(
             {
                 "type": "audioRecorded",
                 "message": f"Đã ghi âm cho {child_name}",
-                "occurred_at": (
-                    v.created_at.isoformat() if v.created_at else None
-                ),
+                "occurred_at": (v.created_at.isoformat() if v.created_at else None),
             }
         )
 
@@ -453,15 +475,11 @@ def get_parent_primary_child(
     class_name = ""
     teacher_name = ""
     if child.class_id:
-        class_ = (
-            db.query(Class_).filter(Class_.class_id == child.class_id).first()
-        )
+        class_ = db.query(Class_).filter(Class_.class_id == child.class_id).first()
         if class_:
             class_name = class_.name
             teacher = (
-                db.query(Teacher)
-                .filter(Teacher.class_id == class_.class_id)
-                .first()
+                db.query(Teacher).filter(Teacher.class_id == class_.class_id).first()
             )
             teacher_name = teacher.full_name if teacher else ""
 
@@ -511,11 +529,13 @@ def get_child_reports(
         db.query(DailyReport)
         .filter(
             DailyReport.child_id == child_id,
-            DailyReport.status.in_([
-                DailyReportStatus.PUBLISHED,
-                DailyReportStatus.SENT,
-                DailyReportStatus.READ,
-            ]),
+            DailyReport.status.in_(
+                [
+                    DailyReportStatus.PUBLISHED,
+                    DailyReportStatus.SENT,
+                    DailyReportStatus.READ,
+                ]
+            ),
         )
         .order_by(DailyReport.report_date.desc())
         .limit(limit)

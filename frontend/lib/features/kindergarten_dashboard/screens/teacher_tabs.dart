@@ -190,7 +190,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Lớp ${widget.className}', style: Theme.of(context).textTheme.headlineMedium),
+              Text(widget.className, style: Theme.of(context).textTheme.headlineMedium),
               Text(widget.schoolName, style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 14),
               SearchField(hint: 'Tìm theo tên bé…', onChanged: (value) => setState(() => query = value)),
@@ -428,7 +428,6 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  String size = 'Vừa';
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
   late final HttpClassDataRepository classRepository = widget.classRepository ?? HttpClassDataRepository();
   late Future<_AccountData> future;
@@ -453,7 +452,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(teacher.fullName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                    Text('Giáo viên · Lớp $className', style: const TextStyle(fontSize: 13, color: KColors.inkSoft)),
+                    Text('Giáo viên · $className', style: const TextStyle(fontSize: 13, color: KColors.inkSoft)),
                   ],
                 ),
               ),
@@ -466,7 +465,7 @@ class _AccountScreenState extends State<AccountScreen> {
             children: [
               _AccountRow(icon: Icons.phone_outlined, label: 'Số điện thoại', value: teacher.phone ?? 'Chưa cập nhật'),
               const Divider(),
-              _AccountRow(icon: Icons.school_outlined, label: 'Lớp phụ trách', value: 'Lớp $className'),
+              _AccountRow(icon: Icons.school_outlined, label: 'Lớp phụ trách', value: className),
               const Divider(),
               _AccountRow(icon: Icons.groups_outlined, label: 'Số trẻ', value: '${data.childCount} trẻ'),
             ],
@@ -479,26 +478,6 @@ class _AccountScreenState extends State<AccountScreen> {
               const _AccountRow(icon: Icons.key_outlined, label: 'Đổi mật khẩu', chevron: true),
               const Divider(),
               const _AccountRow(icon: Icons.notifications_outlined, label: 'Thông báo đẩy', value: 'Chưa hỗ trợ'),
-              const Divider(),
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  children: [
-                    const Row(children: [Icon(Icons.text_fields, size: 19, color: KColors.inkSoft), SizedBox(width: 12), Text('Cỡ chữ')]),
-                    const SizedBox(height: 12),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'Nhỏ', label: Text('Nhỏ')),
-                        ButtonSegment(value: 'Vừa', label: Text('Vừa')),
-                        ButtonSegment(value: 'Lớn', label: Text('Lớn')),
-                      ],
-                      selected: {size},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (value) => setState(() => size = value.first),
-                    ),
-                  ],
-                ),
-              ),
               const Divider(),
               const _AccountRow(icon: Icons.info_outline, label: 'Về KinderLog', value: 'v1.0.0'),
             ],

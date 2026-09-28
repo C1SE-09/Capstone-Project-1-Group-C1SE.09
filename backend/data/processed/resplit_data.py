@@ -1,4 +1,3 @@
-
 import json
 import random
 from collections import Counter
@@ -67,9 +66,7 @@ def check_label_conflicts(data):
         text_labels[text].add(label)
 
     conflicts = {
-        text: labels
-        for text, labels in text_labels.items()
-        if len(labels) > 1
+        text: labels for text, labels in text_labels.items() if len(labels) > 1
     }
 
     return conflicts
@@ -101,12 +98,8 @@ def stratified_split(data):
         validation_count = int(total * VALIDATION_RATIO)
 
         train_items = items[:train_count]
-        validation_items = items[
-            train_count:train_count + validation_count
-        ]
-        test_items = items[
-            train_count + validation_count:
-        ]
+        validation_items = items[train_count : train_count + validation_count]
+        test_items = items[train_count + validation_count :]
 
         train.extend(train_items)
         validation.extend(validation_items)
@@ -183,17 +176,8 @@ test_texts = {normalize_text(item["text"]) for item in test}
 
 print("\nData leakage check")
 
-print(
-    "Train ∩ Validation:",
-    len(train_texts & validation_texts)
-)
+print("Train ∩ Validation:", len(train_texts & validation_texts))
 
-print(
-    "Train ∩ Test:",
-    len(train_texts & test_texts)
-)
+print("Train ∩ Test:", len(train_texts & test_texts))
 
-print(
-    "Validation ∩ Test:",
-    len(validation_texts & test_texts)
-)
+print("Validation ∩ Test:", len(validation_texts & test_texts))

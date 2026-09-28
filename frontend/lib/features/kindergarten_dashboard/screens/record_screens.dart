@@ -83,7 +83,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Cả lớp ${data.className}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        Text('Cả ${data.className}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                         Text('Ghi một lần, tạo báo cáo cho tất cả trẻ.', style: TextStyle(fontSize: 12.5, color: KColors.inkSoft)),
                       ],
                     ),
@@ -107,7 +107,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               child: Row(
                 children: [
-                  Expanded(child: Text('Lớp ${data.className} · ${data.totalChildren} trẻ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: KColors.inkSoft))),
+                  Expanded(child: Text('${data.className} · ${data.totalChildren} trẻ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: KColors.inkSoft))),
                   Text('${data.pendingCount} chưa xong', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
                 ],
               ),
@@ -190,7 +190,7 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
                   classId: widget.classId,
                   onSent: () {
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã lưu bản nháp báo cáo')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi báo cáo thành công')));
                   },
                 ),
               ));
@@ -283,8 +283,8 @@ class _RecordingScreenState extends State<RecordingScreen> with SingleTickerProv
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(classroom ? 'Cả lớp ${widget.className}' : (widget.child?.name ?? 'Trẻ'), style: Theme.of(context).textTheme.titleMedium),
-                        Text(classroom ? 'Cả lớp' : 'Lớp ${widget.className}${widget.child?.nickname == null ? '' : ' · ${widget.child!.nickname}'}', style: Theme.of(context).textTheme.bodySmall),
+                        Text(classroom ? 'Cả ${widget.className}' : (widget.child?.name ?? 'Trẻ'), style: Theme.of(context).textTheme.titleMedium),
+                        Text(classroom ? 'Cả lớp' : '${widget.className}${widget.child?.nickname == null ? '' : ' · ${widget.child!.nickname}'}', style: Theme.of(context).textTheme.bodySmall),
                         if (!classroom && widget.child?.allergy != null)
                           Text('Dị ứng: ${widget.child?.allergy}', style: const TextStyle(fontSize: 11, color: KColors.warn)),
 
