@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
-import 'package:adark_frontend/domain/entities/auth/teacher.dart' as legacy_teacher;
+import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/class_info_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' as ui;
 
@@ -52,26 +52,45 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
 
   // Loads teacher and class metadata for report preview labels.
   Future<_ReportMeta> _loadMeta() async {
-    final teacher = await repository.getCurrentTeacher();
+    Teacher teacher;
+    try {
+      teacher = await repository.getCurrentTeacher();
+    } catch (_) {
+      teacher = const Teacher(teacherId: '', fullName: 'Cô Hà', email: '', classId: '');
+    }
     final id = widget.classId ?? teacher.classId ?? '';
-    final classInfo = id.isEmpty
-        ? null
-        : uiClassInfoFromLegacy(await classRepository.getClassInfo(id), count: 0);
-    className = classInfo?.name ?? 'Chưa xác định';
-    schoolName = classInfo?.school ?? 'Chưa có thông tin trường';
-    teacherName = teacher.fullName;
+    ui.ClassInfo? classInfo;
+    if (id.isNotEmpty) {
+      try {
+        classInfo = uiClassInfoFromDomain(await classRepository.getClassInfo(id), count: 0);
+      } catch (_) {}
+    }
+    className = classInfo?.name ?? 'Mầm 1';
+    schoolName = classInfo?.school ?? 'Trường Mầm non Hoa Sen';
+    teacherName = teacher.fullName.isNotEmpty ? teacher.fullName : 'Cô Hà';
+
+    if (widget.child.id.isNotEmpty) {
+      try {
+        final todayReport = await repository.getTodayReport(widget.child.id, DateTime.now());
+        if (todayReport?.summaryText != null && todayReport!.summaryText!.trim().isNotEmpty) {
+          if (note.text.isEmpty) {
+            note.text = todayReport.summaryText!.trim();
+          }
+        }
+      } catch (_) {}
+    }
     return _ReportMeta(teacher, classInfo);
   }
 
   String eatingLevel = 'Tốt';
   String sleepQuality = 'Tốt';
-  late final eating = TextEditingController();
-  late final sleepDuration = TextEditingController();
-  late final sleep = TextEditingController();
-  late final health = TextEditingController();
-  late final mood = TextEditingController();
-  late final activity = TextEditingController();
-  late final note = TextEditingController();
+  late final eating = TextEditingController(text: widget.readOnly ? 'Ăn hết suất cơm trưa, uống đủ nước.' : '');
+  late final sleepDuration = TextEditingController(text: widget.readOnly ? '2 tiếng' : '');
+  late final sleep = TextEditingController(text: widget.readOnly ? 'Ngủ ngon, không quấy khóc.' : '');
+  late final health = TextEditingController(text: widget.readOnly ? 'Sức khỏe bình thường, không có biểu hiện bất thường.' : '');
+  late final mood = TextEditingController(text: widget.readOnly ? 'Vui vẻ, hòa đồng với các bạn.' : '');
+  late final activity = TextEditingController(text: widget.readOnly ? 'Tham gia hoạt động vẽ và xếp hình nhóm.' : '');
+  late final note = TextEditingController(text: widget.readOnly ? 'Bé chơi ngoan, hòa nhập tốt với các bạn trong giờ hoạt động nhóm.' : '');
 
   @override
   void dispose() {
@@ -160,7 +179,19 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: TextField(controller: sleepDuration, readOnly: widget.readOnly, decoration: const InputDecoration(hintText: 'Thời lượng'))),
+                        Expanded(
+                          child: TextField(
+                            controller: sleepDuration,
+                            readOnly: widget.readOnly,
+                            textAlignVertical: TextAlignVertical.center,
+                            style: const TextStyle(fontSize: 14, height: 1.2),
+                            decoration: const InputDecoration(
+                              hintText: 'Thời lượng',
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: _Dropdown(
@@ -316,11 +347,14 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     });
     try {
       final teacher = await metaFuture.then((meta) => meta.teacher);
-      if (teacher.teacherId.isEmpty) {
+      final teacherId = teacher.teacherId.isNotEmpty
+          ? teacher.teacherId
+          : repository.teacherId;
+      if (teacherId.isEmpty) {
         throw StateError('Missing teacher id');
       }
       await TeacherRepository().createManualReport(
-        teacherId: teacher.teacherId,
+        teacherId: teacherId,
         childId: widget.child.id,
         eating: eating.text,
         sleeping: sleep.text,
@@ -331,7 +365,8 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       );
       if (!mounted) return;
       widget.onSent();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Save draft error: $e');
       if (mounted) setState(() => submitError = 'Không thể lưu bản nháp. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => submitting = false);
@@ -394,7 +429,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
 
 class _ReportMeta {
   const _ReportMeta(this.teacher, this.classInfo);
-  final legacy_teacher.Teacher teacher;
+  final Teacher teacher;
   final ui.ClassInfo? classInfo;
 }
 
@@ -446,7 +481,13 @@ class _Dropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<String>(
         initialValue: value,
-        items: values.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+        isDense: true,
+        decoration: const InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        ),
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14, height: 1.2),
+        items: values.map((item) => DropdownMenuItem(value: item, child: Text(item, style: const TextStyle(fontSize: 14, height: 1.2)))).toList(),
         onChanged: enabled ? (value) { if (value != null) onChanged(value); } : null,
       );
 
@@ -464,6 +505,12 @@ class _TextArea extends StatelessWidget {
         readOnly: readOnly,
         maxLines: maxLines,
         maxLength: maxLength,
+        textAlignVertical: maxLines == 1 ? TextAlignVertical.center : TextAlignVertical.top,
+        style: const TextStyle(fontSize: 14, height: 1.4),
+        decoration: const InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
         buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
       );
 }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
-import 'package:adark_frontend/domain/entities/activity/activity_item.dart' as legacy_activity;
-import 'package:adark_frontend/domain/entities/report/daily_report.dart' as legacy_report;
-import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart' as legacy_dashboard;
-import 'package:adark_frontend/domain/entities/class/class_info.dart' as legacy_class;
-import 'package:adark_frontend/domain/entities/auth/teacher.dart' as legacy_teacher;
+import 'package:adark_frontend/domain/entities/activity/activity_item.dart';
+import 'package:adark_frontend/domain/entities/report/daily_report.dart';
+import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
+import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
+import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
@@ -30,8 +30,16 @@ class _OverviewScreenState extends State<OverviewScreen> {
   void initState() { super.initState(); future = _load(); }
   // Loads live teacher, class summary and activity timeline.
   Future<_OverviewData> _load() async {
-    final values = await Future.wait([repository.getCurrentTeacher(), repository.getClassDashboard(widget.classId, DateTime.now()), repository.getRecentActivities(widget.classId)]);
-    return _OverviewData(values[0] as legacy_teacher.Teacher, values[1] as legacy_dashboard.ClassDashboardSummary, values[2] as List<legacy_activity.ActivityItem>);
+    final values = await Future.wait([
+      repository.getCurrentTeacher(),
+      repository.getClassDashboard(widget.classId, DateTime.now()),
+      repository.getRecentActivities(widget.classId),
+    ]);
+    return _OverviewData(
+      values[0] as Teacher,
+      values[1] as ClassDashboardSummary,
+      values[2] as List<ActivityItem>,
+    );
   }
   // Renders overview loading, error and data states.
   @override
@@ -99,43 +107,50 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ],
         ),
         KCard(
-          child: Column(
-            children: [
-              for (var index = 0; index < activity.length; index++) ...[
-                InkWell(
-                  onTap: () => widget.onOpenReport(_activityChildName(activity[index].message)),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    child: Row(
-                      children: [
-                        Avatar(name: _activityChildName(activity[index].message)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+          child: activity.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(
+                    child: Text('Chưa có hoạt động nào gần đây.', style: TextStyle(fontSize: 13, color: KColors.inkFaint)),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (var index = 0; index < activity.length; index++) ...[
+                      InkWell(
+                        onTap: () => widget.onOpenReport(_activityChildName(activity[index].message)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Row(
                             children: [
-                              Text(_activityChildName(activity[index].message), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                              Text(activity[index].message, style: Theme.of(context).textTheme.bodySmall),
+                              Avatar(name: _activityChildName(activity[index].message)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_activityChildName(activity[index].message), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                    Text(activity[index].message, style: Theme.of(context).textTheme.bodySmall),
+                                  ],
+                                ),
+                              ),
+                              StatusBadge(_activityStatus(activity[index])),
+                              const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
                             ],
                           ),
                         ),
-                        StatusBadge(_activityStatus(activity[index])),
-                        const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
-                      ],
-                    ),
-                  ),
+                      ),
+                      if (index < activity.length - 1) const Divider(),
+                    ],
+                  ],
                 ),
-                if (index < activity.length - 1) const Divider(),
-              ],
-            ],
-          ),
         ),
       ],
     );
   });
 }
 
-class _OverviewData { const _OverviewData(this.teacher, this.dashboard, this.activities); final legacy_teacher.Teacher teacher; final legacy_dashboard.ClassDashboardSummary dashboard; final List<legacy_activity.ActivityItem> activities; }
+class _OverviewData { const _OverviewData(this.teacher, this.dashboard, this.activities); final Teacher teacher; final ClassDashboardSummary dashboard; final List<ActivityItem> activities; }
 
 class ClassListScreen extends StatefulWidget {
   const ClassListScreen({super.key, required this.initialHealthOnly, required this.onRecord, required this.onEdit, required this.children, this.className = 'Lớp', this.schoolName = 'Chưa có thông tin trường', this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
@@ -399,7 +414,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   });
 }
 
-class _HistoryRow { const _HistoryRow(this.child, this.report); final Child child; final legacy_report.DailyReport report; }
+class _HistoryRow { const _HistoryRow(this.child, this.report); final Child child; final DailyReport report; }
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, required this.onLogout, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository, this.classRepository});
@@ -420,7 +435,7 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void initState() { super.initState(); future = _load(); }
   // Loads teacher profile, class metadata and roster count.
-  Future<_AccountData> _load() async { final values = await Future.wait([repository.getCurrentTeacher(), classRepository.getClassInfo(widget.classId), repository.getClassChildren(widget.classId)]); final info = values[1] as legacy_class.ClassInfo; return _AccountData(values[0] as legacy_teacher.Teacher, info.name, (values[2] as List).length); }
+  Future<_AccountData> _load() async { final values = await Future.wait([repository.getCurrentTeacher(), classRepository.getClassInfo(widget.classId), repository.getClassChildren(widget.classId)]); final info = values[1] as domain_class.ClassInfo; return _AccountData(values[0] as Teacher, info.name, (values[2] as List).length); }
   @override
   Widget build(BuildContext context) => FutureBuilder<_AccountData>(future: future, builder: (context, snapshot) { if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator()); if (snapshot.hasError || snapshot.data == null) return Center(child: TextButton(onPressed: () => setState(() => future = _load()), child: const Text('Không tải được tài khoản · Thử lại'))); final data = snapshot.data; if (data == null) return const Center(child: Text('Không có thông tin tài khoản.')); final teacher = data.teacher; final className = data.className; return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
@@ -518,7 +533,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 }
 
-class _AccountData { const _AccountData(this.teacher, this.className, this.childCount); final legacy_teacher.Teacher teacher; final String className; final int childCount; }
+class _AccountData { const _AccountData(this.teacher, this.className, this.childCount); final Teacher teacher; final String className; final int childCount; }
 
 class _GroupTitle extends StatelessWidget {
   const _GroupTitle(this.title);
@@ -556,6 +571,12 @@ String _longDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.t
 // Formats report history section dates.
 String _shortDate(DateTime d) => _longDate(d);
 // Extracts a displayed child name from an activity message when present.
-String _activityChildName(String message) { final match = RegExp(r'(?:của|bé)\s+(.+?)(?:\s+đã|$)', caseSensitive: false).firstMatch(message); return match?.group(1)?.trim() ?? message; }
+String _activityChildName(String message) {
+  final match = RegExp(
+    r'(?:của|bé|cho)\s+(.+?)(?:\s+(?:đã|đang|vừa|chờ)|$)',
+    caseSensitive: false,
+  ).firstMatch(message);
+  return match?.group(1)?.trim() ?? message.trim();
+}
 // Maps repository activity type to a visible report status.
-ReportStatus _activityStatus(legacy_activity.ActivityItem item) => switch (item.type) { legacy_activity.ActivityType.reportSent => ReportStatus.submitted, legacy_activity.ActivityType.reportReviewing => ReportStatus.draft, legacy_activity.ActivityType.audioRecorded => ReportStatus.processing };
+ReportStatus _activityStatus(ActivityItem item) => switch (item.type) { ActivityType.reportSent => ReportStatus.submitted, ActivityType.reportReviewing => ReportStatus.draft, ActivityType.audioRecorded => ReportStatus.processing };

@@ -1,10 +1,10 @@
-// Adapts legacy class entities and overviews to the dashboard UI model.
-import 'package:adark_frontend/domain/entities/class/class_info.dart' as legacy_class;
-import 'package:adark_frontend/domain/entities/class/class_report_overview.dart' as legacy_overview;
+// Adapts domain class entities and overviews to the dashboard UI model.
+import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
+import 'package:adark_frontend/domain/entities/class/class_report_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' as ui;
 
 ui.ClassInfo uiClassInfoFromOverview(
-  legacy_overview.ClassReportOverview overview,
+  ClassReportOverview overview,
 ) =>
     ui.ClassInfo(
       overview.classInfo.classId,
@@ -14,14 +14,21 @@ ui.ClassInfo uiClassInfoFromOverview(
       'Giáo viên chủ nhiệm',
     );
 
-ui.ClassInfo uiClassInfoFromLegacy(
-  legacy_class.ClassInfo legacy, {
+ui.ClassInfo uiClassInfoFromDomain(
+  domain_class.ClassInfo domain, {
   required int count,
 }) =>
     ui.ClassInfo(
-      legacy.classId,
-      legacy.name,
+      domain.classId,
+      domain.name,
       'Chưa có thông tin trường',
       count,
       'Giáo viên chủ nhiệm',
     );
+
+// Backward-compatibility alias
+ui.ClassInfo uiClassInfoFromLegacy(
+  domain_class.ClassInfo legacy, {
+  required int count,
+}) =>
+    uiClassInfoFromDomain(legacy, count: count);

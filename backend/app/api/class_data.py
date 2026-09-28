@@ -77,7 +77,10 @@ def get_children(
         "children": [
             {
                 "child_id": str(child.child_id),
+                "parent_id": str(child.parent_id) if child.parent_id else None,
+                "class_id": str(child.class_id) if child.class_id else None,
                 "full_name": child.full_name,
+                "nickname": child.nickname,
                 "date_of_birth": (
                     child.date_of_birth.isoformat()
                     if child.date_of_birth
@@ -86,7 +89,7 @@ def get_children(
                 "gender": child.gender,
                 "avatar_url": child.avatar_url,
                 "medical_allergies": child.medical_allergies,
-                "status": child.status
+                "status": child.status.value if hasattr(child.status, "value") else str(child.status),
             }
             for child in children
         ]

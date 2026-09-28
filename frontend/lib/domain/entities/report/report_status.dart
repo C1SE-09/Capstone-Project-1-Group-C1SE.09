@@ -1,4 +1,4 @@
-﻿// frontend/lib/domain/entities/report/report_status.dart
+// frontend/lib/domain/entities/report/report_status.dart
 // =========================================================
 // Trạng thái báo cáo ngày — MIRROR enum DailyReportStatus
 // ở backend (backend/app/models/report.py):
@@ -16,12 +16,16 @@ enum ReportStatus {
   ;
 
   /// Parse chuỗi JSON → enum.
-  /// Nếu gặp giá trị lạ thì mặc định coi là [draft] (an toàn).
+  /// Nếu gặp 'sent' hoặc 'published' đều nhận diện là [published] (đã gửi cho phụ huynh).
   static ReportStatus fromJson(String? value) {
-    return ReportStatus.values.firstWhere(
-      (s) => s.name == value,
-      orElse: () => ReportStatus.draft,
-    );
+    final lower = value?.toLowerCase();
+    if (lower == 'sent' || lower == 'published') {
+      return ReportStatus.published;
+    }
+    if (lower == 'archived') {
+      return ReportStatus.archived;
+    }
+    return ReportStatus.draft;
   }
 
   /// Nhãn tiếng Việt hiển thị trên badge.

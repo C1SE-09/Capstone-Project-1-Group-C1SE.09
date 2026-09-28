@@ -656,6 +656,7 @@ def create_manual_report(
     db.refresh(report)
 
     return DailyReportDetailResponse(
+        daily_report_id=report.daily_report_id,
         report_id=report.daily_report_id,
         child_id=report.child_id,
         teacher_id=report.teacher_id,
@@ -693,6 +694,7 @@ def get_report_detail(
         raise HTTPException(status_code=403, detail="Not authorized to access this report")
 
     return DailyReportDetailResponse(
+        daily_report_id=report.daily_report_id,
         report_id=report.daily_report_id,
         child_id=report.child_id,
         teacher_id=report.teacher_id,
@@ -851,6 +853,7 @@ def _send_one_report(
         )
 
     return SendReportResponse(
+        daily_report_id=report.daily_report_id,
         report_id=report.daily_report_id,
         status=report.status.value,
         sent_at=report.sent_at,
@@ -915,14 +918,14 @@ def send_all_reports(
             skipped += 1
             results.append(
                 SendAllItemResult(
-                    report_id=target_id, result="skipped", detail="Already sent"
+                    daily_report_id=target_id, report_id=target_id, result="skipped", detail="Already sent"
                 )
             )
         except HTTPException as exc:
             failed += 1
             results.append(
                 SendAllItemResult(
-                    report_id=target_id, result="failed", detail=str(exc.detail)
+                    daily_report_id=target_id, report_id=target_id, result="failed", detail=str(exc.detail)
                 )
             )
         except Exception:
@@ -931,11 +934,11 @@ def send_all_reports(
             failed += 1
             results.append(
                 SendAllItemResult(
-                    report_id=target_id, result="failed", detail="Unexpected error"
+                    daily_report_id=target_id, report_id=target_id, result="failed", detail="Unexpected error"
                 )
             )
         else:
             sent += 1
-            results.append(SendAllItemResult(report_id=target_id, result="sent"))
+            results.append(SendAllItemResult(daily_report_id=target_id, report_id=target_id, result="sent"))
 
     return SendAllResponse(sent=sent, skipped=skipped, failed=failed, results=results)
