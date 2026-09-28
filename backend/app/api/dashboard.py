@@ -318,12 +318,16 @@ def get_class_activities(
 
     activities: list[dict[str, Any]] = []
 
-    # 1) Báo cáo đã PUBLISHED
+    # 1) Báo cáo đã PUBLISHED / SENT / READ
     published = (
         db.query(DailyReport)
         .filter(
             DailyReport.child_id.in_(child_ids),
-            DailyReport.status == DailyReportStatus.PUBLISHED,
+            DailyReport.status.in_([
+                DailyReportStatus.PUBLISHED,
+                DailyReportStatus.SENT,
+                DailyReportStatus.READ,
+            ]),
         )
         .order_by(DailyReport.created_at.desc())
         .limit(limit)
@@ -507,7 +511,11 @@ def get_child_reports(
         db.query(DailyReport)
         .filter(
             DailyReport.child_id == child_id,
-            DailyReport.status == DailyReportStatus.PUBLISHED,
+            DailyReport.status.in_([
+                DailyReportStatus.PUBLISHED,
+                DailyReportStatus.SENT,
+                DailyReportStatus.READ,
+            ]),
         )
         .order_by(DailyReport.report_date.desc())
         .limit(limit)

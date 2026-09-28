@@ -73,8 +73,9 @@ ThemeData kinderTheme() {
     inputDecorationTheme: const InputDecorationTheme(
       filled: true,
       fillColor: KColors.surface,
-      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      hintStyle: TextStyle(color: KColors.inkFaint),
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      hintStyle: TextStyle(color: KColors.inkFaint, fontSize: 14, height: 1.2),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.all(Radius.circular(KRadii.control)),
         borderSide: BorderSide(color: KColors.lineStrong),

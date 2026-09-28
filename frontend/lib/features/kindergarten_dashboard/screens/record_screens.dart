@@ -4,9 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
-import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart' as legacy_dashboard;
-import 'package:adark_frontend/domain/entities/child/child.dart' as legacy_child;
-import 'package:adark_frontend/domain/entities/class/class_info.dart' as legacy_class;
+import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart' as domain_child;
+import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
 
@@ -39,14 +39,16 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
   // Loads class roster, dashboard statuses, and class display information.
   Future<_RecordHubData> _load() async {
     final values = await Future.wait([repository.getClassChildren(widget.classId), repository.getClassDashboard(widget.classId, DateTime.now()), classRepository.getClassInfo(widget.classId)]);
-    final rawChildren = values[0] as List<legacy_child.Child>;
-    final dashboard = values[1] as legacy_dashboard.ClassDashboardSummary;
-    final classInfo = values[2] as legacy_class.ClassInfo;
+    final rawChildren = values[0] as List<domain_child.Child>;
+    final dashboard = values[1] as ClassDashboardSummary;
+    final classInfo = values[2] as domain_class.ClassInfo;
     final statuses = {for (final item in dashboard.pendingChildren) item.child.childId: item};
     final converted = rawChildren.map((child) {
       final item = statuses[child.childId];
       final severity = severityFromDescription(null);
-      return item == null ? uiChildFromLegacy(legacy: child, reportStatus: ReportStatus.none, severity: severity) : uiChildFromLegacyWithReport(legacy: child, legacyStatus: item.status, severity: severity, updatedAt: item.updatedAt);
+      return item == null
+          ? uiChildFromDomain(child: child, reportStatus: ReportStatus.none, severity: severity)
+          : uiChildFromDomainWithReport(child: child, reportStatus: item.status, severity: severity, updatedAt: item.updatedAt);
     }).toList();
     return _RecordHubData(converted, classInfo.name, dashboard.totalChildren, dashboard.notCompletedCount);
   }
@@ -478,12 +480,14 @@ class _SegmentationScreenState extends State<SegmentationScreen> {
   // Derives segmentation rows from the class roster and dashboard report states.
   Future<List<Child>> _loadChildren() async {
     final results = await Future.wait([repository.getClassChildren(widget.classId), repository.getClassDashboard(widget.classId, DateTime.now())]);
-    final roster = results[0] as List<legacy_child.Child>;
-    final dashboard = results[1] as legacy_dashboard.ClassDashboardSummary;
+    final roster = results[0] as List<domain_child.Child>;
+    final dashboard = results[1] as ClassDashboardSummary;
     final statuses = {for (final item in dashboard.pendingChildren) item.child.childId: item};
     return roster.map((child) {
       final item = statuses[child.childId];
-      return item == null ? uiChildFromLegacy(legacy: child, reportStatus: ReportStatus.none, severity: severityFromDescription(null)) : uiChildFromLegacyWithReport(legacy: child, legacyStatus: item.status, severity: severityFromDescription(null), updatedAt: item.updatedAt);
+      return item == null
+          ? uiChildFromDomain(child: child, reportStatus: ReportStatus.none, severity: severityFromDescription(null))
+          : uiChildFromDomainWithReport(child: child, reportStatus: item.status, severity: severityFromDescription(null), updatedAt: item.updatedAt);
     }).toList();
   }
 

@@ -4,7 +4,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/domain/entities/class/class_report_overview.dart' as legacy_overview;
+import 'package:adark_frontend/domain/entities/class/class_report_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/class_info_adapter.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -136,7 +136,7 @@ class ClassSelectScreen extends StatefulWidget {
 
 class _ClassSelectScreenState extends State<ClassSelectScreen> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
-  late Future<List<legacy_overview.ClassReportOverview>> classesFuture;
+  late Future<List<ClassReportOverview>> classesFuture;
   @override
   void initState() { super.initState(); classesFuture = repository.getTeacherClasses(); }
   // Renders repository loading, error, and class data states.
@@ -147,7 +147,7 @@ class _ClassSelectScreenState extends State<ClassSelectScreen> {
       Text('Chọn lớp', style: Theme.of(context).textTheme.headlineMedium),
       const SizedBox(height: 4), Text('Chọn lớp bạn muốn ghi nhận hôm nay.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: KColors.inkSoft)),
       const SizedBox(height: 24),
-      Expanded(child: FutureBuilder<List<legacy_overview.ClassReportOverview>>(future: classesFuture, builder: (context, snapshot) {
+      Expanded(child: FutureBuilder<List<ClassReportOverview>>(future: classesFuture, builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
         if (snapshot.hasError) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Text('Không tải được danh sách lớp.'), TextButton(onPressed: () => setState(() => classesFuture = repository.getTeacherClasses()), child: const Text('Thử lại'))]));
         final classes = (snapshot.data ?? []).map((item) => uiClassInfoFromOverview(item)).toList();

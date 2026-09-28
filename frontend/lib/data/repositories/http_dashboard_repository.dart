@@ -191,7 +191,7 @@ class HttpDashboardRepository implements DashboardRepository {
             status: switch (statusRaw) {
               null => null,
               'draft' => ReportStatus.draft,
-              'published' => ReportStatus.published,
+              'published' || 'sent' => ReportStatus.published,
               _ => null,
             },
           ),

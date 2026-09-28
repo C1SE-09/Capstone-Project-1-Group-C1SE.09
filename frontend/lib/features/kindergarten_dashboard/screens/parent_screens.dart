@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/domain/entities/child/child_overview.dart' as legacy_overview;
-import 'package:adark_frontend/domain/entities/report/daily_report.dart' as legacy_report;
+import 'package:adark_frontend/domain/entities/child/child_overview.dart';
+import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
@@ -20,7 +20,7 @@ class _ParentFlowState extends State<ParentFlow> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
   late Future<_ParentData> future;
   bool showReport = false;
-  legacy_report.DailyReport? selectedReport;
+  DailyReport? selectedReport;
 
   @override
   void initState() {
@@ -48,8 +48,8 @@ class _ParentFlowState extends State<ParentFlow> {
           final data = snapshot.data;
           if (data == null) return _loadError(() => setState(() => future = _load()));
           final todayReport = data.today;
-          final child = uiChildFromLegacy(
-            legacy: data.overview.child,
+          final child = uiChildFromDomain(
+            child: data.overview.child,
             reportStatus: todayReport == null ? ReportStatus.none : uiReportStatusFromBackend(todayReport.status.name),
             severity: severityFromDescription(todayReport?.summaryText),
           );
@@ -89,16 +89,16 @@ class _ParentFlowState extends State<ParentFlow> {
 class _ParentData {
   const _ParentData(this.parentName, this.overview, this.reports, this.today);
   final String parentName;
-  final legacy_overview.ChildOverview overview;
-  final List<legacy_report.DailyReport> reports;
-  final legacy_report.DailyReport? today;
+  final ChildOverview overview;
+  final List<DailyReport> reports;
+  final DailyReport? today;
 }
 
 class _ParentHome extends StatelessWidget {
   const _ParentHome({required this.data, required this.child, required this.onOpen});
   final _ParentData data;
   final Child child;
-  final ValueChanged<legacy_report.DailyReport> onOpen;
+  final ValueChanged<DailyReport> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +261,7 @@ class _ParentReport extends StatefulWidget {
   const _ParentReport({required this.data, required this.child, required this.report, required this.onBack});
   final _ParentData data;
   final Child child;
-  final legacy_report.DailyReport? report;
+  final DailyReport? report;
   final VoidCallback onBack;
 
   @override

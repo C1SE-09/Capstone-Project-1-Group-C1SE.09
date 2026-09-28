@@ -139,6 +139,15 @@ def extract_from_transcript(transcript: str) -> dict:
             "mood": str | None
         }
     """
+    if not transcript or not transcript.strip():
+        return {
+            "meals": None,
+            "sleeping": None,
+            "health": None,
+            "activities": None,
+            "mood": None,
+        }
+
     _load_model()
 
     tokens = _tokenizer(transcript)

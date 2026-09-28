@@ -185,10 +185,15 @@ class SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       onChanged: onChanged,
+      textAlignVertical: TextAlignVertical.center,
+      style: const TextStyle(fontSize: 14, height: 1.2),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: const Icon(Icons.search, size: 19, color: KColors.inkFaint),
+        hintStyle: const TextStyle(fontSize: 14, color: KColors.inkFaint, height: 1.2),
+        prefixIcon: const Icon(Icons.search, size: 20, color: KColors.inkFaint),
+        prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
         isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
     );
   }
