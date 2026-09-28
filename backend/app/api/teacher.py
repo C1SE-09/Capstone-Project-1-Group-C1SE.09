@@ -71,6 +71,7 @@ from app.schemas.report import (
 )
 from app.services.extraction_service import extract_from_transcript
 from app.services.notification_service import notification_service
+from app.services.validation_service import ValidationError, validate_transcript_content
 from app.tasks.process_audio import process_audio_task
 
 logger = logging.getLogger(__name__)
@@ -429,6 +430,22 @@ def re_extract_from_edited_transcript(
             status_code=400,
             detail=f"Transcription not completed yet (status: {voice_record.status.value})"
         )
+
+    # ================================================================
+    # VALIDATE TRANSCRIPT CONTENT
+    # Kiểm tra transcript có phải nội dung báo cáo học sinh không
+    # ================================================================
+    try:
+        validate_transcript_content(payload.edited_transcript)
+    except ValidationError as ve:
+        logger.warning(
+            "[ReExtract] Transcript validation failed for VoiceRecord %s: %s",
+            voice_id, ve.reason
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=ve.message
+        ) from ve
 
     # Re-extract từ transcript đã chỉnh sửa. Chỉ persist nếu model chạy thành công.
     try:

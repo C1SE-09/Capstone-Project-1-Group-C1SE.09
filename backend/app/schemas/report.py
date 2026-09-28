@@ -13,8 +13,9 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from app.models.report import VoiceRecordStatus
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.models.report import VoiceRecordStatus
 
 
 # ===========================================================================
