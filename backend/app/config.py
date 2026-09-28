@@ -3,7 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Database & cache
-    database_url: str = "postgresql+psycopg://kinderlog:change-me@localhost:5432/kinderlog"
+    database_url: str = (
+        "postgresql+psycopg://kinderlog:change-me@localhost:5432/kinderlog"
+    )
     redis_url: str = "redis://localhost:6379/0"
 
     # Security

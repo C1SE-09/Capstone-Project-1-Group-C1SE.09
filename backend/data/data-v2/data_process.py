@@ -5,12 +5,13 @@ from pathlib import Path
 
 folder = Path(__file__)
 
+
 def load_json(file_name):
-    with open(folder/file_name, "r", encoding="utf-8") as f:
+    with open(folder / file_name, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     labels = []
-    
+
     for item in data:
         label = item.get("label")
         labels.append(label)
@@ -18,20 +19,21 @@ def load_json(file_name):
     print(len(data))
     print(Counter(labels))
     return data
+
+
 train = load_json("train-v1.json")
 validate = load_json("validation-v1.json")
 test = load_json("test-v1.json")
 
+
 def get_text(item):
     return item.get("text", "").strip()
+
+
 def check_normalized_duplicate(data, name):
     texts = [normalize_text(get_text(item)) for item in data]
     counter = Counter(texts)
-    duplicates = {
-        text: count
-        for text, count in counter.items()
-        if count > 1
-    }
+    duplicates = {text: count for text, count in counter.items() if count > 1}
 
     print(f"\n{name} - NORMALIZED DUPLICATE")
     print(f"Unique texts: {len(counter)}")
@@ -42,6 +44,7 @@ def check_normalized_duplicate(data, name):
         print("\nExamples:")
         for text, count in list(duplicates.items())[:10]:
             print(f"[{count}x] {text}")
+
 
 def check_cross_duplicates(data1, data2, name1, name2):
     texts_1 = {get_text(item) for item in data1}
@@ -56,6 +59,8 @@ def check_cross_duplicates(data1, data2, name1, name2):
         print("Examples")
         for text in list(duplicate):
             print(f"{text}")
+
+
 def check_structure(data, name):
     invalid_structure = 0
     missing_text = 0
@@ -67,7 +72,11 @@ def check_structure(data, name):
             invalid_structure += 1
             continue
 
-        if "text" not in item or item["text"] is None or not isinstance(item["text"], str):
+        if (
+            "text" not in item
+            or item["text"] is None
+            or not isinstance(item["text"], str)
+        ):
             missing_text += 1
         elif not item["text"].strip():
             empty_text += 1
@@ -79,13 +88,11 @@ def check_structure(data, name):
     print(f"Missing/invalid text: {missing_text}")
     print(f"Empty text: {empty_text}")
     print(f"Missing label: {missing_label}")
-VALID_LABELS = {
-    "activities",
-    "health",
-    "meals",
-    "mood",
-    "sleeping"
-}
+
+
+VALID_LABELS = {"activities", "health", "meals", "mood", "sleeping"}
+
+
 def check_labels(data, name):
     invalid_labels = []
 
@@ -101,10 +108,13 @@ def check_labels(data, name):
     if invalid_labels:
         for index, label in invalid_labels[:10]:
             print(f"Index {index}: {label}")
+
+
 def normalize_text(text):
     text = text.lower()
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
 
 check_normalized_duplicate(train, "TRAIN")
 check_normalized_duplicate(validate, "VALIDATION")

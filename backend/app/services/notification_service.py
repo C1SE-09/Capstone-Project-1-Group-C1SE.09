@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class NotificationService(Protocol):
-
     def notify_report_sent(
         self,
         *,
