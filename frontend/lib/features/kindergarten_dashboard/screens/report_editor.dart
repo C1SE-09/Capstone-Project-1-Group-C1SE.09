@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
@@ -72,9 +73,24 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     if (widget.child.id.isNotEmpty) {
       try {
         final todayReport = await repository.getTodayReport(widget.child.id, DateTime.now());
-        if (todayReport?.summaryText != null && todayReport!.summaryText!.trim().isNotEmpty) {
-          if (note.text.isEmpty) {
+        if (todayReport != null) {
+          if (todayReport.summaryText != null && todayReport.summaryText!.trim().isNotEmpty) {
             note.text = todayReport.summaryText!.trim();
+          }
+          if (todayReport.eating != null && todayReport.eating!.trim().isNotEmpty) {
+            eating.text = todayReport.eating!.trim();
+          }
+          if (todayReport.sleeping != null && todayReport.sleeping!.trim().isNotEmpty) {
+            sleep.text = todayReport.sleeping!.trim();
+          }
+          if (todayReport.health != null && todayReport.health!.trim().isNotEmpty) {
+            health.text = todayReport.health!.trim();
+          }
+          if (todayReport.mood != null && todayReport.mood!.trim().isNotEmpty) {
+            mood.text = todayReport.mood!.trim();
+          }
+          if (todayReport.activitiesText != null && todayReport.activitiesText!.trim().isNotEmpty) {
+            activity.text = todayReport.activitiesText!.trim();
           }
         }
       } catch (_) {}
@@ -85,7 +101,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
   String eatingLevel = 'Tốt';
   String sleepQuality = 'Tốt';
   late final eating = TextEditingController(text: widget.readOnly ? 'Ăn hết suất cơm trưa, uống đủ nước.' : '');
-  late final sleepDuration = TextEditingController(text: widget.readOnly ? '2 tiếng' : '');
+  late final sleepDuration = TextEditingController(text: widget.readOnly ? '120' : '');
   late final sleep = TextEditingController(text: widget.readOnly ? 'Ngủ ngon, không quấy khóc.' : '');
   late final health = TextEditingController(text: widget.readOnly ? 'Sức khỏe bình thường, không có biểu hiện bất thường.' : '');
   late final mood = TextEditingController(text: widget.readOnly ? 'Vui vẻ, hòa đồng với các bạn.' : '');
@@ -184,9 +200,13 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                             controller: sleepDuration,
                             readOnly: widget.readOnly,
                             textAlignVertical: TextAlignVertical.center,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             style: const TextStyle(fontSize: 14, height: 1.2),
                             decoration: const InputDecoration(
-                              hintText: 'Thời lượng',
+                              hintText: 'Thời lượng (phút)',
                               isDense: true,
                               contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             ),
@@ -234,7 +254,14 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     _TextArea(controller: note, readOnly: widget.readOnly, maxLines: 3, maxLength: 500),
-                    Text('${note.text.length}/500', style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: note,
+                      builder: (context, value, _) => Text(
+                        '${value.text.characters.length}/500',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -273,8 +300,8 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                       ),
                       const SizedBox(height: 10),
                       KButton(
-                        label: submitting ? 'Đang lưu bản nháp…' : 'Lưu bản nháp',
-                        icon: Icons.save_outlined,
+                        label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                        icon: Icons.send_outlined,
                         large: true,
                         onPressed: submitting ? null : _confirmSend,
                       ),
@@ -313,7 +340,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium),
-                              Text('Lớp $className · $teacherName · $todayLong', style: const TextStyle(fontSize: 11.5, color: KColors.inkFaint)),
+                              Text('$className · $teacherName · $todayLong', style: const TextStyle(fontSize: 11.5, color: KColors.inkFaint)),
                             ],
                           ),
                         ),
@@ -373,6 +400,47 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     }
   }
 
+  Future<void> _sendReport() async {
+    if (submitting) return;
+    setState(() {
+      submitting = true;
+      submitError = null;
+    });
+    try {
+      final teacher = await metaFuture.then((meta) => meta.teacher);
+      final teacherId = teacher.teacherId.isNotEmpty
+          ? teacher.teacherId
+          : repository.teacherId;
+      if (teacherId.isEmpty) {
+        throw StateError('Missing teacher id');
+      }
+      final reportRes = await TeacherRepository().createManualReport(
+        teacherId: teacherId,
+        childId: widget.child.id,
+        eating: eating.text,
+        sleeping: sleep.text,
+        health: health.text,
+        activities: activity.text,
+        mood: mood.text,
+        teacherNote: note.text,
+      );
+      final reportId = (reportRes['daily_report_id'] ?? reportRes['report_id'])?.toString();
+      if (reportId != null && reportId.isNotEmpty) {
+        await TeacherRepository().publishReport(
+          reportId: reportId,
+          teacherId: teacherId,
+        );
+      }
+      if (!mounted) return;
+      widget.onSent();
+    } catch (e) {
+      debugPrint('Send report error: $e');
+      if (mounted) setState(() => submitError = 'Không thể gửi báo cáo. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => submitting = false);
+    }
+  }
+
   void _confirmSend() {
     final todayLong = _todayLong(DateTime.now());
     showKSheet(
@@ -380,7 +448,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Lưu bản nháp báo cáo?', style: Theme.of(context).textTheme.titleMedium),
+          Text('Gửi báo cáo cho phụ huynh?', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -393,7 +461,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    Text('Bản nháp báo cáo $todayLong', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
+                    Text('Báo cáo ngày $todayLong', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
                   ],
                 ),
               ],
@@ -402,7 +470,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
           if (severity != Severity.none)
             const Padding(
               padding: EdgeInsets.only(top: 12),
-              child: Text('Báo cáo có thông tin sức khỏe cần được kiểm tra trước khi lưu.', style: TextStyle(fontSize: 12.5, color: KColors.inkSoft)),
+              child: Text('Báo cáo có thông tin sức khỏe cần được kiểm tra trước khi gửi.', style: TextStyle(fontSize: 12.5, color: KColors.inkSoft)),
             ),
           const SizedBox(height: 20),
           Row(
@@ -411,11 +479,11 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: KButton(
-                  label: submitting ? 'Đang lưu…' : 'Lưu bản nháp',
-                  icon: Icons.save_outlined,
+                  label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                  icon: Icons.send_outlined,
                   onPressed: submitting ? null : () async {
                     Navigator.pop(context);
-                    await _saveDraft();
+                    await _sendReport();
                   },
                 ),
               ),
@@ -494,18 +562,25 @@ class _Dropdown extends StatelessWidget {
 }
 
 class _TextArea extends StatelessWidget {
-  const _TextArea({required this.controller, required this.readOnly, this.maxLines = 2, this.maxLength});
+  const _TextArea({
+    required this.controller,
+    required this.readOnly,
+    this.maxLines = 2,
+    this.maxLength,
+  });
   final TextEditingController controller;
   final bool readOnly;
   final int maxLines;
   final int? maxLength;
+
   @override
   Widget build(BuildContext context) => TextField(
         controller: controller,
         readOnly: readOnly,
+        minLines: 1,
         maxLines: maxLines,
         maxLength: maxLength,
-        textAlignVertical: maxLines == 1 ? TextAlignVertical.center : TextAlignVertical.top,
+        textAlignVertical: TextAlignVertical.center,
         style: const TextStyle(fontSize: 14, height: 1.4),
         decoration: const InputDecoration(
           isDense: true,

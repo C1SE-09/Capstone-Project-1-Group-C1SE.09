@@ -202,6 +202,12 @@ abstract class TeacherRepositoryBase {
     String? mood,
     String? teacherNote,
   });
+
+  /// Publish a daily report so parents can view it.
+  Future<Map<String, dynamic>> publishReport({
+    required String reportId,
+    required String teacherId,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -527,6 +533,39 @@ class TeacherRepository implements TeacherRepositoryBase {
       if (body == null) {
         throw const TeacherRepositoryException(
           'Server returned an empty manual report response.',
+        );
+      }
+
+      return body;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> publishReport({
+    required String reportId,
+    required String teacherId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/$reportId/publish',
+        queryParameters: {'teacher_id': teacherId},
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty publish report response.',
         );
       }
 

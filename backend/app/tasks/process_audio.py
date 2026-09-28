@@ -153,7 +153,9 @@ def process_audio_task(voice_record_id: str) -> dict:
         record.extraction_result = None
         record.status = VoiceRecordStatus.COMPLETED
         db.commit()
-        logger.info("[Process] VoiceRecord %s lưu transcript thành công", voice_record_id)
+        logger.info(
+            "[Process] VoiceRecord %s lưu transcript thành công", voice_record_id
+        )
 
         return {
             "voice_record_id": voice_record_id,
@@ -171,7 +173,9 @@ def process_audio_task(voice_record_id: str) -> dict:
                 failed_record.status = VoiceRecordStatus.FAILED
                 failed_record.error_message = traceback.format_exc()
                 db.commit()
-                logger.error("[Process] Đánh dấu FAILED cho VoiceRecord %s", voice_record_id)
+                logger.error(
+                    "[Process] Đánh dấu FAILED cho VoiceRecord %s", voice_record_id
+                )
         except SQLAlchemyError:
             logger.exception("[Process] Lỗi DB khi cập nhật FAILED")
             db.rollback()

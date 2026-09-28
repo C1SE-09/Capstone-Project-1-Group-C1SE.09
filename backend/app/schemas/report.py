@@ -9,6 +9,7 @@ nguyên tắc Clean Architecture — tránh expose trực tiếp ORM objects.
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from datetime import date, datetime
 from typing import Any
@@ -73,7 +74,9 @@ class VoiceRecordDetailResponse(BaseModel):
     """Response trả về chi tiết VoiceRecord bao gồm cả raw và edited transcript."""
 
     id: uuid.UUID = Field(..., description="UUID của VoiceRecord")
-    voice_record_id: uuid.UUID | None = Field(None, description="Alias UUID của VoiceRecord")
+    voice_record_id: uuid.UUID | None = Field(
+        None, description="Alias UUID của VoiceRecord"
+    )
     status: VoiceRecordStatus = Field(..., description="Trạng thái xử lý audio")
     raw_transcript: str | None = Field(None, description="Bản dịch thô ban đầu từ AI")
     edited_transcript: str | None = Field(
@@ -162,10 +165,11 @@ class ManualReportCreateRequest(BaseModel):
     eating: str | None = Field(None, description="Nội dung ăn uống")
     sleeping: str | None = Field(None, description="Nội dung giấc ngủ")
     health: str | None = Field(None, description="Nội dung sức khỏe")
-    activities: str | None = Field(None, description="Nội dung hoạt động vui chơi/học tập")
+    activities: str | None = Field(
+        None, description="Nội dung hoạt động vui chơi/học tập"
+    )
     mood: str | None = Field(None, description="Nội dung tâm trạng")
     teacher_note: str | None = Field(None, description="Ghi chú thêm của giáo viên")
-
 
 
 class ActivityEntryResponse(BaseModel):
@@ -183,7 +187,7 @@ class ActivityEntryResponse(BaseModel):
 class DailyReportDetailResponse(BaseModel):
     """Response chi tiết một DailyReport bao gồm danh sách ActivityEntry."""
 
-    daily_report_id: uuid.UUID
+    daily_report_id: uuid.UUID | None = None
     report_id: uuid.UUID | None = None
     child_id: uuid.UUID | None = None
     teacher_id: uuid.UUID | None = None
@@ -202,6 +206,14 @@ class DailyReportDetailResponse(BaseModel):
             if rid is not None:
                 data["daily_report_id"] = rid
                 data["report_id"] = rid
+        elif hasattr(data, "daily_report_id") or hasattr(data, "report_id"):
+            rid = getattr(data, "daily_report_id", None) or getattr(
+                data, "report_id", None
+            )
+            if rid is not None:
+                with contextlib.suppress(AttributeError, TypeError):
+                    data.daily_report_id = rid
+                    data.report_id = rid
         return data
 
 
@@ -239,7 +251,8 @@ class SendAllRequest(BaseModel):
         None, description="Danh sách báo cáo cần gửi. Bỏ trống = bản nháp"
     )
     report_date: date | None = Field(
-        None, description="Chỉ gửi report của ngày này (dùng khi empty trong report_ids)"
+        None,
+        description="Chỉ gửi report của ngày này (dùng khi empty trong report_ids)",
     )
 
 
@@ -271,5 +284,3 @@ class SendAllResponse(BaseModel):
     skipped: int = 0
     failed: int = 0
     results: list[SendAllItemResult] = Field(default_factory=list)
-
-

@@ -87,7 +87,7 @@ class VoiceRecordStatus(str, enum.Enum):
 
 
 class DailyReportStatus(str, enum.Enum):
-    """Lifecycle of a DailyReport 
+    """Lifecycle of a DailyReport
 
     DRAFT  - created from voice transcription; not yet reviewed by teacher.
     SENT   - teacher reviewed and sent it; the parent has been notified.
