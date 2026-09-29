@@ -63,12 +63,23 @@ from app.models.base import Base, TimestampMixin
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
     from app.models.child import Child
-    from app.models.user import Teacher
+    from app.models.user import Class_, Teacher
 
 
 # ===========================================================================
 # Enums
 # ===========================================================================
+
+
+class VoiceRecordScope(str, enum.Enum):
+    """Scope of a VoiceRecord: single child or whole class.
+
+    SINGLE_CHILD – audio recording for a single specific child.
+    WHOLE_CLASS  – audio recording for an entire classroom / group.
+    """
+
+    SINGLE_CHILD = "single_child"
+    WHOLE_CLASS = "whole_class"
 
 
 class VoiceRecordStatus(str, enum.Enum):
@@ -84,6 +95,28 @@ class VoiceRecordStatus(str, enum.Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class BroadcastReportStatus(str, enum.Enum):
+    """Lifecycle status of a ClassBroadcastReport.
+
+    DRAFT – created from class voice recording; draft state.
+    SENT  – teacher approved and sent to parents of non-exception children.
+    """
+
+    DRAFT = "draft"
+    SENT = "sent"
+
+
+class DailyReportType(str, enum.Enum):
+    """Origin/type of a DailyReport.
+
+    INDIVIDUAL – standalone report created for a single child.
+    EXCEPTION  – report separated out for a child with exception notes during a class recording.
+    """
+
+    INDIVIDUAL = "individual"
+    EXCEPTION = "exception"
 
 
 class DailyReportStatus(str, enum.Enum):
@@ -160,6 +193,8 @@ class VoiceRecord(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_voice_record_teacher_id", "teacher_id"),
         Index("ix_voice_record_child_id", "child_id"),
+        Index("ix_voice_record_class_id", "class_id"),
+        Index("ix_voice_record_scope", "scope"),
         Index("ix_voice_record_status", "status"),
         Index("ix_voice_record_recorded_at", "recorded_at"),
         {"comment": "Raw audio recordings uploaded by teachers for AI transcription"},
@@ -192,10 +227,27 @@ class VoiceRecord(Base, TimestampMixin):
             name="fk_voice_record_child_id",
         ),
         nullable=True,
-        comment="Subject child of the recording – NULL if child is deleted",
+        comment="Subject child of the recording – NULL if single_child or child deleted",
+    )
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "class.class_id",
+            ondelete="SET NULL",
+            name="fk_voice_record_class_id",
+        ),
+        nullable=True,
+        comment="Target class for whole_class recording – NULL for single_child",
     )
 
-    # --- Audio metadata ---
+    # --- Scope & Audio metadata ---
+    scope: Mapped[VoiceRecordScope] = mapped_column(
+        SAEnum(VoiceRecordScope, name="voice_record_scope_enum", create_type=True),
+        nullable=False,
+        default=VoiceRecordScope.SINGLE_CHILD,
+        server_default=VoiceRecordScope.SINGLE_CHILD.value,
+        comment="Scope of recording: single_child or whole_class",
+    )
     audio_url: Mapped[str] = mapped_column(
         String(512),
         nullable=False,
@@ -264,18 +316,221 @@ class VoiceRecord(Base, TimestampMixin):
         back_populates="voice_records",
         lazy="joined",
     )
+    class_: Mapped[Class_ | None] = relationship(
+        "Class_",
+        back_populates="voice_records",
+        lazy="joined",
+    )
     daily_report: Mapped[DailyReport | None] = relationship(
         "DailyReport",
         back_populates="voice_record",
         uselist=False,  # 1-to-1: one VoiceRecord → at most one DailyReport
         lazy="selectin",
     )
+    broadcast_report: Mapped[ClassBroadcastReport | None] = relationship(
+        "ClassBroadcastReport",
+        back_populates="voice_record",
+        uselist=False,  # 1-to-1: one VoiceRecord → at most one ClassBroadcastReport
+        lazy="selectin",
+    )
 
     # --- Dunder ---
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"<VoiceRecord id={self.voice_record_id!s} "
+            f"<VoiceRecord id={self.voice_record_id!s} scope={self.scope.value!r} "
             f"status={self.status.value!r} teacher_id={self.teacher_id!s}>"
+        )
+
+
+# ===========================================================================
+# ClassBroadcastReport
+# ===========================================================================
+
+
+class ClassBroadcastReport(Base, TimestampMixin):
+    """A broadcast daily report for an entire classroom / group.
+
+    Generated when a teacher submits a whole_class voice recording.
+    Summarizes common daily activities (meals, nap, health, activities, mood)
+    sent to all parents whose child doesn't have an individual exception report.
+
+    Columns
+    -------
+    broadcast_report_id : UUID PK (auto-generated)
+    voice_record_id     : FK → voice_record.voice_record_id (SET NULL)
+    class_id            : FK → class.class_id               (SET NULL)
+    teacher_id          : FK → teacher.teacher_id           (SET NULL)
+    report_date         : Calendar date of the broadcast report
+    common_meals        : AI-generated/teacher-edited common meal info (nullable)
+    common_sleeping     : AI-generated/teacher-edited common nap info (nullable)
+    common_health       : AI-generated/teacher-edited common health info (nullable)
+    common_activities   : AI-generated/teacher-edited common activities (nullable)
+    common_mood         : AI-generated/teacher-edited common mood (nullable)
+    common_notes        : Additional general notes (nullable)
+    included_child_ids  : JSON list of child_id strings receiving this broadcast
+    excluded_child_ids  : JSON list of child_id strings separated into exception reports
+    status              : BroadcastReportStatus (DRAFT / SENT)
+    sent_at             : UTC timestamp when published/sent to parents
+
+    Relationships
+    -------------
+    teacher           : Teacher           – report author
+    class_            : Class_            – target classroom
+    voice_record      : VoiceRecord | None – source audio record
+    exception_reports : List[DailyReport] – individual reports for excluded children
+    """
+
+    __tablename__ = "class_broadcast_report"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "class_id",
+            "report_date",
+            name="uq_broadcast_class_date",
+        ),
+        Index("ix_broadcast_class_id", "class_id"),
+        Index("ix_broadcast_teacher_id", "teacher_id"),
+        Index("ix_broadcast_report_date", "report_date"),
+        Index("ix_broadcast_status", "status"),
+        {"comment": "Broadcast daily reports summarizing common class activities"},
+    )
+
+    # --- Primary key ---
+    broadcast_report_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        comment="Surrogate primary key (UUID v4)",
+    )
+
+    # --- Foreign keys ---
+    voice_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "voice_record.voice_record_id",
+            ondelete="SET NULL",
+            name="fk_broadcast_voice_record_id",
+        ),
+        nullable=True,
+        comment="Source voice recording – NULL if created manually",
+    )
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "class.class_id",
+            ondelete="SET NULL",
+            name="fk_broadcast_class_id",
+        ),
+        nullable=True,
+        comment="Class receiving this broadcast report",
+    )
+    teacher_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "teacher.teacher_id",
+            ondelete="SET NULL",
+            name="fk_broadcast_teacher_id",
+        ),
+        nullable=True,
+        comment="Teacher who created the broadcast report",
+    )
+
+    # --- Content ---
+    report_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        comment="Calendar date covered by this broadcast report",
+    )
+    common_meals: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Common meal information for the whole class",
+    )
+    common_sleeping: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Common sleep/nap information for the whole class",
+    )
+    common_health: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Common health information for the whole class",
+    )
+    common_activities: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Common learning/play activities for the whole class",
+    )
+    common_mood: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Common mood/general sentiment for the whole class",
+    )
+    common_notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="General notes or extra reminders for parents",
+    )
+
+    # --- Recipient lists ---
+    included_child_ids: Mapped[list[str] | dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="List of child IDs (UUID strings) receiving the broadcast report",
+    )
+    excluded_child_ids: Mapped[list[str] | dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="List of child IDs (UUID strings) with individual exception reports",
+    )
+
+    # --- Status ---
+    status: Mapped[BroadcastReportStatus] = mapped_column(
+        SAEnum(
+            BroadcastReportStatus,
+            name="broadcast_report_status_enum",
+            create_type=True,
+        ),
+        nullable=False,
+        default=BroadcastReportStatus.DRAFT,
+        server_default=BroadcastReportStatus.DRAFT.value,
+        comment="Publication lifecycle: draft → sent",
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="UTC timestamp when the broadcast report was sent to parents",
+    )
+
+    # --- Relationships ---
+    teacher: Mapped[Teacher | None] = relationship(
+        "Teacher",
+        back_populates="broadcast_reports",
+        lazy="joined",
+    )
+    class_: Mapped[Class_ | None] = relationship(
+        "Class_",
+        back_populates="broadcast_reports",
+        lazy="joined",
+    )
+    voice_record: Mapped[VoiceRecord | None] = relationship(
+        "VoiceRecord",
+        back_populates="broadcast_report",
+        lazy="joined",
+    )
+    exception_reports: Mapped[list[DailyReport]] = relationship(
+        "DailyReport",
+        back_populates="source_broadcast",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    # --- Dunder ---
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"<ClassBroadcastReport id={self.broadcast_report_id!s} "
+            f"class_id={self.class_id!s} date={self.report_date!s} "
+            f"status={self.status.value!r}>"
         )
 
 
@@ -293,14 +548,16 @@ class DailyReport(Base, TimestampMixin):
 
     Columns
     -------
-    daily_report_id  : UUID PK
-    teacher_id       : FK → teacher.teacher_id (SET NULL)
-    child_id         : FK → child.child_id     (SET NULL)
-    voice_record_id  : FK → voice_record.voice_record_id (SET NULL, optional)
-    report_date      : Calendar date of the report (indexed for date queries)
-    summary_text     : AI-generated or teacher-edited summary (Text, nullable)
-    status           : DailyReportStatus – draft/published/archived
-    published_at     : Timestamp when teacher published the report (nullable)
+    daily_report_id     : UUID PK
+    teacher_id          : FK → teacher.teacher_id (SET NULL)
+    child_id            : FK → child.child_id     (SET NULL)
+    voice_record_id     : FK → voice_record.voice_record_id (SET NULL, optional)
+    source_broadcast_id : FK → class_broadcast_report.broadcast_report_id (SET NULL, optional)
+    report_type         : DailyReportType (individual | exception)
+    report_date         : Calendar date of the report (indexed for date queries)
+    summary_text        : AI-generated or teacher-edited summary (Text, nullable)
+    status              : DailyReportStatus – draft/published/archived
+    published_at        : Timestamp when teacher published the report (nullable)
     Constraints
     -----------
     uq_daily_report_child_date : UNIQUE (child_id, report_date)
@@ -308,10 +565,11 @@ class DailyReport(Base, TimestampMixin):
 
     Relationships
     -------------
-    teacher      : Teacher              – report author (nullable after deletion)
-    child        : Child                – subject child (nullable after deletion)
-    voice_record : VoiceRecord | None   – source audio record (optional)
-    activities   : List[ActivityEntry]  – ordered activity items in this report
+    teacher          : Teacher              – report author (nullable after deletion)
+    child            : Child                – subject child (nullable after deletion)
+    voice_record     : VoiceRecord | None   – source audio record (optional)
+    source_broadcast : ClassBroadcastReport – parent broadcast report if exception type
+    activities       : List[ActivityEntry]  – ordered activity items in this report
     """
 
     __tablename__ = "daily_report"
@@ -326,6 +584,8 @@ class DailyReport(Base, TimestampMixin):
         Index("ix_daily_report_child_id", "child_id"),
         Index("ix_daily_report_report_date", "report_date"),
         Index("ix_daily_report_status", "status"),
+        Index("ix_daily_report_report_type", "report_type"),
+        Index("ix_daily_report_source_broadcast_id", "source_broadcast_id"),
         {"comment": "Structured daily reports submitted by teachers for each child"},
     )
 
@@ -368,8 +628,25 @@ class DailyReport(Base, TimestampMixin):
         nullable=True,
         comment="Source voice recording – NULL for manually authored reports",
     )
+    source_broadcast_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "class_broadcast_report.broadcast_report_id",
+            ondelete="SET NULL",
+            name="fk_daily_report_source_broadcast_id",
+        ),
+        nullable=True,
+        comment="Linked broadcast report if this report was generated as an exception from a class recording",
+    )
 
-    # --- Report content ---
+    # --- Report type & content ---
+    report_type: Mapped[DailyReportType] = mapped_column(
+        SAEnum(DailyReportType, name="daily_report_type_enum", create_type=True),
+        nullable=False,
+        default=DailyReportType.INDIVIDUAL,
+        server_default=DailyReportType.INDIVIDUAL.value,
+        comment="Origin type: individual (standalone single-child) or exception (separated from class broadcast)",
+    )
     report_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
@@ -420,6 +697,11 @@ class DailyReport(Base, TimestampMixin):
         back_populates="daily_report",
         lazy="joined",
     )
+    source_broadcast: Mapped[ClassBroadcastReport | None] = relationship(
+        "ClassBroadcastReport",
+        back_populates="exception_reports",
+        lazy="joined",
+    )
     activities: Mapped[list[ActivityEntry]] = relationship(
         "ActivityEntry",
         back_populates="daily_report",
@@ -433,7 +715,7 @@ class DailyReport(Base, TimestampMixin):
         return (
             f"<DailyReport id={self.daily_report_id!s} "
             f"child_id={self.child_id!s} date={self.report_date!s} "
-            f"status={self.status.value!r}>"
+            f"type={self.report_type.value!r} status={self.status.value!r}>"
         )
 
 
