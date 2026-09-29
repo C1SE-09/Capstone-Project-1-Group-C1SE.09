@@ -64,7 +64,7 @@ class STTService:
             try:
                 logger.info("[STT] Nạp mô hình PhoWhisper trên GPU (CUDA)")
                 return "cuda", WhisperModel(
-                    self.model_id, device="cuda", compute_type="int8", num_workers=1
+                    self.model_id, device="cuda", compute_type="float16", num_workers=1
                 )
             except (RuntimeError, ValueError, OSError) as exc:
                 logger.warning("[STT] CUDA error: %s. Fallback sang CPU", exc)
@@ -89,9 +89,9 @@ class STTService:
             segments, _ = self.model.transcribe(
                 audio_path,
                 language="vi",
-                vad_filter=True,
+                vad_filter=False,
                 vad_parameters={"min_silence_duration_ms": 500},
-                beam_size=5,
+                beam_size=1,
                 condition_on_previous_text=False,
             )
             transcript = "".join(seg.text for seg in segments).strip()
