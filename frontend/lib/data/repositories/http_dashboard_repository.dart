@@ -1,4 +1,4 @@
-﻿// frontend/lib/data/repositories/http_dashboard_repository.dart
+// frontend/lib/data/repositories/http_dashboard_repository.dart
 // =========================================================
 // Triển khai DashboardRepository bằng API THẬT (endpoint
 // dashboard.py + class_data.py). Tất cả method đều gọi Dio.
@@ -37,8 +37,8 @@ class HttpDashboardRepository implements DashboardRepository {
             Dio(
               BaseOptions(
                 baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 15),
+                connectTimeout: const Duration(seconds: 30),
+                receiveTimeout: const Duration(seconds: 30),
               ),
             );
 
@@ -188,15 +188,17 @@ class HttpDashboardRepository implements DashboardRepository {
         pending.add(
           ChildReportItem(
             child: child,
-            status: statusRaw == null
-                ? null
-                : statusRaw == 'draft'
-                    ? ReportStatus.draft
-                    : ReportStatus.published,
+            status: switch (statusRaw) {
+              null => null,
+              'draft' => ReportStatus.draft,
+              'published' || 'sent' => ReportStatus.published,
+              _ => null,
+            },
           ),
         );
       }
     }
+    pending.sort(_comparePendingChildrenByStatus);
 
     return ClassDashboardSummary(
       classInfo: classInfo,
@@ -208,6 +210,20 @@ class HttpDashboardRepository implements DashboardRepository {
       pendingChildren: pending,
     );
   }
+
+  int _comparePendingChildrenByStatus(ChildReportItem a, ChildReportItem b) {
+    final rankA = _statusRank(a.status);
+    final rankB = _statusRank(b.status);
+    if (rankA != rankB) return rankA.compareTo(rankB);
+    return a.child.fullName.toLowerCase().compareTo(b.child.fullName.toLowerCase());
+  }
+
+  int _statusRank(ReportStatus? status) => switch (status) {
+        null => 0, // Chưa báo cáo
+        ReportStatus.draft => 1, // Bản nháp
+        ReportStatus.published => 2, // Đã gửi
+        ReportStatus.archived => 3, // Đã đọc
+      };
 
   Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;

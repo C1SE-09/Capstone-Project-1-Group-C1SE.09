@@ -1,24 +1,50 @@
 import os
 import tempfile
+from typing import Annotated
 
 from app.services.stt_service import stt_service
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 # Khởi tạo router cho nhóm endpoint STT (Speech-to-Text)
 # Router này sẽ được đăng ký vào app chính với prefix (ví dụ: /api/stt)
 router = APIRouter()
 
+# Các định dạng audio được chấp nhận. Giữ nguyên phần mở rộng gốc để bộ giải mã
+# (faster-whisper/PyAV) nhận đúng container, tránh lỗi với .m4a/.mp3/.webm.
+_ALLOWED_SUFFIXES = {
+    ".wav",
+    ".mp3",
+    ".m4a",
+    ".mp4",
+    ".aac",
+    ".ogg",
+    ".oga",
+    ".opus",
+    ".flac",
+    ".webm",
+    ".amr",
+    ".3gp",
+}
+
+
+def _resolve_suffix(filename: str | None) -> str:
+    """Suy ra phần mở rộng hợp lệ từ tên file gốc (mặc định .wav)."""
+    suffix = os.path.splitext(filename or "")[1].lower()
+    if suffix in _ALLOWED_SUFFIXES:
+        return suffix
+    return ".wav"
+
 
 @router.post("/transcribe")
-async def transcribe(audio: UploadFile):
+async def transcribe(audio: Annotated[UploadFile, File()]):
     """Nhận file âm thanh từ client, trả về văn bản đã nhận dạng (STT)."""
-    if not isinstance(audio, UploadFile):
-        raise HTTPException(status_code=400, detail="File âm thanh là bắt buộc")
 
-    # Lưu file upload vào file tạm (delete=False để STTService có thể mở sau khi đóng)
+    # Lưu file upload vào file tạm, GIỮ ĐÚNG phần mở rộng gốc để giải mã đúng
+    # định dạng (delete=False để STTService có thể mở sau khi đóng).
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        suffix = _resolve_suffix(audio.filename)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(await audio.read())
             tmp_path = tmp.name
 

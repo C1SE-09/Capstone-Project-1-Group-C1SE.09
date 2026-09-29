@@ -10,6 +10,9 @@
 // - Throws [TeacherRepositoryException] on failure
 
 
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
 
@@ -28,6 +31,7 @@ class VoiceRecord {
     this.rawTranscript,
     this.editedTranscript,
     this.transcription,
+    this.errorMessage,
   });
 
   final String id;
@@ -35,6 +39,7 @@ class VoiceRecord {
   final String? rawTranscript;
   final String? editedTranscript;
   final String? transcription;
+  final String? errorMessage;
 
   /// Returns the effective transcript text (edited > raw > transcription).
   String get effectiveTranscript =>
@@ -47,6 +52,7 @@ class VoiceRecord {
       rawTranscript: json['raw_transcript'] as String?,
       editedTranscript: json['edited_transcript'] as String?,
       transcription: json['transcription'] as String?,
+      errorMessage: json['error_message'] as String?,
     );
   }
 
@@ -61,50 +67,75 @@ class VoiceRecord {
 
 class ExtractionData {
   const ExtractionData({
+    this.transcript,
     this.meals,
     this.sleeping,
     this.health,
     this.activities,
     this.mood,
+    this.rawJson,
+    this.segments,
+    this.childExtractions,
   });
 
+  final String? transcript;
   final String? meals;
   final String? sleeping;
   final String? health;
   final String? activities;
   final String? mood;
+  final Map<String, dynamic>? rawJson;
+  final List<dynamic>? segments;
+  final Map<String, dynamic>? childExtractions;
 
   factory ExtractionData.fromJson(Map<String, dynamic> json) {
     return ExtractionData(
+      transcript: json['transcript'] as String?,
       meals: json['meals'] as String?,
       sleeping: json['sleeping'] as String?,
       health: json['health'] as String?,
       activities: json['activities'] as String?,
       mood: json['mood'] as String?,
+      rawJson: json,
+      segments: json['segments'] as List<dynamic>?,
+      childExtractions: json['child_extractions'] is Map<String, dynamic>
+          ? json['child_extractions'] as Map<String, dynamic>
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
+        'transcript': transcript,
         'meals': meals,
         'sleeping': sleeping,
         'health': health,
         'activities': activities,
         'mood': mood,
+        if (segments != null) 'segments': segments,
+        if (childExtractions != null) 'child_extractions': childExtractions,
       };
 
   ExtractionData copyWith({
+    String? transcript,
     String? meals,
     String? sleeping,
     String? health,
     String? activities,
     String? mood,
+    Map<String, dynamic>? rawJson,
+    List<dynamic>? segments,
+    Map<String, dynamic>? childExtractions,
   }) {
     return ExtractionData(
+      transcript: transcript ?? this.transcript,
       meals: meals ?? this.meals,
       sleeping: sleeping ?? this.sleeping,
       health: health ?? this.health,
       activities: activities ?? this.activities,
       mood: mood ?? this.mood,
+      rawJson: rawJson ?? this.rawJson,
+      segments: segments ?? this.segments,
+      childExtractions: childExtractions ?? this.childExtractions,
     );
   }
 }
@@ -139,6 +170,9 @@ abstract class TeacherRepositoryBase {
     required String filePath,
     required String classId,
     required String teacherId,
+    String? childId,
+    Uint8List? fileBytes,
+    String? fileName,
     void Function(int sent, int total)? onProgress,
   });
 
@@ -161,10 +195,18 @@ abstract class TeacherRepositoryBase {
     required String teacherId,
   });
 
+  /// Run the NLP analysis model on the teacher-edited PhoWhisper transcript.
+  Future<ExtractionData> analyzeTranscript({
+    required String voiceId,
+    required String teacherId,
+    required String editedTranscript,
+  });
+
   /// Create a draft DailyReport from AI extraction result.
   Future<Map<String, dynamic>> createDraftReport({
     required String voiceId,
     required String teacherId,
+    String? childId,
     ExtractionData? editedExtraction,
   });
 
@@ -178,6 +220,12 @@ abstract class TeacherRepositoryBase {
     String? activities,
     String? mood,
     String? teacherNote,
+  });
+
+  /// Publish a daily report so parents can view it.
+  Future<Map<String, dynamic>> publishReport({
+    required String reportId,
+    required String teacherId,
   });
 }
 
@@ -203,18 +251,44 @@ class TeacherRepository implements TeacherRepositoryBase {
     required String filePath,
     required String classId,
     required String teacherId,
+    String? childId,
+    Uint8List? fileBytes,
+    String? fileName,
     void Function(int sent, int total)? onProgress,
   }) async {
     try {
-      // Build multipart form data
+      if (filePath.trim().isEmpty && (fileBytes == null || fileBytes.isEmpty)) {
+        throw const TeacherRepositoryException(
+          'File ghi âm trống hoặc không hợp lệ.',
+        );
+      }
+
+      final safeFileName = (fileName != null && fileName.trim().isNotEmpty)
+          ? fileName.trim()
+          : (filePath.trim().isNotEmpty
+              ? filePath.split('/').last.split('\\').last
+              : 'recording_audio.m4a');
+
+      final resolvedBytes = fileBytes ??
+          ((kIsWeb || filePath.trim().isEmpty)
+              ? null
+              : await _readAudioBytes(filePath));
+
+      if (resolvedBytes == null || resolvedBytes.isEmpty) {
+        throw const TeacherRepositoryException(
+          'Không thể đọc dữ liệu file ghi âm từ thiết bị.',
+        );
+      }
+
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          filePath,
-          // Keep original filename so the backend can validate the extension
-          filename: filePath.split('/').last.split('\\').last,
+        'file': MultipartFile.fromBytes(
+          resolvedBytes,
+          filename:
+              safeFileName.isNotEmpty ? safeFileName : 'recording_audio.m4a',
         ),
         'class_id': classId,
         'teacher_id': teacherId,
+        if ((childId ?? '').trim().isNotEmpty) 'child_id': childId!.trim(),
       });
 
       final response = await _dio.post<Map<String, dynamic>>(
@@ -243,6 +317,24 @@ class TeacherRepository implements TeacherRepositoryBase {
     } catch (e) {
       throw TeacherRepositoryException(e.toString());
     }
+  }
+
+  Future<Uint8List> _readAudioBytes(String filePath) async {
+    final file = File(filePath);
+
+    for (var attempt = 0; attempt < 8; attempt++) {
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
+        if (bytes.isNotEmpty) {
+          return bytes;
+        }
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+
+    throw TeacherRepositoryException(
+      'Không tìm thấy hoặc không thể đọc file ghi âm tại đường dẫn: $filePath',
+    );
   }
 
   @override
@@ -347,21 +439,65 @@ class TeacherRepository implements TeacherRepositoryBase {
   }
 
   @override
-  Future<Map<String, dynamic>> createDraftReport({
+  Future<ExtractionData> analyzeTranscript({
     required String voiceId,
     required String teacherId,
-    ExtractionData? editedExtraction,
+    required String editedTranscript,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/api/teacher/reports/draft',
-        queryParameters: {
-          'voice_id': voiceId,
-          'teacher_id': teacherId,
+        '/api/teacher/voice/$voiceId/analyze',
+        queryParameters: {'teacher_id': teacherId},
+        data: {'edited_transcript': editedTranscript},
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null || body['extraction'] == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty re-extraction result.',
+        );
+      }
+
+      return ExtractionData.fromJson(body['extraction'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createDraftReport({
+    required String voiceId,
+    required String teacherId,
+    String? childId,
+    ExtractionData? editedExtraction,
+  }) async {
+    try {
+      final payload = {
+        'voice_id': voiceId,
+        'teacher_id': teacherId,
+        if ((childId ?? '').trim().isNotEmpty) 'child_id': childId!.trim(),
+        if (editedExtraction != null) 'edited_extraction': {
+          'transcript': editedExtraction.transcript,
+          'meals': editedExtraction.meals,
+          'sleeping': editedExtraction.sleeping,
+          'health': editedExtraction.health,
+          'activities': editedExtraction.activities,
+          'mood': editedExtraction.mood,
         },
-        data: editedExtraction != null
-            ? {'edited_extraction': editedExtraction.toJson()}
-            : null,
+      };
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/draft',
+        data: payload,
         options: Options(
           headers: {'Accept': 'application/json'},
         ),
@@ -419,6 +555,39 @@ class TeacherRepository implements TeacherRepositoryBase {
       if (body == null) {
         throw const TeacherRepositoryException(
           'Server returned an empty manual report response.',
+        );
+      }
+
+      return body;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> publishReport({
+    required String reportId,
+    required String teacherId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/$reportId/publish',
+        queryParameters: {'teacher_id': teacherId},
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final body = response.data;
+      if (body == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty publish report response.',
         );
       }
 

@@ -35,12 +35,8 @@ def upgrade() -> None:
     # Values are UPPERCASE: sa.Enum stores the member name.
     # ------------------------------------------------------------------
     with op.get_context().autocommit_block():
-        op.execute(
-            "ALTER TYPE daily_report_status_enum ADD VALUE IF NOT EXISTS 'SENT'"
-        )
-        op.execute(
-            "ALTER TYPE daily_report_status_enum ADD VALUE IF NOT EXISTS 'READ'"
-        )
+        op.execute("ALTER TYPE daily_report_status_enum ADD VALUE IF NOT EXISTS 'SENT'")
+        op.execute("ALTER TYPE daily_report_status_enum ADD VALUE IF NOT EXISTS 'READ'")
 
     # ------------------------------------------------------------------
     # 2. Backfill. Every existing 'PUBLISHED' row WAS already sent to the

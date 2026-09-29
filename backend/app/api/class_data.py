@@ -5,31 +5,23 @@ from app.core.database import get_db
 from app.models.child import Child, ChildStatus
 from app.models.user import Class_, Teacher
 
-router = APIRouter(
-    prefix="/api/class",
-    tags=["class"]
-)
+router = APIRouter(prefix="/api/class", tags=["class"])
 
 
 """
 #1 API lấy thông tin lớp
 """
+
+
 @router.get("/{class_id}")
 def get_class(
     class_id: str,
-    db: Session = Depends(get_db)  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
 ):
-    class_data = (
-        db.query(Class_)
-        .filter(Class_.class_id == class_id)
-        .first()
-    )
+    class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 
     if not class_data:
-        raise HTTPException(
-            status_code=404,
-            detail="Class not found"
-        )
+        raise HTTPException(status_code=404, detail="Class not found")
 
     return {
         "class_id": str(class_data.class_id),
@@ -38,36 +30,28 @@ def get_class(
         "grade_label": class_data.grade_label,
         "room_number": class_data.room_number,
         "capacity": class_data.capacity,
-        "is_active": class_data.is_active
+        "is_active": class_data.is_active,
     }
 
 
 """
 #2 API lấy danh sách học sinh
 """
+
+
 @router.get("/{class_id}/children")
 def get_children(
     class_id: str,
-    db: Session = Depends(get_db)  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
 ):
-    class_data = (
-        db.query(Class_)
-        .filter(Class_.class_id == class_id)
-        .first()
-    )
+    class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 
     if not class_data:
-        raise HTTPException(
-            status_code=404,
-            detail="Class not found"
-        )
+        raise HTTPException(status_code=404, detail="Class not found")
 
     children = (
         db.query(Child)
-        .filter(
-            Child.class_id == class_id,
-            Child.status == ChildStatus.ENROLLED
-        )
+        .filter(Child.class_id == class_id, Child.status == ChildStatus.ENROLLED)
         .order_by(Child.full_name)
         .all()
     )
@@ -77,41 +61,39 @@ def get_children(
         "children": [
             {
                 "child_id": str(child.child_id),
+                "parent_id": str(child.parent_id) if child.parent_id else None,
+                "class_id": str(child.class_id) if child.class_id else None,
                 "full_name": child.full_name,
+                "nickname": child.nickname,
                 "date_of_birth": (
-                    child.date_of_birth.isoformat()
-                    if child.date_of_birth
-                    else None
+                    child.date_of_birth.isoformat() if child.date_of_birth else None
                 ),
                 "gender": child.gender,
                 "avatar_url": child.avatar_url,
                 "medical_allergies": child.medical_allergies,
-                "status": child.status
+                "status": child.status.value
+                if hasattr(child.status, "value")
+                else str(child.status),
             }
             for child in children
-        ]
+        ],
     }
 
 
 """
 #3 API Lấy Danh Sách Giáo Viên
 """
+
+
 @router.get("/{class_id}/teachers")
 def get_teacher(
     class_id: str,
-    db: Session = Depends(get_db)  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
 ):
-    class_data = (
-        db.query(Class_)
-        .filter(Class_.class_id == class_id)
-        .first()
-    )
+    class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 
     if not class_data:
-        raise HTTPException(
-            status_code=404,
-            detail="Class not found"
-        )
+        raise HTTPException(status_code=404, detail="Class not found")
 
     teachers = (
         db.query(Teacher)
@@ -126,8 +108,8 @@ def get_teacher(
             {
                 "teacher_id": str(teacher.teacher_id),
                 "full_name": teacher.full_name,
-                "email": teacher.email
+                "email": teacher.email,
             }
             for teacher in teachers
-        ]
+        ],
     }

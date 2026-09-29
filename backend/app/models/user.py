@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     # Imported only for type checkers; not executed at runtime.
     from app.models.child import Child
     from app.models.report import (
+        ClassBroadcastReport,
         DailyReport,
         VoiceRecord,
     )
@@ -280,8 +281,22 @@ class Class_(Base, TimestampMixin):
         "Child",
         back_populates="class_",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
         order_by="Child.full_name",
+    )
+    voice_records: Mapped[list[VoiceRecord]] = relationship(
+        "VoiceRecord",
+        back_populates="class_",
+        cascade="save-update, merge",  # FK is SET NULL – do NOT delete-orphan
+        lazy="select",
+        order_by="VoiceRecord.recorded_at",
+    )
+    broadcast_reports: Mapped[list[ClassBroadcastReport]] = relationship(
+        "ClassBroadcastReport",
+        back_populates="class_",
+        cascade="save-update, merge",  # FK is SET NULL – do NOT delete-orphan
+        lazy="select",
+        order_by="ClassBroadcastReport.report_date",
     )
 
     # --- Dunder ---
@@ -412,15 +427,22 @@ class Teacher(Base, TimestampMixin):
         "VoiceRecord",
         back_populates="teacher",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
         order_by="VoiceRecord.recorded_at",
     )
     daily_reports: Mapped[list[DailyReport]] = relationship(
         "DailyReport",
         back_populates="teacher",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
         order_by="DailyReport.report_date",
+    )
+    broadcast_reports: Mapped[list[ClassBroadcastReport]] = relationship(
+        "ClassBroadcastReport",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="ClassBroadcastReport.report_date",
     )
 
     # --- Dunder ---

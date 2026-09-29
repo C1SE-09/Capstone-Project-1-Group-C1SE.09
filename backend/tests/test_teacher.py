@@ -242,7 +242,9 @@ class TestGetVoiceRecord:
         )
         mock_db.query.return_value.filter.return_value.first.return_value = mock_record
 
-        resp = client.get(f"/api/teacher/voice/{fake_id}", params={"teacher_id": str(TEACHER_ID)})
+        resp = client.get(
+            f"/api/teacher/voice/{fake_id}", params={"teacher_id": str(TEACHER_ID)}
+        )
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["id"] == str(fake_id)
