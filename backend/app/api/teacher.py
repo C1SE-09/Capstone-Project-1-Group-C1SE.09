@@ -69,8 +69,12 @@ from app.schemas.report import (
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
 )
-from app.services.extraction_service import extract_from_transcript
+from app.services.extraction_service import (
+    extract_from_transcript,
+    extract_multi_person,
+)
 from app.services.notification_service import notification_service
+from app.services.validation_service import ValidationError, validate_transcript_content
 from app.tasks.process_audio import process_audio_task
 
 logger = logging.getLogger(__name__)
@@ -281,7 +285,9 @@ def upload_voice_record(
 )
 def get_voice_record(
     voice_id: uuid.UUID,
-    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"),  # noqa: B008
+    teacher_id: uuid.UUID = Query(  # noqa: B008
+        ..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"
+    ),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordDetailResponse:
     voice_record = (
@@ -321,7 +327,9 @@ def get_voice_record(
 def update_voice_transcript(
     voice_id: uuid.UUID,
     payload: TranscriptUpdateRequest,
-    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"),  # noqa: B008
+    teacher_id: uuid.UUID = Query(  # noqa: B008
+        ..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"
+    ),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> VoiceRecordDetailResponse:
     voice_record = (
@@ -386,7 +394,7 @@ def get_voice_extraction(
     if voice_record.status != VoiceRecordStatus.COMPLETED:
         raise HTTPException(
             status_code=400,
-            detail=f"Transcription not completed yet (status: {voice_record.status.value})"
+            detail=f"Transcription not completed yet (status: {voice_record.status.value})",
         )
 
     # Chỉ trả transcript từ PhoWhisper. Không chạy/đọc extraction ở bước này;
@@ -394,7 +402,9 @@ def get_voice_extraction(
     return {
         "voice_id": str(voice_id),
         "status": voice_record.status.value,
-        "transcript": voice_record.edited_transcript or voice_record.raw_transcript or voice_record.transcription,
+        "transcript": voice_record.edited_transcript
+        or voice_record.raw_transcript
+        or voice_record.transcription,
         "extraction": None,
     }
 
@@ -427,30 +437,89 @@ def re_extract_from_edited_transcript(
     if voice_record.status != VoiceRecordStatus.COMPLETED:
         raise HTTPException(
             status_code=400,
-            detail=f"Transcription not completed yet (status: {voice_record.status.value})"
+            detail=f"Transcription not completed yet (status: {voice_record.status.value})",
         )
 
-    # Re-extract từ transcript đã chỉnh sửa. Chỉ persist nếu model chạy thành công.
+    # ================================================================
+    # VALIDATE TRANSCRIPT CONTENT
+    # Kiểm tra transcript có phải nội dung báo cáo học sinh không
+    # ================================================================
     try:
-        new_extraction = extract_from_transcript(payload.edited_transcript)
-        # Model chỉ trả về các nhãn thực thể (meals/sleeping/...), nên bổ sung
-        # transcript đã chỉnh sửa để frontend không ghi đè thành null.
-        new_extraction["transcript"] = payload.edited_transcript
+        validate_transcript_content(payload.edited_transcript)
+    except ValidationError as ve:
+        logger.warning(
+            "[ReExtract] Transcript validation failed for VoiceRecord %s: %s",
+            voice_id, ve.reason
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=ve.message
+        ) from ve
+
+    # ================================================================
+    # EXTRACT: Single child vs Multi-child mode
+    # child_id có giá trị → ghi âm đơn → extract_from_transcript()
+    # child_id = NULL    → ghi âm cả lớp → extract_multi_person()
+    # ================================================================
+    try:
+        if voice_record.child_id:
+            # --- Single child mode ---
+            new_extraction = extract_from_transcript(payload.edited_transcript)
+            new_extraction["transcript"] = payload.edited_transcript
+            new_extraction["_mode"] = "single_child"
+            new_extraction["_child_id"] = str(voice_record.child_id)
+        else:
+            # --- Multi-child mode ---
+            # Lấy tất cả bé trong lớp của giáo viên
+            children = db.query(Child).all()
+            
+            if not children:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Không tìm thấy học sinh nào trong lớp để matching."
+                )
+            
+            multi_result = extract_multi_person(
+                transcript=payload.edited_transcript,
+                children=children,
+                min_confidence=0.3,
+            )
+            
+            # Đóng gói kết quả multi-child
+            new_extraction = {
+                "transcript": payload.edited_transcript,
+                "_mode": "multi_child",
+                "segments": multi_result["segments"],
+                "child_extractions": multi_result["child_extractions"],
+                "unique_children_matched": list(multi_result["child_extractions"].keys()),
+                "ambiguous_segments": multi_result["ambiguous_segments"],
+                "unmatched_segments": multi_result["unmatched_segments"],
+                # Legacy fields (null cho multi-child)
+                "meals": None,
+                "sleeping": None,
+                "health": None,
+                "activities": None,
+                "mood": None,
+            }
+        
+        # Persist extraction
         voice_record.edited_transcript = payload.edited_transcript
         voice_record.transcription = payload.edited_transcript
         voice_record.extraction_result = new_extraction
         db.commit()
         db.refresh(voice_record)
         logger.info(
-            "[ReExtract] VoiceRecord %s re-extracted từ edited transcript",
-            voice_id
+            "[ReExtract] VoiceRecord %s re-extracted (mode=%s)",
+            voice_id,
+            new_extraction.get("_mode", "unknown")
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         db.rollback()
         logger.exception("[ReExtract] Lỗi re-extract VoiceRecord %s", voice_id)
         raise HTTPException(
-            status_code=400,
-            detail=f"Re-extraction failed: {exc!s}"
+            status_code=400, detail=f"Re-extraction failed: {exc!s}"
         ) from exc
 
     return {
@@ -459,7 +528,6 @@ def re_extract_from_edited_transcript(
         "transcript": voice_record.edited_transcript or voice_record.raw_transcript,
         "extraction": new_extraction,
     }
-
 
 
 @router.post("/reports/draft")
@@ -512,10 +580,14 @@ def create_report_from_extraction(
 
     # 3. Tạo DailyReport
     today = datetime.now(timezone.utc).date()
-    existing_report = db.query(DailyReport).filter(
-        DailyReport.child_id == voice_record.child_id,
-        DailyReport.report_date == today
-    ).first()
+    existing_report = (
+        db.query(DailyReport)
+        .filter(
+            DailyReport.child_id == voice_record.child_id,
+            DailyReport.report_date == today,
+        )
+        .first()
+    )
 
     if existing_report:
         report = existing_report
@@ -559,10 +631,7 @@ def create_report_from_extraction(
 
     db.commit()
 
-    return {
-        "report_id": str(report.daily_report_id),
-        "status": report.status.value
-    }
+    return {"report_id": str(report.daily_report_id), "status": report.status.value}
 
 
 @router.post(
@@ -611,8 +680,7 @@ def create_manual_report(
 
     if existing_report:
         report = existing_report
-        if payload.teacher_note:
-            report.summary_text = payload.teacher_note
+        report.summary_text = payload.teacher_note
         db.query(ActivityEntry).filter(
             ActivityEntry.daily_report_id == report.daily_report_id
         ).delete()
@@ -655,7 +723,15 @@ def create_manual_report(
     db.commit()
     db.refresh(report)
 
+    activities_in_db = (
+        db.query(ActivityEntry)
+        .filter(ActivityEntry.daily_report_id == report.daily_report_id)
+        .order_by(ActivityEntry.entry_order)
+        .all()
+    )
+
     return DailyReportDetailResponse(
+        daily_report_id=report.daily_report_id,
         report_id=report.daily_report_id,
         child_id=report.child_id,
         teacher_id=report.teacher_id,
@@ -670,7 +746,7 @@ def create_manual_report(
                 description=e.description,
                 entry_order=e.entry_order,
             )
-            for e in sorted(report.activities, key=lambda x: x.entry_order)
+            for e in activities_in_db
         ],
     )
 
@@ -682,17 +758,27 @@ def get_report_detail(
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """Trả về toàn bộ thông tin DailyReport kèm danh sách ActivityEntry."""
-    report = db.query(DailyReport).filter(
-        DailyReport.daily_report_id == report_id
-    ).first()
+    report = (
+        db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
+    )
 
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
     if report.teacher_id != teacher_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this report")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this report"
+        )
+
+    activities_in_db = (
+        db.query(ActivityEntry)
+        .filter(ActivityEntry.daily_report_id == report.daily_report_id)
+        .order_by(ActivityEntry.entry_order)
+        .all()
+    )
 
     return DailyReportDetailResponse(
+        daily_report_id=report.daily_report_id,
         report_id=report.daily_report_id,
         child_id=report.child_id,
         teacher_id=report.teacher_id,
@@ -707,7 +793,7 @@ def get_report_detail(
                 description=e.description,
                 entry_order=e.entry_order,
             )
-            for e in sorted(report.activities, key=lambda x: x.entry_order)
+            for e in activities_in_db
         ],
     )
 
@@ -719,21 +805,17 @@ def publish_report(
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """Chuyển trạng thái báo cáo từ DRAFT → PUBLISHED và ghi nhận published_at."""
-    report = db.query(DailyReport).filter(
-        DailyReport.daily_report_id == report_id
-    ).first()
+    report = (
+        db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
+    )
 
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
     if report.teacher_id != teacher_id:
-        raise HTTPException(status_code=403, detail="Not authorized to publish this report")
-
-    if report.status == DailyReportStatus.PUBLISHED:
-        raise HTTPException(status_code=400, detail="Report đã được publish trước đó")
-
-    if report.status != DailyReportStatus.DRAFT:
-        raise HTTPException(status_code=400, detail="Chỉ có thể publish báo cáo ở trạng thái DRAFT")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to publish this report"
+        )
 
     report.status = DailyReportStatus.PUBLISHED
     report.published_at = datetime.now(timezone.utc).date()
@@ -745,6 +827,7 @@ def publish_report(
         "status": report.status.value,
         "published_at": report.published_at.isoformat(),
     }
+
 
 SENT_STATUS = DailyReportStatus.SENT
 reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -770,7 +853,7 @@ def _send_one_report(
     teacher_id: uuid.UUID,
     db: Session,
 ) -> SendReportResponse:
-    """Gửi 1 báo cáo. Dùng chung cho endpoint 
+    """Gửi 1 báo cáo. Dùng chung cho endpoint
     lẻ + hàng loạt = luôn chung 1 quy tắc."""
 
     # 1. 2 request đồng thời ko thể gửi cùng 1 bản báo cáo.
@@ -785,7 +868,7 @@ def _send_one_report(
         db.rollback()
         raise HTTPException(status_code=404, detail="Report not found")
 
-    # 2. Chủ sở hữu. Không sài `if teacher_id and ...`: bỏ qua check khi 
+    # 2. Chủ sở hữu. Không sài `if teacher_id and ...`: bỏ qua check khi
     # thiếu teacher_id
     if report.teacher_id != teacher_id:
         db.rollback()
@@ -793,7 +876,7 @@ def _send_one_report(
             status_code=403, detail="Not authorized to send this report"
         )
 
-    # 3. Đã gửi rồi -> Trả 400 
+    # 3. Đã gửi rồi -> Trả 400
     if report.status == SENT_STATUS:
         db.rollback()
         raise ReportAlreadySentError(report_id)
@@ -806,7 +889,7 @@ def _send_one_report(
             detail=f"Report cannot be sent from status '{report.status.value}'",
         )
 
-    #5.  Phải có trẻ (child_id nullable trong schema)
+    # 5.  Phải có trẻ (child_id nullable trong schema)
     if report.child_id is None:
         db.rollback()
         raise HTTPException(status_code=400, detail="Report has no child assigned")
@@ -851,6 +934,7 @@ def _send_one_report(
         )
 
     return SendReportResponse(
+        daily_report_id=report.daily_report_id,
         report_id=report.daily_report_id,
         status=report.status.value,
         sent_at=report.sent_at,
@@ -915,14 +999,20 @@ def send_all_reports(
             skipped += 1
             results.append(
                 SendAllItemResult(
-                    report_id=target_id, result="skipped", detail="Already sent"
+                    daily_report_id=target_id,
+                    report_id=target_id,
+                    result="skipped",
+                    detail="Already sent",
                 )
             )
         except HTTPException as exc:
             failed += 1
             results.append(
                 SendAllItemResult(
-                    report_id=target_id, result="failed", detail=str(exc.detail)
+                    daily_report_id=target_id,
+                    report_id=target_id,
+                    result="failed",
+                    detail=str(exc.detail),
                 )
             )
         except Exception:
@@ -931,11 +1021,18 @@ def send_all_reports(
             failed += 1
             results.append(
                 SendAllItemResult(
-                    report_id=target_id, result="failed", detail="Unexpected error"
+                    daily_report_id=target_id,
+                    report_id=target_id,
+                    result="failed",
+                    detail="Unexpected error",
                 )
             )
         else:
             sent += 1
-            results.append(SendAllItemResult(report_id=target_id, result="sent"))
+            results.append(
+                SendAllItemResult(
+                    daily_report_id=target_id, report_id=target_id, result="sent"
+                )
+            )
 
     return SendAllResponse(sent=sent, skipped=skipped, failed=failed, results=results)

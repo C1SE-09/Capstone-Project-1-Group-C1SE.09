@@ -5,13 +5,7 @@ from pathlib import Path
 
 folder = Path(__file__).parent
 
-VALID_FIELDS = {
-    "meals",
-    "sleeping",
-    "health",
-    "activities",
-    "mood"
-}
+VALID_FIELDS = {"meals", "sleeping", "health", "activities", "mood"}
 
 
 def load_jsonl(file_name):
@@ -55,19 +49,12 @@ def check_normalized_duplicate(data, name):
 
     counter = Counter(texts)
 
-    duplicates = {
-        text: count
-        for text, count in counter.items()
-        if count > 1
-    }
+    duplicates = {text: count for text, count in counter.items() if count > 1}
 
     print(f"\n{name} - NORMALIZED DUPLICATE")
     print(f"Unique transcripts: {len(counter)}")
     print(f"Duplicate transcripts: {len(duplicates)}")
-    print(
-        f"Duplicate samples: "
-        f"{sum(count - 1 for count in duplicates.values())}"
-    )
+    print(f"Duplicate samples: {sum(count - 1 for count in duplicates.values())}")
 
     if duplicates:
         print("\nExamples:")
@@ -77,17 +64,9 @@ def check_normalized_duplicate(data, name):
 
 
 def check_cross_duplicates(data1, data2, name1, name2):
-    map_1 = {
-        normalize_text(get_text(item)): item
-        for item in data1
-        if get_text(item)
-    }
+    map_1 = {normalize_text(get_text(item)): item for item in data1 if get_text(item)}
 
-    map_2 = {
-        normalize_text(get_text(item)): item
-        for item in data2
-        if get_text(item)
-    }
+    map_2 = {normalize_text(get_text(item)): item for item in data2 if get_text(item)}
 
     duplicate = set(map_1) & set(map_2)
 
@@ -107,6 +86,7 @@ def check_cross_duplicates(data1, data2, name1, name2):
             print(f"\n{name2} OUTPUT:")
             print(map_2[text]["output"])
 
+
 def check_structure(data, name):
     invalid_structure = 0
     missing_transcript = 0
@@ -114,7 +94,6 @@ def check_structure(data, name):
     invalid_output = 0
 
     for i, item in enumerate(data):
-
         if not isinstance(item, dict):
             invalid_structure += 1
             continue
@@ -136,12 +115,12 @@ def check_structure(data, name):
     print(f"Empty transcript: {empty_transcript}")
     print(f"Missing/invalid output: {invalid_output}")
 
+
 def check_output_fields(data, name):
     missing_fields = []
     invalid_fields = []
 
     for i, item in enumerate(data):
-
         if not isinstance(item, dict):
             continue
 
@@ -183,7 +162,6 @@ def check_output_values(data, name):
     invalid_values = []
 
     for i, item in enumerate(data):
-
         if not isinstance(item, dict):
             continue
 
@@ -193,7 +171,6 @@ def check_output_values(data, name):
             continue
 
         for field in VALID_FIELDS:
-
             value = output.get(field)
 
             # null is allowed
@@ -202,18 +179,13 @@ def check_output_values(data, name):
 
             # String is allowed
             if isinstance(value, str):
-
                 if not value.strip():
-                    invalid_values.append(
-                        (i, field, "empty string")
-                    )
+                    invalid_values.append((i, field, "empty string"))
 
                 continue
 
             # Anything else is invalid
-            invalid_values.append(
-                (i, field, type(value).__name__)
-            )
+            invalid_values.append((i, field, type(value).__name__))
 
     print(f"\n{name} - OUTPUT VALUES")
     print(f"Invalid values: {len(invalid_values)}")
@@ -222,26 +194,19 @@ def check_output_values(data, name):
         print("\nExamples:")
 
         for index, field, value_type in invalid_values[:10]:
-            print(
-                f"Index {index}: "
-                f"{field} -> {value_type}"
-            )
+            print(f"Index {index}: {field} -> {value_type}")
 
 
 def check_empty_outputs(data, name):
     empty_outputs = 0
 
     for item in data:
-
         output = item.get("output", {})
 
         if not isinstance(output, dict):
             continue
 
-        if all(
-            output.get(field) is None
-            for field in VALID_FIELDS
-        ):
+        if all(output.get(field) is None for field in VALID_FIELDS):
             empty_outputs += 1
 
     print(f"\n{name} - EMPTY OUTPUT")
@@ -256,26 +221,11 @@ check_normalized_duplicate(train, "TRAIN")
 check_normalized_duplicate(validate, "VALIDATION")
 check_normalized_duplicate(test, "TEST")
 
-check_cross_duplicates(
-    train,
-    validate,
-    "TRAIN",
-    "VALIDATION"
-)
+check_cross_duplicates(train, validate, "TRAIN", "VALIDATION")
 
-check_cross_duplicates(
-    train,
-    test,
-    "TRAIN",
-    "TEST"
-)
+check_cross_duplicates(train, test, "TRAIN", "TEST")
 
-check_cross_duplicates(
-    validate,
-    test,
-    "VALIDATION",
-    "TEST"
-)
+check_cross_duplicates(validate, test, "VALIDATION", "TEST")
 
 check_structure(train, "TRAIN")
 check_structure(validate, "VALIDATION")
@@ -292,4 +242,3 @@ check_output_values(test, "TEST")
 check_empty_outputs(train, "TRAIN")
 check_empty_outputs(validate, "VALIDATION")
 check_empty_outputs(test, "TEST")
-

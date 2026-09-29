@@ -3,8 +3,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Database & cache
-    database_url: str
-    redis_url: str
+    database_url: str = (
+        "postgresql+psycopg://kinderlog:change-me@localhost:5432/kinderlog"
+    )
+    redis_url: str = "redis://localhost:6379/0"
 
     # Security
     jwt_secret_key: str = "change-me"
@@ -13,7 +15,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     # MinIO object storage
-    minio_endpoint: str = "minio:9000"
+    minio_endpoint: str = "localhost:9000"
     minio_user: str = "minioadmin"
     minio_password: str = "minioadmin123"
     minio_bucket: str = "audio"
@@ -21,7 +23,7 @@ class Settings(BaseSettings):
 
     # Cấu hình để Pydantic tự động đọc dữ liệu từ file .env
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
