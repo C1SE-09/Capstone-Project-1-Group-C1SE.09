@@ -242,7 +242,12 @@ class VoiceRecord(Base, TimestampMixin):
 
     # --- Scope & Audio metadata ---
     scope: Mapped[VoiceRecordScope] = mapped_column(
-        SAEnum(VoiceRecordScope, name="voice_record_scope_enum", create_type=True),
+        SAEnum(
+            VoiceRecordScope,
+            values_callable=lambda x: [e.value for e in x],
+            name="voice_record_scope_enum",
+            create_type=True,
+        ),
         nullable=False,
         default=VoiceRecordScope.SINGLE_CHILD,
         server_default=VoiceRecordScope.SINGLE_CHILD.value,
@@ -331,7 +336,7 @@ class VoiceRecord(Base, TimestampMixin):
         "ClassBroadcastReport",
         back_populates="voice_record",
         uselist=False,  # 1-to-1: one VoiceRecord → at most one ClassBroadcastReport
-        lazy="selectin",
+        lazy="select",
     )
 
     # --- Dunder ---
@@ -488,6 +493,7 @@ class ClassBroadcastReport(Base, TimestampMixin):
     status: Mapped[BroadcastReportStatus] = mapped_column(
         SAEnum(
             BroadcastReportStatus,
+            values_callable=lambda x: [e.value for e in x],
             name="broadcast_report_status_enum",
             create_type=True,
         ),
@@ -506,23 +512,23 @@ class ClassBroadcastReport(Base, TimestampMixin):
     teacher: Mapped[Teacher | None] = relationship(
         "Teacher",
         back_populates="broadcast_reports",
-        lazy="joined",
+        lazy="select",
     )
     class_: Mapped[Class_ | None] = relationship(
         "Class_",
         back_populates="broadcast_reports",
-        lazy="joined",
+        lazy="select",
     )
     voice_record: Mapped[VoiceRecord | None] = relationship(
         "VoiceRecord",
         back_populates="broadcast_report",
-        lazy="joined",
+        lazy="select",
     )
     exception_reports: Mapped[list[DailyReport]] = relationship(
         "DailyReport",
         back_populates="source_broadcast",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
     )
 
     # --- Dunder ---
@@ -641,7 +647,12 @@ class DailyReport(Base, TimestampMixin):
 
     # --- Report type & content ---
     report_type: Mapped[DailyReportType] = mapped_column(
-        SAEnum(DailyReportType, name="daily_report_type_enum", create_type=True),
+        SAEnum(
+            DailyReportType,
+            values_callable=lambda x: [e.value for e in x],
+            name="daily_report_type_enum",
+            create_type=True,
+        ),
         nullable=False,
         default=DailyReportType.INDIVIDUAL,
         server_default=DailyReportType.INDIVIDUAL.value,
@@ -700,13 +711,13 @@ class DailyReport(Base, TimestampMixin):
     source_broadcast: Mapped[ClassBroadcastReport | None] = relationship(
         "ClassBroadcastReport",
         back_populates="exception_reports",
-        lazy="joined",
+        lazy="select",
     )
     activities: Mapped[list[ActivityEntry]] = relationship(
         "ActivityEntry",
         back_populates="daily_report",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
         order_by="ActivityEntry.entry_order",
     )
 

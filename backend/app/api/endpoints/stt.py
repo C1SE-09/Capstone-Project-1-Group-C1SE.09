@@ -1,8 +1,9 @@
 import os
 import tempfile
+from typing import Annotated
 
 from app.services.stt_service import stt_service
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 # Khởi tạo router cho nhóm endpoint STT (Speech-to-Text)
 # Router này sẽ được đăng ký vào app chính với prefix (ví dụ: /api/stt)
@@ -35,10 +36,8 @@ def _resolve_suffix(filename: str | None) -> str:
 
 
 @router.post("/transcribe")
-async def transcribe(audio: UploadFile):
+async def transcribe(audio: Annotated[UploadFile, File()]):
     """Nhận file âm thanh từ client, trả về văn bản đã nhận dạng (STT)."""
-    if not isinstance(audio, UploadFile):
-        raise HTTPException(status_code=400, detail="File âm thanh là bắt buộc")
 
     # Lưu file upload vào file tạm, GIỮ ĐÚNG phần mở rộng gốc để giải mã đúng
     # định dạng (delete=False để STTService có thể mở sau khi đóng).

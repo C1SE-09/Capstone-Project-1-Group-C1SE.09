@@ -20,6 +20,9 @@ class ReportEditorScreen extends StatefulWidget {
     this.classId,
     this.repository,
     this.classRepository,
+    this.initialExtraction,
+    this.transcript,
+    this.voiceId,
   });
   final Child child;
   final bool readOnly;
@@ -27,6 +30,9 @@ class ReportEditorScreen extends StatefulWidget {
   final String? classId;
   final HttpDashboardRepository? repository;
   final HttpClassDataRepository? classRepository;
+  final ExtractionData? initialExtraction;
+  final String? transcript;
+  final String? voiceId;
 
   @override
   State<ReportEditorScreen> createState() => _ReportEditorScreenState();
@@ -70,7 +76,27 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     schoolName = classInfo?.school ?? 'Trường Mầm non Hoa Sen';
     teacherName = teacher.fullName.isNotEmpty ? teacher.fullName : 'Cô Hà';
 
-    if (widget.child.id.isNotEmpty) {
+    if (widget.initialExtraction != null) {
+      final ext = widget.initialExtraction!;
+      if (ext.meals != null && ext.meals!.trim().isNotEmpty) {
+        eating.text = ext.meals!.trim();
+      }
+      if (ext.sleeping != null && ext.sleeping!.trim().isNotEmpty) {
+        sleep.text = ext.sleeping!.trim();
+      }
+      if (ext.health != null && ext.health!.trim().isNotEmpty) {
+        health.text = ext.health!.trim();
+      }
+      if (ext.mood != null && ext.mood!.trim().isNotEmpty) {
+        mood.text = ext.mood!.trim();
+      }
+      if (ext.activities != null && ext.activities!.trim().isNotEmpty) {
+        activity.text = ext.activities!.trim();
+      }
+      if (widget.transcript != null && widget.transcript!.trim().isNotEmpty) {
+        note.text = widget.transcript!.trim();
+      }
+    } else if (widget.child.id.isNotEmpty) {
       try {
         final todayReport = await repository.getTodayReport(widget.child.id, DateTime.now());
         if (todayReport != null) {
