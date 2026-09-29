@@ -19,12 +19,23 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # 0. Ensure PostgreSQL ENUM types for add_column exist before referencing them
+    sa.dialects.postgresql.ENUM(
+        "single_child", "whole_class", name="voice_record_scope_enum"
+    ).create(op.get_bind(), checkfirst=True)
+
+    sa.dialects.postgresql.ENUM(
+        "individual", "exception", name="daily_report_type_enum"
+    ).create(op.get_bind(), checkfirst=True)
+
     # 1. VoiceRecord changes: scope & class_id
     op.add_column(
         "voice_record",
         sa.Column(
             "scope",
-            sa.Enum("single_child", "whole_class", name="voice_record_scope_enum"),
+            sa.dialects.postgresql.ENUM(
+                "single_child", "whole_class", name="voice_record_scope_enum", create_type=False
+            ),
             server_default="single_child",
             nullable=False,
             comment="Scope of recording: single_child or whole_class",
@@ -188,7 +199,9 @@ def upgrade() -> None:
         "daily_report",
         sa.Column(
             "report_type",
-            sa.Enum("individual", "exception", name="daily_report_type_enum"),
+            sa.dialects.postgresql.ENUM(
+                "individual", "exception", name="daily_report_type_enum", create_type=False
+            ),
             server_default="individual",
             nullable=False,
             comment="Origin type: individual or exception",
