@@ -29,6 +29,8 @@ def upgrade() -> None:
     ).create(op.get_bind(), checkfirst=True)
 
     # 1. VoiceRecord changes: scope & class_id
+    scope_enum = sa.Enum("single_child", "whole_class", name="voice_record_scope_enum")
+    scope_enum.create(op.get_bind(), checkfirst=True)
     op.add_column(
         "voice_record",
         sa.Column(
@@ -195,6 +197,8 @@ def upgrade() -> None:
     op.create_index("ix_broadcast_status", "class_broadcast_report", ["status"], unique=False)
 
     # 3. DailyReport changes: report_type & source_broadcast_id
+    report_type_enum = sa.Enum("individual", "exception", name="daily_report_type_enum")
+    report_type_enum.create(op.get_bind(), checkfirst=True)
     op.add_column(
         "daily_report",
         sa.Column(

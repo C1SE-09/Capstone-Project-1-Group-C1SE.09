@@ -114,7 +114,6 @@ INSERT INTO teacher (
     teacher_id, 
     school_id, 
     class_id, 
-    firebase_uid, 
     full_name, 
     email, 
     phone, 
@@ -126,7 +125,6 @@ INSERT INTO teacher (
     'bbbbbbbb-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000001',
-    'test_firebase_uid_teacher_01',
     'Cô Nguyễn Thị Mai',
     'teacher.mai@hoami.edu.vn',
     '0987654321',
@@ -137,7 +135,6 @@ INSERT INTO teacher (
 ) ON CONFLICT (teacher_id) DO UPDATE SET
     school_id = EXCLUDED.school_id,
     class_id = EXCLUDED.class_id,
-    firebase_uid = EXCLUDED.firebase_uid,
     full_name = EXCLUDED.full_name,
     email = EXCLUDED.email,
     phone = EXCLUDED.phone,
@@ -150,7 +147,6 @@ INSERT INTO teacher (
     teacher_id, 
     school_id, 
     class_id, 
-    firebase_uid, 
     full_name, 
     email, 
     phone, 
@@ -162,7 +158,6 @@ INSERT INTO teacher (
     'bbbbbbbb-0000-0000-0000-000000000002',
     'aaaaaaaa-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000002',
-    'test_firebase_uid_teacher_02',
     'Cô Trần Thị Lan',
     'teacher.lan@hoami.edu.vn',
     '0987654322',
@@ -173,7 +168,6 @@ INSERT INTO teacher (
 ) ON CONFLICT (teacher_id) DO UPDATE SET
     school_id = EXCLUDED.school_id,
     class_id = EXCLUDED.class_id,
-    firebase_uid = EXCLUDED.firebase_uid,
     full_name = EXCLUDED.full_name,
     email = EXCLUDED.email,
     phone = EXCLUDED.phone,
@@ -184,7 +178,6 @@ INSERT INTO teacher (
 -- 4. Thêm Phụ huynh mẫu (Parent) - 10 phụ huynh cho 10 trẻ
 INSERT INTO parent (
     parent_id,
-    firebase_uid,
     full_name,
     phone,
     email,
@@ -196,7 +189,6 @@ INSERT INTO parent (
 -- Phụ huynh của trẻ Lớp Mầm A
 (
     'cccccccc-0000-0000-0000-000000000001',
-    'test_firebase_uid_parent_01',
     'Trần Văn Tuấn',
     '0912000001',
     'parent.tuan@gmail.com',
@@ -207,7 +199,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000002',
-    'test_firebase_uid_parent_02',
     'Lê Hoàng Nam',
     '0912000002',
     'parent.nam@gmail.com',
@@ -218,7 +209,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000003',
-    'test_firebase_uid_parent_03',
     'Phạm Quốc Hùng',
     '0912000003',
     'parent.hung@gmail.com',
@@ -229,7 +219,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000004',
-    'test_firebase_uid_parent_04',
     'Đặng Thanh Thảo',
     '0912000004',
     'parent.thao@gmail.com',
@@ -240,7 +229,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000005',
-    'test_firebase_uid_parent_05',
     'Đỗ Văn Thành',
     '0912000005',
     'parent.thanh@gmail.com',
@@ -252,7 +240,6 @@ INSERT INTO parent (
 -- Phụ huynh của trẻ Lớp Mầm B
 (
     'cccccccc-0000-0000-0000-000000000006',
-    'test_firebase_uid_parent_06',
     'Nguyễn Quang Dũng',
     '0912000006',
     'parent.dung@gmail.com',
@@ -263,7 +250,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000007',
-    'test_firebase_uid_parent_07',
     'Hoàng Nhật Minh',
     '0912000007',
     'parent.minh@gmail.com',
@@ -274,7 +260,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000008',
-    'test_firebase_uid_parent_08',
     'Bùi Đức Trọng',
     '0912000008',
     'parent.trong@gmail.com',
@@ -285,7 +270,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000009',
-    'test_firebase_uid_parent_09',
     'Dương Đình Tuấn',
     '0912000009',
     'parent.tuan.d@gmail.com',
@@ -296,7 +280,6 @@ INSERT INTO parent (
 ),
 (
     'cccccccc-0000-0000-0000-000000000010',
-    'test_firebase_uid_parent_10',
     'Ngô Bá Khang',
     '0912000010',
     'parent.khang@gmail.com',
@@ -306,10 +289,179 @@ INSERT INTO parent (
     NOW()
 )
 ON CONFLICT (parent_id) DO UPDATE SET
-    firebase_uid = EXCLUDED.firebase_uid,
     full_name = EXCLUDED.full_name,
     phone = EXCLUDED.phone,
     email = EXCLUDED.email,
+    status = EXCLUDED.status,
+    is_verified = EXCLUDED.is_verified,
+    updated_at = NOW();
+
+-- 4.5. Thêm Tài khoản Đăng nhập (Users)
+-- Tất cả mật khẩu mặc định: 123456 (hashed với bcrypt: $2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW)
+INSERT INTO users (
+    user_id,
+    username,
+    password_hash,
+    role,
+    teacher_id,
+    parent_id,
+    status,
+    is_verified,
+    created_at,
+    updated_at
+) VALUES
+-- Tài khoản Giáo viên
+(
+    '11111111-0000-0000-0000-000000000001',
+    'teacher_mai',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'teacher',
+    'bbbbbbbb-0000-0000-0000-000000000001',
+    NULL,
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '11111111-0000-0000-0000-000000000002',
+    'teacher_lan',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'teacher',
+    'bbbbbbbb-0000-0000-0000-000000000002',
+    NULL,
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+-- Tài khoản Phụ huynh
+(
+    '22222222-0000-0000-0000-000000000001',
+    'parent_tuan',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000001',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000002',
+    'parent_nam',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000002',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000003',
+    'parent_hung',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000003',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000004',
+    'parent_thao',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000004',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000005',
+    'parent_thanh',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000005',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000006',
+    'parent_dung',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000006',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000007',
+    'parent_minh',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000007',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000008',
+    'parent_trong',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000008',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000009',
+    'parent_tuand',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000009',
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
+(
+    '22222222-0000-0000-0000-000000000010',
+    'parent_khang',
+    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    'parent',
+    NULL,
+    'cccccccc-0000-0000-0000-000000000010',
+    'active',
+    true,
+    NOW(),
+    NOW()
+)
+ON CONFLICT (user_id) DO UPDATE SET
+    username = EXCLUDED.username,
+    password_hash = EXCLUDED.password_hash,
+    role = EXCLUDED.role,
+    teacher_id = EXCLUDED.teacher_id,
+    parent_id = EXCLUDED.parent_id,
     status = EXCLUDED.status,
     is_verified = EXCLUDED.is_verified,
     updated_at = NOW();
