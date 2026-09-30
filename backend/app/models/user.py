@@ -51,7 +51,7 @@ from app.models.base import Base, TimestampMixin
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
     # Imported only for type checkers; not executed at runtime.
-    from app.models.child import Child
+    from app.models.child import Child, Parent
     from app.models.report import (
         ClassBroadcastReport,
         DailyReport,
@@ -181,10 +181,10 @@ class User(Base, TimestampMixin):
 
     # Relationships
     teacher: Mapped[Teacher | None] = relationship(
-        "Teacher", foreign_keys="[User.teacher_id]", lazy="joined"
+        "Teacher", foreign_keys=[teacher_id], lazy="joined"
     )
     parent: Mapped[Parent | None] = relationship(
-        "Parent", foreign_keys="[User.parent_id]", lazy="joined"
+        "Parent", foreign_keys=[parent_id], lazy="joined"
     )
 
     def __repr__(self) -> str:  # pragma: no cover
