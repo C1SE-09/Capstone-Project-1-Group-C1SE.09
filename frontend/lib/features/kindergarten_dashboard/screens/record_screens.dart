@@ -1603,9 +1603,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
-  /// Action "Xác nhận gửi" ở bottom sheet - giờ chỉ cần gọi _sendBatch.
-  Future<void> _confirmAndPublish() => _sendBatch();
-
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
