@@ -230,13 +230,11 @@ class Parent(Base, TimestampMixin):
     """A parent / guardian account shared by a household (father + mother).
 
     One Parent account represents the family unit and can be linked to
-    multiple children (siblings). Both parents share the same Firebase UID
-    so they receive the same daily report notifications.
+    multiple children (siblings).
 
     Columns
     -------
     parent_id    : UUID PK (auto-generated)
-    firebase_uid : Firebase Auth UID (unique, optional – linked after first login)
     full_name    : Primary contact's full name (max 150 chars)
     phone        : Primary contact phone number (unique, max 20 chars)
     email        : Contact email (optional, unique if provided, max 255 chars)
@@ -254,7 +252,6 @@ class Parent(Base, TimestampMixin):
     __table_args__ = (
         UniqueConstraint("phone", name="uq_parent_phone"),
         UniqueConstraint("email", name="uq_parent_email"),
-        UniqueConstraint("firebase_uid", name="uq_parent_firebase_uid"),
         Index("ix_parent_phone", "phone"),
         Index("ix_parent_email", "email"),
         Index("ix_parent_status", "status"),
@@ -269,13 +266,6 @@ class Parent(Base, TimestampMixin):
         primary_key=True,
         default=uuid.uuid4,
         comment="Surrogate primary key (UUID v4)",
-    )
-
-    # --- Auth ---
-    firebase_uid: Mapped[str | None] = mapped_column(
-        String(128),
-        nullable=True,
-        comment="Firebase Authentication UID (linked after first login)",
     )
 
     # --- Personal info ---

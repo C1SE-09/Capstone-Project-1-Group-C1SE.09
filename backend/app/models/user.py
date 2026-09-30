@@ -80,6 +80,117 @@ class TeacherStatus(str, enum.Enum):
     ON_LEAVE = "on_leave"
 
 
+class UserRole(str, enum.Enum):
+    """System access role for a User."""
+
+    TEACHER = "teacher"
+    PARENT = "parent"
+    ADMIN = "admin"
+
+
+class UserStatus(str, enum.Enum):
+    """Account status of a User."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    SUSPENDED = "suspended"
+
+
+# ===========================================================================
+# User
+# ===========================================================================
+
+
+class User(Base, TimestampMixin):
+    """System authentication user account.
+
+    Columns
+    -------
+    user_id       : UUID PK
+    username      : Unique login username (max 50 chars)
+    password_hash : Hashed password (max 255 chars)
+    role          : UserRole enum ('teacher' | 'parent' | 'admin')
+    teacher_id    : FK → teacher.teacher_id (CASCADE)
+    parent_id     : FK → parent.parent_id (CASCADE)
+    status        : UserStatus enum – defaults to ACTIVE
+    is_verified   : Account verification status – defaults to True
+    """
+
+    __tablename__ = "users"
+
+    __table_args__ = (
+        UniqueConstraint("username", name="uq_users_username"),
+        Index("ix_users_username", "username"),
+        Index("ix_users_role", "role"),
+        Index("ix_users_teacher_id", "teacher_id"),
+        Index("ix_users_parent_id", "parent_id"),
+        {"comment": "User accounts for authentication in ADARK"},
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        comment="Surrogate primary key (UUID v4)",
+    )
+    username: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="Login username, e.g. teacher_mai or parent_tuan",
+    )
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Bcrypt password hash",
+    )
+    role: Mapped[UserRole] = mapped_column(
+        SAEnum(UserRole, name="user_role_enum", create_type=True),
+        nullable=False,
+        comment="Account role – teacher | parent | admin",
+    )
+    teacher_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "teacher.teacher_id", ondelete="CASCADE", name="fk_users_teacher_id"
+        ),
+        nullable=True,
+        comment="Linked teacher entity (NULL if not a teacher)",
+    )
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "parent.parent_id", ondelete="CASCADE", name="fk_users_parent_id"
+        ),
+        nullable=True,
+        comment="Linked parent entity (NULL if not a parent)",
+    )
+    status: Mapped[UserStatus] = mapped_column(
+        SAEnum(UserStatus, name="user_status_enum", create_type=True),
+        nullable=False,
+        default=UserStatus.ACTIVE,
+        server_default=UserStatus.ACTIVE.value,
+        comment="Account lifecycle status",
+    )
+    is_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+        comment="True after account verification",
+    )
+
+    # Relationships
+    teacher: Mapped[Teacher | None] = relationship(
+        "Teacher", foreign_keys=[teacher_id], lazy="joined"
+    )
+    parent: Mapped[Parent | None] = relationship(
+        "Parent", foreign_keys=[parent_id], lazy="joined"
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<User id={self.user_id!s} username={self.username!r} role={self.role!r}>"
+
+
 # ===========================================================================
 # School
 # ===========================================================================
@@ -317,7 +428,6 @@ class Teacher(Base, TimestampMixin):
     id            : UUID PK
     school_id     : FK → school.id  (CASCADE DELETE)  – for direct school queries
     class_id      : FK → class.id   (SET NULL)        – current homeroom class
-    firebase_uid  : Firebase Auth UID used for authentication (unique, optional)
     full_name     : Teacher's full name (max 150 chars)
     email         : Login / contact email (unique, max 255 chars)
     phone         : Mobile phone (optional, max 20 chars)
@@ -337,7 +447,6 @@ class Teacher(Base, TimestampMixin):
 
     __table_args__ = (
         UniqueConstraint("email", name="uq_teacher_email"),
-        UniqueConstraint("firebase_uid", name="uq_teacher_firebase_uid"),
         Index("ix_teacher_school_id", "school_id"),
         Index("ix_teacher_class_id", "class_id"),
         Index("ix_teacher_email", "email"),
@@ -365,13 +474,6 @@ class Teacher(Base, TimestampMixin):
         ForeignKey("class.class_id", ondelete="SET NULL", name="fk_teacher_class_id"),
         nullable=True,
         comment="Current homeroom class – NULL if not yet assigned",
-    )
-
-    # --- Auth ---
-    firebase_uid: Mapped[str | None] = mapped_column(
-        String(128),
-        nullable=True,
-        comment="Firebase Authentication UID (linked after first login)",
     )
 
     # --- Personal info ---
@@ -451,3 +553,4 @@ class Teacher(Base, TimestampMixin):
             f"<Teacher id={self.teacher_id!s} email={self.email!r} "
             f"school_id={self.school_id!s} class_id={self.class_id!s}>"
         )
+

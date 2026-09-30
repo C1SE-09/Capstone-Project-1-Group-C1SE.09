@@ -39,6 +39,9 @@ from app.models.user import (
     SchoolStatus,
     Teacher,
     TeacherStatus,
+    User,
+    UserRole,
+    UserStatus,
 )
 
 __all__ = [
@@ -60,6 +63,9 @@ __all__ = [
     "Teacher",
     "TeacherStatus",
     "TimestampMixin",
+    "User",
+    "UserRole",
+    "UserStatus",
     "VoiceRecord",
     "VoiceRecordScope",
     "VoiceRecordStatus",
