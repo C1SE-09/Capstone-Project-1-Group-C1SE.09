@@ -86,21 +86,13 @@ class _TeacherShellState extends State<TeacherShell> {
     ));
   }
 
-  void openRecordHub() {
+  void openRecord(String className) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => RecordHubScreen(
+      builder: (_) => RecordFlowScreen(
+        mode: RecordMode.classroom,
         classId: widget.classId,
+        className: className,
         repository: repository,
-        onChild: (child) {
-          if (child.status == ReportStatus.draft ||
-              {ReportStatus.submitted, ReportStatus.read, ReportStatus.attention}.contains(child.status)) {
-            Navigator.of(context).pop();
-            openReport(child);
-          } else {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: widget.classId)));
-          }
-        },
-        onClass: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.classroom, classId: widget.classId))),
       ),
     ));
   }
@@ -116,12 +108,22 @@ class _TeacherShellState extends State<TeacherShell> {
     final className = classSnapshot.data!;
     final page = switch (tab) {
       TeacherTab.overview => OverviewScreen(classId: widget.classId, repository: repository, onOpenReport: (name) => openReport(childByName(name, children)), onHistory: () => setState(() => tab = TeacherTab.history), onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; })),
-      TeacherTab.classList => ClassListScreen(initialHealthOnly: healthOnly, children: children, classId: widget.classId, className: className, schoolName: 'Chưa có thông tin trường', onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: widget.classId, className: className))), onEdit: openReport),
+      TeacherTab.classList => ClassListScreen(initialHealthOnly: healthOnly, children: children, classId: widget.classId, className: className, schoolName: 'Chưa có thông tin trường', onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: widget.classId, className: className, repository: repository))), onEdit: openReport),
 
       TeacherTab.history => HistoryScreen(children: children, onOpenReport: (name) => openReport(childByName(name, children))),
       TeacherTab.account => AccountScreen(onLogout: widget.onLogout, classId: widget.classId, repository: repository),
     };
-    return Scaffold(body: page, bottomNavigationBar: _TeacherNavigation(tab: tab, onTab: (value) => setState(() { if (value != TeacherTab.classList) healthOnly = false; tab = value; }), onRecord: openRecordHub));
+    return Scaffold(
+      body: page,
+      bottomNavigationBar: _TeacherNavigation(
+        tab: tab,
+        onTab: (value) => setState(() {
+          if (value != TeacherTab.classList) healthOnly = false;
+          tab = value;
+        }),
+        onRecord: () => openRecord(className),
+      ),
+    );
     });
   });
 }

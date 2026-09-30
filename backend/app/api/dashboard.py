@@ -95,7 +95,7 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
             str(report.voice_record_id) if report.voice_record_id else None
         ),
         "report_date": report.report_date.isoformat(),
-        "summary_text": report.summary_text,
+        "summary_text": report.summary_text or category_map.get("other"),
         "status": report.status.value,
         "published_at": (
             report.published_at.isoformat() if report.published_at else None
@@ -117,7 +117,7 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
         "eating": category_map.get("meal"),
         "sleeping": category_map.get("nap"),
         "health": category_map.get("health"),
-        "activities_text": category_map.get("play"),
+        "activities_text": category_map.get("play") or category_map.get("learning"),
         "mood": category_map.get("behavior"),
     }
 

@@ -98,8 +98,8 @@ class ExtractionData {
       mood: json['mood'] as String?,
       rawJson: json,
       segments: json['segments'] as List<dynamic>?,
-      childExtractions: json['child_extractions'] is Map<String, dynamic>
-          ? json['child_extractions'] as Map<String, dynamic>
+      childExtractions: json['child_extractions'] is Map
+          ? (json['child_extractions'] as Map).cast<String, dynamic>()
           : null,
     );
   }
@@ -211,6 +211,7 @@ abstract class TeacherRepositoryBase {
   });
 
   /// Create a manual DailyReport (fallback without voice recording).
+  /// If [overwrite] is true, the backend will upsert (replace existing draft for today).
   Future<Map<String, dynamic>> createManualReport({
     required String teacherId,
     required String childId,
@@ -220,6 +221,7 @@ abstract class TeacherRepositoryBase {
     String? activities,
     String? mood,
     String? teacherNote,
+    bool overwrite = false,
   });
 
   /// Publish a daily report so parents can view it.
@@ -532,6 +534,7 @@ class TeacherRepository implements TeacherRepositoryBase {
     String? activities,
     String? mood,
     String? teacherNote,
+    bool overwrite = false,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -545,6 +548,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'activities': activities,
           'mood': mood,
           'teacher_note': teacherNote,
+          if (overwrite) 'overwrite': true,
         },
         options: Options(
           headers: {'Accept': 'application/json'},

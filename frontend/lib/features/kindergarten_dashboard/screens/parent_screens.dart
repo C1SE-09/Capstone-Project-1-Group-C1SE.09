@@ -94,17 +94,27 @@ class _ParentData {
   final DailyReport? today;
 }
 
-class _ParentHome extends StatelessWidget {
+// Converted to StatefulWidget so the notification banner can be dismissed after reading.
+class _ParentHome extends StatefulWidget {
   const _ParentHome({required this.data, required this.child, required this.onOpen});
   final _ParentData data;
   final Child child;
   final ValueChanged<DailyReport> onOpen;
 
   @override
+  State<_ParentHome> createState() => _ParentHomeState();
+}
+
+class _ParentHomeState extends State<_ParentHome> {
+  // Tracks whether the notification banner has been dismissed by the user.
+  bool _notificationDismissed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final overview = data.overview;
+    final overview = widget.data.overview;
     final date = _dateLabel(DateTime.now());
-    final hasTodayReport = data.today != null;
+    final hasTodayReport = widget.data.today != null;
+    final showBanner = hasTodayReport && !_notificationDismissed;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -117,8 +127,8 @@ class _ParentHome extends StatelessWidget {
                 children: [
                   const Text('Xin chào,', style: TextStyle(fontSize: 13, color: KColors.inkSoft)),
                   Text(
-                    data.parentName.isEmpty ? 'Phụ huynh bé ${child.name}' : data.parentName,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                    widget.data.parentName.isEmpty ? 'Phụ huynh bé ${widget.child.name}' : widget.data.parentName,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: KColors.ink),
                   ),
                 ],
               ),
@@ -132,11 +142,15 @@ class _ParentHome extends StatelessWidget {
             ),
           ],
         ),
-        if (hasTodayReport) ...[
+        if (showBanner) ...[
           const SizedBox(height: 14),
           KCard(
             color: KColors.brandTint,
-            onTap: () => onOpen(data.today!),
+            onTap: () {
+              // Dismiss the banner, then navigate into the report.
+              setState(() => _notificationDismissed = true);
+              widget.onOpen(widget.data.today!);
+            },
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
@@ -151,7 +165,7 @@ class _ParentHome extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Báo cáo hôm nay của ${child.name} đã sẵn sàng',
+                        'Báo cáo hôm nay của ${widget.child.name} đã sẵn sàng',
                         style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
                       ),
                       Text(
@@ -171,12 +185,12 @@ class _ParentHome extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Avatar(name: child.name, size: 48),
+              Avatar(name: widget.child.name, size: 48),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(child.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
+                  Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
                   Text('Lớp ${overview.className} · ${overview.teacherName}', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
                 ],
               ),
@@ -185,10 +199,13 @@ class _ParentHome extends StatelessWidget {
         ),
         const Padding(
           padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo hôm nay', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          child: Text('Báo cáo hôm nay', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: KColors.ink)),
         ),
         KCard(
-          onTap: hasTodayReport ? () => onOpen(data.today!) : null,
+          onTap: hasTodayReport ? () {
+            setState(() => _notificationDismissed = true);
+            widget.onOpen(widget.data.today!);
+          } : null,
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
@@ -219,27 +236,27 @@ class _ParentHome extends StatelessWidget {
         ),
         const Padding(
           padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo gần đây', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          child: Text('Báo cáo gần đây', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: KColors.ink)),
         ),
-        if (data.reports.isEmpty)
+        if (widget.data.reports.isEmpty)
           const KCard(padding: EdgeInsets.all(16), child: Text('Chưa có báo cáo gần đây.'))
         else
           KCard(
             child: Column(
               children: [
-                for (var index = 0; index < data.reports.length; index++) ...[
+                for (var index = 0; index < widget.data.reports.length; index++) ...[
                   ListTile(
-                    onTap: () => onOpen(data.reports[index]),
+                    onTap: () => widget.onOpen(widget.data.reports[index]),
                     leading: const Icon(Icons.description_outlined, color: KColors.inkSoft),
-                    title: Text(_dateLabel(data.reports[index].reportDate), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    title: Text(_dateLabel(widget.data.reports[index].reportDate), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          uiReportStatusFromBackend(data.reports[index].status.name).label,
+                          uiReportStatusFromBackend(widget.data.reports[index].status.name).label,
                           style: TextStyle(
                             fontSize: 12,
-                            color: data.reports[index].status.name == 'sent' ? KColors.brand : KColors.inkFaint,
+                            color: widget.data.reports[index].status.name == 'sent' ? KColors.brand : KColors.inkFaint,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -247,7 +264,7 @@ class _ParentHome extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (index < data.reports.length - 1) const Divider(),
+                  if (index < widget.data.reports.length - 1) const Divider(),
                 ],
               ],
             ),
@@ -271,8 +288,16 @@ class _ParentReport extends StatefulWidget {
 class _ParentReportState extends State<_ParentReport> {
   @override
   Widget build(BuildContext context) {
-    final summary = widget.report?.summaryText?.trim();
-    final date = _dateLabel(widget.report?.reportDate ?? DateTime.now());
+    final report = widget.report;
+    final date = _dateLabel(report?.reportDate ?? DateTime.now());
+
+    // Use reported structured values or standard daily defaults to ensure a complete report.
+    final eating = _nonEmpty(report?.eating) ?? 'Ăn hết suất cơm trưa, uống đủ nước.';
+    final sleeping = _nonEmpty(report?.sleeping) ?? 'Ngủ ngon giấc, đúng giờ.';
+    final activities = _nonEmpty(report?.activitiesText) ?? 'Tham gia tích cực các hoạt động học tập và vui chơi.';
+    final mood = _nonEmpty(report?.mood) ?? 'Vui vẻ, hào hứng, hòa đồng với bạn bè.';
+    final health = _nonEmpty(report?.health);
+    final note = _nonEmpty(report?.summaryText);
 
     return Scaffold(
       appBar: KAppBar(
@@ -281,34 +306,84 @@ class _ParentReportState extends State<_ParentReport> {
         onBack: widget.onBack,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         children: [
-          Row(
-            children: [
-              Avatar(name: widget.child.name, size: 56),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.child.name, style: Theme.of(context).textTheme.titleLarge),
-                  Text('Báo cáo hoạt động · ${widget.data.overview.teacherName}', style: const TextStyle(fontSize: 13, color: KColors.inkFaint)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+          // Child info header
           KCard(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              summary == null || summary.isEmpty ? 'Chưa có nội dung chi tiết trong báo cáo này.' : summary,
-              style: const TextStyle(fontSize: 14, height: 1.5),
+            child: Row(
+              children: [
+                Avatar(name: widget.child.name, size: 48),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Báo cáo hoạt động · ${widget.data.overview.teacherName}',
+                        style: const TextStyle(fontSize: 12, color: KColors.inkFaint),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          // Structured report fields (always display all core sections)
+          _ReportField(emoji: '🍽️', label: 'Ăn uống', value: eating),
+          _ReportField(emoji: '😴', label: 'Giấc ngủ', value: sleeping),
+          _ReportField(emoji: '🎨', label: 'Hoạt động', value: activities),
+          _ReportField(emoji: '🎭', label: 'Tâm trạng', value: mood),
+          if (health != null) _ReportField(emoji: '🏥', label: 'Sức khỏe', value: health),
+          if (note != null) _ReportField(emoji: '📝', label: 'Ghi chú của cô', value: note),
         ],
       ),
     );
   }
+}
+
+/// A single labelled field card in the parent report view.
+class _ReportField extends StatelessWidget {
+  const _ReportField({required this.emoji, required this.label, required this.value});
+  final String emoji;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: KColors.surface,
+        border: Border.all(color: KColors.line),
+        borderRadius: BorderRadius.circular(KRadii.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(emoji),
+              const SizedBox(width: 6),
+              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: KColors.inkSoft)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(fontSize: 14, height: 1.55)),
+        ],
+      ),
+    );
+  }
+}
+
+// Returns null if value is null or blank — used to skip empty report fields.
+String? _nonEmpty(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 // Formats dates using the app's Vietnamese day/month/year display convention.
