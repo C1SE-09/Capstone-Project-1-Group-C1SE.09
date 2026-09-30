@@ -6,10 +6,14 @@ Create Date: 2026-09-30 21:40:00.000000
 
 """
 
+import logging
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.exc import OperationalError
+
+logger = logging.getLogger("alembic.migration")
 
 # revision identifiers, used by Alembic.
 revision: str = "e5a8f2c1d904"
@@ -108,21 +112,23 @@ def upgrade() -> None:
     # 2. Drop firebase_uid from teacher and parent tables if existing
     try:
         op.drop_constraint("uq_teacher_firebase_uid", "teacher", type_="unique")
-    except Exception:
-        pass
+    except OperationalError as e:
+        logger.warning("Could not drop uq_teacher_firebase_uid constraint: %s", e)
+
     try:
         op.drop_column("teacher", "firebase_uid")
-    except Exception:
-        pass
+    except OperationalError as e:
+        logger.warning("Could not drop firebase_uid column from teacher: %s", e)
 
     try:
         op.drop_constraint("uq_parent_firebase_uid", "parent", type_="unique")
-    except Exception:
-        pass
+    except OperationalError as e:
+        logger.warning("Could not drop uq_parent_firebase_uid constraint: %s", e)
+
     try:
         op.drop_column("parent", "firebase_uid")
-    except Exception:
-        pass
+    except OperationalError as e:
+        logger.warning("Could not drop firebase_uid column from parent: %s", e)
 
 
 def downgrade() -> None:
