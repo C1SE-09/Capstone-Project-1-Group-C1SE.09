@@ -58,19 +58,28 @@ from app.models.report import (
 from app.models.user import Teacher
 from app.schemas.report import (
     ActivityEntryResponse,
+    ApproveItemRequest,
+    ApproveItemResponse,
     DailyReportDetailResponse,
     DraftReportCreateRequest,
     ManualReportCreateRequest,
     SendAllItemResult,
     SendAllRequest,
     SendAllResponse,
+    SendBatchItemResult,
+    SendBatchRequest,
+    SendBatchResponse,
     SendReportResponse,
     TranscriptUpdateRequest,
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
 )
+from app.services.draft_report_service import (
+    create_child_draft,
+    create_classwide_drafts,
+    create_unmatched_drafts,
+)
 from app.services.extraction_service import (
-    extract_from_transcript,
     extract_multi_person,
 )
 from app.services.notification_service import notification_service
@@ -457,50 +466,47 @@ def re_extract_from_edited_transcript(
         ) from ve
 
     # ================================================================
-    # EXTRACT: Single child vs Multi-child mode
-    # child_id có giá trị → ghi âm đơn → extract_from_transcript()
-    # child_id = NULL    → ghi âm cả lớp → extract_multi_person()
+    # EXTRACT: Unified auto-detect mode (flow mới - 1 nút ghi âm duy nhất)
+    # Backend LUÔN chạy multi-person để tự detect:
+    #   - 1 bé được nhắc tên → child_extractions có 1 key
+    #   - Vài bé được nhắc → child_extractions có N keys
+    #   - Cả lớp + vài bé đặc biệt → class_wide_extraction + child_extractions
+    #   - Chỉ cả lớp → chỉ có class_wide_extraction
     # ================================================================
     try:
-        if voice_record.child_id:
-            # --- Single child mode ---
-            new_extraction = extract_from_transcript(payload.edited_transcript)
-            new_extraction["transcript"] = payload.edited_transcript
-            new_extraction["_mode"] = "single_child"
-            new_extraction["_child_id"] = str(voice_record.child_id)
-        else:
-            # --- Multi-child mode ---
-            # Lấy tất cả bé trong lớp của giáo viên
-            children = db.query(Child).all()
-            
-            if not children:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Không tìm thấy học sinh nào trong lớp để matching."
-                )
-            
-            multi_result = extract_multi_person(
-                transcript=payload.edited_transcript,
-                children=children,
-                min_confidence=0.3,
+        # Lấy tất cả bé trong lớp của giáo viên để matching tên
+        children = db.query(Child).all()
+
+        if not children:
+            raise HTTPException(
+                status_code=400,
+                detail="Không tìm thấy học sinh nào trong lớp để matching."
             )
-            
-            # Đóng gói kết quả multi-child
-            new_extraction = {
-                "transcript": payload.edited_transcript,
-                "_mode": "multi_child",
-                "segments": multi_result["segments"],
-                "child_extractions": multi_result["child_extractions"],
-                "unique_children_matched": list(multi_result["child_extractions"].keys()),
-                "ambiguous_segments": multi_result["ambiguous_segments"],
-                "unmatched_segments": multi_result["unmatched_segments"],
-                # Legacy fields (null cho multi-child)
-                "meals": None,
-                "sleeping": None,
-                "health": None,
-                "activities": None,
-                "mood": None,
-            }
+
+        multi_result = extract_multi_person(
+            transcript=payload.edited_transcript,
+            children=children,
+            min_confidence=0.3,
+        )
+
+        # Đóng gói kết quả unified
+        new_extraction = {
+            "transcript": payload.edited_transcript,
+            "_mode": "auto",  # backend tự detect, không phân biệt single/multi
+            "segments": multi_result["segments"],
+            "class_wide_extraction": multi_result.get("class_wide_extraction"),
+            "child_extractions": multi_result["child_extractions"],
+            "unique_children_matched": list(multi_result["child_extractions"].keys()),
+            "ambiguous_segments": multi_result["ambiguous_segments"],
+            "unmatched_segments": multi_result["unmatched_segments"],
+            "class_wide_segments": multi_result["class_wide_segments"],
+            # Legacy fields (null cho unified mode - FE dùng class_wide_extraction)
+            "meals": None,
+            "sleeping": None,
+            "health": None,
+            "activities": None,
+            "mood": None,
+        }
         
         # Persist extraction
         voice_record.edited_transcript = payload.edited_transcript
@@ -827,6 +833,244 @@ def publish_report(
         "status": report.status.value,
         "published_at": report.published_at.isoformat(),
     }
+
+
+# ===========================================================================
+# Auto-detect flow: Approve-Item + Send-Batch
+# ===========================================================================
+# Thay thế flow cũ (createManualReport + publishReport loop).
+# Mục tiêu: mỗi lần user bấm "Duyệt" 1 item → tạo draft NGAY (per-item).
+# Sau khi user bấm "Xác nhận gửi" → gửi tất cả drafts 1 lần (batch).
+
+
+@router.post(
+    "/reports/approve-item",
+    response_model=ApproveItemResponse,
+    summary="Approve 1 item (per-item draft creation)",
+    description=(
+        "Tạo draft DailyReport NGAY khi user bấm 'Duyệt' trên 1 item.\n\n"
+        "3 loại item:\n"
+        "- **classwide**: Tạo N drafts (1 cho mỗi child trong lớp)\n"
+        "- **child**: Tạo/update 1 draft cho child cụ thể\n"
+        "- **unmatched**: Không tạo draft (placeholder response)\n\n"
+        "Content merge logic: child_override > class_wide_default.\n"
+        "Nếu đã có draft cho (child, today) → upsert (xóa ActivityEntry cũ, tạo mới)."
+    ),
+)
+def approve_item(
+    payload: ApproveItemRequest,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> ApproveItemResponse:
+    """
+    Auto-detect flow: Approve 1 item → tạo draft NGAY.
+
+    Body params:
+        voice_record_id: UUID của VoiceRecord (nguồn extraction)
+        teacher_id: UUID của giáo viên
+        kind: 'classwide' | 'child' | 'unmatched'
+        child_id: UUID của child (khi kind='child')
+        class_id: UUID của lớp (khi kind='classwide' hoặc 'unmatched')
+        extraction: (Optional) Override content
+    """
+    voice_record = (
+        db.query(VoiceRecord)
+        .filter(VoiceRecord.voice_record_id == payload.voice_record_id)
+        .first()
+    )
+    if not voice_record:
+        raise HTTPException(
+            status_code=404,
+            detail=f"VoiceRecord {payload.voice_record_id} not found",
+        )
+
+    # Extract class_wide_extraction + child_extractions từ extraction_result
+    extraction_result = voice_record.extraction_result or {}
+    class_wide_extraction = extraction_result.get("class_wide_extraction") or {}
+    child_extractions = extraction_result.get("child_extractions") or {}
+
+    # Allow user override content qua payload.extraction
+    user_extraction = payload.extraction or {}
+
+    try:
+        if payload.kind == "classwide":
+            if not payload.class_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="class_id is required when kind='classwide'",
+                )
+            # Override class-wide content nếu user đã sửa
+            final_class_wide = user_extraction if user_extraction else class_wide_extraction
+            # Pass child_overrides hiện có để merge khi tạo draft
+            result = create_classwide_drafts(
+                db=db,
+                class_id=payload.class_id,
+                voice_record_id=payload.voice_record_id,
+                teacher_id=payload.teacher_id,
+                class_wide_extraction=final_class_wide,
+                child_overrides=child_extractions,
+            )
+            return ApproveItemResponse(
+                kind="classwide",
+                draft_report_ids=result["draft_report_ids"],
+                count=result["count"],
+                child_id_to_report_id=result["child_id_to_report_id"],
+            )
+
+        elif payload.kind == "child":
+            if not payload.child_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="child_id is required when kind='child'",
+                )
+            # Override content cho child này
+            child_override = user_extraction if user_extraction else child_extractions.get(str(payload.child_id))
+            result = create_child_draft(
+                db=db,
+                child_id=payload.child_id,
+                voice_record_id=payload.voice_record_id,
+                teacher_id=payload.teacher_id,
+                class_wide_extraction=class_wide_extraction,
+                child_override=child_override,
+            )
+            return ApproveItemResponse(
+                kind="child",
+                draft_report_ids=[result["draft_report_id"]],
+                count=1,
+                merged_extraction=result["merged_extraction"],
+            )
+
+        elif payload.kind == "unmatched":
+            if not payload.class_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="class_id is required when kind='unmatched'",
+                )
+            result = create_unmatched_drafts(
+                db=db,
+                class_id=payload.class_id,
+                voice_record_id=payload.voice_record_id,
+                teacher_id=payload.teacher_id,
+                class_wide_extraction=class_wide_extraction,
+            )
+            return ApproveItemResponse(
+                kind="unmatched",
+                draft_report_ids=[],
+                count=0,
+                note=result.get("note"),
+            )
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid kind: {payload.kind}",
+            )
+
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve)) from ve
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[approve-item] Unexpected failure")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Approve-item failed: {exc!s}",
+        ) from exc
+
+
+@router.post(
+    "/reports/send-batch",
+    response_model=SendBatchResponse,
+    summary="Send batch of approved drafts",
+    description=(
+        "Gửi tất cả draft reports (đã được user duyệt trước đó) cho phụ huynh.\n\n"
+        "Khác `send-all` ở chỗ: gửi ĐÚNG các report_ids được chỉ định, "
+        "không tự động filter theo teacher/date. Nếu rỗng → filter theo class_id + date.\n\n"
+        "Mỗi report được gửi độc lập (commit riêng), 1 lỗi không ảnh hưởng cả batch."
+    ),
+)
+def send_batch_reports(
+    payload: SendBatchRequest,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> SendBatchResponse:
+    """
+    Gửi batch các drafts. Tương tự send-all nhưng nhận explicit report_ids.
+    """
+    # Xác định target report_ids
+    if payload.report_ids:
+        target_ids = list(dict.fromkeys(payload.report_ids))  # dedupe, giữ thứ tự
+    else:
+        # Filter theo class_id + date
+        if not payload.class_id or not payload.report_date:
+            raise HTTPException(
+                status_code=400,
+                detail="report_ids HOẶC (class_id + report_date) là bắt buộc",
+            )
+        query = db.query(DailyReport).filter(
+            DailyReport.status == DailyReportStatus.DRAFT,
+            DailyReport.report_date == payload.report_date,
+        )
+        if payload.class_id:
+            # Join với child để filter theo class
+            query = query.join(Child, DailyReport.child_id == Child.child_id).filter(
+                Child.class_id == payload.class_id
+            )
+        if payload.teacher_id:
+            query = query.filter(DailyReport.teacher_id == payload.teacher_id)
+        target_ids = [row.daily_report_id for row in query.all()]
+
+    if not target_ids:
+        return SendBatchResponse(sent=0, skipped=0, failed=0, results=[])
+
+    results: list[SendBatchItemResult] = []
+    sent = skipped = failed = 0
+
+    for report_id in target_ids:
+        try:
+            # Tái sử dụng _send_one_report (đã có sẵn logic notification + error handling)
+            _send_one_report(report_id, payload.teacher_id, db)
+            sent += 1
+            results.append(
+                SendBatchItemResult(daily_report_id=report_id, result="sent")
+            )
+        except ReportAlreadySentError:
+            skipped += 1
+            results.append(
+                SendBatchItemResult(
+                    daily_report_id=report_id,
+                    result="skipped",
+                    detail="Already sent",
+                )
+            )
+        except HTTPException as exc:
+            failed += 1
+            results.append(
+                SendBatchItemResult(
+                    daily_report_id=report_id,
+                    result="failed",
+                    detail=str(exc.detail),
+                )
+            )
+        except Exception:
+            db.rollback()
+            logger.exception("[send-batch] Unexpected failure report_id=%s", report_id)
+            failed += 1
+            results.append(
+                SendBatchItemResult(
+                    daily_report_id=report_id,
+                    result="failed",
+                    detail="Unexpected error",
+                )
+            )
+
+    logger.info(
+        "[send-batch] teacher_id=%s sent=%d skipped=%d failed=%d",
+        payload.teacher_id, sent, skipped, failed,
+    )
+
+    return SendBatchResponse(
+        sent=sent, skipped=skipped, failed=failed, results=results
+    )
 
 
 SENT_STATUS = DailyReportStatus.SENT

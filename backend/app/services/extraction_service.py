@@ -199,6 +199,12 @@ CLASS_WIDE_KEYWORDS = [
     "hôm nay", "sáng nay", "chiều nay"
 ]
 
+# Class-wide extraction fields (used to bucket class-wide statements).
+# Dùng chung cho class_wide_lists init và iteration loop.
+CLASS_WIDE_FIELDS: tuple[str, ...] = (
+    "meals", "sleeping", "health", "activities", "mood",
+)
+
 
 def _is_class_wide_segment(segment_text: str, matches: list) -> bool:
     """
@@ -225,26 +231,38 @@ def extract_multi_person(
 ) -> dict:
     """
     Trích xuất thông tin cho NHIỀU bé từ 1 transcript cả lớp.
-    
+
     Flow:
     1. Tách transcript thành các segment (theo câu)
     2. Dùng name_matching để xác định bé nào được nhắc đến trong mỗi segment
     3. Chạy NLP extraction cho từng segment
-    4. Gán cho tất cả children (default) hoặc child cụ thể (override)
-    
-    Logic:
-    - Segment "cả lớp..." → gán cho TẤT CẢ children (default)
-    - Segment match được child cụ thể → ghi đè (override) extraction của child đó
-    
+    4. Phân loại vào 3 bucket:
+       - Class-wide (default): "cả lớp ăn ngon" → dùng cho TẤT CẢ children
+       - Child-specific (override): "bé Lan ăn ít" → chỉ dùng cho bé Lan
+       - Unmatched: không match được ai
+
+    Logic mới (tách bucket):
+    - Segment "cả lớp..." → append vào `class_wide_extraction`
+    - Segment match được child cụ thể → REPLACE vào `child_extractions[child_id]`
+      (chỉ chứa children CÓ override, không phải all 25)
+    - Segment không match ai → `unmatched_segments` (không lưu content)
+
     Args:
         transcript: Full transcript text từ STT
         children: List[Child] - Danh sách tất cả bé trong lớp
         min_confidence: Ngưỡng confidence tối thiểu để match tên (default 30%)
-    
+
     Returns:
         {
-            "segments": [...],
-            "child_extractions": {
+            "segments": [...],                          # Tất cả segments với metadata
+            "class_wide_extraction": {                  # ← MỚI: default content cho cả lớp
+                "meals": "...",                         #     (comma-joined nếu có nhiều)
+                "sleeping": "...",
+                "health": "...",
+                "activities": "...",
+                "mood": "..."
+            },
+            "child_extractions": {                      # CHỈ children có override
                 "child_id": {
                     "meals": "...",
                     "sleeping": "...",
@@ -255,80 +273,92 @@ def extract_multi_person(
             "unmatched_segments": 2,
             "class_wide_segments": 1,
         }
+
+    Note:
+        Frontend merge logic: `final = merge(class_wide_extraction, child_extractions.get(child_id, {}))`
+        - Class-wide dùng cho children KHÔNG có override
+        - Child-specific REPLACE các field class-wide
     """
     import re
 
     from app.services.name_matching_service import match_single_text
-    
+
     if not transcript or not transcript.strip():
         return {
             "segments": [],
+            "class_wide_extraction": {
+                "meals": None,
+                "sleeping": None,
+                "health": None,
+                "activities": None,
+                "mood": None,
+            },
             "child_extractions": {},
             "ambiguous_segments": 0,
             "unmatched_segments": 0,
             "class_wide_segments": 0,
         }
-    
+
     # Split transcript into sentences
     segments_text = re.split(r'[.!?\n]+', transcript)
     segments_text = [s.strip() for s in segments_text if s.strip()]
-    
+
     if not segments_text:
         return {
             "segments": [],
+            "class_wide_extraction": {
+                "meals": None,
+                "sleeping": None,
+                "health": None,
+                "activities": None,
+                "mood": None,
+            },
             "child_extractions": {},
             "ambiguous_segments": 0,
             "unmatched_segments": 0,
             "class_wide_segments": 0,
         }
-    
+
     # Load model once
     _load_model()
-    
-    # Initialize all children with empty extractions (for tracking)
-    all_child_ids = [str(c.child_id) for c in children]
-    child_extractions = {}  # child_id -> {meals: [], sleeping: [], ...}
-    for child_id in all_child_ids:
-        child_extractions[child_id] = {
-            "meals": [],
-            "sleeping": [],
-            "health": [],
-            "activities": [],
-            "mood": [],
-        }
-    
-    # Track which fields were overridden by child-specific segments
-    # child_id -> set of keys that were overridden
-    overridden_fields = {}  # child_id -> {("meals",), ("sleeping",), ...}
-    for child_id in all_child_ids:
-        overridden_fields[child_id] = set()
-    
+
+    # ============ 3 BUCKETS RIÊNG BIỆT ============
+
+    # Bucket 1: Class-wide content (append khi gặp segment class-wide)
+    class_wide_lists: dict[str, list[str]] = {
+        key: [] for key in CLASS_WIDE_FIELDS
+    }
+
+    # Bucket 2: Child-specific overrides (REPLACE khi gặp segment match child)
+    # Chỉ chứa children CÓ override, không tạo sẵn cho all 25
+    child_overrides_lists: dict[str, dict[str, list[str]]] = {}
+
     result_segments = []
     ambiguous_count = 0
     unmatched_count = 0
     class_wide_count = 0
-    
+
     for segment_text in segments_text:
         # 1. Match children names in this segment
         matches = match_single_text(
-            segment_text, 
-            children, 
+            segment_text,
+            children,
             min_confidence=min_confidence
         )
-        
+
         # 2. Run NLP extraction on this segment
         extraction = _extract_single_segment(segment_text)
-        
+
         # 3. Check if this is a class-wide segment
         is_class_wide = _is_class_wide_segment(segment_text, matches)
-        
+
         # 4. Check if ambiguous
         is_ambiguous = (
-            len(matches) > 1 and 
+            len(matches) > 1 and
             matches[0].confidence == matches[1].confidence
         )
-        
-        # Build segment result
+
+        # Build segment result (giữ nguyên format để frontend dùng)
         segment_result = {
             "text": segment_text,
             "is_class_wide": is_class_wide,
@@ -345,48 +375,65 @@ def extract_multi_person(
             "extraction": extraction,
             "is_ambiguous": is_ambiguous,
         }
-        
+
         if is_ambiguous:
             ambiguous_count += 1
-        
+
+        # ============ 5. Phân loại vào 3 buckets ============
+
         if is_class_wide:
+            # Class-wide: append vào bucket 1
             class_wide_count += 1
-            # Apply to ALL children (default)
-            target_child_ids = all_child_ids
-        elif matches:
-            # Apply ONLY to matched children (override)
-            target_child_ids = [m.child_id for m in matches]
-        else:
-            unmatched_count += 1
-            target_child_ids = []
-        
-        # 5. Aggregate extractions for target children
-        for child_id in target_child_ids:
-            for key in child_extractions[child_id]:
+            for key in CLASS_WIDE_FIELDS:
                 value = extraction.get(key)
                 if value:
-                    # Child-specific segment: override (clear old values first)
-                    if not is_class_wide and matches:
-                        child_extractions[child_id][key] = [value]
-                        overridden_fields[child_id].add(key)
-                    else:
-                        # Class-wide: add to list (only if not already overridden)
-                        if key not in overridden_fields.get(child_id, set()):
-                            child_extractions[child_id][key].append(value)
-        
+                    class_wide_lists[key].append(value)
+
+        elif matches:
+            # Child-specific: REPLACE vào bucket 2 cho từng matched child
+            for m in matches:
+                child_id = m.child_id
+                # Chỉ thêm child vào bucket 2 khi LẦN ĐẦU gặp
+                if child_id not in child_overrides_lists:
+                    child_overrides_lists[child_id] = {
+                        "meals": [],
+                        "sleeping": [],
+                        "health": [],
+                        "activities": [],
+                        "mood": [],
+                    }
+                # REPLACE (không append) cho mỗi field có giá trị
+                for key in child_overrides_lists[child_id]:
+                    value = extraction.get(key)
+                    if value:
+                        # Replace list với 1 phần tử (override cuối cùng thắng)
+                        child_overrides_lists[child_id][key] = [value]
+        else:
+            # Unmatched: chỉ đếm, không lưu content vào bucket nào
+            unmatched_count += 1
+
         result_segments.append(segment_result)
-    
-    # Convert lists to comma-joined strings
-    final_child_extractions = {}
-    for child_id, data in child_extractions.items():
-        final_child_extractions[child_id] = {
+
+    # ============ Convert lists → comma-joined strings ============
+
+    # Bucket 1: class_wide_extraction
+    class_wide_extraction = {
+        key: ", ".join(values) if values else None
+        for key, values in class_wide_lists.items()
+    }
+
+    # Bucket 2: child_extractions (CHỈ children có override)
+    child_extractions: dict[str, dict[str, str | None]] = {}
+    for child_id, data in child_overrides_lists.items():
+        child_extractions[child_id] = {
             key: ", ".join(values) if values else None
             for key, values in data.items()
         }
-    
+
     return {
         "segments": result_segments,
-        "child_extractions": final_child_extractions,
+        "class_wide_extraction": class_wide_extraction,
+        "child_extractions": child_extractions,
         "ambiguous_segments": ambiguous_count,
         "unmatched_segments": unmatched_count,
         "class_wide_segments": class_wide_count,

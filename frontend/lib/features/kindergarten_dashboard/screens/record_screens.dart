@@ -1190,6 +1190,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
   int savedReportsCount = 0;
   int savedHealthCount = 0;
 
+  /// Map từ item.id → list draft_report_id đã được tạo (sau khi gọi approve-item).
+  /// Dùng để gom lại và gửi 1 lần qua send-batch.
+  final Map<String, List<String>> approvedDraftIds = {};
+
+  /// Set các item.id đang trong quá trình approve (disable button tránh double-click).
+  final Set<String> approvingIds = <String>{};
+
+  /// True khi đang gọi send-batch.
+  bool isSendingBatch = false;
+
   @override
   void initState() {
     super.initState();
@@ -1207,7 +1217,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
     try {
       final ext = widget.extraction;
 
-      // Single child mode
+      // Legacy single-child mode (RecordMode.child không còn dùng trong flow mới,
+      // nhưng giữ lại để không vỡ các entry-point cũ nếu còn gọi tới).
       if (widget.mode == RecordMode.child && widget.child != null) {
         final c = widget.child!;
         final meals = ext?.meals?.trim().isNotEmpty == true
@@ -1242,87 +1253,48 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ];
       }
 
-      // Classroom mode
-      final childMap = ext?.childExtractions;
+      // ====================================================================
+      // Classroom mode - Auto-detect flow (mới)
+      // ====================================================================
+      // Cấu trúc items:
+      //   1. Classwide item (1) - nếu backend có classWideExtraction có nội dung
+      //   2. Child items (N) - chỉ các bé CÓ override trong childExtractions
+      //   3. Unmatched items (M) - các segments không gắn được với bé nào
+      // ====================================================================
       final result = <ObservationItem>[];
 
-      for (final child in children) {
-        String eating = 'Ăn hết suất cơm trưa, uống đủ nước.';
-        String sleep = 'Ngủ ngon giấc, đúng giờ.';
-        String health = '';
-        String mood = 'Vui vẻ, hòa đồng.';
-        String activities = 'Tham gia tích cực các hoạt động cùng lớp.';
-        String note = '';
+      // -------- 1. Classwide item -----------------------------------------
+      if (ext?.hasClassWideContent == true) {
+        final cw = ext!.classWideExtraction!;
+        result.add(_classwideItemFromExtraction(cw));
+      }
 
-        dynamic data;
-        if (childMap != null) {
+      // -------- 2. Child items (chỉ các bé có override) -------------------
+      final childMap = ext?.childExtractions;
+      if (childMap != null && childMap.isNotEmpty) {
+        for (final child in children) {
+          // Tìm override theo id hoặc theo name (backend có thể trả key là name)
+          dynamic data;
           if (childMap.containsKey(child.id)) {
             data = childMap[child.id];
           } else if (childMap.containsKey(child.name)) {
             data = childMap[child.name];
           }
+          if (data is! Map) {
+            continue; // Bé này không có override → KHÔNG tạo item (dùng classwide default)
+          }
+          result.add(_childItemFromExtraction(child, data));
         }
-
-        if (data is Map) {
-          if (data['meals']?.toString().trim().isNotEmpty == true) {
-            eating = data['meals'].toString().trim();
-          }
-          if (data['sleeping']?.toString().trim().isNotEmpty == true) {
-            sleep = data['sleeping'].toString().trim();
-          }
-          if (data['health']?.toString().trim().isNotEmpty == true) {
-            health = data['health'].toString().trim();
-          }
-          if (data['mood']?.toString().trim().isNotEmpty == true) {
-            mood = data['mood'].toString().trim();
-          }
-          if (data['activities']?.toString().trim().isNotEmpty == true) {
-            activities = data['activities'].toString().trim();
-          }
-          if (data['transcript']?.toString().trim().isNotEmpty == true) {
-            note = data['transcript'].toString().trim();
-          }
-        }
-
-        result.add(
-          ObservationItem(
-            id: child.id,
-            name: child.name,
-            childId: child.id,
-            nickname: child.nickname,
-            matched: true,
-            eating: eating,
-            sleep: sleep,
-            activities: activities,
-            mood: mood,
-            health: health,
-            note: note,
-            severity: child.severity,
-          ),
-        );
       }
 
-      // Unmatched segments (if AI found mentions not matched to a child)
+      // -------- 3. Unmatched items ----------------------------------------
       final rawUnmatched = ext?.rawJson?['unmatched_segments'];
-      if (rawUnmatched is List) {
+      if (rawUnmatched is List && rawUnmatched.isNotEmpty) {
         for (var i = 0; i < rawUnmatched.length; i++) {
           final seg = rawUnmatched[i];
           final text = seg is Map ? (seg['text']?.toString() ?? '') : seg.toString();
           if (text.trim().isNotEmpty) {
-            result.add(
-              ObservationItem(
-                id: 'unmatched_$i',
-                name: 'Chưa rõ bé nào',
-                matched: false,
-                kind: ObservationKind.unmatched,
-                decision: ObservationDecision.pending,
-                snippet: text,
-                eating: 'Chưa có thông tin',
-                sleep: 'Chưa có thông tin',
-                activities: 'Chưa có thông tin',
-                mood: 'Chưa có thông tin',
-              ),
-            );
+            result.add(_unmatchedItem('unmatched_$i', text));
           }
         }
       } else if (ext?.segments != null) {
@@ -1335,20 +1307,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             if (!isClassWide && !hasMatches) {
               final text = seg['text']?.toString() ?? '';
               if (text.trim().isNotEmpty) {
-                result.add(
-                  ObservationItem(
-                    id: 'unmatched_${uIdx++}',
-                    name: 'Chưa rõ bé nào',
-                    matched: false,
-                    kind: ObservationKind.unmatched,
-                    decision: ObservationDecision.pending,
-                    snippet: text,
-                    eating: 'Chưa có thông tin',
-                    sleep: 'Chưa có thông tin',
-                    activities: 'Chưa có thông tin',
-                    mood: 'Chưa có thông tin',
-                  ),
-                );
+                result.add(_unmatchedItem('unmatched_${uIdx++}', text));
               }
             }
           }
@@ -1358,23 +1317,85 @@ class _ReviewScreenState extends State<ReviewScreen> {
       return result;
     } catch (e, st) {
       debugPrint('Error in _buildObservations: $e\n$st');
-      return children
-          .map((child) => ObservationItem(
-                id: child.id,
-                name: child.name,
-                childId: child.id,
-                nickname: child.nickname,
-                matched: true,
-                eating: 'Ăn hết suất cơm trưa, uống đủ nước.',
-                sleep: 'Ngủ ngon giấc, đúng giờ.',
-                activities: 'Tham gia tích cực các hoạt động cùng lớp.',
-                mood: 'Vui vẻ, hòa đồng.',
-                health: '',
-                note: widget.transcript ?? '',
-                severity: child.severity,
-              ))
-          .toList();
+      // Fallback an toàn: 1 classwide item duy nhất
+      return [
+        ObservationItem(
+          id: 'classwide',
+          name: 'Chung cả lớp',
+          matched: true,
+          kind: ObservationKind.classwide,
+          eating: 'Ăn theo thực đơn lớp.',
+          sleep: 'Ngủ theo giờ chung.',
+          activities: 'Tham gia hoạt động chung.',
+          mood: 'Vui vẻ.',
+          health: '',
+        ),
+      ];
     }
+  }
+
+  /// Tạo classwide ObservationItem từ classWideExtraction map.
+  ObservationItem _classwideItemFromExtraction(Map<String, dynamic> cw) {
+    String pick(String key, String fallback) {
+      final v = cw[key];
+      final s = v?.toString().trim();
+      return (s != null && s.isNotEmpty) ? s : fallback;
+    }
+
+    return ObservationItem(
+      id: 'classwide',
+      name: 'Chung cả lớp',
+      matched: true,
+      kind: ObservationKind.classwide,
+      decision: ObservationDecision.pending,
+      eating: pick('meals', 'Cả lớp ăn theo thực đơn chung.'),
+      sleep: pick('sleeping', 'Cả lớp ngủ đúng giờ.'),
+      activities: pick('activities', 'Tham gia hoạt động chung của lớp.'),
+      mood: pick('mood', 'Vui vẻ, hào hứng.'),
+      health: pick('health', ''),
+    );
+  }
+
+  /// Tạo child ObservationItem từ childExtractions[childId/name].
+  ObservationItem _childItemFromExtraction(Child child, Map data) {
+    String? pick(String key) {
+      final v = data[key];
+      final s = v?.toString().trim();
+      return (s != null && s.isNotEmpty) ? s : null;
+    }
+
+    return ObservationItem(
+      id: child.id,
+      name: child.name,
+      childId: child.id,
+      nickname: child.nickname,
+      matched: true,
+      kind: ObservationKind.normal,
+      decision: ObservationDecision.pending,
+      eating: pick('meals') ?? 'Ăn theo thực đơn lớp.',
+      sleep: pick('sleeping') ?? 'Ngủ theo giờ chung.',
+      activities: pick('activities') ?? '',
+      mood: pick('mood') ?? '',
+      health: pick('health') ?? '',
+      note: pick('transcript') ?? '',
+      severity: child.severity,
+    );
+  }
+
+  /// Tạo unmatched ObservationItem cho 1 segment không gắn được với bé nào.
+  ObservationItem _unmatchedItem(String id, String text) {
+    return ObservationItem(
+      id: id,
+      name: 'Chưa rõ bé nào',
+      matched: false,
+      kind: ObservationKind.unmatched,
+      decision: ObservationDecision.pending,
+      snippet: text,
+      eating: 'Chưa có thông tin',
+      sleep: 'Chưa có thông tin',
+      activities: 'Chưa có thông tin',
+      mood: 'Chưa có thông tin',
+    );
   }
 
   Future<List<Child>> _loadChildren() async {
@@ -1416,46 +1437,148 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
-  Future<void> _confirmAndPublish() async {
-    if (isSubmitting) return;
-    setState(() => isSubmitting = true);
+  /// Approve 1 item (gọi POST /api/teacher/reports/approve-item).
+  /// Item được approve sẽ được backend tạo draft NGAY và trả về list draft_report_ids.
+  /// Lưu vào [approvedDraftIds] để gom lại gửi batch.
+  Future<void> _approveItem(ObservationItem item) async {
+    if (approvingIds.contains(item.id)) return; // tránh double-click
+
+    // Phải có voiceRecordId để backend biết lấy extraction từ đâu.
+    final voiceRecordId = widget.voiceRecord?.id;
+    if (voiceRecordId == null || voiceRecordId.isEmpty) {
+      _showError('Thiếu voice_record_id. Vui lòng quay lại bước trước.');
+      return;
+    }
+
+    final teacher = await repository.getCurrentTeacher();
+    final teacherId =
+        teacher.teacherId.isNotEmpty ? teacher.teacherId : repository.teacherId;
+
+    setState(() => approvingIds.add(item.id));
 
     try {
-      final teacher = await repository.getCurrentTeacher();
-      final teacherId = teacher.teacherId.isNotEmpty ? teacher.teacherId : repository.teacherId;
+      // Map item.kind → API kind
+      String kind;
+      String? childId;
+      String? classId;
+      Map<String, String?>? extraction;
 
-      int pCount = 0;
-      int hCount = 0;
+      if (item.kind == ObservationKind.classwide) {
+        kind = 'classwide';
+        classId = widget.classId;
+      } else if (item.kind == ObservationKind.unmatched) {
+        // Unmatched: backend hiện tại KHÔNG tạo draft (theo doc),
+        // chỉ echo lại để user biết segment này được chấp nhận.
+        // Vẫn gọi API để đồng bộ trạng thái, nhưng draft_ids sẽ rỗng.
+        kind = 'unmatched';
+        classId = widget.classId;
+        extraction = {'transcript': item.snippet};
+      } else {
+        // normal / child
+        kind = 'child';
+        childId = item.childId;
+        extraction = {
+          if (item.eating.isNotEmpty) 'meals': item.eating,
+          if (item.sleep.isNotEmpty) 'sleeping': item.sleep,
+          if (item.health.isNotEmpty) 'health': item.health,
+          if (item.activities.isNotEmpty) 'activities': item.activities,
+          if (item.mood.isNotEmpty) 'mood': item.mood,
+          if (item.note.isNotEmpty) 'transcript': item.note,
+        };
+      }
 
-      final approvedItems = items
-          .where((i) => i.decision == ObservationDecision.approved && i.matched && i.childId != null)
-          .toList();
+      final res = await teacherRepository.approveItem(
+        voiceRecordId: voiceRecordId,
+        teacherId: teacherId,
+        kind: kind,
+        childId: childId,
+        classId: classId,
+        extraction: extraction,
+      );
 
-      for (final item in approvedItems) {
-        final res = await teacherRepository.createManualReport(
-          teacherId: teacherId,
-          childId: item.childId!,
-          eating: item.eating,
-          sleeping: item.sleep,
-          health: item.health,
-          activities: item.activities,
-          mood: item.mood,
-          teacherNote: item.note.isNotEmpty ? item.note : (widget.transcript ?? ''),
-          overwrite: true,
-        );
-
-        final reportId = (res['daily_report_id'] ?? res['report_id'])?.toString();
-        if (reportId != null && reportId.isNotEmpty) {
-          await teacherRepository.publishReport(
-            reportId: reportId,
-            teacherId: teacherId,
-          );
-        }
-        pCount++;
-        if (item.health.isNotEmpty) {
-          hCount++;
+      // Parse draft_report_ids từ response (List<dynamic> các UUID string)
+      final draftIdsRaw = res['draft_report_ids'];
+      final newDraftIds = <String>[];
+      if (draftIdsRaw is List) {
+        for (final v in draftIdsRaw) {
+          final s = v?.toString();
+          if (s != null && s.isNotEmpty) newDraftIds.add(s);
         }
       }
+
+      // Classwide có thể trả child_id_to_report_id (map) thay vì list
+      if (newDraftIds.isEmpty && kind == 'classwide') {
+        final map = res['child_id_to_report_id'];
+        if (map is Map) {
+          map.forEach((k, v) {
+            final s = v?.toString();
+            if (s != null && s.isNotEmpty) newDraftIds.add(s);
+          });
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        approvedDraftIds[item.id] = newDraftIds;
+        item.decision = ObservationDecision.approved;
+      });
+    } catch (e) {
+      debugPrint('Approve item error: $e');
+      if (mounted) _showError('Không thể duyệt mục này. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => approvingIds.remove(item.id));
+    }
+  }
+
+  /// Gửi batch tất cả draft đã thu được.
+  /// Gọi POST /api/teacher/reports/send-batch với list tất cả draft_report_ids.
+  Future<void> _sendBatch() async {
+    if (isSendingBatch) return;
+
+    // Gom tất cả draft ids từ approved items
+    final allDraftIds = <String>[];
+    for (final ids in approvedDraftIds.values) {
+      allDraftIds.addAll(ids);
+    }
+    // dedupe (giữ thứ tự)
+    final uniqueDraftIds = <String>[];
+    final seen = <String>{};
+    for (final id in allDraftIds) {
+      if (seen.add(id)) uniqueDraftIds.add(id);
+    }
+
+    if (uniqueDraftIds.isEmpty) {
+      _showError('Chưa có báo cáo nào được duyệt.');
+      return;
+    }
+
+    final teacher = await repository.getCurrentTeacher();
+    final teacherId =
+        teacher.teacherId.isNotEmpty ? teacher.teacherId : repository.teacherId;
+
+    setState(() {
+      isSendingBatch = true;
+      isSubmitting = true;
+    });
+
+    try {
+      final res = await teacherRepository.sendBatch(
+        teacherId: teacherId,
+        reportIds: uniqueDraftIds,
+      );
+
+      final sent = (res['sent'] is num) ? (res['sent'] as num).toInt() : 0;
+      final skipped = (res['skipped'] is num) ? (res['skipped'] as num).toInt() : 0;
+      final failed = (res['failed'] is num) ? (res['failed'] as num).toInt() : 0;
+
+      // Tính số phiếu liên lạc + sức khỏe từ các item đã approve
+      final pCount = uniqueDraftIds.length;
+      final hCount = items
+          .where((i) =>
+              i.decision == ObservationDecision.approved &&
+              approvedDraftIds.containsKey(i.id) &&
+              i.health.isNotEmpty)
+          .length;
 
       if (!mounted) return;
       setState(() {
@@ -1463,16 +1586,29 @@ class _ReviewScreenState extends State<ReviewScreen> {
         savedHealthCount = hCount;
         isDone = true;
       });
-    } catch (e) {
-      debugPrint('Confirm report error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể gửi báo cáo. Vui lòng thử lại.')),
-        );
+
+      if (failed > 0) {
+        debugPrint('send-batch: sent=$sent skipped=$skipped failed=$failed');
       }
+    } catch (e) {
+      debugPrint('send-batch error: $e');
+      if (mounted) _showError('Không thể gửi báo cáo. Vui lòng thử lại.');
     } finally {
-      if (mounted) setState(() => isSubmitting = false);
+      if (mounted) {
+        setState(() {
+          isSendingBatch = false;
+          isSubmitting = false;
+        });
+      }
     }
+  }
+
+  /// Action "Xác nhận gửi" ở bottom sheet - giờ chỉ cần gọi _sendBatch.
+  Future<void> _confirmAndPublish() => _sendBatch();
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   void _assignChild(ObservationItem item) {
@@ -1512,10 +1648,36 @@ class _ReviewScreenState extends State<ReviewScreen> {
       );
     }
 
-    final approvedCount = items.where((i) => i.decision == ObservationDecision.approved && i.matched).length;
-    final healthCount = items.where((i) => i.decision == ObservationDecision.approved && i.health.isNotEmpty).length;
-    final unmatchedCount = items.where((i) => !i.matched && i.decision != ObservationDecision.discarded).length;
-    final canConfirm = approvedCount > 0 && unmatchedCount == 0 && !isSubmitting;
+    // Counters cho header + bottom sheet
+    final totalCount = items.length;
+    final approvedCount = items
+        .where((i) =>
+            i.decision == ObservationDecision.approved &&
+            approvedDraftIds.containsKey(i.id))
+        .length;
+    final pendingCount = items
+        .where((i) =>
+            i.decision != ObservationDecision.discarded &&
+            i.decision != ObservationDecision.approved)
+        .length;
+    final discardedCount = items
+        .where((i) => i.decision == ObservationDecision.discarded)
+        .length;
+    final healthCount = approvedDraftIds.entries
+        .where((e) => items.any((i) => i.id == e.key && i.health.isNotEmpty))
+        .length;
+
+    // Unmatched còn lại (chưa được gán/lọc) - phải = 0 mới cho confirm
+    final unmatchedActiveCount = items
+        .where((i) =>
+            i.kind == ObservationKind.unmatched &&
+            i.decision != ObservationDecision.discarded)
+        .length;
+
+    // Có thể confirm khi: có ít nhất 1 item được duyệt + KHÔNG còn item pending
+    // nào (kể cả unmatched chưa xử lý).
+    final canConfirm =
+        approvedCount > 0 && pendingCount == 0 && !isSubmitting;
 
     final subtitle = widget.mode == RecordMode.classroom
         ? 'Ghi âm cả lớp · ${widget.className}'
@@ -1553,9 +1715,25 @@ class _ReviewScreenState extends State<ReviewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Từ 1 lần nói · $approvedCount bé · ${items.length} ghi nhận',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, height: 1.25, color: KColors.ink),
+                // Header: counter X/Y
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Từ 1 lần nói · ${items.length} ghi nhận',
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            height: 1.25,
+                            color: KColors.ink),
+                      ),
+                    ),
+                    _CounterPill(
+                      approved: approvedCount,
+                      total: totalCount - discardedCount,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -1564,29 +1742,41 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 ),
                 const SizedBox(height: 16),
                 for (var i = 0; i < items.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _ObservationTile(
-                      card: items[i],
-                      index: i,
-                      onToggleApprove: () => setState(() {
-                        items[i].decision = items[i].decision == ObservationDecision.approved
-                            ? ObservationDecision.pending
-                            : ObservationDecision.approved;
-                      }),
-                      onDiscard: () => setState(() {
-                        items[i].decision = ObservationDecision.discarded;
-                      }),
-                      onRestore: () => setState(() {
-                        items[i].decision = ObservationDecision.approved;
-                      }),
-                      onAssign: () => _assignChild(items[i]),
-                      onAssignClass: () => setState(() {
-                        items[i].kind = ObservationKind.classwide;
-                        items[i].name = 'Chung cả lớp';
-                        items[i].matched = true;
-                        items[i].decision = ObservationDecision.approved;
-                      }),
+                  _AnimatedObservationWrapper(
+                    key: ValueKey(items[i].id),
+                    decision: items[i].decision,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ObservationTile(
+                        card: items[i],
+                        index: i,
+                        isApproving: approvingIds.contains(items[i].id),
+                        onToggleApprove: () {
+                          // Đã duyệt rồi → re-approve không có ý nghĩa (backend
+                          // đã tạo draft). Nên chỉ trigger approve khi còn pending.
+                          if (items[i].decision != ObservationDecision.approved) {
+                            _approveItem(items[i]);
+                          }
+                        },
+                        onDiscard: () => setState(() {
+                          items[i].decision = ObservationDecision.discarded;
+                          // Bỏ draft ids đã thu (nếu có) để không gửi nhầm
+                          approvedDraftIds.remove(items[i].id);
+                        }),
+                        onRestore: () => setState(() {
+                          items[i].decision = ObservationDecision.pending;
+                          // Xóa draft ids để user phải approve lại
+                          approvedDraftIds.remove(items[i].id);
+                        }),
+                        onAssign: () => _assignChild(items[i]),
+                        onAssignClass: () => setState(() {
+                          items[i].kind = ObservationKind.classwide;
+                          items[i].name = 'Chung cả lớp';
+                          items[i].matched = true;
+                          items[i].decision = ObservationDecision.pending;
+                          approvedDraftIds.remove(items[i].id);
+                        }),
+                      ),
                     ),
                   ),
               ],
@@ -1608,14 +1798,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Sẽ tạo từ 1 lần nói này:',
+              'Sẽ gửi từ 1 lần nói này:',
               style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: KColors.inkSoft),
             ),
             const SizedBox(height: 7),
             _SummaryRow('📄', approvedCount, 'phiếu liên lạc cho phụ huynh'),
             if (healthCount > 0)
               _SummaryRow('🏥', healthCount, 'ghi nhận vào sổ sức khỏe'),
-            if (unmatchedCount > 0)
+            if (discardedCount > 0)
+              _SummaryRow('🗑️', discardedCount, 'đã được loại bỏ'),
+            if (unmatchedActiveCount > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: _SurfaceBox(
@@ -1623,19 +1815,38 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   color: KColors.warnTint,
                   borderColor: KColors.warnTint,
                   child: Text(
-                    'Còn $unmatchedCount đoạn “Chưa rõ bé nào”. Gán cho một bé hoặc cả lớp để xác nhận.',
+                    'Còn $unmatchedActiveCount đoạn chưa xử lý. Gán cho một bé, cả lớp hoặc bỏ qua để xác nhận.',
                     style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: KColors.warn),
+                  ),
+                ),
+              ),
+            if (pendingCount > 0 && unmatchedActiveCount == 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _SurfaceBox(
+                  padding: const EdgeInsets.all(8),
+                  color: KColors.brandTint,
+                  borderColor: KColors.brandTint,
+                  child: Text(
+                    'Còn $pendingCount mục chưa duyệt. Bấm "Duyệt" từng mục hoặc loại bỏ để tiếp tục.',
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: KColors.brand),
                   ),
                 ),
               ),
             const SizedBox(height: 10),
             FilledButton(
-              onPressed: canConfirm ? _confirmAndPublish : null,
+              onPressed: canConfirm ? _sendBatch : null,
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 44),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KRadii.control)),
               ),
-              child: Text(isSubmitting ? 'Đang gửi báo cáo…' : 'Xác nhận'),
+              child: Text(
+                isSubmitting
+                    ? 'Đang gửi báo cáo…'
+                    : approvedCount > 0
+                        ? 'Gửi $approvedCount báo cáo'
+                        : 'Xác nhận',
+              ),
             ),
           ],
         ),
@@ -1655,6 +1866,7 @@ class _ObservationTile extends StatelessWidget {
     required this.onRestore,
     required this.onAssign,
     required this.onAssignClass,
+    this.isApproving = false,
   });
 
   final ObservationItem card;
@@ -1664,6 +1876,7 @@ class _ObservationTile extends StatelessWidget {
   final VoidCallback onRestore;
   final VoidCallback onAssign;
   final VoidCallback onAssignClass;
+  final bool isApproving;
 
   @override
   Widget build(BuildContext context) {
@@ -1827,12 +2040,22 @@ class _ObservationTile extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
-                  onPressed: onDiscard,
+                  onPressed: isApproving ? null : onDiscard,
                   icon: const Icon(Icons.close_rounded, size: 15),
                   label: const Text('Loại bỏ'),
                 ),
                 const SizedBox(width: 8),
-                if (card.decision == ObservationDecision.approved)
+                if (isApproving)
+                  // Đang approve → hiện spinner (block cả Loại bỏ để tránh race)
+                  const SizedBox(
+                    height: 32,
+                    width: 32,
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (card.decision == ObservationDecision.approved)
                   FilledButton.icon(
                     onPressed: onToggleApprove,
                     icon: const Icon(Icons.check_rounded, size: 15),
@@ -2105,6 +2328,85 @@ class _DoneScreenView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ===========================================================================
+// Counter pill "X / Y đã duyệt" ở header
+// ===========================================================================
+
+class _CounterPill extends StatelessWidget {
+  const _CounterPill({required this.approved, required this.total});
+
+  final int approved;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = approved >= total && total > 0;
+    final color = done ? KColors.brand : KColors.inkSoft;
+    final bg = done ? KColors.brandTint : KColors.canvas;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        'Đã duyệt $approved/$total',
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// Animation wrapper cho mỗi ObservationTile
+// Khi decision -> discarded: fade out + slide sang trái (~300ms)
+// Khi restore: fade in + slide về 0 (~300ms)
+// ===========================================================================
+
+class _AnimatedObservationWrapper extends StatelessWidget {
+  const _AnimatedObservationWrapper({
+    super.key,
+    required this.child,
+    required this.decision,
+  });
+
+  final Widget child;
+  final ObservationDecision decision;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDiscarded = decision == ObservationDecision.discarded;
+    // Tween end: -1 nếu discarded (slide trái + fade), 0 nếu bình thường.
+    // TweenAnimationBuilder sẽ tween từ giá trị hiện tại → end mỗi khi tween đổi.
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      tween: Tween<double>(
+        begin: 0.0,
+        end: isDiscarded ? -1.0 : 0.0,
+      ),
+      builder: (context, offset, c) {
+        final clamped = offset.clamp(-1.0, 0.0);
+        return Opacity(
+          // offset = -1 → opacity = 0.45 (mờ đi); offset = 0 → opacity = 1.0
+          opacity: 1.0 + clamped * 0.55,
+          child: Transform.translate(
+            // slide trái tối đa ~28px
+            offset: Offset(clamped * 28, 0),
+            child: c,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }
