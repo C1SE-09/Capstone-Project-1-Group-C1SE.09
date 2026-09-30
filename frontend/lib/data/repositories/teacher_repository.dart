@@ -75,6 +75,7 @@ class ExtractionData {
     this.mood,
     this.rawJson,
     this.segments,
+    this.classWideExtraction,
     this.childExtractions,
   });
 
@@ -86,6 +87,13 @@ class ExtractionData {
   final String? mood;
   final Map<String, dynamic>? rawJson;
   final List<dynamic>? segments;
+  /// Default content cho cả lớp (vd: "Cả lớp ăn ngon").
+  /// Backend trả về trong key `class_wide_extraction`.
+  /// Chỉ thực sự có nội dung khi giáo viên nói "cả lớp...".
+  final Map<String, dynamic>? classWideExtraction;
+  /// Override content cho từng bé (vd: "Lan ho nhẹ").
+  /// Backend trả về trong key `child_extractions`.
+  /// Chỉ chứa các bé CÓ override (không phải cả lớp).
   final Map<String, dynamic>? childExtractions;
 
   factory ExtractionData.fromJson(Map<String, dynamic> json) {
@@ -98,6 +106,9 @@ class ExtractionData {
       mood: json['mood'] as String?,
       rawJson: json,
       segments: json['segments'] as List<dynamic>?,
+      classWideExtraction: json['class_wide_extraction'] is Map
+          ? (json['class_wide_extraction'] as Map).cast<String, dynamic>()
+          : null,
       childExtractions: json['child_extractions'] is Map
           ? (json['child_extractions'] as Map).cast<String, dynamic>()
           : null,
@@ -112,6 +123,8 @@ class ExtractionData {
         'activities': activities,
         'mood': mood,
         if (segments != null) 'segments': segments,
+        if (classWideExtraction != null)
+          'class_wide_extraction': classWideExtraction,
         if (childExtractions != null) 'child_extractions': childExtractions,
       };
 
@@ -124,6 +137,7 @@ class ExtractionData {
     String? mood,
     Map<String, dynamic>? rawJson,
     List<dynamic>? segments,
+    Map<String, dynamic>? classWideExtraction,
     Map<String, dynamic>? childExtractions,
   }) {
     return ExtractionData(
@@ -135,8 +149,20 @@ class ExtractionData {
       mood: mood ?? this.mood,
       rawJson: rawJson ?? this.rawJson,
       segments: segments ?? this.segments,
+      classWideExtraction: classWideExtraction ?? this.classWideExtraction,
       childExtractions: childExtractions ?? this.childExtractions,
     );
+  }
+
+  /// Classwide có nội dung thật (ít nhất 1 field không null/rỗng).
+  bool get hasClassWideContent {
+    final cw = classWideExtraction;
+    if (cw == null || cw.isEmpty) return false;
+    return cw.values.any((v) {
+      if (v == null) return false;
+      final s = v.toString().trim();
+      return s.isNotEmpty;
+    });
   }
 }
 
@@ -228,6 +254,42 @@ abstract class TeacherRepositoryBase {
   Future<Map<String, dynamic>> publishReport({
     required String reportId,
     required String teacherId,
+  });
+
+  // ------------------------------------------------------------------
+  // Auto-detect flow (Task 2.1)
+  // ------------------------------------------------------------------
+
+  /// Approve 1 item from the review screen → backend tạo draft NGAY.
+  ///
+  /// [kind] = "classwide" | "child" | "unmatched"
+  /// - classwide: [classId] bắt buộc, tạo N drafts (1/child trong lớp).
+  /// - child:     [childId] bắt buộc, tạo/update 1 draft cho child đó.
+  /// - unmatched: [classId] bắt buộc, không tạo draft (placeholder).
+  ///
+  /// [extraction] (optional): Override content nếu user đã sửa trong UI.
+  /// Trả về Map gồm: kind, draft_report_ids, count, child_id_to_report_id (optional),
+  /// merged_extraction (optional).
+  Future<Map<String, dynamic>> approveItem({
+    required String voiceRecordId,
+    required String teacherId,
+    required String kind,
+    String? childId,
+    String? classId,
+    Map<String, String?>? extraction,
+  });
+
+  /// Gửi batch các draft reports đã được user duyệt trước đó.
+  ///
+  /// Nếu [reportIds] được cung cấp → gửi đúng các report đó.
+  /// Nếu rỗng → backend filter theo [classId] + [reportDate] + [teacherId].
+  ///
+  /// Trả về Map gồm: sent, skipped, failed, results (List<Map>).
+  Future<Map<String, dynamic>> sendBatch({
+    required String teacherId,
+    List<String>? reportIds,
+    String? classId,
+    String? reportDate,
   });
 }
 
@@ -596,6 +658,95 @@ class TeacherRepository implements TeacherRepositoryBase {
       }
 
       return body;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> approveItem({
+    required String voiceRecordId,
+    required String teacherId,
+    required String kind,
+    String? childId,
+    String? classId,
+    Map<String, String?>? extraction,
+  }) async {
+    // Build body (only include optional fields when present)
+    final body = <String, dynamic>{
+      'voice_record_id': voiceRecordId,
+      'teacher_id': teacherId,
+      'kind': kind,
+    };
+    if (childId != null) body['child_id'] = childId;
+    if (classId != null) body['class_id'] = classId;
+    if (extraction != null) body['extraction'] = extraction;
+
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/approve-item',
+        data: body,
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final data = response.data;
+      if (data == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty approve-item response.',
+        );
+      }
+      return data;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Unknown network error.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (e) {
+      throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> sendBatch({
+    required String teacherId,
+    List<String>? reportIds,
+    String? classId,
+    String? reportDate,
+  }) async {
+    final body = <String, dynamic>{
+      'teacher_id': teacherId,
+    };
+    if (reportIds != null && reportIds.isNotEmpty) {
+      body['report_ids'] = reportIds;
+    }
+    if (classId != null) body['class_id'] = classId;
+    if (reportDate != null) body['report_date'] = reportDate;
+
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/send-batch',
+        data: body,
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final data = response.data;
+      if (data == null) {
+        throw const TeacherRepositoryException(
+          'Server returned an empty send-batch response.',
+        );
+      }
+      return data;
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
       final detail = _extractDetail(e.response?.data) ??
