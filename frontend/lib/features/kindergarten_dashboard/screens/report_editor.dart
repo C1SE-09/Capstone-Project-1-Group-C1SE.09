@@ -20,6 +20,9 @@ class ReportEditorScreen extends StatefulWidget {
     this.classId,
     this.repository,
     this.classRepository,
+    this.initialExtraction,
+    this.transcript,
+    this.voiceId,
   });
   final Child child;
   final bool readOnly;
@@ -27,13 +30,15 @@ class ReportEditorScreen extends StatefulWidget {
   final String? classId;
   final HttpDashboardRepository? repository;
   final HttpClassDataRepository? classRepository;
+  final ExtractionData? initialExtraction;
+  final String? transcript;
+  final String? voiceId;
 
   @override
   State<ReportEditorScreen> createState() => _ReportEditorScreenState();
 }
 
 class _ReportEditorScreenState extends State<ReportEditorScreen> {
-  late Severity severity = widget.child.severity;
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
   late final HttpClassDataRepository classRepository = widget.classRepository ?? HttpClassDataRepository();
   late Future<_ReportMeta> metaFuture;
@@ -70,7 +75,24 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     schoolName = classInfo?.school ?? 'Trường Mầm non Hoa Sen';
     teacherName = teacher.fullName.isNotEmpty ? teacher.fullName : 'Cô Hà';
 
-    if (widget.child.id.isNotEmpty) {
+    if (widget.initialExtraction != null) {
+      final ext = widget.initialExtraction!;
+      if (ext.meals != null && ext.meals!.trim().isNotEmpty) {
+        eating.text = ext.meals!.trim();
+      }
+      if (ext.sleeping != null && ext.sleeping!.trim().isNotEmpty) {
+        sleep.text = ext.sleeping!.trim();
+      }
+      if (ext.mood != null && ext.mood!.trim().isNotEmpty) {
+        mood.text = ext.mood!.trim();
+      }
+      if (ext.activities != null && ext.activities!.trim().isNotEmpty) {
+        activity.text = ext.activities!.trim();
+      }
+      if (widget.transcript != null && widget.transcript!.trim().isNotEmpty) {
+        note.text = widget.transcript!.trim();
+      }
+    } else if (widget.child.id.isNotEmpty) {
       try {
         final todayReport = await repository.getTodayReport(widget.child.id, DateTime.now());
         if (todayReport != null) {
@@ -82,9 +104,6 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
           }
           if (todayReport.sleeping != null && todayReport.sleeping!.trim().isNotEmpty) {
             sleep.text = todayReport.sleeping!.trim();
-          }
-          if (todayReport.health != null && todayReport.health!.trim().isNotEmpty) {
-            health.text = todayReport.health!.trim();
           }
           if (todayReport.mood != null && todayReport.mood!.trim().isNotEmpty) {
             mood.text = todayReport.mood!.trim();
@@ -98,19 +117,16 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     return _ReportMeta(teacher, classInfo);
   }
 
-  String eatingLevel = 'Tốt';
-  String sleepQuality = 'Tốt';
   late final eating = TextEditingController(text: widget.readOnly ? 'Ăn hết suất cơm trưa, uống đủ nước.' : '');
   late final sleepDuration = TextEditingController(text: widget.readOnly ? '120' : '');
   late final sleep = TextEditingController(text: widget.readOnly ? 'Ngủ ngon, không quấy khóc.' : '');
-  late final health = TextEditingController(text: widget.readOnly ? 'Sức khỏe bình thường, không có biểu hiện bất thường.' : '');
   late final mood = TextEditingController(text: widget.readOnly ? 'Vui vẻ, hòa đồng với các bạn.' : '');
   late final activity = TextEditingController(text: widget.readOnly ? 'Tham gia hoạt động vẽ và xếp hình nhóm.' : '');
   late final note = TextEditingController(text: widget.readOnly ? 'Bé chơi ngoan, hòa nhập tốt với các bạn trong giờ hoạt động nhóm.' : '');
 
   @override
   void dispose() {
-    for (final controller in [eating, sleepDuration, sleep, health, mood, activity, note]) {
+    for (final controller in [eating, sleepDuration, sleep, mood, activity, note]) {
       controller.dispose();
     }
     super.dispose();
@@ -159,89 +175,33 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                     ],
                   ),
                 ),
-              if (severity != Severity.none)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: KColors.warnTint, borderRadius: BorderRadius.circular(KRadii.control)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, size: 18, color: KColors.warn),
-                      const SizedBox(width: 10),
-                      Text('Cần theo dõi sức khỏe · mức ${severity.label.toLowerCase()}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: KColors.warnDeep)),
-                    ],
-                  ),
-                ),
               _FieldBlock(
                 emoji: '🍽️',
                 label: 'Ăn uống',
-                child: Column(
-                  children: [
-                    _Dropdown(
-                      value: eatingLevel,
-                      values: const ['Rất tốt', 'Tốt', 'Tạm được', 'Kém'],
-                      enabled: !widget.readOnly,
-                      onChanged: (value) => setState(() => eatingLevel = value),
-                    ),
-                    const SizedBox(height: 10),
-                    _TextArea(controller: eating, readOnly: widget.readOnly),
-                  ],
-                ),
+                child: _TextArea(controller: eating, readOnly: widget.readOnly),
               ),
               _FieldBlock(
                 emoji: '😴',
                 label: 'Giấc ngủ',
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: sleepDuration,
-                            readOnly: widget.readOnly,
-                            textAlignVertical: TextAlignVertical.center,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            style: const TextStyle(fontSize: 14, height: 1.2),
-                            decoration: const InputDecoration(
-                              hintText: 'Thời lượng (phút)',
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _Dropdown(
-                            value: sleepQuality,
-                            values: const ['Rất tốt', 'Tốt', 'Tạm được', 'Kém'],
-                            enabled: !widget.readOnly,
-                            onChanged: (value) => setState(() => sleepQuality = value),
-                          ),
-                        ),
+                    TextField(
+                      controller: sleepDuration,
+                      readOnly: widget.readOnly,
+                      textAlignVertical: TextAlignVertical.center,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
                       ],
+                      style: const TextStyle(fontSize: 14, height: 1.2),
+                      decoration: const InputDecoration(
+                        hintText: 'Thời lượng (phút)',
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
                     ),
                     const SizedBox(height: 10),
                     _TextArea(controller: sleep, readOnly: widget.readOnly),
-                  ],
-                ),
-              ),
-              _FieldBlock(
-                emoji: '🏥',
-                label: 'Sức khỏe',
-                sensitive: true,
-                child: Column(
-                  children: [
-                    SegmentedButton<Severity>(
-                      segments: Severity.values.map((value) => ButtonSegment(value: value, label: Text(value.label))).toList(),
-                      selected: {severity},
-                      showSelectedIcon: false,
-                      onSelectionChanged: widget.readOnly ? null : (values) => setState(() => severity = values.first),
-                    ),
-                    const SizedBox(height: 10),
-                    _TextArea(controller: health, readOnly: widget.readOnly),
                   ],
                 ),
               ),
@@ -267,10 +227,10 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
               ),
             ],
           ),
-          bottomNavigationBar: BottomActionBar(
-            child: widget.readOnly
-                ? KButton(label: 'Xem trước', icon: Icons.visibility_outlined, secondary: true, large: true, onPressed: _preview)
-                : Column(
+          bottomNavigationBar: widget.readOnly
+              ? null
+              : BottomActionBar(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (submitError != null)
@@ -287,15 +247,6 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                               onPressed: submitting ? null : _saveDraft,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: KButton(
-                              label: 'Xem trước',
-                              icon: Icons.visibility_outlined,
-                              ghost: true,
-                              onPressed: submitting ? null : _preview,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -307,65 +258,14 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                       ),
                     ],
                   ),
-          ),
+                ),
         );
       },
     );
   }
 
-  void _preview() {
-    showKSheet(
-      context,
-      SizedBox(
-        height: MediaQuery.sizeOf(context).height * .68,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Phụ huynh sẽ thấy', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: KColors.inkFaint)),
-            const SizedBox(height: 10),
-            Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: KColors.canvas, borderRadius: BorderRadius.circular(KRadii.card)),
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Text(schoolName, style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Avatar(name: widget.child.name, size: 44),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium),
-                              Text('$className · $teacherName · $todayLong', style: const TextStyle(fontSize: 11.5, color: KColors.inkFaint)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _PreviewRow('🍽️ Ăn uống', '$eatingLevel — ${eating.text}'),
-                    _PreviewRow('😴 Giấc ngủ', '${sleepDuration.text}, ${sleepQuality.toLowerCase()} — ${sleep.text}'),
-                    _PreviewRow('🏥 Sức khỏe · ${severity.label}', health.text),
-                    _PreviewRow('🎭 Tâm trạng', mood.text),
-                    _PreviewRow('🎨 Hoạt động', activity.text),
-                    _PreviewRow('📝 Lời nhắn của cô', note.text),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            KButton(label: 'Đóng', onPressed: () => Navigator.pop(context)),
-          ],
-        ),
-      ),
-    );
-  }
 
-  // Saves the manually edited report through the existing draft endpoint.
+  // Lưu bản nháp thủ công. Nếu bé đã có bản nháp trong ngày → ghi đè (overwrite=true).
   Future<void> _saveDraft() async {
     if (submitting) return;
     setState(() {
@@ -385,13 +285,16 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
         childId: widget.child.id,
         eating: eating.text,
         sleeping: sleep.text,
-        health: health.text,
+        health: '',
         activities: activity.text,
         mood: mood.text,
         teacherNote: note.text,
+        overwrite: true,
       );
       if (!mounted) return;
-      widget.onSent();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã lưu bản nháp thành công')),
+      );
     } catch (e) {
       debugPrint('Save draft error: $e');
       if (mounted) setState(() => submitError = 'Không thể lưu bản nháp. Vui lòng thử lại.');
@@ -419,10 +322,11 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
         childId: widget.child.id,
         eating: eating.text,
         sleeping: sleep.text,
-        health: health.text,
+        health: '',
         activities: activity.text,
         mood: mood.text,
         teacherNote: note.text,
+        overwrite: true,
       );
       final reportId = (reportRes['daily_report_id'] ?? reportRes['report_id'])?.toString();
       if (reportId != null && reportId.isNotEmpty) {
@@ -467,11 +371,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
               ],
             ),
           ),
-          if (severity != Severity.none)
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
-              child: Text('Báo cáo có thông tin sức khỏe cần được kiểm tra trước khi gửi.', style: TextStyle(fontSize: 12.5, color: KColors.inkSoft)),
-            ),
+
           const SizedBox(height: 20),
           Row(
             children: [
@@ -505,11 +405,10 @@ class _ReportMeta {
 String _todayLong(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
 class _FieldBlock extends StatelessWidget {
-  const _FieldBlock({required this.emoji, required this.label, required this.child, this.sensitive = false});
+  const _FieldBlock({required this.emoji, required this.label, required this.child});
   final String emoji;
   final String label;
   final Widget child;
-  final bool sensitive;
 
   @override
   Widget build(BuildContext context) {
@@ -517,8 +416,8 @@ class _FieldBlock extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: sensitive ? KColors.warnTint.withValues(alpha: .35) : KColors.surface,
-        border: Border.all(color: sensitive ? KColors.warn.withValues(alpha: .3) : KColors.line),
+        color: KColors.surface,
+        border: Border.all(color: KColors.line),
         borderRadius: BorderRadius.circular(KRadii.card),
       ),
       child: Column(
@@ -528,8 +427,6 @@ class _FieldBlock extends StatelessWidget {
               Text(emoji),
               const SizedBox(width: 8),
               Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              const Spacer(),
-              if (sensitive) const Text('Thông tin nhạy cảm', style: TextStyle(fontSize: 10.5, color: KColors.warnDeep)),
             ],
           ),
           const SizedBox(height: 10),
@@ -540,26 +437,7 @@ class _FieldBlock extends StatelessWidget {
   }
 }
 
-class _Dropdown extends StatelessWidget {
-  const _Dropdown({required this.value, required this.values, required this.enabled, required this.onChanged});
-  final String value;
-  final List<String> values;
-  final bool enabled;
-  final ValueChanged<String> onChanged;
-  @override
-  Widget build(BuildContext context) => DropdownButtonFormField<String>(
-        initialValue: value,
-        isDense: true,
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        ),
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14, height: 1.2),
-        items: values.map((item) => DropdownMenuItem(value: item, child: Text(item, style: const TextStyle(fontSize: 14, height: 1.2)))).toList(),
-        onChanged: enabled ? (value) { if (value != null) onChanged(value); } : null,
-      );
 
-}
 
 class _TextArea extends StatelessWidget {
   const _TextArea({
@@ -590,20 +468,3 @@ class _TextArea extends StatelessWidget {
       );
 }
 
-class _PreviewRow extends StatelessWidget {
-  const _PreviewRow(this.label, this.value);
-  final String label;
-  final String value;
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 2),
-            Text(value, style: const TextStyle(fontSize: 14, height: 1.5)),
-          ],
-        ),
-      );
-}

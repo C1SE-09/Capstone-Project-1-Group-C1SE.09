@@ -11,8 +11,8 @@
 
 
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
 
@@ -73,6 +73,9 @@ class ExtractionData {
     this.health,
     this.activities,
     this.mood,
+    this.rawJson,
+    this.segments,
+    this.childExtractions,
   });
 
   final String? transcript;
@@ -81,6 +84,9 @@ class ExtractionData {
   final String? health;
   final String? activities;
   final String? mood;
+  final Map<String, dynamic>? rawJson;
+  final List<dynamic>? segments;
+  final Map<String, dynamic>? childExtractions;
 
   factory ExtractionData.fromJson(Map<String, dynamic> json) {
     return ExtractionData(
@@ -90,6 +96,11 @@ class ExtractionData {
       health: json['health'] as String?,
       activities: json['activities'] as String?,
       mood: json['mood'] as String?,
+      rawJson: json,
+      segments: json['segments'] as List<dynamic>?,
+      childExtractions: json['child_extractions'] is Map
+          ? (json['child_extractions'] as Map).cast<String, dynamic>()
+          : null,
     );
   }
 
@@ -100,6 +111,8 @@ class ExtractionData {
         'health': health,
         'activities': activities,
         'mood': mood,
+        if (segments != null) 'segments': segments,
+        if (childExtractions != null) 'child_extractions': childExtractions,
       };
 
   ExtractionData copyWith({
@@ -109,6 +122,9 @@ class ExtractionData {
     String? health,
     String? activities,
     String? mood,
+    Map<String, dynamic>? rawJson,
+    List<dynamic>? segments,
+    Map<String, dynamic>? childExtractions,
   }) {
     return ExtractionData(
       transcript: transcript ?? this.transcript,
@@ -117,6 +133,9 @@ class ExtractionData {
       health: health ?? this.health,
       activities: activities ?? this.activities,
       mood: mood ?? this.mood,
+      rawJson: rawJson ?? this.rawJson,
+      segments: segments ?? this.segments,
+      childExtractions: childExtractions ?? this.childExtractions,
     );
   }
 }
@@ -192,6 +211,7 @@ abstract class TeacherRepositoryBase {
   });
 
   /// Create a manual DailyReport (fallback without voice recording).
+  /// If [overwrite] is true, the backend will upsert (replace existing draft for today).
   Future<Map<String, dynamic>> createManualReport({
     required String teacherId,
     required String childId,
@@ -201,6 +221,7 @@ abstract class TeacherRepositoryBase {
     String? activities,
     String? mood,
     String? teacherNote,
+    bool overwrite = false,
   });
 
   /// Publish a daily report so parents can view it.
@@ -238,17 +259,20 @@ class TeacherRepository implements TeacherRepositoryBase {
     void Function(int sent, int total)? onProgress,
   }) async {
     try {
-      if (filePath.trim().isEmpty && fileBytes == null) {
+      if (filePath.trim().isEmpty && (fileBytes == null || fileBytes.isEmpty)) {
         throw const TeacherRepositoryException(
           'File ghi âm trống hoặc không hợp lệ.',
         );
       }
 
-      final safeFileName =
-          (fileName ?? filePath.split('/').last.split('\\').last).trim();
+      final safeFileName = (fileName != null && fileName.trim().isNotEmpty)
+          ? fileName.trim()
+          : (filePath.trim().isNotEmpty
+              ? filePath.split('/').last.split('\\').last
+              : 'recording_audio.m4a');
 
       final resolvedBytes = fileBytes ??
-          (filePath.trim().isEmpty
+          ((kIsWeb || filePath.trim().isEmpty)
               ? null
               : await _readAudioBytes(filePath));
 
@@ -510,6 +534,7 @@ class TeacherRepository implements TeacherRepositoryBase {
     String? activities,
     String? mood,
     String? teacherNote,
+    bool overwrite = false,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -523,6 +548,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'activities': activities,
           'mood': mood,
           'teacher_note': teacherNote,
+          if (overwrite) 'overwrite': true,
         },
         options: Options(
           headers: {'Accept': 'application/json'},

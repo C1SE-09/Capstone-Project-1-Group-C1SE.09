@@ -202,14 +202,14 @@ class Child(Base, TimestampMixin):
         "VoiceRecord",
         back_populates="child",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
         order_by="VoiceRecord.recorded_at",
     )
     daily_reports: Mapped[list[DailyReport]] = relationship(
         "DailyReport",
         back_populates="child",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
         order_by="DailyReport.report_date",
     )
 
@@ -311,7 +311,7 @@ class Parent(Base, TimestampMixin):
         "Child",
         back_populates="parent",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
         order_by="Child.full_name",
     )
 
