@@ -181,10 +181,10 @@ class User(Base, TimestampMixin):
 
     # Relationships
     teacher: Mapped[Teacher | None] = relationship(
-        "Teacher", foreign_keys="[User.teacher_id]", lazy="joined"
+        "Teacher", foreign_keys=[teacher_id], lazy="joined"
     )
     parent: Mapped[Parent | None] = relationship(
-        "Parent", foreign_keys="[User.parent_id]", lazy="joined"
+        "Parent", foreign_keys=[parent_id], lazy="joined"
     )
 
     def __repr__(self) -> str:  # pragma: no cover
