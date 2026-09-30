@@ -387,13 +387,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       Avatar(name: group.value[index].child.name),
                                       const SizedBox(width: 12),
                                       Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(group.value[index].child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                            Text('Sức khỏe: ${group.value[index].child.severity.label}', style: Theme.of(context).textTheme.bodySmall),
-                                          ],
-                                        ),
+                                        child: Text(group.value[index].child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                       ),
                                       StatusBadge(uiReportStatusFromBackend(group.value[index].report.status.name)),
                                     ],

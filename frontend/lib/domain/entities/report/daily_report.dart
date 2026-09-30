@@ -54,7 +54,10 @@ class DailyReport extends BaseEntity {
     String? findDesc(String cat) {
       for (final a in activitiesList) {
         final c = a['category']?.toString().toLowerCase();
-        if (c == cat) return a['description']?.toString();
+        if (c == cat) {
+          final desc = a['description']?.toString();
+          if (desc != null && desc.trim().isNotEmpty) return desc.trim();
+        }
       }
       return null;
     }
@@ -65,7 +68,9 @@ class DailyReport extends BaseEntity {
       childId: json['child_id'] as String?,
       voiceRecordId: json['voice_record_id'] as String?,
       reportDate: DateTime.parse(json['report_date'] as String),
-      summaryText: json['summary_text'] as String?,
+      summaryText: json['summary_text'] as String? ??
+          json['teacher_note'] as String? ??
+          findDesc('other'),
       status: ReportStatus.fromJson(json['status'] as String?),
       publishedAt: json['published_at'] != null
           ? DateTime.tryParse(json['published_at'] as String)
@@ -74,7 +79,9 @@ class DailyReport extends BaseEntity {
       eating: json['eating'] as String? ?? findDesc('meal'),
       sleeping: json['sleeping'] as String? ?? findDesc('nap'),
       health: json['health'] as String? ?? findDesc('health'),
-      activitiesText: json['activities_text'] as String? ?? findDesc('play'),
+      activitiesText: json['activities_text'] as String? ??
+          findDesc('play') ??
+          findDesc('learning'),
       mood: json['mood'] as String? ?? findDesc('behavior'),
     );
   }

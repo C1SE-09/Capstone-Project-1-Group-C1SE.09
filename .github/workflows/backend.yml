@@ -27,6 +27,13 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Free Disk Space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
@@ -34,9 +41,13 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
-        pip install -r backend/requirements.txt
-        pip install ruff pytest httpx
+        python -m pip install --upgrade pip
+        # Cài đặt PyTorch CPU nhẹ và không lưu cache để tiết kiệm dung lượng
+        pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        # Lọc bỏ extra-index-url cu121, các gói nvidia và torch để tránh kéo lại bản GPU
+        grep -v -E "extra-index-url|nvidia-|torch" backend/requirements.txt > req_ci.txt
+        pip install --no-cache-dir -r req_ci.txt
+        pip install --no-cache-dir ruff pytest httpx
 
     - name: Lint code with Ruff
       run: ruff check backend/
