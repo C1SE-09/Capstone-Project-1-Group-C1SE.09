@@ -1,5 +1,5 @@
 from app.core.database import get_db
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, verify_password, get_current_user
 from app.models.user import User
 from app.schemas.auth_schema import login_request, login_response
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -30,3 +30,6 @@ def login(data: login_request, db: Session = Depends(get_db)):
         token_type="bearer",
         role=role
     )
+@router.post("/logout")
+def logout(current_user: User = Depends(get_current_user)):
+    return {"message": "Đăng xuất thành công!"}
