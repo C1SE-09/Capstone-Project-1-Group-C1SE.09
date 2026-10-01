@@ -130,7 +130,7 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
 @router.get("/api/teacher/{teacher_id}", summary="Thông tin giáo viên")
 def get_teacher(
     teacher_id: uuid.UUID,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     """Trả về thông tin 1 giáo viên (cho màn Tổng quan)."""
     teacher = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
@@ -145,7 +145,7 @@ def get_teacher(
 )
 def get_teacher_classes(
     teacher_id: uuid.UUID,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     """
     Trả về danh sách lớp của giáo viên kèm summary báo cáo hôm nay,
@@ -229,8 +229,8 @@ def get_teacher_classes(
 )
 def get_class_dashboard(
     class_id: uuid.UUID,
-    date_param: date | None = Query(default=None, alias="date"),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+    date_param: date | None = Query(default=None, alias="date"),
+    db: Session = Depends(get_db),
 ):
     """
     Trả về summary của lớp khớp ClassDashboardSummary (frontend):
@@ -317,7 +317,7 @@ def get_class_dashboard(
 def get_class_activities(
     class_id: uuid.UUID,
     limit: int = Query(default=10, ge=1, le=50),
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     """
     Trả về timeline hoạt động gần đây, khớp ActivityItem (frontend).
@@ -426,7 +426,7 @@ def get_class_activities(
 @router.get("/api/parent/{parent_id}", summary="Thông tin phụ huynh")
 def get_parent(
     parent_id: uuid.UUID,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     """Trả về thông tin 1 phụ huynh, khớp entity Parent (frontend)."""
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
@@ -448,7 +448,7 @@ def get_parent(
 )
 def get_parent_primary_child(
     parent_id: uuid.UUID,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     """
     Trả về 1 đứa con (đầu tiên) + tên lớp + tên giáo viên,
@@ -501,9 +501,9 @@ def get_parent_primary_child(
 )
 def get_child_reports(
     child_id: uuid.UUID,
-    date_param: date | None = Query(default=None, alias="date"),  # noqa: B008
+    date_param: date | None = Query(default=None, alias="date"),
     limit: int = Query(default=7, ge=1, le=50),
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     """
     Trả về báo cáo hôm nay (riêng) + danh sách gần đây (mới nhất trước),

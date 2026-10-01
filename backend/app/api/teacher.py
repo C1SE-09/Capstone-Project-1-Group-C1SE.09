@@ -46,12 +46,9 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
-
-
-
 from app.core.database import get_db
-from app.core.storage import upload_audio_to_minio
 from app.core.security import require_role
+from app.core.storage import upload_audio_to_minio
 from app.models.child import Child
 from app.models.report import (
     ActivityCategory,
@@ -61,8 +58,7 @@ from app.models.report import (
     VoiceRecord,
     VoiceRecordStatus,
 )
-from app.models.user import Teacher
-from app.models.user import User
+from app.models.user import Teacher, User
 from app.schemas.report import (
     ActivityEntryResponse,
     ApproveItemRequest,
@@ -170,11 +166,11 @@ def _extract_duration_ffprobe(file_path: str) -> float | None:
     ),
 )
 def upload_voice_record(
-    file: UploadFile = File(..., description="Audio file (.m4a / .wav / .mp3 / .webm)"),  # noqa: B008
-    teacher_id: uuid.UUID = Form(..., description="UUID của teacher đang upload"),  # noqa: B008
-    class_id: uuid.UUID = Form(..., description="UUID của lớp học liên quan"),  # noqa: B008
-    child_id: uuid.UUID | None = Form(None, description="UUID của child liên quan"),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+    file: UploadFile = File(..., description="Audio file (.m4a / .wav / .mp3 / .webm)"),
+    teacher_id: uuid.UUID = Form(..., description="UUID của teacher đang upload"),
+    class_id: uuid.UUID = Form(..., description="UUID của lớp học liên quan"),
+    child_id: uuid.UUID | None = Form(None, description="UUID của child liên quan"),
+    db: Session = Depends(get_db),
 ) -> VoiceRecordUploadResponse:
     # ------------------------------------------------------------------
     # 1. Validate file extension
@@ -301,10 +297,10 @@ def upload_voice_record(
 )
 def get_voice_record(
     voice_id: uuid.UUID,
-    teacher_id: uuid.UUID = Query(  # noqa: B008
+    teacher_id: uuid.UUID = Query(
         ..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"
     ),
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> VoiceRecordDetailResponse:
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
@@ -343,10 +339,10 @@ def get_voice_record(
 def update_voice_transcript(
     voice_id: uuid.UUID,
     payload: TranscriptUpdateRequest,
-    teacher_id: uuid.UUID = Query(  # noqa: B008
+    teacher_id: uuid.UUID = Query(
         ..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"
     ),
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> VoiceRecordDetailResponse:
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
@@ -386,8 +382,8 @@ def update_voice_transcript(
 @router.post("/voice/{voice_id}/extract")
 def get_voice_extraction(
     voice_id: uuid.UUID,
-    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    db: Session = Depends(get_db),
 ):
     """
     Lấy kết quả extraction (đã chạy trong Celery task).
@@ -430,8 +426,8 @@ def get_voice_extraction(
 def re_extract_from_edited_transcript(
     voice_id: uuid.UUID,
     payload: TranscriptUpdateRequest,
-    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    db: Session = Depends(get_db),
 ):
     """Chạy NLP trên transcript đã được giáo viên kiểm tra/chỉnh sửa.
 
@@ -546,7 +542,7 @@ def re_extract_from_edited_transcript(
 @router.post("/reports/draft")
 def create_report_from_extraction(
     payload: DraftReportCreateRequest,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     voice_id = payload.voice_id
     teacher_id = payload.teacher_id
@@ -655,7 +651,7 @@ def create_report_from_extraction(
 )
 def create_manual_report(
     payload: ManualReportCreateRequest,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> DailyReportDetailResponse:
     # 1. Kiểm tra giáo viên & học sinh có tồn tại không
     teacher = db.query(Teacher).filter(Teacher.teacher_id == payload.teacher_id).first()
@@ -767,8 +763,8 @@ def create_manual_report(
 @router.get("/reports/{report_id}", summary="Chi tiết báo cáo")
 def get_report_detail(
     report_id: uuid.UUID,
-    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    db: Session = Depends(get_db),
 ):
     """Trả về toàn bộ thông tin DailyReport kèm danh sách ActivityEntry."""
     report = (
@@ -814,8 +810,8 @@ def get_report_detail(
 @router.post("/reports/{report_id}/publish", summary="Publish báo cáo gửi phụ huynh")
 def publish_report(
     report_id: uuid.UUID,
-    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    db: Session = Depends(get_db),
 ):
     """Chuyển trạng thái báo cáo từ DRAFT → PUBLISHED và ghi nhận published_at."""
     report = (
@@ -866,7 +862,7 @@ def publish_report(
 )
 def approve_item(
     payload: ApproveItemRequest,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> ApproveItemResponse:
     """
     Auto-detect flow: Approve 1 item → tạo draft NGAY.
@@ -998,7 +994,7 @@ def approve_item(
 )
 def send_batch_reports(
     payload: SendBatchRequest,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> SendBatchResponse:
     """
     Gửi batch các drafts. Tương tự send-all nhưng nhận explicit report_ids.
@@ -1207,7 +1203,7 @@ def _send_one_report(
 def send_report(
     report_id: uuid.UUID,
     teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> SendReportResponse:
     return _send_one_report(report_id, teacher_id, db)
 
@@ -1224,7 +1220,7 @@ def send_report(
 def send_all_reports(
     payload: SendAllRequest,
     teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> SendAllResponse:
     # 1. Xac dinh danh sach bao cao can gui.
     if payload.report_ids:

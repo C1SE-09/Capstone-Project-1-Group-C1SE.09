@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from typing import Callable
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User
-
 
 SECRET_KEY = "kinderlog-secret"
 ALGORITHM = "HS256"

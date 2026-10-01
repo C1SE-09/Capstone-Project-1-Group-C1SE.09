@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+
 from app.services.extraction_service import extract_from_transcript
 
 router = APIRouter()
