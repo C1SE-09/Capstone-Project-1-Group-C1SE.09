@@ -313,7 +313,7 @@ INSERT INTO users (
 -- Tài khoản Giáo viên
 (
     '11111111-0000-0000-0000-000000000001',
-    'teacher_mai',
+    'comai',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'teacher',
     'bbbbbbbb-0000-0000-0000-000000000001',
@@ -325,7 +325,7 @@ INSERT INTO users (
 ),
 (
     '11111111-0000-0000-0000-000000000002',
-    'teacher_lan',
+    'colan',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'teacher',
     'bbbbbbbb-0000-0000-0000-000000000002',
@@ -338,7 +338,7 @@ INSERT INTO users (
 -- Tài khoản Phụ huynh
 (
     '22222222-0000-0000-0000-000000000001',
-    'parent_tuan',
+    'tuan',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -350,7 +350,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000002',
-    'parent_nam',
+    'nam',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -362,7 +362,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000003',
-    'parent_hung',
+    'hung',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -374,7 +374,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000004',
-    'parent_thao',
+    'thao',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -386,7 +386,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000005',
-    'parent_thanh',
+    'thanh',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -398,7 +398,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000006',
-    'parent_dung',
+    'dung',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -410,7 +410,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000007',
-    'parent_minh',
+    'minh',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -422,7 +422,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000008',
-    'parent_trong',
+    'trong',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -434,7 +434,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000009',
-    'parent_tuand',
+    'tuand',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
@@ -446,7 +446,7 @@ INSERT INTO users (
 ),
 (
     '22222222-0000-0000-0000-000000000010',
-    'parent_khang',
+    'khang',
     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
     'parent',
     NULL,
