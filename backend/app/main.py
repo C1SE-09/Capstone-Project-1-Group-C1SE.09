@@ -1,10 +1,12 @@
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
+from app.api.endpoints import auth
 from app.api.endpoints.stt import router as stt_router
 from app.api.teacher import reports_router
 from app.api.teacher import router as teacher_router
@@ -23,7 +25,17 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+@app.middleware("http")
+async def timing_middleware(request: Request, call_next):
+    start = time.perf_counter()
 
+    response = await call_next(request)
+
+    elapsed = (time.perf_counter() - start) * 1000
+
+    print(f"[API] {request.method} {request.url.path} - {elapsed:.2f} ms")
+
+    return response
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,6 +52,7 @@ app.include_router(dashboard_router)
 app.include_router(teacher_router)
 app.include_router(reports_router)
 app.include_router(stt_router, prefix="/api/stt", tags=["stt"])
+app.include_router(auth.router, prefix="/api")
 
 
 @app.get("/")

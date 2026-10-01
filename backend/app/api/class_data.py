@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/class", tags=["class"])
 @router.get("/{class_id}")
 def get_class(
     class_id: str,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 
@@ -42,7 +42,7 @@ def get_class(
 @router.get("/{class_id}/children")
 def get_children(
     class_id: str,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 
@@ -88,7 +88,7 @@ def get_children(
 @router.get("/{class_id}/teachers")
 def get_teacher(
     class_id: str,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ):
     class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 

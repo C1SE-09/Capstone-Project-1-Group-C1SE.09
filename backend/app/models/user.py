@@ -144,7 +144,7 @@ class User(Base, TimestampMixin):
         comment="Bcrypt password hash",
     )
     role: Mapped[UserRole] = mapped_column(
-        SAEnum(UserRole, name="user_role_enum", create_type=True),
+        SAEnum(UserRole, name="user_role_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls], create_type=True),
         nullable=False,
         comment="Account role – teacher | parent | admin",
     )
@@ -165,7 +165,7 @@ class User(Base, TimestampMixin):
         comment="Linked parent entity (NULL if not a parent)",
     )
     status: Mapped[UserStatus] = mapped_column(
-        SAEnum(UserStatus, name="user_status_enum", create_type=True),
+        SAEnum(UserStatus, name="user_status_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls], create_type=True),
         nullable=False,
         default=UserStatus.ACTIVE,
         server_default=UserStatus.ACTIVE.value,
