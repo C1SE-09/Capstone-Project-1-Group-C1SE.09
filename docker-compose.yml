@@ -72,6 +72,7 @@ services:
     env_file: .env
     volumes:
       - ./backend:/app
+      - hf_cache:/root/.cache/huggingface
     depends_on:
       redis:
         condition: service_healthy
@@ -79,7 +80,7 @@ services:
         condition: service_healthy
     environment:
       # Repo này đã có model.bin CTranslate2; repo vinai gốc là checkpoint PyTorch.
-      PHOWHISPER_MODEL_ID: vudang449/PhoWhisper-large-ct2
+      PHOWHISPER_MODEL_ID: small
     # PhoWhisper-large cần nhiều VRAM hơn bản small. Một worker/concurrency=1
     # giúp RTX 3050/4050 chỉ nạp một model và tránh GPU OOM.
     command: >
@@ -91,3 +92,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  hf_cache:
