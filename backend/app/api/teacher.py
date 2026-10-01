@@ -477,8 +477,25 @@ def re_extract_from_edited_transcript(
     #   - Chỉ cả lớp → chỉ có class_wide_extraction
     # ================================================================
     try:
-        # Lấy tất cả bé trong lớp của giáo viên để matching tên
-        children = db.query(Child).all()
+        # Lấy tất cả bé trong lớp của VoiceRecord để matching tên.
+        # QUAN TRỌNG: filter theo class_id để tránh cross-class contamination
+        # (bé lớp khác cùng tên có thể bị match nhầm).
+        target_class_id = voice_record.class_id
+        if target_class_id:
+            children = (
+                db.query(Child)
+                .filter(Child.class_id == target_class_id)
+                .all()
+            )
+        else:
+            # VoiceRecord chưa gắn class (legacy data) → fallback lấy tất cả
+            # nhưng log warning để dev biết.
+            logger.warning(
+                "[ReExtract] VoiceRecord %s has no class_id; "
+                "falling back to db.query(Child).all() — risk of cross-class match.",
+                voice_id,
+            )
+            children = db.query(Child).all()
 
         if not children:
             raise HTTPException(
