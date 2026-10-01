@@ -3,7 +3,6 @@
 import re
 
 from celery import Celery
-from celery.signals import worker_ready
 
 from app.config import settings
 
@@ -47,8 +46,3 @@ celery_app.conf.update(
 def ping() -> str:
     """Task đơn giản để kiểm tra worker có kết nối Redis hay không."""
     return "pong"
-
-@worker_ready.connect
-def _warm_model(**_):
-    from app.services.stt_service import get_stt_service
-    get_stt_service()

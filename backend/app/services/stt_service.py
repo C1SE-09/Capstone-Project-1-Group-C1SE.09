@@ -163,7 +163,7 @@ class STTService:
             segments, _ = self.model.transcribe(
                 audio_path,
                 language="vi",
-                vad_filter=True,
+                vad_filter=False,
                 vad_parameters={"min_silence_duration_ms": 500},
                 beam_size=1,
                 condition_on_previous_text=False,
