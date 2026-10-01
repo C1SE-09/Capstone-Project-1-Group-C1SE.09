@@ -1,3 +1,5 @@
+
+
 """
 app/api/teacher.py
 ==================
@@ -44,8 +46,12 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
+
+
+
 from app.core.database import get_db
 from app.core.storage import upload_audio_to_minio
+from app.core.security import require_role
 from app.models.child import Child
 from app.models.report import (
     ActivityCategory,
@@ -56,6 +62,7 @@ from app.models.report import (
     VoiceRecordStatus,
 )
 from app.models.user import Teacher
+from app.models.user import User
 from app.schemas.report import (
     ActivityEntryResponse,
     ApproveItemRequest,
@@ -1280,3 +1287,11 @@ def send_all_reports(
             )
 
     return SendAllResponse(sent=sent, skipped=skipped, failed=failed, results=results)
+@router.get("/me")
+def get_teacher_me(current_user: User = Depends(require_role("teacher"))):
+    return {
+        "user_id": str(current_user.user_id),
+        "role": current_user.role.value,
+        "teacher_id": str(current_user.teacher_id)
+    }
+
