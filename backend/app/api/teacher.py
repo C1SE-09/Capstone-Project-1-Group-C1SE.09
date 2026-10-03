@@ -1163,9 +1163,7 @@ def _send_one_report(
 
     if report.teacher_id and teacher_id and report.teacher_id != teacher_id:
         teacher_obj = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
-        if teacher_obj:
-            report.teacher_id = teacher_id
-        elif not report.teacher_id:
+        if teacher_obj or not report.teacher_id:
             report.teacher_id = teacher_id
     elif not report.teacher_id and teacher_id:
         report.teacher_id = teacher_id

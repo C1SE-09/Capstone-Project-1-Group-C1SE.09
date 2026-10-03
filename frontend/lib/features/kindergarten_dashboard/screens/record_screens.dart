@@ -88,19 +88,22 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
   Widget build(BuildContext context) => FutureBuilder<_RecordHubData>(
       future: future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done)
+        if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
-        if (snapshot.hasError || snapshot.data == null)
+        }
+        if (snapshot.hasError || snapshot.data == null) {
           return Scaffold(
               body: Center(
                   child: TextButton(
                       onPressed: () => setState(() => future = _load()),
                       child: const Text('Không tải được lớp · Thử lại'))));
+        }
         final data = snapshot.data;
-        if (data == null)
+        if (data == null) {
           return const Scaffold(
               body: Center(child: Text('Không có dữ liệu lớp.')));
+        }
         final list = data.children
             .where((child) =>
                 child.name.toLowerCase().contains(query.toLowerCase()))
@@ -1180,8 +1183,9 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   }
 
   String _getFriendlyErrorMessage(dynamic error) {
-    if (error == null)
+    if (error == null) {
       return 'Đã có sự cố khi xử lý file âm thanh. Vui lòng thử lại.';
+    }
 
     String raw = '';
     int? statusCode;
@@ -1634,7 +1638,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       }
 
       // -------- 3. Unmatched items ----------------------------------------
-      bool _hasExtractionContent(dynamic seg) {
+      bool hasExtractionContent(dynamic seg) {
         if (seg is! Map) return false;
         final extr = seg['extraction'];
         if (extr is! Map) return false;
@@ -1651,7 +1655,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         for (var i = 0; i < rawUnmatched.length; i++) {
           final seg = rawUnmatched[i];
 
-          if (!_hasExtractionContent(seg)) {
+          if (!hasExtractionContent(seg)) {
             continue;
           }
 
@@ -1669,7 +1673,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             final matches = seg['child_matches'];
             final hasMatches = matches is List && matches.isNotEmpty;
             if (!isClassWide && !hasMatches) {
-              if (!_hasExtractionContent(seg)) {
+              if (!hasExtractionContent(seg)) {
                 continue;
               }
               final text = seg['text']?.toString() ?? '';
@@ -1993,8 +1997,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
       }
     } catch (err) {
       debugPrint('Fallback manual report failed: $err');
-      if (mounted)
+      if (mounted) {
         _showError('Không thể tạo bản nháp báo cáo. Vui lòng thử lại.');
+      }
     } finally {
       if (mounted) setState(() => approvingIds.remove(item.id));
     }
