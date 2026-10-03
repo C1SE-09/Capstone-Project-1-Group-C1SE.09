@@ -80,6 +80,7 @@ services:
     environment:
       # Repo này đã có model.bin CTranslate2; repo vinai gốc là checkpoint PyTorch.
       PHOWHISPER_MODEL_ID: vudang449/PhoWhisper-large-ct2
+      LD_LIBRARY_PATH: /opt/conda/lib/python3.11/site-packages/nvidia/cublas/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cudnn/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
     # PhoWhisper-large cần nhiều VRAM hơn bản small. Một worker/concurrency=1
     # giúp RTX 3050/4050 chỉ nạp một model và tránh GPU OOM.
     command: >

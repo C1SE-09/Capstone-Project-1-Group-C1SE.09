@@ -28,7 +28,10 @@ def login(data: login_request, db: Session = Depends(get_db)):
     return login_response(
         access_token=access_token,
         token_type="bearer",
-        role=role
+        role=role,
+        user_id=str(user.user_id),
+        teacher_id=str(user.teacher_id) if user.teacher_id else None,
+        parent_id=str(user.parent_id) if user.parent_id else None,
     )
 @router.post("/logout")
 def logout(current_user: User = Depends(get_current_user)):

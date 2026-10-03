@@ -5,13 +5,15 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
+import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class ParentFlow extends StatefulWidget {
-  const ParentFlow({super.key, this.repository});
+  const ParentFlow({super.key, this.repository, this.onLogout});
   final HttpDashboardRepository? repository;
+  final VoidCallback? onLogout;
   @override
   State<ParentFlow> createState() => _ParentFlowState();
 }
@@ -32,9 +34,16 @@ class _ParentFlowState extends State<ParentFlow> {
   Future<_ParentData> _load() async {
     final parent = await repository.getCurrentParent();
     final overview = await repository.getPrimaryChildOverview(parent.parentId);
-    final reports = await repository.getRecentReports(overview.child.childId);
+    final reports = await repository.getRecentReports(
+      overview.child.childId,
+      includeDraft: false,
+    );
     final today = DateTime.now();
-    final todayReport = await repository.getTodayReport(overview.child.childId, today);
+    final todayReport = await repository.getTodayReport(
+      overview.child.childId,
+      today,
+      includeDraft: false,
+    );
     return _ParentData(parent.fullName, overview, reports, todayReport);
   }
 
@@ -43,10 +52,25 @@ class _ParentFlowState extends State<ParentFlow> {
   Widget build(BuildContext context) => FutureBuilder<_ParentData>(
         future: future,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return _loadError(() => setState(() => future = _load()));
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+              backgroundColor: KColors.canvas,
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasError) {
+            return Scaffold(
+              backgroundColor: KColors.canvas,
+              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+            );
+          }
           final data = snapshot.data;
-          if (data == null) return _loadError(() => setState(() => future = _load()));
+          if (data == null) {
+            return Scaffold(
+              backgroundColor: KColors.canvas,
+              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+            );
+          }
           final todayReport = data.today;
           final child = uiChildFromDomain(
             child: data.overview.child,
@@ -58,6 +82,23 @@ class _ParentFlowState extends State<ParentFlow> {
                   data: data,
                   child: child,
                   report: selectedReport ?? data.today,
+                  repository: repository,
+                  onReportRead: (updated) {
+                    setState(() {
+                      if (selectedReport?.dailyReportId == updated.dailyReportId) {
+                        selectedReport = updated;
+                      }
+                      future = future.then((current) {
+                        final newReports = current.reports
+                            .map((r) => r.dailyReportId == updated.dailyReportId ? updated : r)
+                            .toList();
+                        final newToday = current.today?.dailyReportId == updated.dailyReportId
+                            ? updated
+                            : current.today;
+                        return _ParentData(current.parentName, current.overview, newReports, newToday);
+                      });
+                    });
+                  },
                   onBack: () => setState(() {
                     showReport = false;
                     selectedReport = null;
@@ -66,6 +107,7 @@ class _ParentFlowState extends State<ParentFlow> {
               : _ParentHome(
                   data: data,
                   child: child,
+                  onLogout: widget.onLogout,
                   onOpen: (report) => setState(() {
                     selectedReport = report;
                     showReport = true;
@@ -79,7 +121,11 @@ class _ParentFlowState extends State<ParentFlow> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Không tải được dữ liệu phụ huynh.'),
+            const Text(
+              'Không tải được dữ liệu phụ huynh.',
+              style: TextStyle(fontSize: 14, color: KColors.ink),
+            ),
+            const SizedBox(height: 8),
             TextButton(onPressed: retry, child: const Text('Thử lại')),
           ],
         ),
@@ -96,10 +142,16 @@ class _ParentData {
 
 // Converted to StatefulWidget so the notification banner can be dismissed after reading.
 class _ParentHome extends StatefulWidget {
-  const _ParentHome({required this.data, required this.child, required this.onOpen});
+  const _ParentHome({
+    required this.data,
+    required this.child,
+    required this.onOpen,
+    this.onLogout,
+  });
   final _ParentData data;
   final Child child;
   final ValueChanged<DailyReport> onOpen;
+  final VoidCallback? onLogout;
 
   @override
   State<_ParentHome> createState() => _ParentHomeState();
@@ -109,6 +161,35 @@ class _ParentHomeState extends State<_ParentHome> {
   // Tracks whether the notification banner has been dismissed by the user.
   bool _notificationDismissed = false;
 
+  void _confirmLogout() {
+    showKSheet(
+      context,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Bạn có muốn đăng xuất không ?', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(context))),
+              const SizedBox(width: 12),
+              Expanded(
+                child: KButton(
+                  label: 'Đăng xuất',
+                  icon: Icons.logout,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    widget.onLogout?.call();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final overview = widget.data.overview;
@@ -116,33 +197,54 @@ class _ParentHomeState extends State<_ParentHome> {
     final hasTodayReport = widget.data.today != null;
     final showBanner = hasTodayReport && !_notificationDismissed;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      children: [
-        Row(
+    return Scaffold(
+      backgroundColor: KColors.canvas,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Xin chào,', style: TextStyle(fontSize: 13, color: KColors.inkSoft)),
-                  Text(
-                    widget.data.parentName.isEmpty ? 'Phụ huynh bé ${widget.child.name}' : widget.data.parentName,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: KColors.ink),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Xin chào,',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: KColors.inkSoft,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                      Text(
+                        widget.data.parentName.isEmpty ? 'Phụ huynh bé ${widget.child.name}' : widget.data.parentName,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: KColors.ink,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                IconButton(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Thông báo chưa được hỗ trợ.')),
+                  ),
+                  tooltip: 'Thông báo',
+                  icon: const Icon(Icons.notifications_outlined),
+                ),
+                if (widget.onLogout != null)
+                  IconButton(
+                    onPressed: _confirmLogout,
+                    tooltip: 'Đăng xuất',
+                    icon: const Icon(Icons.logout_rounded, color: KColors.inkSoft),
+                  ),
+              ],
             ),
-            IconButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Thông báo chưa được hỗ trợ.')),
-              ),
-              tooltip: 'Thông báo chưa được hỗ trợ',
-              icon: const Icon(Icons.notifications_outlined),
-            ),
-          ],
-        ),
-        if (showBanner) ...[
+            if (showBanner) ...[
           const SizedBox(height: 14),
           KCard(
             color: KColors.brandTint,
@@ -256,7 +358,13 @@ class _ParentHomeState extends State<_ParentHome> {
                           uiReportStatusFromBackend(widget.data.reports[index].status.name).label,
                           style: TextStyle(
                             fontSize: 12,
-                            color: widget.data.reports[index].status.name == 'sent' ? KColors.brand : KColors.inkFaint,
+                            fontWeight: FontWeight.w600,
+                            color: widget.data.reports[index].status.name == 'read'
+                                ? KColors.brand
+                                : (widget.data.reports[index].status.name == 'sent' ||
+                                        widget.data.reports[index].status.name == 'published'
+                                    ? KColors.brand
+                                    : KColors.inkFaint),
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -269,26 +377,71 @@ class _ParentHomeState extends State<_ParentHome> {
               ],
             ),
           ),
-      ],
-    );
+        ],
+      ),
+    ),
+  );
   }
 }
 
+
 class _ParentReport extends StatefulWidget {
-  const _ParentReport({required this.data, required this.child, required this.report, required this.onBack});
+  const _ParentReport({
+    required this.data,
+    required this.child,
+    required this.report,
+    required this.onBack,
+    this.repository,
+    this.onReportRead,
+  });
   final _ParentData data;
   final Child child;
   final DailyReport? report;
   final VoidCallback onBack;
+  final HttpDashboardRepository? repository;
+  final ValueChanged<DailyReport>? onReportRead;
 
   @override
   State<_ParentReport> createState() => _ParentReportState();
 }
 
 class _ParentReportState extends State<_ParentReport> {
+  late DailyReport? _currentReport = widget.report;
+
+  @override
+  void initState() {
+    super.initState();
+    _markRead();
+  }
+
+  @override
+  void didUpdateWidget(_ParentReport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.report?.dailyReportId != oldWidget.report?.dailyReportId) {
+      _currentReport = widget.report;
+      _markRead();
+    }
+  }
+
+  void _markRead() {
+    final rep = _currentReport;
+    if (rep != null &&
+        rep.status != domain_status.ReportStatus.read &&
+        rep.status != domain_status.ReportStatus.draft) {
+      widget.repository?.markReportAsRead(rep.dailyReportId).then((updated) {
+        if (mounted) {
+          setState(() {
+            _currentReport = updated;
+          });
+        }
+        widget.onReportRead?.call(updated);
+      }).catchError((_) {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final report = widget.report;
+    final report = _currentReport;
     final date = _dateLabel(report?.reportDate ?? DateTime.now());
 
     // Use reported structured values or standard daily defaults to ensure a complete report.
@@ -327,6 +480,8 @@ class _ParentReportState extends State<_ParentReport> {
                     ],
                   ),
                 ),
+                if (_currentReport != null)
+                  StatusBadge(uiReportStatusFromBackend(_currentReport!.status.name)),
               ],
             ),
           ),

@@ -1,9 +1,29 @@
+# Python cache & tests
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments
 venv/
 .venv/
 backend/.venv/
-.envbackend/build.log
-.DS_Store
-.vscode
 .env
+*.env
+
+# Logs
+backend/build.log
+*.log
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Large models
+backend/models/PhoWhisper-large-ct2/

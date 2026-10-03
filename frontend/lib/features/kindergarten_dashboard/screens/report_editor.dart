@@ -4,6 +4,7 @@ import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart'
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
+import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/class_info_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' as ui;
 
@@ -16,6 +17,7 @@ class ReportEditorScreen extends StatefulWidget {
     super.key,
     required this.child,
     required this.onSent,
+    this.initialReport,
     this.readOnly = false,
     this.classId,
     this.repository,
@@ -25,6 +27,7 @@ class ReportEditorScreen extends StatefulWidget {
     this.voiceId,
   });
   final Child child;
+  final DailyReport? initialReport;
   final bool readOnly;
   final VoidCallback onSent;
   final String? classId;
@@ -48,7 +51,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
   String schoolName = 'Chưa có thông tin trường';
   String teacherName = '';
 
-  String get todayLong => _todayLong(DateTime.now());
+  String get todayLong => widget.initialReport != null
+      ? _todayLong(widget.initialReport!.reportDate)
+      : _todayLong(DateTime.now());
 
   @override
   void initState() {
@@ -75,13 +80,36 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     schoolName = classInfo?.school ?? 'Trường Mầm non Hoa Sen';
     teacherName = teacher.fullName.isNotEmpty ? teacher.fullName : 'Cô Hà';
 
-    if (widget.initialExtraction != null) {
+    if (widget.initialReport != null) {
+      final rep = widget.initialReport!;
+      if (rep.eating != null && rep.eating!.trim().isNotEmpty) {
+        eating.text = rep.eating!.trim();
+      }
+      if (rep.sleeping != null && rep.sleeping!.trim().isNotEmpty) {
+        sleep.text = rep.sleeping!.trim();
+      }
+      if (rep.health != null && rep.health!.trim().isNotEmpty) {
+        health.text = rep.health!.trim();
+      }
+      if (rep.mood != null && rep.mood!.trim().isNotEmpty) {
+        mood.text = rep.mood!.trim();
+      }
+      if (rep.activitiesText != null && rep.activitiesText!.trim().isNotEmpty) {
+        activity.text = rep.activitiesText!.trim();
+      }
+      if (rep.summaryText != null && rep.summaryText!.trim().isNotEmpty) {
+        note.text = rep.summaryText!.trim();
+      }
+    } else if (widget.initialExtraction != null) {
       final ext = widget.initialExtraction!;
       if (ext.meals != null && ext.meals!.trim().isNotEmpty) {
         eating.text = ext.meals!.trim();
       }
       if (ext.sleeping != null && ext.sleeping!.trim().isNotEmpty) {
         sleep.text = ext.sleeping!.trim();
+      }
+      if (ext.health != null && ext.health!.trim().isNotEmpty) {
+        health.text = ext.health!.trim();
       }
       if (ext.mood != null && ext.mood!.trim().isNotEmpty) {
         mood.text = ext.mood!.trim();
@@ -105,6 +133,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
           if (todayReport.sleeping != null && todayReport.sleeping!.trim().isNotEmpty) {
             sleep.text = todayReport.sleeping!.trim();
           }
+          if (todayReport.health != null && todayReport.health!.trim().isNotEmpty) {
+            health.text = todayReport.health!.trim();
+          }
           if (todayReport.mood != null && todayReport.mood!.trim().isNotEmpty) {
             mood.text = todayReport.mood!.trim();
           }
@@ -120,17 +151,23 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
   late final eating = TextEditingController(text: widget.readOnly ? 'Ăn hết suất cơm trưa, uống đủ nước.' : '');
   late final sleepDuration = TextEditingController(text: widget.readOnly ? '120' : '');
   late final sleep = TextEditingController(text: widget.readOnly ? 'Ngủ ngon, không quấy khóc.' : '');
+  late final health = TextEditingController(text: widget.readOnly ? 'Bình thường, không sốt, không ho.' : '');
   late final mood = TextEditingController(text: widget.readOnly ? 'Vui vẻ, hòa đồng với các bạn.' : '');
   late final activity = TextEditingController(text: widget.readOnly ? 'Tham gia hoạt động vẽ và xếp hình nhóm.' : '');
   late final note = TextEditingController(text: widget.readOnly ? 'Bé chơi ngoan, hòa nhập tốt với các bạn trong giờ hoạt động nhóm.' : '');
 
   @override
   void dispose() {
-    for (final controller in [eating, sleepDuration, sleep, mood, activity, note]) {
+    for (final controller in [eating, sleepDuration, sleep, health, mood, activity, note]) {
       controller.dispose();
     }
     super.dispose();
   }
+
+  String _isoDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +241,11 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                     _TextArea(controller: sleep, readOnly: widget.readOnly),
                   ],
                 ),
+              ),
+              _FieldBlock(
+                emoji: '🏥',
+                label: 'Sức khỏe',
+                child: _TextArea(controller: health, readOnly: widget.readOnly),
               ),
               _FieldBlock(emoji: '🎭', label: 'Tâm trạng', child: _TextArea(controller: mood, readOnly: widget.readOnly)),
               _FieldBlock(emoji: '🎨', label: 'Hoạt động', child: _TextArea(controller: activity, readOnly: widget.readOnly)),
@@ -285,10 +327,13 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
         childId: widget.child.id,
         eating: eating.text,
         sleeping: sleep.text,
-        health: '',
+        health: health.text,
         activities: activity.text,
         mood: mood.text,
         teacherNote: note.text,
+        reportDate: widget.initialReport != null
+            ? _isoDate(widget.initialReport!.reportDate)
+            : null,
         overwrite: true,
       );
       if (!mounted) return;
@@ -322,10 +367,13 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
         childId: widget.child.id,
         eating: eating.text,
         sleeping: sleep.text,
-        health: '',
+        health: health.text,
         activities: activity.text,
         mood: mood.text,
         teacherNote: note.text,
+        reportDate: widget.initialReport != null
+            ? _isoDate(widget.initialReport!.reportDate)
+            : null,
         overwrite: true,
       );
       final reportId = (reportRes['daily_report_id'] ?? reportRes['report_id'])?.toString();
@@ -346,7 +394,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
   }
 
   void _confirmSend() {
-    final todayLong = _todayLong(DateTime.now());
+    final reportDateText = todayLong;
     showKSheet(
       context,
       Column(
@@ -365,7 +413,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    Text('Báo cáo ngày $todayLong', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
+                    Text('Báo cáo ngày $reportDateText', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
                   ],
                 ),
               ],

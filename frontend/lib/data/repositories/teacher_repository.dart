@@ -247,6 +247,7 @@ abstract class TeacherRepositoryBase {
     String? activities,
     String? mood,
     String? teacherNote,
+    String? reportDate,
     bool overwrite = false,
   });
 
@@ -303,7 +304,7 @@ class TeacherRepository implements TeacherRepositoryBase {
             Dio(
               BaseOptions(
                 baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 30),
+                connectTimeout: const Duration(seconds: 60),
                 receiveTimeout: const Duration(minutes: 5),
               ),
             );
@@ -361,6 +362,7 @@ class TeacherRepository implements TeacherRepositoryBase {
         onSendProgress: onProgress,
         options: Options(
           headers: {'Accept': 'application/json'},
+          sendTimeout: const Duration(minutes: 3),
         ),
       );
 
@@ -596,6 +598,7 @@ class TeacherRepository implements TeacherRepositoryBase {
     String? activities,
     String? mood,
     String? teacherNote,
+    String? reportDate,
     bool overwrite = false,
   }) async {
     try {
@@ -610,6 +613,8 @@ class TeacherRepository implements TeacherRepositoryBase {
           'activities': activities,
           'mood': mood,
           'teacher_note': teacherNote,
+          if (reportDate != null && reportDate.isNotEmpty)
+            'report_date': reportDate,
           if (overwrite) 'overwrite': true,
         },
         options: Options(

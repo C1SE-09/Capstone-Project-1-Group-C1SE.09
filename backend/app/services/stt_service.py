@@ -17,7 +17,7 @@ from faster_whisper import WhisperModel
 
 logger = logging.getLogger(__name__)
 
-# --- Cấu hình DLL NVIDIA trên Windows ---
+# --- Cấu hình DLL / thư viện NVIDIA trên Windows và Linux (Docker) ---
 if sys.platform == "win32":
     try:
         import site
@@ -38,8 +38,47 @@ if sys.platform == "win32":
                             )
     except (AttributeError, ImportError, OSError):
         pass
+else:
+    # Linux / Docker container: nạp đường dẫn cublas và cudnn từ pip package
+    try:
+        import ctypes
+        import site
 
-MODEL_ID = os.getenv("PHOWHISPER_MODEL_ID", "vudang449/PhoWhisper-large-ct2")
+        extra_paths = []
+        for sp in site.getsitepackages():
+            for pkg in ("cublas", "cudnn"):
+                lib_dir = os.path.join(sp, "nvidia", pkg, "lib")
+                if os.path.isdir(lib_dir):
+                    extra_paths.append(lib_dir)
+
+        if extra_paths:
+            cur_ld = os.environ.get("LD_LIBRARY_PATH", "")
+            os.environ["LD_LIBRARY_PATH"] = ":".join(extra_paths) + (
+                (":" + cur_ld) if cur_ld else ""
+            )
+            # Preload shared libraries để dlopen trong ctranslate2 tìm thấy
+            for p in extra_paths:
+                for f in sorted(os.listdir(p)):
+                    if f.endswith(".so") or ".so." in f:
+                        try:
+                            ctypes.CDLL(os.path.join(p, f))
+                        except OSError:
+                            pass
+    except (AttributeError, ImportError, OSError):
+        pass
+
+from pathlib import Path
+
+_DEFAULT_REPO_ID = "vudang449/PhoWhisper-large-ct2"
+_LOCAL_MODEL_PATH = Path(__file__).resolve().parent.parent.parent / "models" / "PhoWhisper-large-ct2"
+
+_ENV_MODEL = os.getenv("PHOWHISPER_MODEL_ID", "")
+if _ENV_MODEL and _ENV_MODEL != _DEFAULT_REPO_ID:
+    MODEL_ID = _ENV_MODEL
+elif (_LOCAL_MODEL_PATH / "model.bin").is_file():
+    MODEL_ID = str(_LOCAL_MODEL_PATH)
+else:
+    MODEL_ID = _ENV_MODEL or _DEFAULT_REPO_ID
 
 
 def cuda_available() -> bool:
@@ -163,7 +202,7 @@ class STTService:
             segments, _ = self.model.transcribe(
                 audio_path,
                 language="vi",
-                vad_filter=False,
+                vad_filter=True,
                 vad_parameters={"min_silence_duration_ms": 500},
                 beam_size=1,
                 condition_on_previous_text=False,
@@ -174,10 +213,11 @@ class STTService:
                     f"Nội dung file âm thanh rỗng hoặc không thể nhận dạng tiếng nói: {audio_path}"
                 )
             return transcript
-        except RuntimeError:
+        except RuntimeError as exc:
             if self.device == "cuda":
                 logger.warning(
-                    "[STT] Lỗi GPU trong lúc transcribe, fallback sang CPU..."
+                    "[STT] Lỗi GPU trong lúc transcribe: %s. Fallback sang CPU...",
+                    exc,
                 )
                 self.device = "cpu"
                 self.model = WhisperModel(

@@ -6,6 +6,7 @@ import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart'
 import 'package:adark_frontend/domain/entities/child/child.dart' as domain_child;
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
+import 'package:adark_frontend/domain/entities/auth/teacher.dart' as domain_teacher;
 
 class MockDashboardRepository extends HttpDashboardRepository {
   @override
@@ -46,6 +47,16 @@ class MockDashboardRepository extends HttpDashboardRepository {
       pendingChildren: [],
     );
   }
+
+  @override
+  Future<domain_teacher.Teacher> getCurrentTeacher() async {
+    return const domain_teacher.Teacher(
+      teacherId: 'teacher-1',
+      fullName: 'Cô Mai',
+      email: 'mai@example.com',
+      classId: 'class-1',
+    );
+  }
 }
 
 void main() {
@@ -61,12 +72,20 @@ void main() {
             'meals': 'Ăn hết 2 bát cơm',
             'sleeping': 'Ngủ đủ 120 phút',
           },
+          'child-2': {
+            'meals': 'Ăn đủ suất',
+            'sleeping': 'Ngủ ngoan',
+          },
         },
       },
       childExtractions: {
         'child-1': {
           'meals': 'Ăn hết 2 bát cơm',
           'sleeping': 'Ngủ đủ 120 phút',
+        },
+        'child-2': {
+          'meals': 'Ăn đủ suất',
+          'sleeping': 'Ngủ ngoan',
         },
       },
     );
@@ -98,5 +117,143 @@ void main() {
     expect(find.text('Bé Nguyễn Văn A'), findsOneWidget);
     expect(find.text('Bé Trần Thị B'), findsOneWidget);
     expect(find.textContaining('Ăn hết 2 bát cơm'), findsOneWidget);
+
+    // Verify Analyzed Text card is rendered
+    expect(find.text('Xem lại text đã phân tích'), findsOneWidget);
   });
+
+  testWidgets('ReviewScreen expands analyzed text and shows unapprove button after approve',
+      (WidgetTester tester) async {
+    final extraction = ExtractionData(
+      transcript: 'Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.',
+      childExtractions: {
+        'child-1': {
+          'meals': 'Ăn hết 2 bát cơm',
+          'sleeping': 'Ngủ đủ 120 phút',
+        },
+      },
+    );
+
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewScreen(
+          classId: 'class-1',
+          className: 'Lớp Mầm A',
+          extraction: extraction,
+          transcript: 'Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.',
+          voiceRecord: const VoiceRecord(id: 'voice-1', status: 'completed'),
+          repository: MockDashboardRepository(),
+          teacherRepository: MockTeacherRepo(),
+          onBack: () {},
+          onCompleted: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // 1. Check Analyzed Text Card
+    expect(find.text('Xem lại text đã phân tích'), findsOneWidget);
+    await tester.tap(find.text('Xem lại text đã phân tích'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.'), findsOneWidget);
+
+    // 2. Check initial Duyệt button
+    expect(find.text('Duyệt'), findsOneWidget);
+
+    // Tap Duyệt
+    await tester.ensureVisible(find.text('Duyệt'));
+    await tester.tap(find.text('Duyệt'));
+    await tester.pumpAndSettle();
+
+    // 3. Now it should show both "Đã duyệt" and "Bỏ duyệt"
+    expect(find.text('Đã duyệt'), findsWidgets);
+    expect(find.text('Bỏ duyệt'), findsOneWidget);
+    expect(find.text('Bỏ duyệt tất cả'), findsOneWidget);
+
+    // Tap Bỏ duyệt
+    await tester.ensureVisible(find.text('Bỏ duyệt'));
+    await tester.tap(find.text('Bỏ duyệt'));
+    await tester.pumpAndSettle();
+
+    // 4. Returns to "Duyệt"
+    expect(find.text('Duyệt'), findsOneWidget);
+    expect(find.text('Bỏ duyệt'), findsNothing);
+  });
+
+  testWidgets('ReviewScreen allows editing observation content via edit sheet',
+      (WidgetTester tester) async {
+    final extraction = ExtractionData(
+      transcript: 'Hôm nay các bé ăn cơm ngoan.',
+      childExtractions: {
+        'child-1': {
+          'meals': 'Ăn hết 2 bát cơm',
+        },
+      },
+    );
+
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewScreen(
+          classId: 'class-1',
+          className: 'Lớp Mầm A',
+          extraction: extraction,
+          transcript: 'Hôm nay các bé ăn cơm ngoan.',
+          voiceRecord: const VoiceRecord(id: 'voice-1', status: 'completed'),
+          repository: MockDashboardRepository(),
+          teacherRepository: MockTeacherRepo(),
+          onBack: () {},
+          onCompleted: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Check Chỉnh sửa button is rendered
+    expect(find.text('Chỉnh sửa'), findsOneWidget);
+    await tester.tap(find.text('Chỉnh sửa'));
+    await tester.pumpAndSettle();
+
+    // Verify modal bottom sheet is open
+    expect(find.text('Lưu thay đổi'), findsOneWidget);
+    expect(find.textContaining('/500 ký tự'), findsOneWidget);
+
+    // Tap Lưu thay đổi
+    await tester.tap(find.text('Lưu thay đổi'));
+    await tester.pumpAndSettle();
+
+    // Verify modal is closed
+    expect(find.text('Lưu thay đổi'), findsNothing);
+  });
+}
+
+class MockTeacherRepo extends TeacherRepository {
+  @override
+  Future<Map<String, dynamic>> approveItem({
+    required String voiceRecordId,
+    required String teacherId,
+    required String kind,
+    String? childId,
+    String? classId,
+    Map<String, String?>? extraction,
+  }) async {
+    return {
+      'draft_report_ids': ['draft-123'],
+    };
+  }
 }

@@ -1,4 +1,4 @@
-﻿// frontend/lib/domain/repositories/dashboard_repository.dart
+// frontend/lib/domain/repositories/dashboard_repository.dart
 // =========================================================
 // INTERFACE (hợp đồng) cho toàn bộ data của màn Tổng quan +
 // màn Phụ huynh.
@@ -47,8 +47,19 @@ abstract class DashboardRepository {
   Future<ChildOverview> getPrimaryChildOverview(String parentId);
 
   /// Báo cáo hôm nay của trẻ (null nếu chưa có) — dùng cho banner.
-  Future<DailyReport?> getTodayReport(String childId, DateTime date);
+  Future<DailyReport?> getTodayReport(
+    String childId,
+    DateTime date, {
+    bool includeDraft = true,
+  });
 
   /// Danh sách báo cáo gần đây (mới nhất trước).
-  Future<List<DailyReport>> getRecentReports(String childId, {int limit = 7});
+  Future<List<DailyReport>> getRecentReports(
+    String childId, {
+    int limit = 7,
+    bool includeDraft = true,
+  });
+
+  /// Đánh dấu báo cáo ngày đã được phụ huynh đọc.
+  Future<DailyReport> markReportAsRead(String reportId);
 }

@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
@@ -57,10 +58,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError as exec:
+        user_uuid = uuid.UUID(str(user_id))
+    except (JWTError, ValueError) as exec:
         raise credentials_exception from exec
     user = db.query(User).filter(
-        User.user_id == user_id
+        User.user_id == user_uuid
     ).first()
     if user is None:
         raise credentials_exception

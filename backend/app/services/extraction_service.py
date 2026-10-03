@@ -193,11 +193,18 @@ def extract_from_transcript(transcript: str) -> dict:
 
 # =============== MULTI-PERSON EXTRACTION ===============
 
-# Keywords indicate class-wide statements
+# Keywords indicate class-wide statements.
+# NOTE: Temporal markers (“hôm nay”, “sáng nay”, “chiều nay”) đã được LOẠI Bỏ.
+# Lý do: chúng là context starter (mở đầu câu), không phải class-wide marker.
+# VD: "hôm nay Lan ăn ngon" → "hôm nay" chỉ thời gian, segment vẫn match Lan OK.
+# Class-wide markers thực sự: cả lớp, các bé, mọi người, tất cả, ai cũng.
 CLASS_WIDE_KEYWORDS = [
     "cả lớp", "các bé", "mọi người", "tất cả", "ai cũng",
-    "hôm nay", "sáng nay", "chiều nay"
 ]
+
+# Confidence tối thiểu của child match để GHI ĐÈ class-wide keyword.
+# Nếu match >= threshold → segment thuộc về child đó, không phải class-wide.
+CHILD_MATCH_CONFIDENCE_THRESHOLD = 0.5
 
 # Class-wide extraction fields (used to bucket class-wide statements).
 # Dùng chung cho class_wide_lists init và iteration loop.
@@ -209,19 +216,92 @@ CLASS_WIDE_FIELDS: tuple[str, ...] = (
 def _is_class_wide_segment(segment_text: str, matches: list) -> bool:
     """
     Kiểm tra xem segment có phải là statement cho cả lớp không.
-    
-    Returns True nếu:
-    1. Chứa keywords như "cả lớp", "các bé"...
-    2. KHÔNG match được child nào (no child matches)
+
+    Quy tắc ưu tiên (theo thứ tự):
+    1. Nếu MATCH được child với confidence cao (>= CHILD_MATCH_CONFIDENCE_THRESHOLD)
+       → segment thuộc về child đó, KHÔNG phải class-wide (kể cả khi có keyword).
+    2. Nếu MATCH yếu (confidence < threshold) → coi như noise, vẫn check class-wide keyword.
+    3. Không match ai → dùng class-wide keyword để quyết định.
+
+    Lý do: keyword "cả lớp" có thể xuất hiện trong câu chứa tên bé cụ thể
+    (ví dụ "cả lớp vui chơi nhưng Lan ăn hết suất"). Trong trường hợp này,
+    child match mạnh hơn nên thắng keyword.
     """
+    # Có child match đủ mạnh → segment này gắn với child đó
+    if matches and matches[0].confidence >= CHILD_MATCH_CONFIDENCE_THRESHOLD:
+        return False
+
+    # Không có match hoặc match yếu → dùng keyword
     segment_lower = segment_text.lower()
-    
-    # Check for class-wide keywords
     for keyword in CLASS_WIDE_KEYWORDS:
         if keyword in segment_lower:
             return True
-    
-    return not matches
+
+    # Không có match và không có keyword → unmatched
+    return False
+
+
+def _smart_split_transcript(text: str, children: list, min_confidence: float = 0.3) -> list[str]:
+    """
+    Anchor-based fallback splitter khi transcript KHÔNG có dấu chấm/câu kết thúc.
+
+    Whisper raw output cho tiếng Việt thường trả về 1 chuỗi dài, ví dụ:
+        "Lan ăn ngon hết suất cả lớp vui chơi Hoàng ho nhẹ"
+
+    Cách hoạt động:
+    1. Match tên bé trên toàn text (giống match_single_text).
+    2. Tìm vị trí xuất hiện đầu tiên của mỗi từ trong matched_words.
+    3. Tìm vị trí xuất hiện của CLASS_WIDE_KEYWORDS.
+    4. Sắp xếp anchors (unique, tăng dần) → cắt text theo từng anchor.
+
+    Returns:
+        List[str] - các đoạn text con đã được tách (mỗi đoạn đều non-empty).
+        Nếu không tìm được anchor nào, trả về [text] (giữ nguyên 1 segment).
+    """
+    from app.services.name_matching_service import match_single_text
+
+    text_lower = text.lower()
+    anchors: set[int] = set()
+
+    # 1. Anchors từ tên bé match được
+    matches = match_single_text(text, children, min_confidence=min_confidence)
+    for m in matches:
+        for word in m.matched_words:
+            idx = text_lower.find(word)
+            if idx > 0:
+                anchors.add(idx)
+
+    # 2. Anchors từ class-wide keywords
+    for kw in CLASS_WIDE_KEYWORDS:
+        kw_lower = kw.lower()
+        idx = 0
+        while True:
+            idx = text_lower.find(kw_lower, idx)
+            if idx < 0:
+                break
+            if idx > 0:
+                anchors.add(idx)
+            idx += len(kw_lower)
+
+    # Không tìm được anchor nào → giữ nguyên 1 segment
+    if not anchors:
+        return [text.strip()] if text.strip() else []
+
+    # 3. Sắp xếp anchors tăng dần, cắt text
+    sorted_anchors = sorted(anchors)
+    segments: list[str] = []
+    prev = 0
+    for anchor in sorted_anchors:
+        chunk = text[prev:anchor].strip()
+        if chunk:
+            segments.append(chunk)
+        prev = anchor
+    # Đoạn cuối cùng (từ anchor cuối đến hết text)
+    tail = text[prev:].strip()
+    if tail:
+        segments.append(tail)
+
+    return segments
 
 
 def extract_multi_person(
@@ -299,9 +379,18 @@ def extract_multi_person(
             "class_wide_segments": 0,
         }
 
-    # Split transcript into sentences
+    # Split transcript into sentences (dấu chấm/câu xuống dòng)
     segments_text = re.split(r'[.!?\n]+', transcript)
     segments_text = [s.strip() for s in segments_text if s.strip()]
+
+    # Fallback: Whisper raw output tiếng Việt thường KHÔNG có dấu chấm/kết thúc câu.
+    # Nếu regex chỉ ra 1 segment duy nhất → dùng anchor-based split (tên bé + keyword).
+    if len(segments_text) == 1 and children:
+        smart_segments = _smart_split_transcript(
+            segments_text[0], children, min_confidence=min_confidence
+        )
+        if len(smart_segments) > 1:
+            segments_text = smart_segments
 
     if not segments_text:
         return {
@@ -337,6 +426,9 @@ def extract_multi_person(
     ambiguous_count = 0
     unmatched_count = 0
     class_wide_count = 0
+
+    # Track để merge orphan segments vào class-wide
+    prev_was_classwide = False
 
     for segment_text in segments_text:
         # 1. Match children names in this segment
@@ -384,10 +476,19 @@ def extract_multi_person(
         if is_class_wide:
             # Class-wide: append vào bucket 1
             class_wide_count += 1
+            has_any_content = False
             for key in CLASS_WIDE_FIELDS:
                 value = extraction.get(key)
                 if value:
                     class_wide_lists[key].append(value)
+                    has_any_content = True
+            # Fallback: nếu model trả extraction rỗng → dùng raw text làm representative
+            # cho field phù hợp nhất (đoán từ keyword trong segment)
+            if not has_any_content:
+                for priority_key in ["meals", "activities", "sleeping", "health", "mood"]:
+                    if priority_key in class_wide_lists:
+                        class_wide_lists[priority_key].append(segment_text)
+                        break
 
         elif matches:
             # Child-specific: REPLACE vào bucket 2 cho từng matched child
@@ -409,8 +510,19 @@ def extract_multi_person(
                         # Replace list với 1 phần tử (override cuối cùng thắng)
                         child_overrides_lists[child_id][key] = [value]
         else:
-            # Unmatched: chỉ đếm, không lưu content vào bucket nào
-            unmatched_count += 1
+            # Unmatched: orphan segment ngắn (< 3 từ) + prev là class-wide
+            # → merge vào class-wide bucket thay vì unmatched
+            word_count = len(segment_text.split())
+            is_orphan_short = word_count < 3
+            if is_orphan_short and prev_was_classwide:
+                # Merge vào class-wide
+                class_wide_count += 1
+                class_wide_lists["activities"].append(segment_text)
+            else:
+                unmatched_count += 1
+
+        # Cập nhật prev state cho lần lặp sau
+        prev_was_classwide = is_class_wide
 
         result_segments.append(segment_result)
 

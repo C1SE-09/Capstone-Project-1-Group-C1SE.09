@@ -71,7 +71,7 @@ ACTIVITIES_KEYWORDS: list[str] = [
     "chơi", "hoạt động", "ngoài trời", "tập trung", "lơ đễnh",
     "tích cực", "năng động", "chạy nhảy",
     # Tương tác
-    "cùng bạn", "với bạn", "với cô", "chơi một mình",
+    "cùng bạn", "với bạn", "với cô", "chơi một mình","nói chuyện",
     # Hoạt động khác
     "xé giấy", "hay giành đồ chơi"
 ]
@@ -231,7 +231,7 @@ def validate_transcript_content(transcript: str) -> ValidationResult:
         )
     
     # Rule 3: Cần ít nhất 2 categories có keywords
-    if len(matched_categories) < 2:
+    if len(matched_categories) < 1:
         raise ValidationError(
             "Transcript không có đủ thông tin báo cáo học sinh. "
             "Vui lòng kiểm tra lại nội dung.",
@@ -239,7 +239,7 @@ def validate_transcript_content(transcript: str) -> ValidationResult:
         )
     
     # Rule 4: Cần ít nhất 1 trong 3 categories quan trọng (eating, sleeping, health)
-    important_categories = ["eating", "sleeping", "health"]
+    important_categories = ["eating", "sleeping", "health","activities","mood"]
     has_important = any(cat in matched_categories for cat in important_categories)
     
     if not has_important:

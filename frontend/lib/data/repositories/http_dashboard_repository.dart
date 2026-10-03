@@ -21,6 +21,7 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
+import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
 import 'package:dio/dio.dart';
 
@@ -29,9 +30,15 @@ class HttpDashboardRepository implements DashboardRepository {
     ClassDataRepository? classDataRepository,
     Dio? dio,
     String? baseUrl,
-    this.teacherId = 'bbbbbbbb-0000-0000-0000-000000000001',
-    this.parentId = 'cccccccc-0000-0000-0000-000000000001',
-  })  : _classData =
+    String? teacherId,
+    String? parentId,
+  })  : teacherId = teacherId ??
+            AuthRepository.currentUser?.teacherId ??
+            'bbbbbbbb-0000-0000-0000-000000000001',
+        parentId = parentId ??
+            AuthRepository.currentUser?.parentId ??
+            'cccccccc-0000-0000-0000-000000000001',
+        _classData =
             classDataRepository ?? HttpClassDataRepository(dio: dio, baseUrl: baseUrl),
         _dio = dio ??
             Dio(
@@ -39,6 +46,9 @@ class HttpDashboardRepository implements DashboardRepository {
                 baseUrl: baseUrl ?? kApiBaseUrl,
                 connectTimeout: const Duration(seconds: 30),
                 receiveTimeout: const Duration(seconds: 30),
+                headers: AuthRepository.currentUser?.token != null
+                    ? {'Authorization': 'Bearer ${AuthRepository.currentUser!.token}'}
+                    : null,
               ),
             );
 
@@ -140,10 +150,18 @@ class HttpDashboardRepository implements DashboardRepository {
   }
 
   @override
-  Future<DailyReport?> getTodayReport(String childId, DateTime date) async {
+  Future<DailyReport?> getTodayReport(
+    String childId,
+    DateTime date, {
+    bool includeDraft = true,
+  }) async {
     final data = await _get(
       '/api/child/$childId/reports',
-      query: {'date': _isoDate(date), 'limit': '7'},
+      query: {
+        'date': _isoDate(date),
+        'limit': '7',
+        'include_draft': includeDraft.toString(),
+      },
     );
     final raw = data['today_report'];
     if (raw == null) return null;
@@ -154,17 +172,40 @@ class HttpDashboardRepository implements DashboardRepository {
   Future<List<DailyReport>> getRecentReports(
     String childId, {
     int limit = 7,
+    bool includeDraft = true,
   }) async {
     final data = await _get(
       '/api/child/$childId/reports',
-      query: {'limit': limit.toString()},
+      query: {
+        'limit': limit.toString(),
+        'include_draft': includeDraft.toString(),
+      },
     );
+    final list = <DailyReport>[];
+    final seen = <String>{};
+    if (data['today_report'] is Map) {
+      final rep = DailyReport.fromJson(_asMap(data['today_report']));
+      if (includeDraft || rep.status != ReportStatus.draft) {
+        if (rep.dailyReportId.isNotEmpty) seen.add(rep.dailyReportId);
+        list.add(rep);
+      }
+    }
     final raw = data['recent_reports'];
-    if (raw is! List) return const [];
-    return raw
-        .whereType<Map>()
-        .map((item) => DailyReport.fromJson(Map<String, dynamic>.from(item)))
-        .toList(growable: false);
+    if (raw is List) {
+      for (final item in raw.whereType<Map>()) {
+        final rep = DailyReport.fromJson(Map<String, dynamic>.from(item));
+        if (rep.dailyReportId.isEmpty || seen.add(rep.dailyReportId)) {
+          list.add(rep);
+        }
+      }
+    }
+    return list;
+  }
+
+  @override
+  Future<DailyReport> markReportAsRead(String reportId) async {
+    final data = await _post('/api/reports/$reportId/read');
+    return DailyReport.fromJson(_asMap(data));
   }
 
   // ══════════════════════════════════════════════════════════
@@ -192,6 +233,7 @@ class HttpDashboardRepository implements DashboardRepository {
               null => null,
               'draft' => ReportStatus.draft,
               'published' || 'sent' => ReportStatus.published,
+              'read' => ReportStatus.read,
               _ => null,
             },
           ),
@@ -222,7 +264,8 @@ class HttpDashboardRepository implements DashboardRepository {
         null => 0, // Chưa báo cáo
         ReportStatus.draft => 1, // Bản nháp
         ReportStatus.published => 2, // Đã gửi
-        ReportStatus.archived => 3, // Đã đọc
+        ReportStatus.read => 3, // Đã đọc
+        ReportStatus.archived => 4, // Đã lưu trữ
       };
 
   Map<String, dynamic> _asMap(dynamic value) {
@@ -241,6 +284,21 @@ class HttpDashboardRepository implements DashboardRepository {
     } on DioException catch (error) {
       throw ClassDataException(
         error.message ?? 'Không thể tải dữ liệu.',
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> _post(
+    String path, {
+    dynamic data,
+  }) async {
+    try {
+      final response = await _dio.post(path, data: data);
+      return _asMap(response.data);
+    } on DioException catch (error) {
+      throw ClassDataException(
+        error.message ?? 'Không thể gửi dữ liệu.',
         statusCode: error.response?.statusCode,
       );
     }

@@ -195,7 +195,13 @@ def get_teacher_classes(
         completed = sum(
             1
             for c in child_ids
-            if c in by_child and by_child[c].status == DailyReportStatus.PUBLISHED
+            if c in by_child
+            and by_child[c].status
+            in (
+                DailyReportStatus.PUBLISHED,
+                DailyReportStatus.SENT,
+                DailyReportStatus.READ,
+            )
         )
         draft = sum(
             1
@@ -274,12 +280,16 @@ def get_class_dashboard(
             pending.append(
                 {"child": _child_dict(child), "status": None, "updated_at": None}
             )
-        elif report.status in (DailyReportStatus.PUBLISHED, DailyReportStatus.SENT):
+        elif report.status in (
+            DailyReportStatus.PUBLISHED,
+            DailyReportStatus.SENT,
+            DailyReportStatus.READ,
+        ):
             completed += 1
             pending.append(
                 {
                     "child": _child_dict(child),
-                    "status": "published",
+                    "status": "read" if report.status == DailyReportStatus.READ else "published",
                     "updated_at": None,
                 }
             )
@@ -503,11 +513,12 @@ def get_child_reports(
     child_id: uuid.UUID,
     date_param: date | None = Query(default=None, alias="date"),
     limit: int = Query(default=7, ge=1, le=50),
+    include_draft: bool = Query(default=True),
     db: Session = Depends(get_db),
 ):
     """
     Trả về báo cáo hôm nay (riêng) + danh sách gần đây (mới nhất trước),
-    khớp nhu cầu của ParentHomeController.
+    khớp nhu cầu của ParentHomeController và Teacher History.
     """
     child = db.query(Child).filter(Child.child_id == child_id).first()
     if not child:
@@ -515,29 +526,37 @@ def get_child_reports(
 
     target_date = date_param or datetime.now(tz=timezone.utc).date()
 
-    today_report = (
-        db.query(DailyReport)
-        .filter(
-            DailyReport.child_id == child_id,
-            DailyReport.report_date == target_date,
-        )
-        .order_by(DailyReport.created_at.desc())
-        .first()
+    today_query = db.query(DailyReport).filter(
+        DailyReport.child_id == child_id,
+        DailyReport.report_date == target_date,
     )
-
-    recent = (
-        db.query(DailyReport)
-        .filter(
-            DailyReport.child_id == child_id,
+    if not include_draft:
+        today_query = today_query.filter(
             DailyReport.status.in_(
                 [
                     DailyReportStatus.PUBLISHED,
                     DailyReportStatus.SENT,
                     DailyReportStatus.READ,
                 ]
-            ),
+            )
         )
-        .order_by(DailyReport.report_date.desc())
+    today_report = today_query.order_by(DailyReport.created_at.desc()).first()
+
+    statuses = [
+        DailyReportStatus.PUBLISHED,
+        DailyReportStatus.SENT,
+        DailyReportStatus.READ,
+    ]
+    if include_draft:
+        statuses.append(DailyReportStatus.DRAFT)
+
+    recent = (
+        db.query(DailyReport)
+        .filter(
+            DailyReport.child_id == child_id,
+            DailyReport.status.in_(statuses),
+        )
+        .order_by(DailyReport.report_date.desc(), DailyReport.created_at.desc())
         .limit(limit)
         .all()
     )
@@ -546,3 +565,46 @@ def get_child_reports(
         "today_report": _report_dict(today_report) if today_report else None,
         "recent_reports": [_report_dict(r) for r in recent],
     }
+
+
+@router.post(
+    "/api/reports/{report_id}/read",
+    summary="Đánh dấu báo cáo đã đọc",
+)
+def mark_report_as_read(
+    report_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Đánh dấu một báo cáo ngày đã được phụ huynh mở đọc:
+    - Chuyển status -> READ (nếu status đang là SENT hoặc PUBLISHED hoặc READ).
+    - Cập nhật read_at -> thời gian hiện tại (nếu chưa có).
+    """
+    report = (
+        db.query(DailyReport)
+        .filter(DailyReport.daily_report_id == report_id)
+        .first()
+    )
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if report.status in (DailyReportStatus.SENT, DailyReportStatus.PUBLISHED, DailyReportStatus.READ):
+        report.status = DailyReportStatus.READ
+        if not report.read_at:
+            report.read_at = datetime.now(tz=timezone.utc)
+        db.commit()
+        db.refresh(report)
+
+    return _report_dict(report)
+
+
+@router.post(
+    "/api/parent/reports/{report_id}/read",
+    summary="Đánh dấu báo cáo đã đọc (alias)",
+)
+def mark_parent_report_as_read(
+    report_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    return mark_report_as_read(report_id=report_id, db=db)
+

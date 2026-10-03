@@ -42,6 +42,40 @@ class DailyReport extends BaseEntity {
   final String? activitiesText;
   final String? mood;
 
+  DailyReport copyWith({
+    String? dailyReportId,
+    String? teacherId,
+    String? childId,
+    String? voiceRecordId,
+    DateTime? reportDate,
+    String? summaryText,
+    ReportStatus? status,
+    DateTime? publishedAt,
+    List<Map<String, dynamic>>? activities,
+    String? eating,
+    String? sleeping,
+    String? health,
+    String? activitiesText,
+    String? mood,
+  }) {
+    return DailyReport(
+      dailyReportId: dailyReportId ?? this.dailyReportId,
+      teacherId: teacherId ?? this.teacherId,
+      childId: childId ?? this.childId,
+      voiceRecordId: voiceRecordId ?? this.voiceRecordId,
+      reportDate: reportDate ?? this.reportDate,
+      summaryText: summaryText ?? this.summaryText,
+      status: status ?? this.status,
+      publishedAt: publishedAt ?? this.publishedAt,
+      activities: activities ?? this.activities,
+      eating: eating ?? this.eating,
+      sleeping: sleeping ?? this.sleeping,
+      health: health ?? this.health,
+      activitiesText: activitiesText ?? this.activitiesText,
+      mood: mood ?? this.mood,
+    );
+  }
+
   factory DailyReport.fromJson(Map<String, dynamic> json) {
     final rawActivities = json['activities'];
     final activitiesList = rawActivities is List
