@@ -136,7 +136,7 @@ class User(Base, TimestampMixin):
     username: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
-        comment="Login username, e.g. teacher_mai or parent_tuan",
+        comment="Login username, e.g. comai or tuan",
     )
     password_hash: Mapped[str] = mapped_column(
         String(255),
