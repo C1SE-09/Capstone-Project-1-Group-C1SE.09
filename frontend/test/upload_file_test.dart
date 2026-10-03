@@ -1,9 +1,44 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:record/record.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
+
+class FakeAudioRecorder extends AudioRecorder {
+  bool permission = true;
+  bool isRecordingState = false;
+  RecordConfig? lastConfig;
+  String? lastPath;
+  String? stopResultPath;
+  bool disposed = false;
+
+  @override
+  Future<bool> hasPermission() async => permission;
+
+  @override
+  Future<bool> isEncoderSupported(AudioEncoder encoder) async => true;
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) async {
+    lastConfig = config;
+    lastPath = path;
+    isRecordingState = true;
+  }
+
+  @override
+  Future<String?> stop() async {
+    isRecordingState = false;
+    return stopResultPath;
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposed = true;
+  }
+}
 
 class FailingTeacherRepo extends TeacherRepository {
   @override
@@ -180,5 +215,144 @@ void main() {
     expect(repo.capturedFileName, 'my_recording.wav');
     expect(repo.capturedBytes, testBytes);
     expect(doneCalled, isTrue);
+  });
+
+  testWidgets(
+      'RecordingScreen starts recording, stops, and submits real PlatformFile',
+      (WidgetTester tester) async {
+    final tempDir = Directory.systemTemp.createTempSync('audio_test');
+    final tempFile = File('${tempDir.path}/test_rec.m4a');
+    final sampleAudioBytes = Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8]);
+    tempFile.writeAsBytesSync(sampleAudioBytes);
+
+    final fakeRecorder = FakeAudioRecorder();
+    fakeRecorder.stopResultPath = tempFile.path;
+
+    PlatformFile? submittedFile;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecordingScreen(
+          mode: RecordMode.classroom,
+          audioRecorder: fakeRecorder,
+          pathProvider: (_) async => tempFile.path,
+          onSubmit: (file) {
+            submittedFile = file;
+          },
+        ),
+      ),
+    );
+
+    // Initial state: ready
+    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('Nhấn để bắt đầu ghi âm'), findsOneWidget);
+    expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+
+    // Tap record button to start
+    await tester.tap(find.byIcon(Icons.mic_none_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(fakeRecorder.isRecordingState, isTrue);
+    expect(find.text('Đang ghi âm · Nói tự nhiên'), findsOneWidget);
+    expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+
+    // Advance 2 seconds
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('00:02'), findsOneWidget);
+
+    // Tap stop button to finish inside runAsync so File.readAsBytes() completes
+    await tester.runAsync(() async {
+      await tester.tap(find.byIcon(Icons.stop_rounded));
+      await Future.delayed(const Duration(milliseconds: 150));
+    });
+    await tester.pump();
+
+    expect(fakeRecorder.isRecordingState, isFalse);
+    expect(find.textContaining('Đã ghi âm 00:02'), findsOneWidget);
+    expect(find.text('Gửi xử lý'), findsOneWidget);
+
+    // Tap submit button
+    await tester.tap(find.text('Gửi xử lý'));
+    await tester.pump();
+
+    expect(submittedFile, isNotNull);
+    expect(submittedFile!.bytes, sampleAudioBytes);
+    expect(submittedFile!.size, sampleAudioBytes.length);
+    expect(submittedFile!.name, contains('.m4a'));
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  testWidgets(
+      'RecordingScreen shows warning when microphone permission is denied',
+      (WidgetTester tester) async {
+    final fakeRecorder = FakeAudioRecorder();
+    fakeRecorder.permission = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecordingScreen(
+          mode: RecordMode.classroom,
+          audioRecorder: fakeRecorder,
+          onSubmit: (_) {},
+        ),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.mic_none_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Vui lòng cấp quyền truy cập micro để ghi âm.'),
+        findsOneWidget);
+    expect(fakeRecorder.isRecordingState, isFalse);
+  });
+
+  testWidgets(
+      'RecordingScreen resets state when "Ghi âm lại" is clicked',
+      (WidgetTester tester) async {
+    final tempDir = Directory.systemTemp.createTempSync('audio_test_reset');
+    final tempFile = File('${tempDir.path}/test_rec2.m4a');
+    tempFile.writeAsBytesSync([10, 20, 30]);
+
+    final fakeRecorder = FakeAudioRecorder();
+    fakeRecorder.stopResultPath = tempFile.path;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecordingScreen(
+          mode: RecordMode.classroom,
+          audioRecorder: fakeRecorder,
+          pathProvider: (_) async => tempFile.path,
+          onSubmit: (_) {},
+        ),
+      ),
+    );
+
+    // Start recording
+    await tester.tap(find.byIcon(Icons.mic_none_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Stop recording
+    await tester.runAsync(() async {
+      await tester.tap(find.byIcon(Icons.stop_rounded));
+      await Future.delayed(const Duration(milliseconds: 150));
+    });
+    await tester.pump();
+
+    expect(find.text('Ghi âm lại'), findsOneWidget);
+
+    // Tap 'Ghi âm lại'
+    await tester.tap(find.text('Ghi âm lại'));
+    await tester.pump();
+
+    // Verifies returned to initial state
+    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('Nhấn để bắt đầu ghi âm'), findsOneWidget);
+    expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+
+    tempDir.deleteSync(recursive: true);
   });
 }

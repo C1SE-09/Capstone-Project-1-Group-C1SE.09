@@ -15,6 +15,9 @@ import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:cross_file/cross_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
@@ -250,6 +253,8 @@ class RecordFlowScreen extends StatefulWidget {
     this.className = 'Mầm 1',
     this.repository,
     this.teacherRepository,
+    this.audioRecorder,
+    this.pathProvider,
   });
   final RecordMode mode;
   final Child? child;
@@ -257,6 +262,8 @@ class RecordFlowScreen extends StatefulWidget {
   final String className;
   final HttpDashboardRepository? repository;
   final TeacherRepository? teacherRepository;
+  final AudioRecorder? audioRecorder;
+  final Future<String> Function(String extension)? pathProvider;
 
   @override
   State<RecordFlowScreen> createState() => _RecordFlowScreenState();
@@ -314,6 +321,8 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
           mode: widget.mode,
           child: widget.child,
           className: widget.className,
+          audioRecorder: widget.audioRecorder,
+          pathProvider: widget.pathProvider,
           onSubmit: (file) {
             setState(() {
               uploadedFile = file;
@@ -332,11 +341,15 @@ class RecordingScreen extends StatefulWidget {
     required this.onSubmit,
     this.child,
     this.className = 'Mầm 1',
+    this.audioRecorder,
+    this.pathProvider,
   });
   final RecordMode mode;
   final Child? child;
   final ValueChanged<PlatformFile?> onSubmit;
   final String className;
+  final AudioRecorder? audioRecorder;
+  final Future<String> Function(String extension)? pathProvider;
 
   @override
   State<RecordingScreen> createState() => _RecordingScreenState();
@@ -348,6 +361,11 @@ class _RecordingScreenState extends State<RecordingScreen>
   String phase = 'ready';
   PlatformFile? selectedFile;
   Timer? timer;
+  bool isBusy = false;
+  String _currentExtension = 'm4a';
+
+  late final AudioRecorder _recorder = widget.audioRecorder ?? AudioRecorder();
+
   // Primary wave controller — drives the oscillation frequency.
   late final AnimationController wave = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 700));
@@ -360,6 +378,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     timer?.cancel();
     wave.dispose();
     wave2.dispose();
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -373,6 +392,7 @@ class _RecordingScreenState extends State<RecordingScreen>
       if (result != null && result.files.isNotEmpty) {
         timer?.cancel();
         wave.stop();
+        wave2.stop();
         setState(() {
           selectedFile = result.files.single;
           phase = 'file_selected';
@@ -395,31 +415,169 @@ class _RecordingScreenState extends State<RecordingScreen>
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  void toggle() {
-    if (phase == 'done' || phase == 'file_selected') return;
+  Future<void> toggle() async {
+    if (isBusy || phase == 'file_selected' || phase == 'done') return;
     if (phase == 'recording') {
-      timer?.cancel();
-      wave.stop();
-      wave2.stop();
-      setState(() => phase = 'done');
+      await _stopRecording();
       return;
     }
-    wave.repeat(reverse: true);
-    wave2.repeat(reverse: false);
-    setState(() => phase = 'recording');
-    timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (seconds >= 179) {
-        timer?.cancel();
-        wave.stop();
-        wave2.stop();
-        setState(() {
-          seconds = 180;
-          phase = 'done';
-        });
-      } else {
-        setState(() => seconds++);
+    await _startRecording();
+  }
+
+  Future<void> _startRecording() async {
+    setState(() => isBusy = true);
+    try {
+      final hasPermission = await _recorder.hasPermission();
+      if (!hasPermission) {
+        if (mounted) {
+          setState(() => isBusy = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vui lòng cấp quyền truy cập micro để ghi âm.'),
+              backgroundColor: KColors.warn,
+            ),
+          );
+        }
+        return;
       }
-    });
+
+      AudioEncoder encoder = AudioEncoder.aacLc;
+      String extension = 'm4a';
+
+      if (kIsWeb) {
+        if (await _recorder.isEncoderSupported(AudioEncoder.opus)) {
+          encoder = AudioEncoder.opus;
+          extension = 'webm';
+        } else if (await _recorder.isEncoderSupported(AudioEncoder.aacLc)) {
+          encoder = AudioEncoder.aacLc;
+          extension = 'm4a';
+        } else {
+          encoder = AudioEncoder.wav;
+          extension = 'wav';
+        }
+      }
+
+      String recordPath = '';
+      if (!kIsWeb) {
+        if (widget.pathProvider != null) {
+          recordPath = await widget.pathProvider!(extension);
+        } else {
+          try {
+            final dir = await getTemporaryDirectory();
+            recordPath =
+                '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.$extension';
+          } catch (_) {
+            recordPath =
+                'rec_${DateTime.now().millisecondsSinceEpoch}.$extension';
+          }
+        }
+      }
+
+      await _recorder.start(
+        RecordConfig(
+          encoder: encoder,
+          bitRate: 128000,
+          sampleRate: 44100,
+          numChannels: 1,
+        ),
+        path: recordPath,
+      );
+
+      _currentExtension = extension;
+
+      wave.repeat(reverse: true);
+      wave2.repeat(reverse: false);
+      if (mounted) {
+        setState(() {
+          seconds = 0;
+          phase = 'recording';
+          selectedFile = null;
+          isBusy = false;
+        });
+      }
+
+      timer?.cancel();
+      timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (seconds >= 179) {
+          _stopRecording();
+        } else {
+          setState(() => seconds++);
+        }
+      });
+    } catch (e) {
+      debugPrint('Error starting recording: $e');
+      if (mounted) {
+        setState(() => isBusy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể bắt đầu ghi âm: $e'),
+            backgroundColor: KColors.bad,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    if (phase != 'recording') return;
+    timer?.cancel();
+    wave.stop();
+    wave2.stop();
+
+    setState(() => isBusy = true);
+    try {
+      final path = await _recorder.stop();
+      if (path != null && path.isNotEmpty) {
+        final xFile = XFile(path);
+        final bytes = await xFile.readAsBytes();
+
+        if (bytes.isEmpty) {
+          if (mounted) {
+            setState(() {
+              seconds = 0;
+              phase = 'ready';
+              selectedFile = null;
+              isBusy = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Bản ghi âm quá ngắn hoặc không có âm thanh. Vui lòng thử lại.'),
+                backgroundColor: KColors.warn,
+              ),
+            );
+          }
+          return;
+        }
+
+        final fileName =
+            'rec_${DateTime.now().millisecondsSinceEpoch}.$_currentExtension';
+        final platformFile = PlatformFile(
+          name: fileName,
+          size: bytes.length,
+          bytes: bytes,
+          path: kIsWeb ? null : path,
+        );
+
+        if (mounted) {
+          setState(() {
+            selectedFile = platformFile;
+            phase = 'done';
+            isBusy = false;
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error stopping recording: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        phase = 'done';
+        isBusy = false;
+      });
+    }
   }
 
   String get time =>
@@ -657,15 +815,26 @@ class _RecordingScreenState extends State<RecordingScreen>
                             shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),
-                              onTap: phase == 'done' ? null : toggle,
+                              onTap: (phase == 'done' || isBusy) ? null : toggle,
                               child: SizedBox.square(
                                 dimension: 96,
-                                child: Icon(
-                                    recording
-                                        ? Icons.stop_rounded
-                                        : Icons.mic_none_rounded,
-                                    size: 36,
-                                    color: Colors.white),
+                                child: isBusy
+                                    ? const Center(
+                                        child: SizedBox(
+                                          width: 32,
+                                          height: 32,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 3,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        recording
+                                            ? Icons.stop_rounded
+                                            : Icons.mic_none_rounded,
+                                        size: 36,
+                                        color: Colors.white),
                               ),
                             ),
                           ),
@@ -684,7 +853,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                           ? 'Nhấn để bắt đầu ghi âm'
                           : recording
                               ? 'Đang ghi âm · Nói tự nhiên'
-                              : 'Đã ghi âm $time',
+                              : (selectedFile != null
+                                  ? 'Đã ghi âm $time · ${_formatBytes(selectedFile!.size)}'
+                                  : 'Đã ghi âm $time'),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     if (phase == 'ready') ...[
@@ -753,7 +924,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                   label: 'Gửi xử lý',
                   icon: Icons.send_outlined,
                   large: true,
-                  onPressed: () => widget.onSubmit(null)),
+                  onPressed: () => widget.onSubmit(selectedFile)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -765,6 +936,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                           onPressed: () => setState(() {
                                 seconds = 0;
                                 phase = 'ready';
+                                selectedFile = null;
                               }))),
                   const SizedBox(width: 10),
                   Expanded(
