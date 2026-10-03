@@ -170,6 +170,7 @@ class ManualReportCreateRequest(BaseModel):
     )
     mood: str | None = Field(None, description="Nội dung tâm trạng")
     teacher_note: str | None = Field(None, description="Ghi chú thêm của giáo viên")
+    report_date: date | None = Field(None, description="Ngày của báo cáo (mặc định hôm nay)")
 
 
 class ActivityEntryResponse(BaseModel):

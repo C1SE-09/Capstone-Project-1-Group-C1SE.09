@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
-import 'package:adark_frontend/domain/entities/activity/activity_item.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
@@ -13,10 +12,11 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class OverviewScreen extends StatefulWidget {
-  const OverviewScreen({super.key, required this.onOpenReport, required this.onHistory, required this.onHealth, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository});
-  final ValueChanged<String> onOpenReport;
-  final VoidCallback onHistory;
-  final VoidCallback onHealth;
+  const OverviewScreen({super.key, this.onOpenReport, this.onHistory, this.onHealth, this.onSelectClass, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository});
+  final ValueChanged<String>? onOpenReport;
+  final VoidCallback? onHistory;
+  final VoidCallback? onHealth;
+  final VoidCallback? onSelectClass;
   final String classId;
   final HttpDashboardRepository? repository;
   @override
@@ -28,17 +28,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
   late Future<_OverviewData> future;
   @override
   void initState() { super.initState(); future = _load(); }
-  // Loads live teacher, class summary and activity timeline.
+  // Loads live teacher and class summary.
   Future<_OverviewData> _load() async {
     final values = await Future.wait([
       repository.getCurrentTeacher(),
       repository.getClassDashboard(widget.classId, DateTime.now()),
-      repository.getRecentActivities(widget.classId),
     ]);
     return _OverviewData(
       values[0] as Teacher,
       values[1] as ClassDashboardSummary,
-      values[2] as List<ActivityItem>,
     );
   }
   // Renders overview loading, error and data states.
@@ -50,12 +48,50 @@ class _OverviewScreenState extends State<OverviewScreen> {
     if (data == null) return const Center(child: Text('Không có dữ liệu tổng quan.'));
     final total = data.dashboard.totalChildren;
     final healthCount = data.dashboard.pendingChildren.where((item) => item.child.medicalAllergies?.trim().isNotEmpty == true).length;
-    final activity = data.activities;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
-        Text(_longDate(DateTime.now()), style: Theme.of(context).textTheme.bodyMedium),
-        Text('Chào ${data.teacher.fullName}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_longDate(DateTime.now()), style: Theme.of(context).textTheme.bodyMedium),
+                  Text('Chào ${data.teacher.fullName}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
+                ],
+              ),
+            ),
+            if (widget.onSelectClass != null)
+              InkWell(
+                onTap: widget.onSelectClass,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: KColors.brandTint,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: KColors.brand.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.school_outlined, size: 15, color: KColors.brand),
+                      const SizedBox(width: 5),
+                      Text(
+                        data.dashboard.classInfo.name.isNotEmpty ? data.dashboard.classInfo.name : 'Đổi lớp',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: KColors.brand),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.swap_horiz_rounded, size: 15, color: KColors.brand),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
         const SizedBox(height: 18),
         KCard(
           padding: const EdgeInsets.all(16),
@@ -96,68 +132,23 @@ class _OverviewScreenState extends State<OverviewScreen> {
             StatCard(value: total, label: 'Tổng số trẻ', icon: Icons.groups_outlined),
             StatCard(value: data.dashboard.completedCount, label: 'Đã gửi', icon: Icons.check_circle_outline, tone: KColors.ok),
             StatCard(value: data.dashboard.draftCount, label: 'Bản nháp', icon: Icons.edit_outlined, tone: KColors.info),
-            StatCard(value: healthCount, label: 'Cảnh báo sức khỏe', icon: Icons.monitor_heart_outlined, tone: KColors.warn, onTap: widget.onHealth),
+            StatCard(value: healthCount, label: 'Cảnh báo sức khỏe', icon: Icons.monitor_heart_outlined, tone: KColors.warn),
           ],
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            const Expanded(child: Text('Hoạt động gần đây', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
-            TextButton(onPressed: widget.onHistory, child: const Text('Xem tất cả', style: TextStyle(fontSize: 13))),
-          ],
-        ),
-        KCard(
-          child: activity.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(
-                    child: Text('Chưa có hoạt động nào gần đây.', style: TextStyle(fontSize: 13, color: KColors.inkFaint)),
-                  ),
-                )
-              : Column(
-                  children: [
-                    for (var index = 0; index < activity.length; index++) ...[
-                      InkWell(
-                        onTap: () => widget.onOpenReport(_activityChildName(activity[index].message)),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          child: Row(
-                            children: [
-                              Avatar(name: _activityChildName(activity[index].message)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(_activityChildName(activity[index].message), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                    Text(activity[index].message, style: Theme.of(context).textTheme.bodySmall),
-                                  ],
-                                ),
-                              ),
-                              StatusBadge(_activityStatus(activity[index])),
-                              const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (index < activity.length - 1) const Divider(),
-                    ],
-                  ],
-                ),
         ),
       ],
     );
   });
 }
 
-class _OverviewData { const _OverviewData(this.teacher, this.dashboard, this.activities); final Teacher teacher; final ClassDashboardSummary dashboard; final List<ActivityItem> activities; }
+class _OverviewData { const _OverviewData(this.teacher, this.dashboard); final Teacher teacher; final ClassDashboardSummary dashboard; }
 
 class ClassListScreen extends StatefulWidget {
-  const ClassListScreen({super.key, required this.initialHealthOnly, required this.onRecord, required this.onEdit, required this.children, this.className = 'Lớp', this.schoolName = 'Chưa có thông tin trường', this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
+  const ClassListScreen({super.key, required this.initialHealthOnly, required this.onRecord, required this.onEdit, required this.children, this.onSelectClass, this.className = 'Lớp', this.schoolName = 'Chưa có thông tin trường', this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
   final bool initialHealthOnly;
   final ValueChanged<Child> onRecord;
   final ValueChanged<Child> onEdit;
   final List<Child> children;
+  final VoidCallback? onSelectClass;
   final String classId;
   final String className;
   final String schoolName;
@@ -190,8 +181,31 @@ class _ClassListScreenState extends State<ClassListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.className, style: Theme.of(context).textTheme.headlineMedium),
-              Text(widget.schoolName, style: Theme.of(context).textTheme.bodyMedium),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.className, style: Theme.of(context).textTheme.headlineMedium),
+                        Text(widget.schoolName, style: Theme.of(context).textTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
+                  if (widget.onSelectClass != null)
+                    OutlinedButton.icon(
+                      onPressed: widget.onSelectClass,
+                      icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: KColors.brand),
+                      label: const Text('Đổi lớp', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: KColors.brand)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: KColors.brand, width: 1.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(height: 14),
               SearchField(hint: 'Tìm theo tên bé…', onChanged: (value) => setState(() => query = value)),
               const SizedBox(height: 12),
@@ -306,7 +320,7 @@ class _ChildRow extends StatelessWidget {
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key, required this.onOpenReport, required this.children, this.repository});
-  final ValueChanged<String> onOpenReport;
+  final void Function(Child child, DailyReport? report) onOpenReport;
   final List<Child> children;
   final HttpDashboardRepository? repository;
 
@@ -322,7 +336,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() { super.initState(); future = _load(); }
   // Loads the latest report history for each roster child.
-  Future<List<_HistoryRow>> _load() async { final rows = <_HistoryRow>[]; for (final child in widget.children) { final reports = await repository.getRecentReports(child.id); for (final report in reports) { rows.add(_HistoryRow(child, report)); } } return rows; }
+  Future<List<_HistoryRow>> _load() async {
+    final validChildren = widget.children.where((c) => c.id.isNotEmpty).toList();
+    final childLists = await Future.wait(
+      validChildren.map((child) async {
+        try {
+          final reports = await repository.getRecentReports(child.id, includeDraft: true);
+          return reports.map((report) => _HistoryRow(child, report)).toList();
+        } catch (e) {
+          debugPrint('Error loading reports for child ${child.id}: $e');
+          return <_HistoryRow>[];
+        }
+      }),
+    );
+    final rows = <_HistoryRow>[];
+    for (final list in childLists) {
+      rows.addAll(list);
+    }
+    rows.sort((a, b) => b.report.reportDate.compareTo(a.report.reportDate));
+    return rows;
+  }
   @override
   Widget build(BuildContext context) => FutureBuilder<List<_HistoryRow>>(future: future, builder: (context, snapshot) {
     if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
@@ -379,7 +412,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           children: [
                             for (var index = 0; index < group.value.length; index++) ...[
                               InkWell(
-                                onTap: () => widget.onOpenReport(group.value[index].child.name),
+                                onTap: () => widget.onOpenReport(group.value[index].child, group.value[index].report),
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: Row(
@@ -411,8 +444,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 class _HistoryRow { const _HistoryRow(this.child, this.report); final Child child; final DailyReport report; }
 
 class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key, required this.onLogout, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository, this.classRepository});
+  const AccountScreen({super.key, required this.onLogout, this.onSelectClass, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository, this.classRepository});
   final VoidCallback onLogout;
+  final VoidCallback? onSelectClass;
   final String classId;
   final HttpDashboardRepository? repository;
   final HttpClassDataRepository? classRepository;
@@ -459,7 +493,13 @@ class _AccountScreenState extends State<AccountScreen> {
             children: [
               _AccountRow(icon: Icons.phone_outlined, label: 'Số điện thoại', value: teacher.phone ?? 'Chưa cập nhật'),
               const Divider(),
-              _AccountRow(icon: Icons.school_outlined, label: 'Lớp phụ trách', value: className),
+              _AccountRow(
+                icon: Icons.school_outlined,
+                label: 'Lớp phụ trách',
+                value: className,
+                chevron: widget.onSelectClass != null,
+                onTap: widget.onSelectClass,
+              ),
               const Divider(),
               _AccountRow(icon: Icons.groups_outlined, label: 'Số trẻ', value: '${data.childCount} trẻ'),
             ],
@@ -469,10 +509,10 @@ class _AccountScreenState extends State<AccountScreen> {
         KCard(
           child: Column(
             children: [
-              const _AccountRow(icon: Icons.key_outlined, label: 'Đổi mật khẩu', chevron: true),
-              const Divider(),
-              const _AccountRow(icon: Icons.notifications_outlined, label: 'Thông báo đẩy', value: 'Chưa hỗ trợ'),
-              const Divider(),
+              if (widget.onSelectClass != null) ...[
+                _AccountRow(icon: Icons.swap_horiz_rounded, label: 'Quay lại chọn lớp khác', chevron: true, onTap: widget.onSelectClass),
+                const Divider(),
+              ],
               const _AccountRow(icon: Icons.info_outline, label: 'Về KinderLog', value: 'v1.0.0'),
             ],
           ),
@@ -489,9 +529,7 @@ class _AccountScreenState extends State<AccountScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Đăng xuất khỏi KinderLog?', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('Bạn sẽ cần chọn vai trò lại khi quay lại.', style: Theme.of(context).textTheme.bodyMedium),
+          Text('Bạn có muốn đăng xuất không ?', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -519,37 +557,35 @@ class _GroupTitle extends StatelessWidget {
 }
 
 class _AccountRow extends StatelessWidget {
-  const _AccountRow({required this.icon, required this.label, this.value, this.chevron = false});
+  const _AccountRow({required this.icon, required this.label, this.value, this.chevron = false, this.onTap});
   final IconData icon;
   final String label;
   final String? value;
   final bool chevron;
+  final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        child: Row(
-          children: [
-            Icon(icon, size: 19, color: KColors.inkSoft),
-            const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
-            if (value != null) Text(value!, style: Theme.of(context).textTheme.bodySmall),
-            if (chevron) const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      child: Row(
+        children: [
+          Icon(icon, size: 19, color: KColors.inkSoft),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
+          if (value != null) Text(value!, style: Theme.of(context).textTheme.bodySmall),
+          if (chevron) const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
+        ],
+      ),
+    );
+    if (onTap != null) {
+      return InkWell(onTap: onTap, child: row);
+    }
+    return row;
+  }
 }
 
 // Formats today's date for the Vietnamese dashboard.
 String _longDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 // Formats report history section dates.
 String _shortDate(DateTime d) => _longDate(d);
-// Extracts a displayed child name from an activity message when present.
-String _activityChildName(String message) {
-  final match = RegExp(
-    r'(?:của|bé|cho)\s+(.+?)(?:\s+(?:đã|đang|vừa|chờ)|$)',
-    caseSensitive: false,
-  ).firstMatch(message);
-  return match?.group(1)?.trim() ?? message.trim();
-}
-// Maps repository activity type to a visible report status.
-ReportStatus _activityStatus(ActivityItem item) => switch (item.type) { ActivityType.reportSent => ReportStatus.submitted, ActivityType.reportReviewing => ReportStatus.draft, ActivityType.audioRecorded => ReportStatus.processing };

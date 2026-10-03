@@ -11,6 +11,9 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/report_editor.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
+import 'package:adark_frontend/domain/entities/report/daily_report.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
+import 'package:adark_frontend/core/routing/app_router.dart';
 
 enum TeacherTab { overview, classList, history, account }
 
@@ -69,14 +72,18 @@ class _TeacherShellState extends State<TeacherShell> {
     );
   }
 
-  void openReport(Child child) {
-    final readOnly = {ReportStatus.submitted, ReportStatus.read, ReportStatus.attention}.contains(child.status);
+  void openReport(Child child, [DailyReport? report]) {
+    final reportStatus = report != null
+        ? uiReportStatusFromBackend(report.status.name)
+        : child.status;
+    final readOnly = {ReportStatus.submitted, ReportStatus.read, ReportStatus.attention}.contains(reportStatus);
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ReportEditorScreen(
         classId: widget.classId,
         repository: repository,
         classRepository: classRepository,
         child: child,
+        initialReport: report,
         readOnly: readOnly,
         onSent: () {
           Navigator.of(context).pop();
@@ -107,11 +114,31 @@ class _TeacherShellState extends State<TeacherShell> {
     if (classSnapshot.hasError || classSnapshot.data == null) return Scaffold(body: Center(child: TextButton(onPressed: () => setState(() => classNameFuture = classRepository.getClassInfo(widget.classId).then((value) => value.name)), child: const Text('Không tải được thông tin lớp · Thử lại'))));
     final className = classSnapshot.data!;
     final page = switch (tab) {
-      TeacherTab.overview => OverviewScreen(classId: widget.classId, repository: repository, onOpenReport: (name) => openReport(childByName(name, children)), onHistory: () => setState(() => tab = TeacherTab.history), onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; })),
-      TeacherTab.classList => ClassListScreen(initialHealthOnly: healthOnly, children: children, classId: widget.classId, className: className, schoolName: 'Chưa có thông tin trường', onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: widget.classId, className: className, repository: repository))), onEdit: openReport),
-
-      TeacherTab.history => HistoryScreen(children: children, onOpenReport: (name) => openReport(childByName(name, children))),
-      TeacherTab.account => AccountScreen(onLogout: widget.onLogout, classId: widget.classId, repository: repository),
+      TeacherTab.overview => OverviewScreen(
+        classId: widget.classId,
+        repository: repository,
+        onSelectClass: () => appRouter.go('/class-select'),
+        onOpenReport: (name) => openReport(childByName(name, children)),
+        onHistory: () => setState(() => tab = TeacherTab.history),
+        onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; }),
+      ),
+      TeacherTab.classList => ClassListScreen(
+        initialHealthOnly: healthOnly,
+        children: children,
+        classId: widget.classId,
+        className: className,
+        schoolName: 'Chưa có thông tin trường',
+        onSelectClass: () => appRouter.go('/class-select'),
+        onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: widget.classId, className: className, repository: repository))),
+        onEdit: openReport,
+      ),
+      TeacherTab.history => HistoryScreen(children: children, onOpenReport: (child, report) => openReport(child, report)),
+      TeacherTab.account => AccountScreen(
+        onLogout: widget.onLogout,
+        onSelectClass: () => appRouter.go('/class-select'),
+        classId: widget.classId,
+        repository: repository,
+      ),
     };
     return Scaffold(
       body: page,

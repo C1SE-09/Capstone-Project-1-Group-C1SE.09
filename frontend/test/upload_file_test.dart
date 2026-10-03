@@ -78,7 +78,8 @@ class SuccessTeacherRepo extends TeacherRepository {
 }
 
 void main() {
-  testWidgets('RecordingScreen displays upload file button when ready', (WidgetTester tester) async {
+  testWidgets('RecordingScreen displays upload file button when ready',
+      (WidgetTester tester) async {
     PlatformFile? submittedFile;
 
     await tester.pumpWidget(
@@ -101,7 +102,9 @@ void main() {
     expect(submittedFile, isNull);
   });
 
-  testWidgets('ProcessingScreen converts technical code exception to friendly UI message', (WidgetTester tester) async {
+  testWidgets(
+      'ProcessingScreen converts technical code exception to friendly UI message',
+      (WidgetTester tester) async {
     final file = PlatformFile(
       name: 'test_audio.m4a',
       size: 1024,
@@ -135,12 +138,15 @@ void main() {
     // Must display user-friendly Vietnamese message
     expect(find.textContaining('trình duyệt'), findsOneWidget);
 
-    // Must provide action buttons
+    // Must provide action buttons in dialog
     expect(find.text('Thử lại'), findsOneWidget);
-    expect(find.text('Bỏ qua & Tiếp tục'), findsOneWidget);
+    expect(find.text('Quay lại'), findsOneWidget);
+    expect(find.text('Bỏ qua & Tiếp tục'), findsNothing);
   });
 
-  testWidgets('ProcessingScreen successfully passes file bytes and file name for upload', (WidgetTester tester) async {
+  testWidgets(
+      'ProcessingScreen successfully passes file bytes and file name for upload',
+      (WidgetTester tester) async {
     final testBytes = Uint8List.fromList([10, 20, 30, 40]);
     final file = PlatformFile(
       name: 'my_recording.wav',
@@ -176,4 +182,3 @@ void main() {
     expect(doneCalled, isTrue);
   });
 }
-

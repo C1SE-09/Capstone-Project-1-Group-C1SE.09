@@ -24,13 +24,21 @@ from app.tasks.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 
+from urllib.parse import quote, urlsplit, urlunsplit
+
+
 def _download_audio(audio_url: str) -> str:
     """Tải file âm thanh từ URL lưu vào đĩa đệm tạm."""
     suffix = os.path.splitext(audio_url.partition("?")[0])[1] or ".wav"
     fd, tmp_path = tempfile.mkstemp(suffix=suffix)
     os.close(fd)
     try:
-        with urlopen(audio_url, timeout=60) as resp, open(tmp_path, "wb") as out_file:
+        parts = urlsplit(audio_url)
+        encoded_path = quote(parts.path, safe="/:@&=+$,-_.!~*'()")
+        safe_url = urlunsplit(
+            (parts.scheme, parts.netloc, encoded_path, parts.query, parts.fragment)
+        )
+        with urlopen(safe_url, timeout=60) as resp, open(tmp_path, "wb") as out_file:
             shutil.copyfileobj(resp, out_file)
         return tmp_path
     except (HTTPError, URLError, OSError):

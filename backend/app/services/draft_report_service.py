@@ -115,6 +115,7 @@ def _get_or_create_draft(
         # Update: ghi đè voice_record_id (có thể đã tạo từ voice_record khác)
         report.voice_record_id = voice_record_id
         report.teacher_id = teacher_id
+        report.status = DailyReportStatus.DRAFT
         # Xóa ActivityEntry cũ để ghi lại
         db.query(ActivityEntry).filter(
             ActivityEntry.daily_report_id == report.daily_report_id
@@ -161,6 +162,25 @@ def _populate_activities(
                 category=ActivityCategory[category_str],
                 title=title,
                 description=value.strip(),
+                entry_order=order,
+            )
+            db.add(entry)
+            entries.append(entry)
+            order += 1
+
+    if not entries:
+        defaults = [
+            ("MEAL", "Bữa ăn", "Ăn theo thực đơn chung của lớp, ăn hết suất."),
+            ("NAP", "Giấc ngủ", "Ngủ trưa đúng giờ, ngủ đủ giấc."),
+            ("PLAY", "Hoạt động", "Tham gia tích cực các hoạt động học tập và vui chơi."),
+            ("BEHAVIOR", "Tâm trạng", "Vui vẻ, hòa đồng cùng các bạn."),
+        ]
+        for category_str, title, desc in defaults:
+            entry = ActivityEntry(
+                daily_report_id=report.daily_report_id,
+                category=ActivityCategory[category_str],
+                title=title,
+                description=desc,
                 entry_order=order,
             )
             db.add(entry)
@@ -253,6 +273,13 @@ def create_classwide_drafts(
             report_date=report_date,
         )
 
+        note_val = None
+        if override:
+            note_val = override.get("teacher_note") or override.get("notes") or override.get("note")
+        if not note_val and class_wide_extraction:
+            note_val = class_wide_extraction.get("teacher_note") or class_wide_extraction.get("notes") or class_wide_extraction.get("note")
+        report.summary_text = note_val.strip() if note_val else None
+
         # Tạo ActivityEntry từ merged content
         _populate_activities(db, report, merged)
 
@@ -328,6 +355,13 @@ def create_child_draft(
         voice_record_id=voice_record_id,
         report_date=report_date,
     )
+
+    note_val = None
+    if child_override:
+        note_val = child_override.get("teacher_note") or child_override.get("notes") or child_override.get("note")
+    if not note_val and class_wide_extraction:
+        note_val = class_wide_extraction.get("teacher_note") or class_wide_extraction.get("notes") or class_wide_extraction.get("note")
+    report.summary_text = note_val.strip() if note_val else None
 
     # Populate activities
     _populate_activities(db, report, merged)

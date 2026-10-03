@@ -4,7 +4,7 @@ from app.core.security import require_role
 from app.models.user import User
 
 router = APIRouter(
-    prefix="/parent",
+    prefix="/api/parent",
     tags=["parent"]
 )
 

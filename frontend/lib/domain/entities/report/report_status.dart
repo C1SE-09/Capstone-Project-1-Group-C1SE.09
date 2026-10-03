@@ -11,6 +11,7 @@
 enum ReportStatus {
   draft, // Bản nháp — chưa gửi cho phụ huynh
   published, // Đã gửi — phụ huynh xem được
+  read, // Đã đọc — phụ huynh đã mở xem
   archived, // Đã lưu trữ — không còn hiển thị
 
   ;
@@ -22,6 +23,9 @@ enum ReportStatus {
     if (lower == 'sent' || lower == 'published') {
       return ReportStatus.published;
     }
+    if (lower == 'read') {
+      return ReportStatus.read;
+    }
     if (lower == 'archived') {
       return ReportStatus.archived;
     }
@@ -32,6 +36,7 @@ enum ReportStatus {
   String get label => switch (this) {
         ReportStatus.draft => 'Bản nháp',
         ReportStatus.published => 'Đã gửi',
+        ReportStatus.read => 'Đã đọc',
         ReportStatus.archived => 'Đã lưu trữ',
       };
 }

@@ -7,3 +7,4 @@ backend/.venv/
 .DS_Store
 .vscode
 .env
+backend/models/PhoWhisper-large-ct2/

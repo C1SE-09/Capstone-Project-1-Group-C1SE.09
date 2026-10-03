@@ -8,6 +8,8 @@ from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import auth
 from app.api.endpoints.stt import router as stt_router
+from app.api.model import router as model_router
+from app.api.parent import router as parent_router
 from app.api.teacher import reports_router
 from app.api.teacher import router as teacher_router
 
@@ -47,12 +49,14 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
+app.include_router(auth.router, prefix="/api")
+app.include_router(teacher_router)
+app.include_router(parent_router)
+app.include_router(reports_router)
 app.include_router(class_router)
 app.include_router(dashboard_router)
-app.include_router(teacher_router)
-app.include_router(reports_router)
+app.include_router(model_router, prefix="/api/model", tags=["model"])
 app.include_router(stt_router, prefix="/api/stt", tags=["stt"])
-app.include_router(auth.router, prefix="/api")
 
 
 @app.get("/")

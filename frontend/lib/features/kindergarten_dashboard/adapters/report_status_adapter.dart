@@ -19,6 +19,7 @@ ui.ReportStatus uiReportStatusFromDomain(
       domain_status.ReportStatus.draft =>
         hasSeverity ? ui.ReportStatus.attention : ui.ReportStatus.draft,
       domain_status.ReportStatus.published => ui.ReportStatus.submitted,
+      domain_status.ReportStatus.read => ui.ReportStatus.read,
       domain_status.ReportStatus.archived || null => ui.ReportStatus.none,
     };
 
