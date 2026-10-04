@@ -33,6 +33,11 @@ from app.models.report import (
     VoiceRecordScope,
     VoiceRecordStatus,
 )
+from app.models.schedule import (
+    ClassSchedule,
+    Subject,
+    TimeSlot,
+)
 from app.models.user import (
     Class_,
     School,
@@ -53,6 +58,7 @@ __all__ = [
     "ChildStatus",
     "ClassBroadcastReport",
     "Class_",
+    "ClassSchedule",
     "DailyReport",
     "DailyReportStatus",
     "DailyReportType",
@@ -60,8 +66,10 @@ __all__ = [
     "ParentStatus",
     "School",
     "SchoolStatus",
+    "Subject",
     "Teacher",
     "TeacherStatus",
+    "TimeSlot",
     "TimestampMixin",
     "User",
     "UserRole",
