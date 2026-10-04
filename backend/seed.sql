@@ -622,3 +622,80 @@ ON CONFLICT (child_id) DO UPDATE SET
     medical_allergies = EXCLUDED.medical_allergies,
     status = EXCLUDED.status,
     updated_at = NOW();
+
+-- ===========================================================================
+-- 6. Thêm Khung tiết học mẫu (TimeSlot)
+-- ===========================================================================
+INSERT INTO time_slot (
+    slot_id, school_id, name, start_time, end_time, order_index, created_at, updated_at
+) VALUES
+('e0000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '7h00 - 7h30', '07:00', '07:30', 1, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '7h30 - 8h00', '07:30', '08:00', 2, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', '8h10 - 8h40', '08:10', '08:40', 3, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001', '8h40 - 9h00', '08:40', '09:00', 4, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000005', 'aaaaaaaa-0000-0000-0000-000000000001', '9h00 - 9h45', '09:00', '09:45', 5, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000006', 'aaaaaaaa-0000-0000-0000-000000000001', '9h45 - 10h30', '09:45', '10:30', 6, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000007', 'aaaaaaaa-0000-0000-0000-000000000001', '10h30 - 10h45', '10:30', '10:45', 7, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000008', 'aaaaaaaa-0000-0000-0000-000000000001', '10h45 - 11h30', '10:45', '11:30', 8, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000009', 'aaaaaaaa-0000-0000-0000-000000000001', '11h30 - 12h00', '11:30', '12:00', 9, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000010', 'aaaaaaaa-0000-0000-0000-000000000001', '12h00 - 14h00', '12:00', '14:00', 10, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000011', 'aaaaaaaa-0000-0000-0000-000000000001', '14h00 - 14h30', '14:00', '14:30', 11, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000012', 'aaaaaaaa-0000-0000-0000-000000000001', '14h30 - 15h00', '14:30', '15:00', 12, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000013', 'aaaaaaaa-0000-0000-0000-000000000001', '15h00 - 16h00', '15:00', '16:00', 13, NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000014', 'aaaaaaaa-0000-0000-0000-000000000001', '16h00 - 17h00', '16:00', '17:00', 14, NOW(), NOW())
+ON CONFLICT (slot_id) DO UPDATE SET
+    name = EXCLUDED.name, start_time = EXCLUDED.start_time, end_time = EXCLUDED.end_time, order_index = EXCLUDED.order_index, updated_at = NOW();
+
+-- ===========================================================================
+-- 7. Thêm Môn học / Hoạt động mẫu (Subject) - Đổi Tiếng Anh thành Tiếng Việt
+-- ===========================================================================
+INSERT INTO subject (
+    subject_id, school_id, name, code, color_code, description, created_at, updated_at
+) VALUES
+('f0000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'Đón & Trả trẻ', 'REC', '#FF9800', 'Đón trẻ, quản chơi tự do, trao đổi phụ huynh', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'Thể dục & Vận động', 'PHY', '#4CAF50', 'Thể dục buổi sáng, vận động thể chất', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'Ăn uống', 'MEAL', '#FF5722', 'Ăn sáng, ăn giữa giờ, ăn trưa, ăn xế', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001', 'Tiếng Việt', 'VIE', '#2196F3', 'Rèn luyện kỹ năng ngôn ngữ Tiếng Việt, làm quen chữ cái và kể chuyện', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000005', 'aaaaaaaa-0000-0000-0000-000000000001', 'Mỹ thuật & Tạo hình', 'ART', '#E91E63', 'Vẽ tranh, nặn đất màu, dán giấy', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000006', 'aaaaaaaa-0000-0000-0000-000000000001', 'Âm nhạc & Vận động', 'MUS', '#9C27B0', 'Hát, nghe nhạc, vận động theo nhạc', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000007', 'aaaaaaaa-0000-0000-0000-000000000001', 'Vui chơi & Ngoài trời', 'PLAY', '#00BCD4', 'Hoạt động vui chơi góc, vận động ngoài trời, quan sát tự nhiên', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000008', 'aaaaaaaa-0000-0000-0000-000000000001', 'Vệ sinh & Ngủ trưa', 'SLEEP', '#607D8B', 'Vệ sinh cá nhân, rửa tay, ngủ trưa', NOW(), NOW()),
+('f0000000-0000-0000-0000-000000000009', 'aaaaaaaa-0000-0000-0000-000000000001', 'Kỹ năng sống', 'SKI', '#8BC34A', 'Rèn luyện kỹ năng tự phục vụ, giao tiếp lễ phép', NOW(), NOW())
+ON CONFLICT (subject_id) DO UPDATE SET
+    name = EXCLUDED.name, code = EXCLUDED.code, color_code = EXCLUDED.color_code, description = EXCLUDED.description, updated_at = NOW();
+
+-- ===========================================================================
+-- 8. Thêm Thời khóa biểu chi tiết (ClassSchedule) - Lớp Mầm A (Thứ 2 đến Thứ 6)
+-- ===========================================================================
+INSERT INTO class_schedule (
+    schedule_id, class_id, subject_id, slot_id, teacher_id, day_of_week, activity_name, content, room_name, is_active, created_at, updated_at
+) VALUES
+-- --- THỨ 2 (Day 2) ---
+('fa000000-0000-0000-0002-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Đón trẻ', 'Cô quản trẻ chơi tự do. Cô trao đổi với phụ huynh những thông tin cần thiết', 'Phòng Mầm A', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000001', 2, 'Tập thể dục - Ăn sáng', '7h30 Thể dục buổi sáng. 7h40 Ăn sáng', 'Sân trường / Phòng ăn', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000004', 'e0000000-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Hoạt động có chủ đích', '- Giáo viên tổ chức giờ học rèn luyện kỹ năng Tiếng Việt cho trẻ theo kế hoạch chương trình giáo dục độ tuổi', 'Phòng Mầm A', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000003', 'e0000000-0000-0000-0000-000000000004', 'bbbbbbbb-0000-0000-0000-000000000001', 2, 'Ăn giữa giờ - Vệ sinh', 'Trẻ uống nước trái cây hoặc ăn nhẹ giữa giờ. Trẻ đi vệ sinh', 'Phòng Mầm A', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000005', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000007', 'e0000000-0000-0000-0000-000000000005', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Hoạt động vui chơi', '- Giáo viên tổ chức cho trẻ hoạt động vui chơi theo kế hoạch', 'Góc đồ chơi', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000006', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000007', 'e0000000-0000-0000-0000-000000000006', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Hoạt động ngoài trời', 'Vận động phát triển thể chất, trò chơi dân gian. Quan sát các hiện tượng tự nhiên và thiên nhiên', 'Sân cỏ', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000007', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000008', 'e0000000-0000-0000-0000-000000000007', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Chuẩn bị ăn trưa', '- Trẻ đi vệ sinh, rửa tay, lau mặt', 'Nhà vệ sinh', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000008', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000003', 'e0000000-0000-0000-0000-000000000008', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Ăn trưa', '- Trẻ ăn cơm trưa', 'Phòng ăn', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000009', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000008', 'e0000000-0000-0000-0000-000000000009', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Chuẩn bị ngủ trưa', '- Trẻ đánh răng, vệ sinh, thay đồ chuẩn bị ngủ trưa', 'Phòng ngủ', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000010', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000008', 'e0000000-0000-0000-0000-000000000010', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Ngủ trưa', '- Trẻ ngủ trưa', 'Phòng ngủ', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000011', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-000000000011', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Hoạt động nhẹ', '- Trẻ thức giấc, vận động nhẹ theo nhạc', 'Phòng Mầm A', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000012', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000003', 'e0000000-0000-0000-0000-000000000012', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Ăn xế', '- Trẻ ăn xế.- Vệ sinh sau giờ ăn xế', 'Phòng ăn', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000013', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000007', 'e0000000-0000-0000-0000-000000000013', 'bbbbbbbb-0000-0000-0000-000000000001', 2, '- Sinh hoạt ngoại khóa - Hoạt động vui chơi', '- Trẻ tham gia các hoạt động ngoại khóa, phát triển năng khiếu- Giáo viên tổ chức cho trẻ sinh hoạt vui chơi theo kế hoạch', 'Sân trường', true, NOW(), NOW()),
+('fa000000-0000-0000-0002-000000000014', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000014', 'bbbbbbbb-0000-0000-0000-000000000001', 2, 'Trả trẻ', '- Cô quản trẻ chơi tự do. Cô trao đổi với phụ huynh những sinh hoạt trong ngày của trẻ tại nhóm lớp', 'Phòng Mầm A', true, NOW(), NOW()),
+
+-- --- THỨ 3 (Day 3: Môn Mỹ thuật) ---
+('fa000000-0000-0000-0003-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000005', 'e0000000-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 3, '- Hoạt động có chủ đích (Mỹ thuật)', '- Giáo viên tổ chức giờ học vẽ tranh nét đơn giản và nặn đất màu', 'Phòng Mỹ thuật', true, NOW(), NOW()),
+
+-- --- THỨ 4 (Day 4: Môn Âm nhạc) ---
+('fa000000-0000-0000-0004-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000006', 'e0000000-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 4, '- Hoạt động có chủ đích (Âm nhạc)', '- Giáo viên tổ chức giờ học hát và vận động nhịp điệu', 'Phòng Âm nhạc', true, NOW(), NOW()),
+
+-- --- THỨ 5 (Day 5: Môn Kỹ năng sống) ---
+('fa000000-0000-0000-0005-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000009', 'e0000000-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 5, '- Hoạt động có chủ đích (Kỹ năng)', '- Rèn luyện kỹ năng rửa tay đúng cách và xếp hàng trật tự', 'Phòng Mầm A', true, NOW(), NOW()),
+
+-- --- THỨ 6 (Day 6: Môn Tiếng Việt) ---
+('fa000000-0000-0000-0006-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000004', 'e0000000-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 6, '- Hoạt động có chủ đích (Tiếng Việt)', '- Giáo viên tổ chức đọc truyện cổ tích Tiếng Việt và kể chuyện theo tranh', 'Phòng Mầm A', true, NOW(), NOW())
+ON CONFLICT (schedule_id) DO UPDATE SET
+    class_id = EXCLUDED.class_id, subject_id = EXCLUDED.subject_id, slot_id = EXCLUDED.slot_id, teacher_id = EXCLUDED.teacher_id, day_of_week = EXCLUDED.day_of_week, activity_name = EXCLUDED.activity_name, content = EXCLUDED.content, room_name = EXCLUDED.room_name, is_active = EXCLUDED.is_active, updated_at = NOW();
