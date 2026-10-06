@@ -4,6 +4,7 @@ from email.message import EmailMessage
 
 from app.config import settings
 
+
 def send_test_email(to_email: str, subject: str, body: str):
     smtp_host = settings.smtp_host or os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(settings.smtp_port or os.getenv("SMTP_PORT", "587"))
