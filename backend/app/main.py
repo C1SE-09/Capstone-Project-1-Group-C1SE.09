@@ -7,6 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import auth
+from app.api.endpoints.schedule import (
+    router as schedule_router,
+    subject_router,
+    time_slot_router,
+)
 from app.api.endpoints.stt import router as stt_router
 from app.api.model import router as model_router
 from app.api.parent import router as parent_router
@@ -57,6 +62,10 @@ app.include_router(class_router)
 app.include_router(dashboard_router)
 app.include_router(model_router, prefix="/api/model", tags=["model"])
 app.include_router(stt_router, prefix="/api/stt", tags=["stt"])
+app.include_router(time_slot_router, prefix="/api")
+app.include_router(subject_router, prefix="/api")
+app.include_router(schedule_router, prefix="/api")
+
 
 
 @app.get("/")
