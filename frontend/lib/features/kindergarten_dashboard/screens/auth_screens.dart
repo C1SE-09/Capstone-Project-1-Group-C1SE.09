@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
@@ -6,16 +7,19 @@ import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/class/class_report_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/class_info_adapter.dart';
+export 'package:adark_frontend/features/kindergarten_dashboard/screens/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
     super.key,
     required this.onLogin,
     this.authRepository,
+    this.onForgotPassword,
   });
 
   final ValueChanged<UserRole> onLogin;
   final AuthRepository? authRepository;
+  final VoidCallback? onForgotPassword;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -259,7 +263,35 @@ class _LoginScreenState extends State<LoginScreen> {
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) => _handleLogin(),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 8),
+
+                        // Forgot password button
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              if (widget.onForgotPassword != null) {
+                                widget.onForgotPassword!();
+                              } else {
+                                context.push('/forgot-password');
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(50, 30),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'Quên mật khẩu?',
+                              style: TextStyle(
+                                color: KColors.brand,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
 
                         // Login Action Button (ĐĂNG NHẬP)
                         SizedBox(

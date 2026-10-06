@@ -131,4 +131,93 @@ class AuthRepository {
       // Bỏ qua lỗi mạng khi logout để người dùng vẫn quay về màn đăng nhập
     }
   }
+
+  /// Gửi yêu cầu mã xác thực qua email
+  Future<String> requestPasswordReset(String email) async {
+    try {
+      final response = await _dio.post(
+        '/api/auth/forgot-password',
+        data: {'email': email.trim().toLowerCase()},
+      );
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+      return 'Mã xác thực đã được gửi. Vui lòng kiểm tra hòm thư của bạn.';
+    } on DioException catch (e) {
+      _handleDioError(e, 'Không thể gửi yêu cầu đặt lại mật khẩu.');
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException('Lỗi bất ngờ: $e');
+    }
+  }
+
+  /// Xác thực mã OTP 6 số
+  Future<String> verifyResetCode({
+    required String email,
+    required String resetCode,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/auth/verify-reset-code',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'reset_code': resetCode.trim(),
+        },
+      );
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+      return 'Xác thực mã thành công.';
+    } on DioException catch (e) {
+      _handleDioError(e, 'Mã xác thực không hợp lệ hoặc đã hết hạn.');
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException('Lỗi bất ngờ: $e');
+    }
+  }
+
+  /// Đặt lại mật khẩu mới
+  Future<String> resetPassword({
+    required String email,
+    required String resetCode,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/auth/reset-password',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'reset_code': resetCode.trim(),
+          'new_password': newPassword,
+        },
+      );
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+      return 'Đặt lại mật khẩu thành công!';
+    } on DioException catch (e) {
+      _handleDioError(e, 'Đặt lại mật khẩu không thành công.');
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException('Lỗi bất ngờ: $e');
+    }
+  }
+
+  Never _handleDioError(DioException e, String fallbackMsg) {
+    if (e.response != null) {
+      final status = e.response?.statusCode;
+      final resData = e.response?.data;
+      String? detailMsg;
+      if (resData is Map && resData['detail'] != null) {
+        detailMsg = resData['detail'].toString();
+      }
+      throw AuthException(detailMsg ?? fallbackMsg, statusCode: status);
+    }
+    throw AuthException(
+      'Không thể kết nối đến máy chủ backend ($kApiBaseUrl). Vui lòng kiểm tra kết nối mạng.',
+    );
+  }
 }
