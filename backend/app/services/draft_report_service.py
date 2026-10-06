@@ -62,6 +62,7 @@ FIELDS_MAPPING: list[tuple[str, str, str]] = [
 # Helpers
 # ===========================================================================
 
+
 def _merge_extraction(
     class_wide: dict[str, str | None] | None,
     child_override: dict[str, str | None] | None,
@@ -122,7 +123,8 @@ def _get_or_create_draft(
         ).delete()
         logger.info(
             "[draft_report_service] Updating existing draft: report_id=%s child_id=%s",
-            report.daily_report_id, child_id,
+            report.daily_report_id,
+            child_id,
         )
     else:
         report = DailyReport(
@@ -136,7 +138,8 @@ def _get_or_create_draft(
         db.flush()  # Lấy daily_report_id
         logger.info(
             "[draft_report_service] Creating new draft: report_id=%s child_id=%s",
-            report.daily_report_id, child_id,
+            report.daily_report_id,
+            child_id,
         )
 
     return report
@@ -172,7 +175,11 @@ def _populate_activities(
         defaults = [
             ("MEAL", "Bữa ăn", "Ăn theo thực đơn chung của lớp, ăn hết suất."),
             ("NAP", "Giấc ngủ", "Ngủ trưa đúng giờ, ngủ đủ giấc."),
-            ("PLAY", "Hoạt động", "Tham gia tích cực các hoạt động học tập và vui chơi."),
+            (
+                "PLAY",
+                "Hoạt động",
+                "Tham gia tích cực các hoạt động học tập và vui chơi.",
+            ),
             ("BEHAVIOR", "Tâm trạng", "Vui vẻ, hòa đồng cùng các bạn."),
         ]
         for category_str, title, desc in defaults:
@@ -275,9 +282,17 @@ def create_classwide_drafts(
 
         note_val = None
         if override:
-            note_val = override.get("teacher_note") or override.get("notes") or override.get("note")
+            note_val = (
+                override.get("teacher_note")
+                or override.get("notes")
+                or override.get("note")
+            )
         if not note_val and class_wide_extraction:
-            note_val = class_wide_extraction.get("teacher_note") or class_wide_extraction.get("notes") or class_wide_extraction.get("note")
+            note_val = (
+                class_wide_extraction.get("teacher_note")
+                or class_wide_extraction.get("notes")
+                or class_wide_extraction.get("note")
+            )
         report.summary_text = note_val.strip() if note_val else None
 
         # Tạo ActivityEntry từ merged content
@@ -289,7 +304,8 @@ def create_classwide_drafts(
     db.commit()
     logger.info(
         "[draft_report_service] create_classwide_drafts: class_id=%s count=%d",
-        class_id, len(draft_ids),
+        class_id,
+        len(draft_ids),
     )
 
     return {
@@ -358,9 +374,17 @@ def create_child_draft(
 
     note_val = None
     if child_override:
-        note_val = child_override.get("teacher_note") or child_override.get("notes") or child_override.get("note")
+        note_val = (
+            child_override.get("teacher_note")
+            or child_override.get("notes")
+            or child_override.get("note")
+        )
     if not note_val and class_wide_extraction:
-        note_val = class_wide_extraction.get("teacher_note") or class_wide_extraction.get("notes") or class_wide_extraction.get("note")
+        note_val = (
+            class_wide_extraction.get("teacher_note")
+            or class_wide_extraction.get("notes")
+            or class_wide_extraction.get("note")
+        )
     report.summary_text = note_val.strip() if note_val else None
 
     # Populate activities
@@ -369,7 +393,8 @@ def create_child_draft(
     db.commit()
     logger.info(
         "[draft_report_service] create_child_draft: child_id=%s report_id=%s",
-        child_id, report.daily_report_id,
+        child_id,
+        report.daily_report_id,
     )
 
     return {
@@ -418,6 +443,7 @@ def create_unmatched_drafts(
 # ===========================================================================
 # Utility: đọc lại extraction đã merge sẵn cho 1 child
 # ===========================================================================
+
 
 def get_merged_extraction_for_child(
     voice_record_extraction: dict[str, Any],

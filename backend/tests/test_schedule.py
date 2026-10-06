@@ -9,14 +9,13 @@ Integration & Unit tests cho Timetable APIs:
 
 import uuid
 from unittest.mock import MagicMock
-import pytest
-from fastapi.testclient import TestClient
 
-from app.main import app
+import pytest
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.main import app
 from app.models.user import User, UserRole
-
+from fastapi.testclient import TestClient
 
 CLASS_ID = uuid.UUID("aaaaaaaa-0000-0000-0000-000000000001")
 TEACHER_ID = uuid.UUID("bbbbbbbb-0000-0000-0000-000000000001")
@@ -139,7 +138,9 @@ class TestClassScheduleAPI:
         mock_sched.teacher = mock_teacher
 
         # mock SQLAlchemy query chain
-        mock_db.query.return_value.options.return_value.filter.return_value.join.return_value.order_by.return_value.all.return_value = [mock_sched]
+        mock_db.query.return_value.options.return_value.filter.return_value.join.return_value.order_by.return_value.all.return_value = [
+            mock_sched
+        ]
 
         resp = client.get(f"/api/schedules/class/{CLASS_ID}")
         assert resp.status_code == 200

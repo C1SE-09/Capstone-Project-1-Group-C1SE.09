@@ -7,19 +7,18 @@ Nghiệp vụ (Service Layer) cho quản lý Thời khóa biểu (TimeSlot, Subj
 from __future__ import annotations
 
 import uuid
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, and_
 
-from app.models.schedule import TimeSlot, Subject, ClassSchedule
+from app.models.schedule import ClassSchedule, Subject, TimeSlot
 from app.schemas.schedule import (
-    TimeSlotCreate,
-    TimeSlotUpdate,
-    SubjectCreate,
-    SubjectUpdate,
+    ClassScheduleBulkCreateItem,
     ClassScheduleCreate,
     ClassScheduleUpdate,
-    ClassScheduleBulkCreateItem,
+    SubjectCreate,
+    SubjectUpdate,
+    TimeSlotCreate,
+    TimeSlotUpdate,
 )
+from sqlalchemy.orm import Session, joinedload
 
 
 # ===========================================================================
@@ -47,7 +46,9 @@ def create_time_slot(db: Session, data: TimeSlotCreate) -> TimeSlot:
     return slot
 
 
-def update_time_slot(db: Session, slot_id: uuid.UUID, data: TimeSlotUpdate) -> TimeSlot | None:
+def update_time_slot(
+    db: Session, slot_id: uuid.UUID, data: TimeSlotUpdate
+) -> TimeSlot | None:
     slot = get_time_slot_by_id(db, slot_id)
     if not slot:
         return None
@@ -95,8 +96,9 @@ def create_subject(db: Session, data: SubjectCreate) -> Subject:
     return subject
 
 
-
-def update_subject(db: Session, subject_id: uuid.UUID, data: SubjectUpdate) -> Subject | None:
+def update_subject(
+    db: Session, subject_id: uuid.UUID, data: SubjectUpdate
+) -> Subject | None:
     subject = get_subject_by_id(db, subject_id)
     if not subject:
         return None
@@ -191,8 +193,10 @@ def check_schedule_conflict(
         ClassSchedule.is_active == True,
     )
     if exclude_schedule_id:
-        class_query = class_query.filter(ClassSchedule.schedule_id != exclude_schedule_id)
-    
+        class_query = class_query.filter(
+            ClassSchedule.schedule_id != exclude_schedule_id
+        )
+
     if class_query.first():
         return f"Lớp học này đã có tiết học khác vào Thứ {day_of_week} trong khung giờ này."
 
@@ -205,7 +209,9 @@ def check_schedule_conflict(
             ClassSchedule.is_active == True,
         )
         if exclude_schedule_id:
-            teacher_query = teacher_query.filter(ClassSchedule.schedule_id != exclude_schedule_id)
+            teacher_query = teacher_query.filter(
+                ClassSchedule.schedule_id != exclude_schedule_id
+            )
 
         if teacher_query.first():
             return f"Giáo viên đã có lịch dạy ở lớp khác vào Thứ {day_of_week} trong khung giờ này."
@@ -256,7 +262,9 @@ def create_class_schedule(db: Session, data: ClassScheduleCreate) -> ClassSchedu
 def update_class_schedule(
     db: Session, schedule_id: uuid.UUID, data: ClassScheduleUpdate
 ) -> ClassSchedule | None:
-    schedule = db.query(ClassSchedule).filter(ClassSchedule.schedule_id == schedule_id).first()
+    schedule = (
+        db.query(ClassSchedule).filter(ClassSchedule.schedule_id == schedule_id).first()
+    )
     if not schedule:
         return None
 
@@ -328,7 +336,9 @@ def bulk_upsert_class_schedule(
 
 
 def delete_class_schedule(db: Session, schedule_id: uuid.UUID) -> bool:
-    schedule = db.query(ClassSchedule).filter(ClassSchedule.schedule_id == schedule_id).first()
+    schedule = (
+        db.query(ClassSchedule).filter(ClassSchedule.schedule_id == schedule_id).first()
+    )
     if not schedule:
         return False
     db.delete(schedule)

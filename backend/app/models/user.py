@@ -144,7 +144,12 @@ class User(Base, TimestampMixin):
         comment="Bcrypt password hash",
     )
     role: Mapped[UserRole] = mapped_column(
-        SAEnum(UserRole, name="user_role_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls], create_type=True),
+        SAEnum(
+            UserRole,
+            name="user_role_enum",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            create_type=True,
+        ),
         nullable=False,
         comment="Account role – teacher | parent | admin",
     )
@@ -158,14 +163,17 @@ class User(Base, TimestampMixin):
     )
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey(
-            "parent.parent_id", ondelete="CASCADE", name="fk_users_parent_id"
-        ),
+        ForeignKey("parent.parent_id", ondelete="CASCADE", name="fk_users_parent_id"),
         nullable=True,
         comment="Linked parent entity (NULL if not a parent)",
     )
     status: Mapped[UserStatus] = mapped_column(
-        SAEnum(UserStatus, name="user_status_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls], create_type=True),
+        SAEnum(
+            UserStatus,
+            name="user_status_enum",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            create_type=True,
+        ),
         nullable=False,
         default=UserStatus.ACTIVE,
         server_default=UserStatus.ACTIVE.value,
@@ -188,7 +196,9 @@ class User(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:  # pragma: no cover
-        return f"<User id={self.user_id!s} username={self.username!r} role={self.role!r}>"
+        return (
+            f"<User id={self.user_id!s} username={self.username!r} role={self.role!r}>"
+        )
 
 
 # ===========================================================================
@@ -553,4 +563,3 @@ class Teacher(Base, TimestampMixin):
             f"<Teacher id={self.teacher_id!s} email={self.email!r} "
             f"school_id={self.school_id!s} class_id={self.class_id!s}>"
         )
-

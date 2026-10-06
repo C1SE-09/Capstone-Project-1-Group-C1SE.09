@@ -170,7 +170,9 @@ class ManualReportCreateRequest(BaseModel):
     )
     mood: str | None = Field(None, description="Nội dung tâm trạng")
     teacher_note: str | None = Field(None, description="Ghi chú thêm của giáo viên")
-    report_date: date | None = Field(None, description="Ngày của báo cáo (mặc định hôm nay)")
+    report_date: date | None = Field(
+        None, description="Ngày của báo cáo (mặc định hôm nay)"
+    )
 
 
 class ActivityEntryResponse(BaseModel):
@@ -325,17 +327,21 @@ class ApproveItemRequest(BaseModel):
     """
 
     voice_record_id: uuid.UUID = Field(
-        ..., description="UUID của VoiceRecord nguồn",
+        ...,
+        description="UUID của VoiceRecord nguồn",
     )
     teacher_id: uuid.UUID = Field(
-        ..., description="UUID của giáo viên đang duyệt",
+        ...,
+        description="UUID của giáo viên đang duyệt",
     )
     kind: str = Field(
-        ..., description="Loại item: 'classwide' | 'child' | 'unmatched'",
+        ...,
+        description="Loại item: 'classwide' | 'child' | 'unmatched'",
         pattern="^(classwide|child|unmatched)$",
     )
     child_id: uuid.UUID | None = Field(
-        None, description="UUID của child (REQUIRED khi kind='child')",
+        None,
+        description="UUID của child (REQUIRED khi kind='child')",
     )
     class_id: uuid.UUID | None = Field(
         None,
@@ -408,21 +414,22 @@ class SendBatchRequest(BaseModel):
         description="Danh sách báo cáo cần gửi. Bỏ trống = filter theo class_id+date",
     )
     class_id: uuid.UUID | None = Field(
-        None, description="Filter theo lớp (khi report_ids rỗng)",
+        None,
+        description="Filter theo lớp (khi report_ids rỗng)",
     )
     report_date: date | None = Field(
-        None, description="Filter theo ngày (khi report_ids rỗng)",
+        None,
+        description="Filter theo ngày (khi report_ids rỗng)",
     )
     teacher_id: uuid.UUID | None = Field(
-        None, description="Filter theo giáo viên (khi report_ids rỗng)",
+        None,
+        description="Filter theo giáo viên (khi report_ids rỗng)",
     )
 
     @model_validator(mode="after")
     def validate_payload(self) -> SendBatchRequest:
         if not self.report_ids and not (self.class_id and self.report_date):
-            raise ValueError(
-                "Cần report_ids HOẶC (class_id + report_date)"
-            )
+            raise ValueError("Cần report_ids HOẶC (class_id + report_date)")
         return self
 
 

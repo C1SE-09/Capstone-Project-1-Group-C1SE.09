@@ -1,5 +1,3 @@
-
-
 """
 app/api/teacher.py
 ==================
@@ -472,12 +470,10 @@ def re_extract_from_edited_transcript(
     except ValidationError as ve:
         logger.warning(
             "[ReExtract] Transcript validation failed for VoiceRecord %s: %s",
-            voice_id, ve.reason
+            voice_id,
+            ve.reason,
         )
-        raise HTTPException(
-            status_code=400,
-            detail=ve.message
-        ) from ve
+        raise HTTPException(status_code=400, detail=ve.message) from ve
 
     # ================================================================
     # EXTRACT: Unified auto-detect mode (flow mới - 1 nút ghi âm duy nhất)
@@ -493,11 +489,7 @@ def re_extract_from_edited_transcript(
         # (bé lớp khác cùng tên có thể bị match nhầm).
         target_class_id = voice_record.class_id
         if target_class_id:
-            children = (
-                db.query(Child)
-                .filter(Child.class_id == target_class_id)
-                .all()
-            )
+            children = db.query(Child).filter(Child.class_id == target_class_id).all()
         else:
             # VoiceRecord chưa gắn class (legacy data) → fallback lấy tất cả
             # nhưng log warning để dev biết.
@@ -511,7 +503,7 @@ def re_extract_from_edited_transcript(
         if not children:
             raise HTTPException(
                 status_code=400,
-                detail="Không tìm thấy học sinh nào trong lớp để matching."
+                detail="Không tìm thấy học sinh nào trong lớp để matching.",
             )
 
         multi_result = extract_multi_person(
@@ -538,7 +530,7 @@ def re_extract_from_edited_transcript(
             "activities": None,
             "mood": None,
         }
-        
+
         # Persist extraction
         voice_record.edited_transcript = payload.edited_transcript
         voice_record.transcription = payload.edited_transcript
@@ -548,7 +540,7 @@ def re_extract_from_edited_transcript(
         logger.info(
             "[ReExtract] VoiceRecord %s re-extracted (mode=%s)",
             voice_id,
-            new_extraction.get("_mode", "unknown")
+            new_extraction.get("_mode", "unknown"),
         )
     except HTTPException:
         raise
@@ -916,11 +908,15 @@ def approve_item(
             voice_record_id=payload.voice_record_id,
             teacher_id=payload.teacher_id,
             class_id=payload.class_id,
-            scope=VoiceRecordScope.WHOLE_CLASS if payload.kind == "classwide" else VoiceRecordScope.SINGLE_CHILD,
+            scope=VoiceRecordScope.WHOLE_CLASS
+            if payload.kind == "classwide"
+            else VoiceRecordScope.SINGLE_CHILD,
             status=VoiceRecordStatus.COMPLETED,
             audio_url="recorded://app_audio",
-            raw_transcript=(payload.extraction or {}).get("transcript") or "Ghi âm báo cáo lớp học",
-            transcription=(payload.extraction or {}).get("transcript") or "Ghi âm báo cáo lớp học",
+            raw_transcript=(payload.extraction or {}).get("transcript")
+            or "Ghi âm báo cáo lớp học",
+            transcription=(payload.extraction or {}).get("transcript")
+            or "Ghi âm báo cáo lớp học",
             extraction_result=payload.extraction or {},
         )
         db.add(voice_record)
@@ -943,7 +939,9 @@ def approve_item(
                     detail="class_id is required when kind='classwide'",
                 )
             # Override class-wide content nếu user đã sửa
-            final_class_wide = user_extraction if user_extraction else class_wide_extraction
+            final_class_wide = (
+                user_extraction if user_extraction else class_wide_extraction
+            )
             # Pass child_overrides hiện có để merge khi tạo draft
             result = create_classwide_drafts(
                 db=db,
@@ -967,7 +965,11 @@ def approve_item(
                     detail="child_id is required when kind='child'",
                 )
             # Override content cho child này
-            child_override = user_extraction if user_extraction else child_extractions.get(str(payload.child_id))
+            child_override = (
+                user_extraction
+                if user_extraction
+                else child_extractions.get(str(payload.child_id))
+            )
             result = create_child_draft(
                 db=db,
                 child_id=payload.child_id,
@@ -1109,12 +1111,13 @@ def send_batch_reports(
 
     logger.info(
         "[send-batch] teacher_id=%s sent=%d skipped=%d failed=%d",
-        payload.teacher_id, sent, skipped, failed,
+        payload.teacher_id,
+        sent,
+        skipped,
+        failed,
     )
 
-    return SendBatchResponse(
-        sent=sent, skipped=skipped, failed=failed, results=results
-    )
+    return SendBatchResponse(sent=sent, skipped=skipped, failed=failed, results=results)
 
 
 SENT_STATUS = DailyReportStatus.SENT
@@ -1189,9 +1192,17 @@ def _send_one_report(
     # 5. Phải có nội dung đã chốt (>= 1 ActivityEntry) - tự động fallback nếu chưa có
     if not report.activities:
         defaults = [
-            (ActivityCategory.MEAL, "Bữa ăn", report.summary_text or "Ăn theo thực đơn chung của lớp, ăn hết suất."),
+            (
+                ActivityCategory.MEAL,
+                "Bữa ăn",
+                report.summary_text or "Ăn theo thực đơn chung của lớp, ăn hết suất.",
+            ),
             (ActivityCategory.NAP, "Giấc ngủ", "Ngủ trưa đúng giờ, ngủ đủ giấc."),
-            (ActivityCategory.PLAY, "Hoạt động", "Tham gia tích cực các hoạt động học tập và vui chơi."),
+            (
+                ActivityCategory.PLAY,
+                "Hoạt động",
+                "Tham gia tích cực các hoạt động học tập và vui chơi.",
+            ),
             (ActivityCategory.BEHAVIOR, "Tâm trạng", "Vui vẻ, hòa đồng cùng các bạn."),
         ]
         for order, (cat, title, desc) in enumerate(defaults):
@@ -1343,11 +1354,12 @@ def send_all_reports(
             )
 
     return SendAllResponse(sent=sent, skipped=skipped, failed=failed, results=results)
+
+
 @router.get("/me")
 def get_teacher_me(current_user: User = Depends(require_role("teacher"))):
     return {
         "user_id": str(current_user.user_id),
         "role": current_user.role.value,
-        "teacher_id": str(current_user.teacher_id)
+        "teacher_id": str(current_user.teacher_id),
     }
-

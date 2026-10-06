@@ -82,7 +82,9 @@ class TimeSlot(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:  # pragma: no cover
-        return f"<TimeSlot id={self.slot_id!s} name={self.name!r} start={self.start_time}>"
+        return (
+            f"<TimeSlot id={self.slot_id!s} name={self.name!r} start={self.start_time}>"
+        )
 
 
 class Subject(Base, TimestampMixin):
@@ -176,25 +178,37 @@ class ClassSchedule(Base, TimestampMixin):
     )
     class_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("class.class_id", ondelete="CASCADE", name="fk_class_schedule_class_id"),
+        ForeignKey(
+            "class.class_id", ondelete="CASCADE", name="fk_class_schedule_class_id"
+        ),
         nullable=False,
         comment="Classroom entity",
     )
     subject_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("subject.subject_id", ondelete="CASCADE", name="fk_class_schedule_subject_id"),
+        ForeignKey(
+            "subject.subject_id",
+            ondelete="CASCADE",
+            name="fk_class_schedule_subject_id",
+        ),
         nullable=False,
         comment="Subject entity",
     )
     slot_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("time_slot.slot_id", ondelete="CASCADE", name="fk_class_schedule_slot_id"),
+        ForeignKey(
+            "time_slot.slot_id", ondelete="CASCADE", name="fk_class_schedule_slot_id"
+        ),
         nullable=False,
         comment="Time slot entity",
     )
     teacher_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("teacher.teacher_id", ondelete="SET NULL", name="fk_class_schedule_teacher_id"),
+        ForeignKey(
+            "teacher.teacher_id",
+            ondelete="SET NULL",
+            name="fk_class_schedule_teacher_id",
+        ),
         nullable=True,
         comment="Assigned teacher for this period (optional)",
     )
@@ -228,8 +242,12 @@ class ClassSchedule(Base, TimestampMixin):
 
     # Relationships
     class_: Mapped[Class_] = relationship("Class_", lazy="joined")
-    subject: Mapped[Subject] = relationship("Subject", back_populates="schedules", lazy="joined")
-    time_slot: Mapped[TimeSlot] = relationship("TimeSlot", back_populates="schedules", lazy="joined")
+    subject: Mapped[Subject] = relationship(
+        "Subject", back_populates="schedules", lazy="joined"
+    )
+    time_slot: Mapped[TimeSlot] = relationship(
+        "TimeSlot", back_populates="schedules", lazy="joined"
+    )
     teacher: Mapped[Teacher | None] = relationship("Teacher", lazy="joined")
 
     def __repr__(self) -> str:  # pragma: no cover

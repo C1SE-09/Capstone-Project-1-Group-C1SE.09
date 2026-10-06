@@ -5,25 +5,25 @@ FastAPI Routers cho quản lý Thời khóa biểu (TimeSlot, Subject, ClassSche
 """
 
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.schedule import (
-    TimeSlotCreate,
-    TimeSlotUpdate,
-    TimeSlotResponse,
-    SubjectCreate,
-    SubjectUpdate,
-    SubjectResponse,
-    ClassScheduleCreate,
-    ClassScheduleUpdate,
     ClassScheduleBulkCreateRequest,
+    ClassScheduleCreate,
     ClassScheduleResponse,
+    ClassScheduleUpdate,
+    SubjectCreate,
+    SubjectResponse,
+    SubjectUpdate,
+    TimeSlotCreate,
+    TimeSlotResponse,
+    TimeSlotUpdate,
 )
 from app.services import schedule_service
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 time_slot_router = APIRouter(prefix="/time-slots", tags=["time-slots"])
@@ -39,7 +39,9 @@ def get_time_slots(db: Session = Depends(get_db)):
     return schedule_service.get_all_time_slots(db)
 
 
-@time_slot_router.post("", response_model=TimeSlotResponse, status_code=status.HTTP_201_CREATED)
+@time_slot_router.post(
+    "", response_model=TimeSlotResponse, status_code=status.HTTP_201_CREATED
+)
 def create_time_slot(
     data: TimeSlotCreate,
     db: Session = Depends(get_db),
@@ -85,7 +87,9 @@ def get_subjects(db: Session = Depends(get_db)):
     return schedule_service.get_all_subjects(db)
 
 
-@subject_router.post("", response_model=SubjectResponse, status_code=status.HTTP_201_CREATED)
+@subject_router.post(
+    "", response_model=SubjectResponse, status_code=status.HTTP_201_CREATED
+)
 def create_subject(
     data: SubjectCreate,
     db: Session = Depends(get_db),
@@ -136,7 +140,9 @@ def get_class_schedule(
     - `class_id`: UUID của lớp học
     - `day_of_week`: Tùy chọn lọc theo ngày (2=Thứ 2, 3=Thứ 3, ..., 7=Thứ 7)
     """
-    return schedule_service.get_schedules_by_class(db, class_id, day_of_week=day_of_week)
+    return schedule_service.get_schedules_by_class(
+        db, class_id, day_of_week=day_of_week
+    )
 
 
 @router.get("/teacher/{teacher_id}", response_model=list[ClassScheduleResponse])
@@ -150,10 +156,14 @@ def get_teacher_schedule(
     - `teacher_id`: UUID của giáo viên
     - `day_of_week`: Tùy chọn lọc theo ngày (2=Thứ 2, ..., 7=Thứ 7)
     """
-    return schedule_service.get_schedules_by_teacher(db, teacher_id, day_of_week=day_of_week)
+    return schedule_service.get_schedules_by_teacher(
+        db, teacher_id, day_of_week=day_of_week
+    )
 
 
-@router.post("", response_model=ClassScheduleResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=ClassScheduleResponse, status_code=status.HTTP_201_CREATED
+)
 def create_class_schedule(
     data: ClassScheduleCreate,
     db: Session = Depends(get_db),
@@ -173,7 +183,9 @@ def bulk_upsert_class_schedule(
     current_user: User = Depends(get_current_user),
 ):
     """Tạo/Thay thế toàn bộ thời khóa biểu tuần cho 1 lớp."""
-    return schedule_service.bulk_upsert_class_schedule(db, data.class_id, data.schedules)
+    return schedule_service.bulk_upsert_class_schedule(
+        db, data.class_id, data.schedules
+    )
 
 
 @router.put("/{schedule_id}", response_model=ClassScheduleResponse)

@@ -5,9 +5,11 @@ from app.services.extraction_service import extract_from_transcript
 
 router = APIRouter()
 
+
 class ExtractionRequest(BaseModel):
-    transcript : str
+    transcript: str
+
 
 @router.post("/extraction")
-def extraction (request: ExtractionRequest):
+def extraction(request: ExtractionRequest):
     return extract_from_transcript(request.transcript)

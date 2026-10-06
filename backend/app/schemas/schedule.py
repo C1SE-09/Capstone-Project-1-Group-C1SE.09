@@ -7,6 +7,7 @@ Pydantic schemas cho TimeSlot, Subject, và ClassSchedule API requests & respons
 from __future__ import annotations
 
 import uuid
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -82,7 +83,9 @@ class ClassScheduleBase(BaseModel):
     class_id: uuid.UUID = Field(..., description="UUID của lớp học")
     subject_id: uuid.UUID = Field(..., description="UUID của môn học/hoạt động")
     slot_id: uuid.UUID = Field(..., description="UUID của khung giờ")
-    teacher_id: uuid.UUID | None = Field(None, description="UUID của giáo viên phụ trách (tùy chọn)")
+    teacher_id: uuid.UUID | None = Field(
+        None, description="UUID của giáo viên phụ trách (tùy chọn)"
+    )
     day_of_week: int = Field(
         ...,
         ge=2,

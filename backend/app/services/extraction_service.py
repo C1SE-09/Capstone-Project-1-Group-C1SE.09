@@ -199,7 +199,11 @@ def extract_from_transcript(transcript: str) -> dict:
 # VD: "hôm nay Lan ăn ngon" → "hôm nay" chỉ thời gian, segment vẫn match Lan OK.
 # Class-wide markers thực sự: cả lớp, các bé, mọi người, tất cả, ai cũng.
 CLASS_WIDE_KEYWORDS = [
-    "cả lớp", "các bé", "mọi người", "tất cả", "ai cũng",
+    "cả lớp",
+    "các bé",
+    "mọi người",
+    "tất cả",
+    "ai cũng",
 ]
 
 # Confidence tối thiểu của child match để GHI ĐÈ class-wide keyword.
@@ -209,7 +213,11 @@ CHILD_MATCH_CONFIDENCE_THRESHOLD = 0.5
 # Class-wide extraction fields (used to bucket class-wide statements).
 # Dùng chung cho class_wide_lists init và iteration loop.
 CLASS_WIDE_FIELDS: tuple[str, ...] = (
-    "meals", "sleeping", "health", "activities", "mood",
+    "meals",
+    "sleeping",
+    "health",
+    "activities",
+    "mood",
 )
 
 
@@ -241,7 +249,9 @@ def _is_class_wide_segment(segment_text: str, matches: list) -> bool:
     return False
 
 
-def _smart_split_transcript(text: str, children: list, min_confidence: float = 0.3) -> list[str]:
+def _smart_split_transcript(
+    text: str, children: list, min_confidence: float = 0.3
+) -> list[str]:
     """
     Anchor-based fallback splitter khi transcript KHÔNG có dấu chấm/câu kết thúc.
 
@@ -380,7 +390,7 @@ def extract_multi_person(
         }
 
     # Split transcript into sentences (dấu chấm/câu xuống dòng)
-    segments_text = re.split(r'[.!?\n]+', transcript)
+    segments_text = re.split(r"[.!?\n]+", transcript)
     segments_text = [s.strip() for s in segments_text if s.strip()]
 
     # Fallback: Whisper raw output tiếng Việt thường KHÔNG có dấu chấm/kết thúc câu.
@@ -414,9 +424,7 @@ def extract_multi_person(
     # ============ 3 BUCKETS RIÊNG BIỆT ============
 
     # Bucket 1: Class-wide content (append khi gặp segment class-wide)
-    class_wide_lists: dict[str, list[str]] = {
-        key: [] for key in CLASS_WIDE_FIELDS
-    }
+    class_wide_lists: dict[str, list[str]] = {key: [] for key in CLASS_WIDE_FIELDS}
 
     # Bucket 2: Child-specific overrides (REPLACE khi gặp segment match child)
     # Chỉ chứa children CÓ override, không tạo sẵn cho all 25
@@ -433,9 +441,7 @@ def extract_multi_person(
     for segment_text in segments_text:
         # 1. Match children names in this segment
         matches = match_single_text(
-            segment_text,
-            children,
-            min_confidence=min_confidence
+            segment_text, children, min_confidence=min_confidence
         )
 
         # 2. Run NLP extraction on this segment
@@ -446,8 +452,7 @@ def extract_multi_person(
 
         # 4. Check if ambiguous
         is_ambiguous = (
-            len(matches) > 1 and
-            matches[0].confidence == matches[1].confidence
+            len(matches) > 1 and matches[0].confidence == matches[1].confidence
         )
 
         # Build segment result (giữ nguyên format để frontend dùng)
@@ -485,7 +490,13 @@ def extract_multi_person(
             # Fallback: nếu model trả extraction rỗng → dùng raw text làm representative
             # cho field phù hợp nhất (đoán từ keyword trong segment)
             if not has_any_content:
-                for priority_key in ["meals", "activities", "sleeping", "health", "mood"]:
+                for priority_key in [
+                    "meals",
+                    "activities",
+                    "sleeping",
+                    "health",
+                    "mood",
+                ]:
                     if priority_key in class_wide_lists:
                         class_wide_lists[priority_key].append(segment_text)
                         break
@@ -538,8 +549,7 @@ def extract_multi_person(
     child_extractions: dict[str, dict[str, str | None]] = {}
     for child_id, data in child_overrides_lists.items():
         child_extractions[child_id] = {
-            key: ", ".join(values) if values else None
-            for key, values in data.items()
+            key: ", ".join(values) if values else None for key, values in data.items()
         }
 
     return {
@@ -564,20 +574,20 @@ def _extract_single_segment(segment_text: str) -> dict:
             "activities": None,
             "mood": None,
         }
-    
+
     tokens = _tokenizer(segment_text)
     input_ids = _numericalize(segment_text)
-    
+
     with torch.no_grad():
         tensor = torch.tensor([input_ids]).to(_device)
         output = _model(tensor)
         predictions = output.argmax(dim=-1)[0]
-    
-    pred_labels = [_id_to_label[pred.item()] for pred in predictions[:len(tokens)]]
+
+    pred_labels = [_id_to_label[pred.item()] for pred in predictions[: len(tokens)]]
     phrases_by_label = _extract_bio_phrases(tokens, pred_labels)
-    
+
     result = {}
     for key, phrases in phrases_by_label.items():
         result[key] = ", ".join(phrases) if phrases else None
-    
+
     return result
