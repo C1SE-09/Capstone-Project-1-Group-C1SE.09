@@ -23,37 +23,32 @@ def upgrade() -> None:
     op.create_table(
         "time_slot",
         sa.Column("slot_id", sa.UUID(), nullable=False, comment="Surrogate primary key (UUID v4)"),
-        sa.Column("school_id", sa.UUID(), nullable=False, comment="Owning school"),
         sa.Column("name", sa.String(length=100), nullable=False, comment="Slot display name, e.g. 7h00 - 7h30"),
         sa.Column("start_time", sa.String(length=10), nullable=False, comment="Start time (HH:MM)"),
         sa.Column("end_time", sa.String(length=10), nullable=False, comment="End time (HH:MM)"),
         sa.Column("order_index", sa.Integer(), nullable=False, server_default="1", comment="Display sort index"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["school_id"], ["school.school_id"], name="fk_time_slot_school_id", ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("slot_id"),
-        comment="Daily time slot definitions per school",
+        comment="Daily time slot definitions",
     )
-    op.create_index("ix_time_slot_school_id", "time_slot", ["school_id"], unique=False)
-    op.create_index("ix_time_slot_order", "time_slot", ["school_id", "order_index"], unique=False)
+    op.create_index("ix_time_slot_order", "time_slot", ["order_index"], unique=False)
 
     # 2. Create subject table
     op.create_table(
         "subject",
         sa.Column("subject_id", sa.UUID(), nullable=False, comment="Surrogate primary key (UUID v4)"),
-        sa.Column("school_id", sa.UUID(), nullable=False, comment="Owning school"),
         sa.Column("name", sa.String(length=100), nullable=False, comment="Subject name, e.g. Tiếng Việt"),
         sa.Column("code", sa.String(length=50), nullable=True, comment="Short code"),
         sa.Column("color_code", sa.String(length=20), nullable=True, server_default="#4CAF50", comment="HEX color code"),
         sa.Column("description", sa.Text(), nullable=True, comment="Detailed description"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["school_id"], ["school.school_id"], name="fk_subject_school_id", ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("subject_id"),
-        sa.UniqueConstraint("school_id", "name", name="uq_subject_school_name"),
+        sa.UniqueConstraint("name", name="uq_subject_name"),
         comment="Subjects and activity types for timetable",
     )
-    op.create_index("ix_subject_school_id", "subject", ["school_id"], unique=False)
+    op.create_index("ix_subject_name", "subject", ["name"], unique=False)
 
     # 3. Create class_schedule table
     op.create_table(
@@ -83,14 +78,15 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_class_schedule_slot", table_name="class_schedule")
-    op.drop_index("ix_class_schedule_day", table_name="class_schedule")
-    op.drop_index("ix_class_schedule_class_id", table_name="class_schedule")
+    op.drop_index("ix_class_schedule_slot", table_name="class_schedule", if_exists=True)
+    op.drop_index("ix_class_schedule_day", table_name="class_schedule", if_exists=True)
+    op.drop_index("ix_class_schedule_class_id", table_name="class_schedule", if_exists=True)
     op.drop_table("class_schedule")
 
-    op.drop_index("ix_subject_school_id", table_name="subject")
+    op.drop_index("ix_subject_name", table_name="subject", if_exists=True)
+    op.drop_index("ix_subject_school_id", table_name="subject", if_exists=True)
     op.drop_table("subject")
 
-    op.drop_index("ix_time_slot_order", table_name="time_slot")
-    op.drop_index("ix_time_slot_school_id", table_name="time_slot")
+    op.drop_index("ix_time_slot_order", table_name="time_slot", if_exists=True)
+    op.drop_index("ix_time_slot_school_id", table_name="time_slot", if_exists=True)
     op.drop_table("time_slot")
