@@ -5,14 +5,15 @@ Revises: c4e8b21f7a35
 Create Date: 2026-09-27 10:56:27.514066
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '1d221a9914e8'
-down_revision: str | Sequence[str] | None = 'c4e8b21f7a35'
+revision: str = "1d221a9914e8"
+down_revision: str | Sequence[str] | None = "c4e8b21f7a35"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -36,7 +37,10 @@ def upgrade() -> None:
         sa.Column(
             "scope",
             sa.dialects.postgresql.ENUM(
-                "single_child", "whole_class", name="voice_record_scope_enum", create_type=False
+                "single_child",
+                "whole_class",
+                name="voice_record_scope_enum",
+                create_type=False,
             ),
             server_default="single_child",
             nullable=False,
@@ -61,7 +65,9 @@ def upgrade() -> None:
         ondelete="SET NULL",
     )
     op.create_index("ix_voice_record_scope", "voice_record", ["scope"], unique=False)
-    op.create_index("ix_voice_record_class_id", "voice_record", ["class_id"], unique=False)
+    op.create_index(
+        "ix_voice_record_class_id", "voice_record", ["class_id"], unique=False
+    )
 
     # 2. Create class_broadcast_report table
     op.create_table(
@@ -191,10 +197,24 @@ def upgrade() -> None:
         sa.UniqueConstraint("class_id", "report_date", name="uq_broadcast_class_date"),
         comment="Broadcast daily reports summarizing common class activities",
     )
-    op.create_index("ix_broadcast_class_id", "class_broadcast_report", ["class_id"], unique=False)
-    op.create_index("ix_broadcast_teacher_id", "class_broadcast_report", ["teacher_id"], unique=False)
-    op.create_index("ix_broadcast_report_date", "class_broadcast_report", ["report_date"], unique=False)
-    op.create_index("ix_broadcast_status", "class_broadcast_report", ["status"], unique=False)
+    op.create_index(
+        "ix_broadcast_class_id", "class_broadcast_report", ["class_id"], unique=False
+    )
+    op.create_index(
+        "ix_broadcast_teacher_id",
+        "class_broadcast_report",
+        ["teacher_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_broadcast_report_date",
+        "class_broadcast_report",
+        ["report_date"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_broadcast_status", "class_broadcast_report", ["status"], unique=False
+    )
 
     # 3. DailyReport changes: report_type & source_broadcast_id
     report_type_enum = sa.Enum("individual", "exception", name="daily_report_type_enum")
@@ -204,7 +224,10 @@ def upgrade() -> None:
         sa.Column(
             "report_type",
             sa.dialects.postgresql.ENUM(
-                "individual", "exception", name="daily_report_type_enum", create_type=False
+                "individual",
+                "exception",
+                name="daily_report_type_enum",
+                create_type=False,
             ),
             server_default="individual",
             nullable=False,
@@ -228,9 +251,14 @@ def upgrade() -> None:
         ["broadcast_report_id"],
         ondelete="SET NULL",
     )
-    op.create_index("ix_daily_report_report_type", "daily_report", ["report_type"], unique=False)
     op.create_index(
-        "ix_daily_report_source_broadcast_id", "daily_report", ["source_broadcast_id"], unique=False
+        "ix_daily_report_report_type", "daily_report", ["report_type"], unique=False
+    )
+    op.create_index(
+        "ix_daily_report_source_broadcast_id",
+        "daily_report",
+        ["source_broadcast_id"],
+        unique=False,
     )
 
 
@@ -238,7 +266,9 @@ def downgrade() -> None:
     """Downgrade schema."""
     op.drop_index("ix_daily_report_source_broadcast_id", table_name="daily_report")
     op.drop_index("ix_daily_report_report_type", table_name="daily_report")
-    op.drop_constraint("fk_daily_report_source_broadcast_id", "daily_report", type_="foreignkey")
+    op.drop_constraint(
+        "fk_daily_report_source_broadcast_id", "daily_report", type_="foreignkey"
+    )
     op.drop_column("daily_report", "source_broadcast_id")
     op.drop_column("daily_report", "report_type")
 

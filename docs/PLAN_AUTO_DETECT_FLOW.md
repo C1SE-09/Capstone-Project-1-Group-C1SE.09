@@ -499,7 +499,9 @@ def approve_item(db, voice_id, teacher_id, item):
         # Tạo draft cho TẤT CẢ children chưa có draft hôm nay
         for child in class_obj.children:
             if not has_draft_today(db, child.id):
-                create_daily_report(db, child, item.content, type=INDIVIDUAL, status=DRAFT)
+                create_daily_report(
+                    db, child, item.content, type=INDIVIDUAL, status=DRAFT
+                )
             # else: skip (đã có draft từ override trước đó)
 
     elif item.kind in ("override", "assigned"):
@@ -512,7 +514,9 @@ def approve_item(db, voice_id, teacher_id, item):
             update_daily_report(db, child_id, today, merged_content)
         else:
             # Chưa có → CREATE
-            create_daily_report(db, child_id, merged_content, type=EXCEPTION, status=DRAFT)
+            create_daily_report(
+                db, child_id, merged_content, type=EXCEPTION, status=DRAFT
+            )
 
     # Resume
 ```

@@ -70,7 +70,9 @@ else:
 from pathlib import Path
 
 _DEFAULT_REPO_ID = "vudang449/PhoWhisper-large-ct2"
-_LOCAL_MODEL_PATH = Path(__file__).resolve().parent.parent.parent / "models" / "PhoWhisper-large-ct2"
+_LOCAL_MODEL_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "models" / "PhoWhisper-large-ct2"
+)
 
 _ENV_MODEL = os.getenv("PHOWHISPER_MODEL_ID", "")
 if _ENV_MODEL and _ENV_MODEL != _DEFAULT_REPO_ID:
