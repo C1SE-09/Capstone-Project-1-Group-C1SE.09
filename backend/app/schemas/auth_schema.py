@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class login_request(BaseModel):
@@ -15,8 +15,8 @@ class login_response(BaseModel):
     parent_id: str | None = None
 
 class change_password_request(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=6, max_length=72)
 
 class forgot_password_request(BaseModel):
     email: str

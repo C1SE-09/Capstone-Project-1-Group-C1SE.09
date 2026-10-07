@@ -6,6 +6,7 @@ import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dar
 import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -513,6 +514,13 @@ class _AccountScreenState extends State<AccountScreen> {
                 _AccountRow(icon: Icons.swap_horiz_rounded, label: 'Quay lại chọn lớp khác', chevron: true, onTap: widget.onSelectClass),
                 const Divider(),
               ],
+              _AccountRow(
+                icon: Icons.lock_outline_rounded,
+                label: 'Đổi mật khẩu',
+                chevron: true,
+                onTap: () => showChangePasswordBottomSheet(context),
+              ),
+              const Divider(),
               const _AccountRow(icon: Icons.info_outline, label: 'Về KinderLog', value: 'v1.0.0'),
             ],
           ),
