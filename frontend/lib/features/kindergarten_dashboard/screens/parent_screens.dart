@@ -5,6 +5,7 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -228,6 +229,11 @@ class _ParentHomeState extends State<_ParentHome> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  onPressed: () => showChangePasswordBottomSheet(context),
+                  tooltip: 'Đổi mật khẩu',
+                  icon: const Icon(Icons.lock_outline_rounded, color: KColors.inkSoft),
                 ),
                 IconButton(
                   onPressed: () => ScaffoldMessenger.of(context).showSnackBar(

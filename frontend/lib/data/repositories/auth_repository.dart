@@ -131,4 +131,49 @@ class AuthRepository {
       // Bỏ qua lỗi mạng khi logout để người dùng vẫn quay về màn đăng nhập
     }
   }
+
+  /// Đổi mật khẩu tài khoản qua POST /api/auth/change-password.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final token = currentUser?.token;
+    if (token == null || token.isEmpty) {
+      throw const AuthException('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
+    }
+
+    try {
+      await _dio.post(
+        '/api/auth/change-password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final status = e.response?.statusCode;
+        final resData = e.response?.data;
+        String? detailMsg;
+        if (resData is Map && resData['detail'] != null) {
+          detailMsg = resData['detail'].toString();
+        }
+        throw AuthException(
+          detailMsg ?? 'Đổi mật khẩu thất bại (Mã lỗi: $status).',
+          statusCode: status,
+        );
+      }
+      throw const AuthException(
+        'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.',
+      );
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException('Lỗi bất ngờ: $e');
+    }
+  }
 }

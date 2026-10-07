@@ -8,6 +8,7 @@ from app.core.security import (
 from app.models.child import Parent
 from app.models.user import Teacher, User
 from app.schemas.auth_schema import (
+    change_password_request,
     forgot_password_request,
     login_request,
     login_response,
@@ -51,6 +52,28 @@ def login(data: login_request, db: Session = Depends(get_db)):
 @router.post("/logout")
 def logout(current_user: User = Depends(get_current_user)):
     return {"message": "Đăng xuất thành công!"}
+
+
+@router.post("/change-password")
+def change_password(
+    data: change_password_request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu hiện tại không chính xác.",
+        )
+    if verify_password(data.new_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu mới không được trùng với mật khẩu hiện tại.",
+        )
+
+    current_user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return {"message": "Đổi mật khẩu thành công!"}
 
 @router.post("/forgot-password")
 def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)):
