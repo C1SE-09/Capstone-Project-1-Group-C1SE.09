@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class FakeAuthRepository extends AuthRepository {
   FakeAuthRepository({this.shouldFail = false, this.errorMessage});
@@ -48,7 +49,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Đổi mật khẩu'), findsOneWidget);
+    expect(find.text('Đổi mật khẩu'), findsNWidgets(2)); // AppBar + Button
     expect(find.text('Mật khẩu hiện tại'), findsOneWidget);
     expect(find.text('Mật khẩu mới'), findsOneWidget);
     expect(find.text('Xác nhận mật khẩu mới'), findsOneWidget);
@@ -62,7 +63,7 @@ void main() {
       ),
     );
 
-    final submitBtn = find.text('Đổi mật khẩu');
+    final submitBtn = find.widgetWithText(KButton, 'Đổi mật khẩu');
     expect(submitBtn, findsOneWidget);
 
     await tester.tap(submitBtn);
@@ -84,7 +85,7 @@ void main() {
     await tester.enterText(fields.at(1), 'newpass123');
     await tester.enterText(fields.at(2), 'mismatchpass');
 
-    final submitBtn = find.text('Đổi mật khẩu');
+    final submitBtn = find.widgetWithText(KButton, 'Đổi mật khẩu');
     await tester.tap(submitBtn);
     await tester.pump();
 
@@ -104,7 +105,7 @@ void main() {
     await tester.enterText(fields.at(1), 'newpass456');
     await tester.enterText(fields.at(2), 'newpass456');
 
-    final submitBtn = find.text('Đổi mật khẩu');
+    final submitBtn = find.widgetWithText(KButton, 'Đổi mật khẩu');
     await tester.tap(submitBtn);
     await tester.pumpAndSettle();
 

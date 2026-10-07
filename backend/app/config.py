@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     minio_bucket: str = "audio"
     minio_secure: bool = False
 
+    # SMTP Email
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
     # Cấu hình để Pydantic tự động đọc dữ liệu từ file .env
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),

@@ -14,6 +14,12 @@ final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(path: '/', redirect: (context, state) => '/login'),
     GoRoute(path: '/login', builder: (context, state) => const _LoginRoute()),
+    GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) => ForgotPasswordScreen(
+        onBackToLogin: () => appRouter.go('/login'),
+      ),
+    ),
     GoRoute(path: '/class-select', builder: (context, state) => Scaffold(body: SafeArea(child: ClassSelectScreen(onPick: (classId) => appRouter.go(Uri(path: '/teacher', queryParameters: {'classId': classId}).toString()))))),
     GoRoute(path: '/teacher', builder: (context, state) => TeacherShell(onLogout: _goLogin, classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001')),
     GoRoute(path: '/parent', builder: (context, state) => const ParentFlow(onLogout: _goLogin)),
@@ -32,5 +38,6 @@ class _LoginRoute extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LoginScreen(
         onLogin: (role) => appRouter.go(role.name == 'teacher' ? '/class-select' : '/parent'),
+        onForgotPassword: () => appRouter.push('/forgot-password'),
       );
 }

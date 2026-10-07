@@ -293,7 +293,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       return 'Vui lòng xác nhận mật khẩu mới.';
                     }
                     if (val != _newPasswordController.text) {
-                      return 'Mật khẩu xác nhận không khớp.';
+                      return 'Mật khẩu xác nhận không trùng khớp.';
                     }
                     return null;
                   },
@@ -517,7 +517,7 @@ class __ChangePasswordFormSheetState
             obscureText: _obscureConfirm,
             validator: (val) {
               if (val == null || val.trim().isEmpty) return 'Vui lòng xác nhận mật khẩu mới.';
-              if (val != _newPasswordController.text) return 'Mật khẩu xác nhận không khớp.';
+              if (val != _newPasswordController.text) return 'Mật khẩu xác nhận không trùng khớp.';
               return null;
             },
             decoration: InputDecoration(

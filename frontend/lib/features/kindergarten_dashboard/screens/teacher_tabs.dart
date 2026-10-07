@@ -6,7 +6,6 @@ import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dar
 import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
