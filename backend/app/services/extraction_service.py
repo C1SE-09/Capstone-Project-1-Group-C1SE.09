@@ -39,11 +39,16 @@ OUTPUT MẪU (Multi-Person):
 
 """
 
+import logging
+import math
 import os
 import re
+import threading
 
 import torch
 from torch import nn
+
+logger = logging.getLogger(__name__)
 
 # =============== MODEL LOADING ===============
 
@@ -63,36 +68,45 @@ class LSTMClassifier(nn.Module):
 
 
 # Load model khi import
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "bio_lstm_model.pt")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "bio_lstm_model_v3.pt")
 
 _label_to_id = None
 _id_to_label = None
 _vocab = None
 _model = None
 _device = None
+_load_lock = threading.Lock()
 
 
 def _load_model():
+    """Thread-safe singleton model loader với double-check locking."""
     global _model, _vocab, _label_to_id, _id_to_label, _device
     if _model is not None:
         return
 
-    _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    with _load_lock:
+        # Double-check sau khi acquire lock (thread khác có thể đã load xong)
+        if _model is not None:
+            return
 
-    checkpoint = torch.load(MODEL_PATH, map_location=_device)
-    _vocab = checkpoint["vocab"]
-    _label_to_id = checkpoint["label_to_id"]
-    _id_to_label = {v: k for k, v in _label_to_id.items()}
+        _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    _model = LSTMClassifier(
-        vocab_size=len(_vocab),
-        embedding_dim=checkpoint["embedding_dim"],
-        hidden_dim=checkpoint["hidden_dim"],
-        num_classes=len(_label_to_id),
-    )
-    _model.load_state_dict(checkpoint["model_state_dict"])
-    _model.to(_device)
-    _model.eval()
+        checkpoint = torch.load(MODEL_PATH, map_location=_device)
+        _vocab = checkpoint["vocab"]
+        _label_to_id = checkpoint["label_to_id"]
+        _id_to_label = {v: k for k, v in _label_to_id.items()}
+
+        _model = LSTMClassifier(
+            vocab_size=len(_vocab),
+            embedding_dim=checkpoint["embedding_dim"],
+            hidden_dim=checkpoint["hidden_dim"],
+            num_classes=len(_label_to_id),
+        )
+        _model.load_state_dict(checkpoint["model_state_dict"])
+        _model.to(_device)
+        _model.eval()
+
+        logger.info("[Extraction] LSTM model loaded on %s", _device)
 
 
 def _tokenizer(text: str):
@@ -107,36 +121,49 @@ def _numericalize(text: str):
 
 
 def _extract_bio_phrases(tokens, pred_labels):
-    """Parse BIO tags thành list phrases theo từng label.."""
+    """Parse BIO tags thành list phrases theo từng label.
+
+    Xử lý các trường hợp BIO sai mà model hay dự đoán:
+      - I-X không có B-X nào mở trước  -> coi như B-X.
+        (Cách cũ bỏ rơi token này, làm mất cả entity.)
+      - I-X khác loại với B đang mở   -> đóng entity cũ, mở entity mới B-X.
+        (Cách cũ nối nhầm token sang field khác.)
+      - Nhãn có loại lạ (vd B-UNK)     -> coi như O, không dính vào entity trước.
+    """
     result = {"meals": [], "sleeping": [], "health": [], "activities": [], "mood": []}
 
     current_phrase = []
-    current_label = None
+    current_type = None
+
+    def flush():
+        nonlocal current_phrase, current_type
+        if current_type and current_phrase and current_type in result:
+            result[current_type].append(" ".join(current_phrase))
+        current_phrase = []
+        current_type = None
 
     for token, pred_label in zip(tokens, pred_labels):
         if pred_label == "O":
-            if current_label and current_phrase:
-                label_name = current_label.replace("B-", "").replace("I-", "").lower()
-                if label_name in result:
-                    result[label_name].append(" ".join(current_phrase))
-                current_phrase = []
-                current_label = None
-        elif pred_label.startswith("B-"):
-            if current_label and current_phrase:
-                label_name = current_label.replace("B-", "").replace("I-", "").lower()
-                if label_name in result:
-                    result[label_name].append(" ".join(current_phrase))
-            current_phrase = [token]
-            current_label = pred_label
-        elif pred_label.startswith("I-") and current_label:
+            flush()
+            continue
+
+        if not pred_label.startswith(("B-", "I-")):
+            flush()
+            continue
+
+        ent_type = pred_label[2:].lower()
+        if ent_type not in result:
+            flush()
+            continue
+
+        if pred_label.startswith("I-") and current_type == ent_type:
             current_phrase.append(token)
+        else:
+            flush()
+            current_phrase = [token]
+            current_type = ent_type
 
-    # Xử lý phrase cuối
-    if current_label and current_phrase:
-        label_name = current_label.replace("B-", "").replace("I-", "").lower()
-        if label_name in result:
-            result[label_name].append(" ".join(current_phrase))
-
+    flush()
     return result
 
 
@@ -199,11 +226,7 @@ def extract_from_transcript(transcript: str) -> dict:
 # VD: "hôm nay Lan ăn ngon" → "hôm nay" chỉ thời gian, segment vẫn match Lan OK.
 # Class-wide markers thực sự: cả lớp, các bé, mọi người, tất cả, ai cũng.
 CLASS_WIDE_KEYWORDS = [
-    "cả lớp",
-    "các bé",
-    "mọi người",
-    "tất cả",
-    "ai cũng",
+    "cả lớp", "các bé", "mọi người", "tất cả", "ai cũng",
 ]
 
 # Confidence tối thiểu của child match để GHI ĐÈ class-wide keyword.
@@ -213,11 +236,7 @@ CHILD_MATCH_CONFIDENCE_THRESHOLD = 0.5
 # Class-wide extraction fields (used to bucket class-wide statements).
 # Dùng chung cho class_wide_lists init và iteration loop.
 CLASS_WIDE_FIELDS: tuple[str, ...] = (
-    "meals",
-    "sleeping",
-    "health",
-    "activities",
-    "mood",
+    "meals", "sleeping", "health", "activities", "mood",
 )
 
 
@@ -249,9 +268,7 @@ def _is_class_wide_segment(segment_text: str, matches: list) -> bool:
     return False
 
 
-def _smart_split_transcript(
-    text: str, children: list, min_confidence: float = 0.3
-) -> list[str]:
+def _smart_split_transcript(text: str, children: list, min_confidence: float = 0.3) -> list[str]:
     """
     Anchor-based fallback splitter khi transcript KHÔNG có dấu chấm/câu kết thúc.
 
@@ -273,13 +290,21 @@ def _smart_split_transcript(
     text_lower = text.lower()
     anchors: set[int] = set()
 
-    # 1. Anchors từ tên bé match được
+    # 1. Anchors từ tên bé match được.
+    #    Mỗi BÉ là 1 anchor duy nhất, lấy vị trí từ tên đầu tiên xuất hiện.
+    #    matched_words đã theo đúng thứ tự xuất hiện trong text, nên phần tử [0]
+    #    chính là từ sớm nhất.
+    #    (Cách cũ lấy anchor cho TỪNG từ trong matched_words, nên "Nguyễn Văn An"
+    #     bị cắt thành 3 đoạn: "Nguyễn" / "Văn" / "An hát hay lắm".)
     matches = match_single_text(text, children, min_confidence=min_confidence)
     for m in matches:
-        for word in m.matched_words:
-            idx = text_lower.find(word)
-            if idx > 0:
-                anchors.add(idx)
+        if not m.matched_words:
+            continue
+        # (?<!\w)...(?!\w) để "an" không khớp trong "anh", "bình" không khớp "bình an"
+        first_word = re.escape(m.matched_words[0].lower())
+        hit = re.search(rf"(?<!\w){first_word}(?!\w)", text_lower)
+        if hit and hit.start() > 0:
+            anchors.add(hit.start())
 
     # 2. Anchors từ class-wide keywords
     for kw in CLASS_WIDE_KEYWORDS:
@@ -312,6 +337,82 @@ def _smart_split_transcript(
         segments.append(tail)
 
     return segments
+
+
+# Bật/tắt việc loại bỏ tên bé khỏi text trước khi trích xuất
+STRIP_MATCHED_NAMES = True
+
+
+def _strip_matched_names(segment_text: str, matches: list) -> str:
+    """Bỏ các từ là tên bé ra khỏi segment trước khi đưa vào model.
+
+    Vì sao cần: tên bé ở Việt Nam hay trùng từ thông dụng (An/ăn, Bình/bình,
+    Khôi/khôi, Hà/hà). Model không có khái niệm "đây là tên riêng" nên gán
+    B-MEALS cho "bình" chỉ vì trong tập train có nhiều cụm ăn uống chứa nó.
+
+    Tên chỉ đóng vai trò anchor để biết segment này nói về bé nào, không mang
+    thông tin sức khoẻ, nên bỏ đi là an toàn. Giữ nguyên text gốc cho frontend,
+    chỉ thay text đưa vào model.
+    """
+    if not STRIP_MATCHED_NAMES or not segment_text or not matches:
+        return segment_text
+
+    name_words = set()
+    for m in matches:
+        for w in (getattr(m, "matched_words", None) or []):
+            if w:
+                name_words.add(w.lower())
+        # Nickname cũng cần bỏ (có thể nhiều từ)
+        for w in (getattr(m, "nickname", None) or "").lower().split():
+            if w:
+                name_words.add(w)
+
+    if not name_words:
+        return segment_text
+
+    # Sắp xếp dài trước để "nguyễn văn" không bị "nguyễn" ăn mất trước.
+    # Lookaround \w để chỉ khớp trọn từ, không khớp chuỗi con (vd "an" trong "anh").
+    pattern = "|".join(
+        re.escape(w) for w in sorted(name_words, key=len, reverse=True)
+    )
+    cleaned = re.sub(
+        rf"(?<!\w)(?:{pattern})(?!\w)", " ", segment_text, flags=re.IGNORECASE
+    )
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" \t\n,.;:!?-–—")
+
+    # Cố tình KHÔNG giữ lại text gốc khi rỗng: segment chỉ chứa tên (vd anchor
+    # bị smart-split tách riêng) không có nội dung sức khoẻ nào, để rỗng thì
+    # _extract_single_segment trả về toàn None -- đúng ý.
+    return cleaned
+
+
+def _strip_class_wide_keywords(segment_text: str) -> str:
+    """Bỏ class-wide keywords (cả lớp, các bé, ...) khỏi segment trước khi
+    đưa vào model extraction.
+
+    Vì sao cần: model được train với transcripts nói về 1 BÉ cụ thể, ít khi
+    bắt đầu bằng "cả lớp". Khi test thấy model bị "lười" - thấy "cả lớp" ở
+    đầu thì chỉ gán B-MOOD cho từ đầu tiên rồi O hết phần sau, bỏ sót
+    activities/sleeping phía sau.
+
+    Cách fix: bỏ "cả lớp"/"các bé"/... trước khi đưa vào model. Model vẫn học
+    tốt với "vui chơi ngủ ngon" thuần (đã verify) nên chỉ cần strip anchor
+    class-wide là đủ.
+
+    Lưu ý: hàm này chỉ dùng cho `extraction_text` (input của model), KHÔNG
+    đụng `segment_text` gốc trả về frontend (để metadata giữ nguyên).
+    """
+    if not segment_text:
+        return segment_text
+
+    # Pattern lookaround \w để chỉ match trọn từ, không khớp "lớp" trong "lớp học"...
+    # (thực tế "lớp" thường đi với "cả" nên vẫn khớp, nhưng an toàn).
+    pattern = "|".join(re.escape(kw) for kw in CLASS_WIDE_KEYWORDS)
+    cleaned = re.sub(
+        rf"(?<!\w)(?:{pattern})(?!\w)", " ", segment_text, flags=re.IGNORECASE
+    )
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" \t\n,.;:!?-–—")
+    return cleaned
 
 
 def extract_multi_person(
@@ -389,18 +490,39 @@ def extract_multi_person(
             "class_wide_segments": 0,
         }
 
-    # Split transcript into sentences (dấu chấm/câu xuống dòng)
-    segments_text = re.split(r"[.!?\n]+", transcript)
-    segments_text = [s.strip() for s in segments_text if s.strip()]
+    # ============ TÁCH TRANSCRIPT THÀNH SEGMENTS ============
+    # Strategy: regex split theo dấu câu làm PRIMARY (chính xác khi có dấu).
+    # Nếu regex chỉ tách được 1 segment (transcript không dấu - thường gặp với
+    # Whisper VN) thì fallback smart split anchor-based.
+    # Lý do không dùng smart split luôn: khi có dấu câu nhưng text chứa tên phổ
+    # biến (vd "Văn" trong "Nguyễn Văn An"), match yếu với child khác có thể
+    # tạo anchor sai giữa tên người (vd "Lê Văn Cường" match "văn" → cắt nhầm).
+    segments_text: list[str] = []
 
-    # Fallback: Whisper raw output tiếng Việt thường KHÔNG có dấu chấm/kết thúc câu.
-    # Nếu regex chỉ ra 1 segment duy nhất → dùng anchor-based split (tên bé + keyword).
-    if len(segments_text) == 1 and children:
+    # Bước 1: regex split theo dấu câu / xuống dòng
+    regex_segments = re.split(r'[.!?\n]+', transcript)
+    regex_segments = [s.strip() for s in regex_segments if s.strip()]
+
+    if len(regex_segments) >= 2:
+        # Có dấu câu → dùng regex (chính xác hơn vì ranh giới rõ ràng)
+        segments_text = regex_segments
+    elif children:
+        # Regex chỉ ra 1 segment (không dấu câu) → dùng smart split
         smart_segments = _smart_split_transcript(
-            segments_text[0], children, min_confidence=min_confidence
+            transcript, children, min_confidence=min_confidence
         )
-        if len(smart_segments) > 1:
+        if len(smart_segments) >= 2:
             segments_text = smart_segments
+        else:
+            # Smart split cũng không tách được (không có anchor) → giữ 1 segment
+            cleaned = transcript.strip()
+            segments_text = [cleaned] if cleaned else []
+    else:
+        # Không có children để smart split → dùng regex (dù 1 segment)
+        segments_text = regex_segments
+        if not segments_text:
+            cleaned = transcript.strip()
+            segments_text = [cleaned] if cleaned else []
 
     if not segments_text:
         return {
@@ -424,7 +546,9 @@ def extract_multi_person(
     # ============ 3 BUCKETS RIÊNG BIỆT ============
 
     # Bucket 1: Class-wide content (append khi gặp segment class-wide)
-    class_wide_lists: dict[str, list[str]] = {key: [] for key in CLASS_WIDE_FIELDS}
+    class_wide_lists: dict[str, list[str]] = {
+        key: [] for key in CLASS_WIDE_FIELDS
+    }
 
     # Bucket 2: Child-specific overrides (REPLACE khi gặp segment match child)
     # Chỉ chứa children CÓ override, không tạo sẵn cho all 25
@@ -435,29 +559,56 @@ def extract_multi_person(
     unmatched_count = 0
     class_wide_count = 0
 
-    # Track để merge orphan segments vào class-wide
-    prev_was_classwide = False
+    # Track context từ segment trước để inherit cho orphan segments.
+    # Smart split giảm orphan gần hết, nhưng vẫn còn edge case (transcript
+    # không có anchor → 1 segment duy nhất không match ai). Option D là
+    # safety net: orphan → inherit subject của segment trước.
+    prev_subject_type: str | None = None  # "child" | "class_wide" | None
+    prev_child_id: str | None = None
 
     for segment_text in segments_text:
         # 1. Match children names in this segment
         matches = match_single_text(
-            segment_text, children, min_confidence=min_confidence
+            segment_text,
+            children,
+            min_confidence=min_confidence
         )
 
-        # 2. Run NLP extraction on this segment
-        extraction = _extract_single_segment(segment_text)
+        # 1b. Bỏ tên bé đã match khỏi text trước khi trích xuất.
+        #     Tên hay trùng từ thông dụng nên model dễ gán nhầm thành entity
+        #     (vd "bình" -> B-MEALS, "an" -> B-MEALS).
+        extraction_text = _strip_matched_names(segment_text, matches)
+
+        # 1c. Bỏ luôn class-wide keyword ("cả lớp", "các bé", ...) nếu có.
+        #     Model bị "lười" khi thấy "cả lớp" ở đầu: chỉ gán B-MOOD cho
+        #     từ đầu rồi O hết phần sau. Strip anchor class-wide trước khi
+        #     đưa vào model để các field phía sau (activities/sleeping/...)
+        #     được nhận diện đầy đủ.
+        extraction_text = _strip_class_wide_keywords(extraction_text)
+
+        # 2. Run NLP extraction on this segment (dùng text đã bỏ tên + class-wide)
+        extraction = _extract_single_segment(extraction_text)
+
+        # 2b. Skip segment nếu model không extract được gì (orphan segment rỗng).
+        #     Orphan như "bé" bị smart-split tách riêng không có nội dung gì,
+        #     gọi model cũng ra toàn None → drop luôn để tránh báo cáo ảo.
+        if all(v is None for v in extraction.values()):
+            unmatched_count += 1
+            continue
 
         # 3. Check if this is a class-wide segment
         is_class_wide = _is_class_wide_segment(segment_text, matches)
 
-        # 4. Check if ambiguous
+        # 4. Check if ambiguous (dùng math.isclose để tránh floating point equality)
         is_ambiguous = (
-            len(matches) > 1 and matches[0].confidence == matches[1].confidence
+            len(matches) > 1
+            and math.isclose(matches[0].confidence, matches[1].confidence, abs_tol=1e-3)
         )
 
         # Build segment result (giữ nguyên format để frontend dùng)
         segment_result = {
             "text": segment_text,
+            "extraction_text": extraction_text,
             "is_class_wide": is_class_wide,
             "child_matches": [
                 {
@@ -481,25 +632,16 @@ def extract_multi_person(
         if is_class_wide:
             # Class-wide: append vào bucket 1
             class_wide_count += 1
-            has_any_content = False
             for key in CLASS_WIDE_FIELDS:
                 value = extraction.get(key)
                 if value:
                     class_wide_lists[key].append(value)
-                    has_any_content = True
-            # Fallback: nếu model trả extraction rỗng → dùng raw text làm representative
-            # cho field phù hợp nhất (đoán từ keyword trong segment)
-            if not has_any_content:
-                for priority_key in [
-                    "meals",
-                    "activities",
-                    "sleeping",
-                    "health",
-                    "mood",
-                ]:
-                    if priority_key in class_wide_lists:
-                        class_wide_lists[priority_key].append(segment_text)
-                        break
+            # Nếu model không extract được gì → trả None (không guess).
+            # Guess gây ra báo cáo có dữ liệu ảo, parent thấy sai còn tệ hơn
+            # báo cáo trống.
+            # Cập nhật context cho segment kế tiếp
+            prev_subject_type = "class_wide"
+            prev_child_id = None
 
         elif matches:
             # Child-specific: REPLACE vào bucket 2 cho từng matched child
@@ -520,20 +662,48 @@ def extract_multi_person(
                     if value:
                         # Replace list với 1 phần tử (override cuối cùng thắng)
                         child_overrides_lists[child_id][key] = [value]
+            # Cập nhật context cho segment kế tiếp (lấy match đầu tiên,
+            # thường là match có confidence cao nhất)
+            prev_subject_type = "child"
+            prev_child_id = matches[0].child_id
         else:
-            # Unmatched: orphan segment ngắn (< 3 từ) + prev là class-wide
-            # → merge vào class-wide bucket thay vì unmatched
-            word_count = len(segment_text.split())
-            is_orphan_short = word_count < 3
-            if is_orphan_short and prev_was_classwide:
-                # Merge vào class-wide
-                class_wide_count += 1
-                class_wide_lists["activities"].append(segment_text)
-            else:
-                unmatched_count += 1
+            # Orphan: không match được child nào và không class-wide.
+            # Safety net: inherit context từ segment trước để không mất info.
+            # Ví dụ: "Bé Lan ăn ngon" (match Lan) → "Ho nhẹ" (orphan, inherit Lan).
+            inherited = False
+            if prev_subject_type == "child" and prev_child_id is not None:
+                # Gán extraction cho child trước đó
+                if prev_child_id not in child_overrides_lists:
+                    child_overrides_lists[prev_child_id] = {
+                        "meals": [],
+                        "sleeping": [],
+                        "health": [],
+                        "activities": [],
+                        "mood": [],
+                    }
+                for key in child_overrides_lists[prev_child_id]:
+                    value = extraction.get(key)
+                    if value:
+                        # Append (orphan có thể có nhiều thông tin cho cùng 1 child)
+                        child_overrides_lists[prev_child_id][key].append(value)
+                inherited = True
+            elif prev_subject_type == "class_wide":
+                # Append vào class-wide bucket
+                for key in CLASS_WIDE_FIELDS:
+                    value = extraction.get(key)
+                    if value:
+                        class_wide_lists[key].append(value)
+                inherited = True
 
-        # Cập nhật prev state cho lần lặp sau
-        prev_was_classwide = is_class_wide
+            if inherited:
+                segment_result["inherited_from"] = {
+                    "type": prev_subject_type,
+                    "child_id": prev_child_id,
+                }
+            else:
+                # Thực sự không có context (segment đầu tiên hoặc transcript
+                # không có anchor nào) → chỉ đếm
+                unmatched_count += 1
 
         result_segments.append(segment_result)
 
@@ -549,7 +719,8 @@ def extract_multi_person(
     child_extractions: dict[str, dict[str, str | None]] = {}
     for child_id, data in child_overrides_lists.items():
         child_extractions[child_id] = {
-            key: ", ".join(values) if values else None for key, values in data.items()
+            key: ", ".join(values) if values else None
+            for key, values in data.items()
         }
 
     return {
@@ -565,6 +736,8 @@ def extract_multi_person(
 def _extract_single_segment(segment_text: str) -> dict:
     """
     Trích xuất thông tin từ 1 segment ngắn (dùng model đã load).
+
+    Returns dict với toàn None nếu segment trống hoặc không có tokens hợp lệ.
     """
     if not segment_text or not segment_text.strip():
         return {
@@ -576,6 +749,17 @@ def _extract_single_segment(segment_text: str) -> dict:
         }
 
     tokens = _tokenizer(segment_text)
+
+    # Guard: nếu tokenize ra rỗng (segment chỉ có dấu câu), trả None
+    if not tokens:
+        return {
+            "meals": None,
+            "sleeping": None,
+            "health": None,
+            "activities": None,
+            "mood": None,
+        }
+
     input_ids = _numericalize(segment_text)
 
     with torch.no_grad():
@@ -583,7 +767,7 @@ def _extract_single_segment(segment_text: str) -> dict:
         output = _model(tensor)
         predictions = output.argmax(dim=-1)[0]
 
-    pred_labels = [_id_to_label[pred.item()] for pred in predictions[: len(tokens)]]
+    pred_labels = [_id_to_label[pred.item()] for pred in predictions[:len(tokens)]]
     phrases_by_label = _extract_bio_phrases(tokens, pred_labels)
 
     result = {}
