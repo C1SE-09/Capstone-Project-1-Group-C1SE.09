@@ -121,7 +121,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
             child: Column(
               children: [
                 KCard(
-                  color: KColors.brandTint,
+                  color: context.k.brandTint,
                   onTap: widget.onClass,
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -130,7 +130,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                            color: KColors.brand,
+                            color: context.k.brand,
                             borderRadius: BorderRadius.circular(12)),
                         child: const Icon(Icons.groups_outlined,
                             color: Colors.white),
@@ -145,15 +145,15 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                     fontSize: 15, fontWeight: FontWeight.w600)),
                             Text('Ghi một lần, tạo báo cáo cho tất cả trẻ.',
                                 style: TextStyle(
-                                    fontSize: 12.5, color: KColors.inkSoft)),
+                                    fontSize: 12.5, color: context.k.inkSoft)),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: KColors.brand),
+                      Icon(Icons.chevron_right, color: context.k.brand),
                     ],
                   ),
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: Row(
                     children: [
@@ -162,7 +162,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text('hoặc chọn từng trẻ',
                               style: TextStyle(
-                                  fontSize: 12, color: KColors.inkFaint))),
+                                  fontSize: 12, color: context.k.inkFaint))),
                       Expanded(child: Divider()),
                     ],
                   ),
@@ -177,13 +177,13 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                       Expanded(
                           child: Text(
                               '${data.className} · ${data.totalChildren} trẻ',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
-                                  color: KColors.inkSoft))),
+                                  color: context.k.inkSoft))),
                       Text('${data.pendingCount} chưa xong',
-                          style: const TextStyle(
-                              fontSize: 12, color: KColors.inkFaint)),
+                          style: TextStyle(
+                              fontSize: 12, color: context.k.inkFaint)),
                     ],
                   ),
                 ),
@@ -213,9 +213,9 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                               fontWeight: FontWeight.w500)),
                                       if (child.allergy != null)
                                         Text('Dị ứng: ${child.allergy}',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 fontSize: 12,
-                                                color: KColors.warn)),
+                                                color: context.k.warn)),
                                     ],
                                   ),
                                 ),
@@ -432,9 +432,9 @@ class _RecordingScreenState extends State<RecordingScreen>
         if (mounted) {
           setState(() => isBusy = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Vui lòng cấp quyền truy cập micro để ghi âm.'),
-              backgroundColor: KColors.warn,
+              backgroundColor: context.k.warn,
             ),
           );
         }
@@ -511,7 +511,7 @@ class _RecordingScreenState extends State<RecordingScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Không thể bắt đầu ghi âm: $e'),
-            backgroundColor: KColors.bad,
+            backgroundColor: context.k.bad,
           ),
         );
       }
@@ -540,10 +540,10 @@ class _RecordingScreenState extends State<RecordingScreen>
               isBusy = false;
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text(
                     'Bản ghi âm quá ngắn hoặc không có âm thanh. Vui lòng thử lại.'),
-                backgroundColor: KColors.warn,
+                backgroundColor: context.k.warn,
               ),
             );
           }
@@ -605,10 +605,10 @@ class _RecordingScreenState extends State<RecordingScreen>
                       ? Container(
                           width: 44,
                           height: 44,
-                          decoration: const BoxDecoration(
-                              color: KColors.brandTint, shape: BoxShape.circle),
-                          child: const Icon(Icons.groups_outlined,
-                              color: KColors.brand))
+                          decoration: BoxDecoration(
+                              color: context.k.brandTint, shape: BoxShape.circle),
+                          child: Icon(Icons.groups_outlined,
+                              color: context.k.brand))
                       : Avatar(name: widget.child?.name ?? 'Trẻ', size: 44),
                   const SizedBox(width: 12),
                   Expanded(
@@ -627,8 +627,8 @@ class _RecordingScreenState extends State<RecordingScreen>
                             style: Theme.of(context).textTheme.bodySmall),
                         if (!classroom && widget.child?.allergy != null)
                           Text('Dị ứng: ${widget.child?.allergy}',
-                              style: const TextStyle(
-                                  fontSize: 11, color: KColors.warn)),
+                              style: TextStyle(
+                                  fontSize: 11, color: context.k.warn)),
                       ],
                     ),
                   ),
@@ -643,22 +643,22 @@ class _RecordingScreenState extends State<RecordingScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: KColors.brandTint,
+                          color: context.k.brandTint,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: KColors.brand.withValues(alpha: 0.3)),
+                              color: context.k.brand.withValues(alpha: 0.3)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.swap_horiz_rounded,
-                                size: 15, color: KColors.brand),
+                                size: 15, color: context.k.brand),
                             SizedBox(width: 4),
                             Text('Đổi lớp',
                                 style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: KColors.brand)),
+                                    color: context.k.brand)),
                           ],
                         ),
                       ),
@@ -677,14 +677,14 @@ class _RecordingScreenState extends State<RecordingScreen>
                           horizontal: 20, vertical: 26),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: KColors.surface,
+                        color: context.k.surface,
                         borderRadius: BorderRadius.circular(KRadii.card),
                         border: Border.all(
-                            color: KColors.brand.withValues(alpha: .35),
+                            color: context.k.brand.withValues(alpha: .35),
                             width: 1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: KColors.brand.withValues(alpha: .08),
+                            color: context.k.brand.withValues(alpha: .08),
                             blurRadius: 18,
                             offset: const Offset(0, 5),
                           ),
@@ -697,11 +697,11 @@ class _RecordingScreenState extends State<RecordingScreen>
                             width: 72,
                             height: 72,
                             decoration: BoxDecoration(
-                              color: KColors.brandTint,
+                              color: context.k.brandTint,
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Icon(Icons.audio_file_rounded,
-                                size: 40, color: KColors.brand),
+                            child: Icon(Icons.audio_file_rounded,
+                                size: 40, color: context.k.brand),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -709,37 +709,37 @@ class _RecordingScreenState extends State<RecordingScreen>
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: KColors.ink),
+                                color: context.k.ink),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'Kích thước: ${_formatBytes(selectedFile!.size)}',
-                            style: const TextStyle(
-                                fontSize: 13, color: KColors.inkSoft),
+                            style: TextStyle(
+                                fontSize: 13, color: context.k.inkSoft),
                           ),
                           const SizedBox(height: 14),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: KColors.okTint,
+                              color: context.k.okTint,
                               borderRadius: BorderRadius.circular(99),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.check_circle_rounded,
-                                    size: 15, color: KColors.ok),
+                                    size: 15, color: context.k.ok),
                                 SizedBox(width: 6),
                                 Text(
                                   'Đã sẵn sàng tạo báo cáo',
                                   style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: KColors.ok),
+                                      color: context.k.ok),
                                 ),
                               ],
                             ),
@@ -780,9 +780,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                                     const EdgeInsets.symmetric(horizontal: 2),
                                 decoration: BoxDecoration(
                                   color: recording
-                                      ? KColors.brand.withValues(
+                                      ? context.k.brand.withValues(
                                           alpha: 0.5 + 0.5 * combined)
-                                      : KColors.brand.withValues(alpha: .28),
+                                      : context.k.brand.withValues(alpha: .28),
                                   borderRadius: BorderRadius.circular(99),
                                 ),
                               );
@@ -804,14 +804,14 @@ class _RecordingScreenState extends State<RecordingScreen>
                                 value: seconds / 180,
                                 strokeWidth: 4,
                                 strokeCap: StrokeCap.round,
-                                backgroundColor: KColors.surfaceSunken,
+                                backgroundColor: context.k.surfaceSunken,
                                 color: seconds >= 150
-                                    ? KColors.warn
-                                    : KColors.brand,
+                                    ? context.k.warn
+                                    : context.k.brand,
                               ),
                             ),
                           Material(
-                            color: recording ? KColors.bad : KColors.brand,
+                            color: recording ? context.k.bad : context.k.brand,
                             shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),
@@ -847,7 +847,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                             fontSize: 28,
                             fontWeight: FontWeight.w600,
                             color:
-                                seconds >= 150 ? KColors.warn : KColors.ink)),
+                                seconds >= 150 ? context.k.warn : context.k.ink)),
                     Text(
                       phase == 'ready'
                           ? 'Nhấn để bắt đầu ghi âm'
@@ -862,25 +862,25 @@ class _RecordingScreenState extends State<RecordingScreen>
                       const SizedBox(height: 18),
                       OutlinedButton.icon(
                         onPressed: _pickFile,
-                        icon: const Icon(Icons.upload_file_rounded,
-                            size: 20, color: KColors.brand),
-                        label: const Text(
+                        icon: Icon(Icons.upload_file_rounded,
+                            size: 20, color: context.k.brand),
+                        label: Text(
                           'Tải lên file ghi âm',
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: KColors.brand),
+                              color: context.k.brand),
                         ),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                              color: KColors.brand, width: 1.4),
+                          side: BorderSide(
+                              color: context.k.brand, width: 1.4),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 22, vertical: 12),
                           shape: RoundedRectangleBorder(
                               borderRadius:
                                   BorderRadius.circular(KRadii.control)),
                           backgroundColor:
-                              KColors.brandTint.withValues(alpha: .35),
+                              context.k.brandTint.withValues(alpha: .35),
                         ),
                       ),
                     ],
@@ -1342,7 +1342,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: const Text('Thử lại'),
             style: FilledButton.styleFrom(
-              backgroundColor: KColors.brand,
+              backgroundColor: context.k.brand,
             ),
             onPressed: () {
               Navigator.pop(context);
@@ -1535,15 +1535,15 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             StepIndicator(steps: steps, active: active),
             const Spacer(),
             KCard(
-              color: KColors.infoTint,
+              color: context.k.infoTint,
               padding: const EdgeInsets.all(14),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline,
                     size: 18,
-                    color: KColors.info,
+                    color: context.k.info,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -2228,9 +2228,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.description_outlined, color: KColors.brand, size: 22),
+            Icon(Icons.description_outlined, color: context.k.brand, size: 22),
             SizedBox(width: 8),
             Text('Text đã phân tích',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -2241,23 +2241,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Toàn bộ nội dung giọng nói từ file ghi âm đã được AI chuyển thành văn bản và phân tích:',
-                style: TextStyle(fontSize: 12.5, color: KColors.inkSoft),
+                style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
               ),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: KColors.surfaceSunken,
+                  color: context.k.surfaceSunken,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: KColors.line),
+                  border: Border.all(color: context.k.line),
                 ),
                 child: SelectableText(
                   text,
-                  style: const TextStyle(
-                      fontSize: 13.5, height: 1.6, color: KColors.ink),
+                  style: TextStyle(
+                      fontSize: 13.5, height: 1.6, color: context.k.ink),
                 ),
               ),
             ],
@@ -2425,7 +2425,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: KColors.canvas,
+      backgroundColor: context.k.canvas,
       constraints: const BoxConstraints(maxWidth: 480),
       builder: (_) => _AssignSheet(card: item, roster: roster),
     ).then((selected) {
@@ -2492,8 +2492,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
         onBack: widget.onBack,
         trailing: effectiveTranscript.isNotEmpty
             ? IconButton(
-                icon: const Icon(Icons.description_outlined,
-                    color: KColors.brand),
+                icon: Icon(Icons.description_outlined,
+                    color: context.k.brand),
                 tooltip: 'Xem text đã phân tích',
                 onPressed: () =>
                     _showTranscriptDialog(context, effectiveTranscript),
@@ -2533,23 +2533,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     Expanded(
                       child: Text(
                         'Từ 1 lần nói · ${items.length} ghi nhận',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
                             height: 1.25,
-                            color: KColors.ink),
+                            color: context.k.ink),
                       ),
                     ),
                     if (pendingCount > 0) ...[
                       TextButton.icon(
                         onPressed: _approveAll,
-                        icon: const Icon(Icons.done_all_rounded,
-                            size: 14, color: KColors.brand),
-                        label: const Text(
+                        icon: Icon(Icons.done_all_rounded,
+                            size: 14, color: context.k.brand),
+                        label: Text(
                           'Duyệt tất cả',
                           style: TextStyle(
                               fontSize: 11.5,
-                              color: KColors.brand,
+                              color: context.k.brand,
                               fontWeight: FontWeight.w600),
                         ),
                         style: TextButton.styleFrom(
@@ -2563,13 +2563,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     if (approvedCount > 0) ...[
                       TextButton.icon(
                         onPressed: _unapproveAll,
-                        icon: const Icon(Icons.undo_rounded,
-                            size: 14, color: KColors.warn),
-                        label: const Text(
+                        icon: Icon(Icons.undo_rounded,
+                            size: 14, color: context.k.warn),
+                        label: Text(
                           'Bỏ duyệt tất cả',
                           style: TextStyle(
                               fontSize: 11.5,
-                              color: KColors.warn,
+                              color: context.k.warn,
                               fontWeight: FontWeight.w600),
                         ),
                         style: TextButton.styleFrom(
@@ -2587,9 +2587,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Đọc lại theo đúng thứ tự cô đã kể.',
-                  style: TextStyle(fontSize: 12.5, color: KColors.inkSoft),
+                  style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
                 ),
                 const SizedBox(height: 16),
                 if (effectiveTranscript.isNotEmpty)
@@ -2644,9 +2644,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
         },
       ),
       bottomSheet: Container(
-        decoration: const BoxDecoration(
-          color: KColors.surface,
-          border: Border(top: BorderSide(color: KColors.line)),
+        decoration: BoxDecoration(
+          color: context.k.surface,
+          border: Border(top: BorderSide(color: context.k.line)),
           boxShadow: [
             BoxShadow(
                 color: Color(0x102a2926),
@@ -2659,12 +2659,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Sẽ gửi từ 1 lần nói này:',
               style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: KColors.inkSoft),
+                  color: context.k.inkSoft),
             ),
             const SizedBox(height: 7),
             _SummaryRow('📄', approvedCount, 'phiếu liên lạc cho phụ huynh'),
@@ -2677,14 +2677,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: _SurfaceBox(
                   padding: const EdgeInsets.all(8),
-                  color: KColors.warnTint,
-                  borderColor: KColors.warnTint,
+                  color: context.k.warnTint,
+                  borderColor: context.k.warnTint,
                   child: Text(
                     'Còn $unmatchedActiveCount đoạn chưa xử lý. Gán cho một bé, cả lớp hoặc bỏ qua để xác nhận.',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: KColors.warn),
+                        color: context.k.warn),
                   ),
                 ),
               ),
@@ -2693,14 +2693,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: _SurfaceBox(
                   padding: const EdgeInsets.all(8),
-                  color: KColors.brandTint,
-                  borderColor: KColors.brandTint,
+                  color: context.k.brandTint,
+                  borderColor: context.k.brandTint,
                   child: Text(
                     'Còn $pendingCount mục chưa duyệt. Bấm "Duyệt" từng mục hoặc loại bỏ để tiếp tục.',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: KColors.brand),
+                        color: context.k.brand),
                   ),
                 ),
               ),
@@ -2803,9 +2803,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.edit_note_rounded, color: KColors.brand),
+            Icon(Icons.edit_note_rounded, color: context.k.brand),
             SizedBox(width: 8),
             Text('Chỉnh sửa văn bản ghi âm',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -2817,9 +2817,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Bạn có thể chỉnh sửa lại nội dung văn bản dưới đây rồi bấm "Phân tích lại" để AI trích xuất lại thông tin:',
-                style: TextStyle(fontSize: 12.5, color: KColors.inkSoft),
+                style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -2830,10 +2830,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 decoration: InputDecoration(
                   hintText: 'Nhập nội dung văn bản...',
                   filled: true,
-                  fillColor: KColors.canvas,
+                  fillColor: context.k.canvas,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: KColors.line),
+                    borderSide: BorderSide(color: context.k.line),
                   ),
                 ),
               ),
@@ -2965,12 +2965,12 @@ class _AnalyzedTextCardState extends State<_AnalyzedTextCard> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: KColors.surface,
+        color: context.k.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: KColors.brand.withValues(alpha: 0.28)),
+        border: Border.all(color: context.k.brand.withValues(alpha: 0.28)),
         boxShadow: [
           BoxShadow(
-            color: KColors.brand.withValues(alpha: 0.05),
+            color: context.k.brand.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -2990,31 +2990,31 @@ class _AnalyzedTextCardState extends State<_AnalyzedTextCard> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: KColors.brandTint,
+                      color: context.k.brandTint,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.text_snippet_outlined,
-                        color: KColors.brand, size: 20),
+                    child: Icon(Icons.text_snippet_outlined,
+                        color: context.k.brand, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Xem lại text đã phân tích',
                           style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w700,
-                              color: KColors.ink),
+                              color: context.k.ink),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           isExpanded
                               ? 'Chạm để thu gọn'
                               : 'Chạm để xem lại toàn bộ text đã ghi âm',
-                          style: const TextStyle(
-                              fontSize: 11.5, color: KColors.inkSoft),
+                          style: TextStyle(
+                              fontSize: 11.5, color: context.k.inkSoft),
                         ),
                       ],
                     ),
@@ -3023,7 +3023,7 @@ class _AnalyzedTextCardState extends State<_AnalyzedTextCard> {
                     isExpanded
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
-                    color: KColors.inkSoft,
+                    color: context.k.inkSoft,
                   ),
                 ],
               ),
@@ -3041,15 +3041,15 @@ class _AnalyzedTextCardState extends State<_AnalyzedTextCard> {
                     constraints: const BoxConstraints(maxHeight: 200),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: KColors.canvas,
+                      color: context.k.canvas,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: KColors.line),
+                      border: Border.all(color: context.k.line),
                     ),
                     child: SingleChildScrollView(
                       child: SelectableText(
                         widget.text,
-                        style: const TextStyle(
-                            fontSize: 13, height: 1.55, color: KColors.ink),
+                        style: TextStyle(
+                            fontSize: 13, height: 1.55, color: context.k.ink),
                       ),
                     ),
                   ),
@@ -3125,13 +3125,13 @@ class _ObservationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     if (card.decision == ObservationDecision.discarded) {
       return _SurfaceBox(
-        color: KColors.canvas,
+        color: context.k.canvas,
         child: Row(
           children: [
             Expanded(
               child: Text(
                 'Đã loại bỏ · ${card.name}',
-                style: const TextStyle(fontSize: 12, color: KColors.inkFaint),
+                style: TextStyle(fontSize: 12, color: context.k.inkFaint),
               ),
             ),
             TextButton.icon(
@@ -3148,9 +3148,9 @@ class _ObservationTile extends StatelessWidget {
 
     return _SurfaceBox(
       color: isUnmatched
-          ? KColors.warnTint.withValues(alpha: 0.45)
-          : KColors.surface,
-      borderColor: isUnmatched ? KColors.warn : KColors.line,
+          ? context.k.warnTint.withValues(alpha: 0.45)
+          : context.k.surface,
+      borderColor: isUnmatched ? context.k.warn : context.k.line,
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3160,7 +3160,7 @@ class _ObservationTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 12,
-                backgroundColor: isUnmatched ? KColors.warn : KColors.brand,
+                backgroundColor: isUnmatched ? context.k.warn : context.k.brand,
                 child: Text(
                   '${index + 1}',
                   style: const TextStyle(
@@ -3170,22 +3170,22 @@ class _ObservationTile extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               if (card.matched)
                 Avatar(name: card.name, size: 32)
               else
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 16,
-                  backgroundColor: KColors.warnTint,
+                  backgroundColor: context.k.warnTint,
                   child: Text(
                     '?',
                     style: TextStyle(
                         fontSize: 16,
-                        color: KColors.warn,
+                        color: context.k.warn,
                         fontWeight: FontWeight.w700),
                   ),
                 ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3194,7 +3194,7 @@ class _ObservationTile extends StatelessWidget {
                       card.name,
                       style: TextStyle(
                         fontSize: 14,
-                        color: isUnmatched ? KColors.warn : KColors.ink,
+                        color: isUnmatched ? context.k.warn : context.k.ink,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -3202,8 +3202,8 @@ class _ObservationTile extends StatelessWidget {
                       isUnmatched
                           ? 'Đoạn này có nhắc tên nhưng chưa khớp'
                           : 'Đoạn ${index + 1}',
-                      style: const TextStyle(
-                          fontSize: 11, color: KColors.inkFaint),
+                      style: TextStyle(
+                          fontSize: 11, color: context.k.inkFaint),
                     ),
                   ],
                 ),
@@ -3211,37 +3211,37 @@ class _ObservationTile extends StatelessWidget {
             ],
           ),
           if (isUnmatched) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _SurfaceBox(
-              color: KColors.surface,
-              padding: const EdgeInsets.all(10),
+              color: context.k.surface,
+              padding: EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Lời cô nói, chỉ cô thấy',
+                  Text('Lời cô nói, chỉ cô thấy',
                       style:
-                          TextStyle(fontSize: 10.5, color: KColors.inkFaint)),
-                  const SizedBox(height: 3),
+                          TextStyle(fontSize: 10.5, color: context.k.inkFaint)),
+                  SizedBox(height: 3),
                   Text(
                     card.snippet.isNotEmpty
                         ? card.snippet
                         : 'Chưa nhận diện chính xác được bé trong lớp.',
                     style:
-                        const TextStyle(fontSize: 12, color: KColors.inkSoft),
+                        TextStyle(fontSize: 12, color: context.k.inkSoft),
                   ),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 10),
-          _buildReportLine('🍽️', 'Bữa ăn', card.eating),
-          _buildReportLine('😴', 'Giấc ngủ', card.sleep),
-          _buildReportLine('🎨', 'Hoạt động', card.activities),
-          _buildReportLine('🎭', 'Tâm trạng', card.mood),
+          SizedBox(height: 10),
+          _buildReportLine(context, '🍽️', 'Bữa ăn', card.eating),
+          _buildReportLine(context, '😴', 'Giấc ngủ', card.sleep),
+          _buildReportLine(context, '🎨', 'Hoạt động', card.activities),
+          _buildReportLine(context, '🎭', 'Tâm trạng', card.mood),
           if (card.health.isNotEmpty)
-            _buildReportLine('🏥', 'Sức khỏe', card.health),
+            _buildReportLine(context, '🏥', 'Sức khỏe', card.health),
           if (card.note.trim().isNotEmpty)
-            _buildReportLine('📝', 'Ghi chú', card.note.trim()),
+            _buildReportLine(context, '📝', 'Ghi chú', card.note.trim()),
           if (card.eating.isEmpty &&
               card.sleep.isEmpty &&
               card.activities.isEmpty &&
@@ -3249,14 +3249,14 @@ class _ObservationTile extends StatelessWidget {
               card.health.isEmpty &&
               card.note.trim().isEmpty &&
               !isUnmatched)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 'Không có thông tin chi tiết được ghi nhận',
                 style: TextStyle(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
-                    color: KColors.inkFaint),
+                    color: context.k.inkFaint),
               ),
             ),
           const Divider(height: 20),
@@ -3265,7 +3265,7 @@ class _ObservationTile extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: KColors.warn,
+                  backgroundColor: context.k.warn,
                   minimumSize: const Size(double.infinity, 40),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(KRadii.control)),
@@ -3307,8 +3307,8 @@ class _ObservationTile extends StatelessWidget {
             Center(
               child: TextButton(
                 onPressed: onDiscard,
-                child: const Text('Bỏ đoạn này',
-                    style: TextStyle(color: KColors.inkFaint)),
+                child: Text('Bỏ đoạn này',
+                    style: TextStyle(color: context.k.inkFaint)),
               ),
             ),
           ] else
@@ -3348,15 +3348,15 @@ class _ObservationTile extends StatelessWidget {
                 else if (card.decision == ObservationDecision.approved) ...[
                   OutlinedButton.icon(
                     onPressed: onUnapprove,
-                    icon: const Icon(Icons.undo_rounded,
-                        size: 15, color: KColors.warn),
-                    label: const Text(
+                    icon: Icon(Icons.undo_rounded,
+                        size: 15, color: context.k.warn),
+                    label: Text(
                       'Bỏ duyệt',
                       style: TextStyle(
-                          color: KColors.warn, fontWeight: FontWeight.w600),
+                          color: context.k.warn, fontWeight: FontWeight.w600),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: KColors.warn, width: 1.2),
+                      side: BorderSide(color: context.k.warn, width: 1.2),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       shape: RoundedRectangleBorder(
@@ -3371,23 +3371,23 @@ class _ObservationTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 7),
                       decoration: BoxDecoration(
-                        color: KColors.okTint,
+                        color: context.k.okTint,
                         borderRadius: BorderRadius.circular(KRadii.control),
                         border: Border.all(
-                            color: KColors.ok.withValues(alpha: 0.3)),
+                            color: context.k.ok.withValues(alpha: 0.3)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.check_circle_rounded,
-                              size: 15, color: KColors.ok),
+                              size: 15, color: context.k.ok),
                           SizedBox(width: 5),
                           Text(
                             'Đã duyệt',
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: KColors.ok),
+                                color: context.k.ok),
                           ),
                         ],
                       ),
@@ -3396,8 +3396,8 @@ class _ObservationTile extends StatelessWidget {
                 ] else
                   OutlinedButton.icon(
                     onPressed: onToggleApprove,
-                    icon: const Icon(Icons.check_rounded, size: 15),
-                    label: const Text('Duyệt'),
+                    icon: Icon(Icons.check_rounded, size: 15),
+                    label: Text('Duyệt'),
                   ),
               ],
             ),
@@ -3406,23 +3406,23 @@ class _ObservationTile extends StatelessWidget {
     );
   }
 
-  Widget _buildReportLine(String emoji, String label, String text) {
-    if (text.isEmpty) return const SizedBox.shrink();
+  Widget _buildReportLine(BuildContext context, String emoji, String label, String text) {
+    if (text.isEmpty) return SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: EdgeInsets.only(bottom: 5),
       child: Text.rich(
         TextSpan(
           children: [
             TextSpan(
               text: '$emoji $label: ',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: KColors.inkSoft),
+                  color: context.k.inkSoft),
             ),
             TextSpan(
               text: text,
-              style: const TextStyle(fontSize: 13, color: KColors.ink),
+              style: TextStyle(fontSize: 13, color: context.k.ink),
             ),
           ],
         ),
@@ -3449,9 +3449,9 @@ class _SurfaceBox extends StatelessWidget {
     return Container(
       padding: padding ?? const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color ?? KColors.surface,
+        color: color ?? context.k.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor ?? KColors.line),
+        border: Border.all(color: borderColor ?? context.k.line),
       ),
       child: child,
     );
@@ -3479,16 +3479,16 @@ class _SummaryRow extends StatelessWidget {
             child: Text(
               '$count',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: KColors.ink),
+                  color: context.k.ink),
             ),
           ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(label,
-                style: const TextStyle(fontSize: 12.5, color: KColors.ink)),
+                style: TextStyle(fontSize: 12.5, color: context.k.ink)),
           ),
         ],
       ),
@@ -3527,17 +3527,17 @@ class _AssignSheetState extends State<_AssignSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Gán cho một bé',
+            Text('Gán cho một bé',
                 style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: KColors.ink)),
+                    color: context.k.ink)),
             const SizedBox(height: 2),
             Text(
               widget.card.snippet.isNotEmpty
                   ? 'Đoạn nói: "${widget.card.snippet}". Chọn bé tương ứng.'
                   : 'Chọn bé tương ứng với đoạn ghi âm này.',
-              style: const TextStyle(fontSize: 12, color: KColors.inkSoft),
+              style: TextStyle(fontSize: 12, color: context.k.inkSoft),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -3564,8 +3564,8 @@ class _AssignSheetState extends State<_AssignSheet> {
                   subtitle: list[i].nickname != null &&
                           list[i].nickname!.isNotEmpty
                       ? Text('Tên gọi ở lớp: ${list[i].nickname}',
-                          style: const TextStyle(
-                              fontSize: 11.5, color: KColors.inkSoft))
+                          style: TextStyle(
+                              fontSize: 11.5, color: context.k.inkSoft))
                       : null,
                   trailing: const Icon(Icons.chevron_right_rounded, size: 18),
                   onTap: () => Navigator.pop(context, list[i]),
@@ -3604,25 +3604,25 @@ class _DoneScreenView extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 16),
-          const Center(
+          Center(
             child: CircleAvatar(
               radius: 36,
-              backgroundColor: KColors.brand,
+              backgroundColor: context.k.brand,
               child: Icon(Icons.check_rounded, size: 40, color: Colors.white),
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Cô nói một lần.\nBa nơi đã nhận.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 22, fontWeight: FontWeight.w800, color: KColors.ink),
+                fontSize: 22, fontWeight: FontWeight.w800, color: context.k.ink),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Không phải nhập lại ở đâu cả. Chạm từng nơi để xem hồ sơ đã tới đúng người.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, color: KColors.inkSoft),
+            style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
           ),
           const SizedBox(height: 24),
           _SurfaceBox(
@@ -3641,7 +3641,7 @@ class _DoneScreenView extends StatelessWidget {
           _SurfaceBox(
             child: Text(
               '$parentReportsCount phụ huynh nhận phiếu. Sổ sức khỏe có $healthRecordsCount dòng mới. Tất cả đến từ ghi âm lúc $recordingTime.',
-              style: const TextStyle(fontSize: 12.5, color: KColors.inkSoft),
+              style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
             ),
           ),
           const SizedBox(height: 24),
@@ -3682,8 +3682,8 @@ class _CounterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final done = approved >= total && total > 0;
-    final color = done ? KColors.brand : KColors.inkSoft;
-    final bg = done ? KColors.brandTint : KColors.canvas;
+    final color = done ? context.k.brand : context.k.inkSoft;
+    final bg = done ? context.k.brandTint : context.k.canvas;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -3781,8 +3781,8 @@ class _EditObservationSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      decoration: const BoxDecoration(
-        color: KColors.surface,
+      decoration: BoxDecoration(
+        color: context.k.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.fromLTRB(16, 12, 16, bottomInset + 16),
@@ -3799,7 +3799,7 @@ class _EditObservationSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: KColors.line,
+                color: context.k.line,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -3809,12 +3809,12 @@ class _EditObservationSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isUnmatched ? KColors.warnTint : KColors.brandTint,
+                  color: isUnmatched ? context.k.warnTint : context.k.brandTint,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   Icons.edit_note_rounded,
-                  color: isUnmatched ? KColors.warn : KColors.brand,
+                  color: isUnmatched ? context.k.warn : context.k.brand,
                   size: 22,
                 ),
               ),
@@ -3825,10 +3825,10 @@ class _EditObservationSheet extends StatelessWidget {
                   children: [
                     Text(
                       'Chỉnh sửa · $title',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: KColors.ink,
+                        color: context.k.ink,
                       ),
                     ),
                     Text(
@@ -3838,13 +3838,14 @@ class _EditObservationSheet extends StatelessWidget {
                               ? 'Chỉnh sửa nội dung đoạn chưa phân loại'
                               : 'Chỉnh sửa chi tiết thông tin cho bé',
                       style:
-                          const TextStyle(fontSize: 12, color: KColors.inkSoft),
+                          TextStyle(fontSize: 12, color: context.k.inkSoft),
                     ),
                   ],
                 ),
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context, false),
+                tooltip: 'Đóng',
                 icon: const Icon(Icons.close_rounded),
                 visualDensity: VisualDensity.compact,
               ),
@@ -3858,7 +3859,7 @@ class _EditObservationSheet extends StatelessWidget {
               child: Column(
                 children: [
                   if (isUnmatched) ...[
-                    _buildField(
+                    _buildField(context,
                       emoji: '💬',
                       label: 'Nội dung đoạn nói',
                       controller: snippetCtrl,
@@ -3866,13 +3867,13 @@ class _EditObservationSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  _buildField(
+                  _buildField(context,
                     emoji: '🍽️',
                     label: 'Bữa ăn',
                     controller: eatingCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(
+                  _buildField(context,
                     emoji: '😴',
                     label: 'Giấc ngủ',
                     controller: sleepCtrl,
@@ -3881,25 +3882,25 @@ class _EditObservationSheet extends StatelessWidget {
                     suffixText: 'phút',
                   ),
                   const SizedBox(height: 12),
-                  _buildField(
+                  _buildField(context,
                     emoji: '🎨',
                     label: 'Hoạt động',
                     controller: activitiesCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(
+                  _buildField(context,
                     emoji: '🎭',
                     label: 'Tâm trạng',
                     controller: moodCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(
+                  _buildField(context,
                     emoji: '🏥',
                     label: 'Sức khỏe',
                     controller: healthCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(
+                  _buildField(context,
                     emoji: '📝',
                     label: 'Ghi chú cho phụ huynh',
                     controller: noteCtrl,
@@ -3944,7 +3945,7 @@ class _EditObservationSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildField({
+  Widget _buildField(BuildContext context, {
     required String emoji,
     required String label,
     required TextEditingController controller,
@@ -3963,10 +3964,10 @@ class _EditObservationSheet extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: KColors.ink),
+                  color: context.k.ink),
             ),
           ],
         ),
@@ -3986,35 +3987,35 @@ class _EditObservationSheet extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       '$currentLength/$maxLength ký tự',
-                      style: const TextStyle(
-                          fontSize: 11.5, color: KColors.inkSoft),
+                      style: TextStyle(
+                          fontSize: 11.5, color: context.k.inkSoft),
                     ),
                   );
                 }
               : null,
-          style: const TextStyle(fontSize: 13.5, color: KColors.ink),
+          style: TextStyle(fontSize: 13.5, color: context.k.ink),
           decoration: InputDecoration(
             suffixText: suffixText,
-            suffixStyle: const TextStyle(
+            suffixStyle: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: KColors.inkSoft),
+                color: context.k.inkSoft),
             isDense: true,
             filled: true,
-            fillColor: KColors.canvas,
+            fillColor: context.k.canvas,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: KColors.brand, width: 1.5),
+              borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
           ),
         ),

@@ -55,6 +55,9 @@ dependencies:
   # Temp directory for copying assets before upload
   path_provider: ^2.1.4
 
+  # Persist user preferences (theme mode)
+  shared_preferences: ^2.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
