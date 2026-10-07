@@ -18,8 +18,12 @@ import re
 
 # Từ chỉ trẻ em/học sinh
 CHILD_REFERENCES: list[str] = [
-    "bé", "con", "bạn", "học sinh", "trẻ", "nhà mình",
-    "bé nhà", "con mình", "trộm vía", "tính nay", "bữa nay", "nay"
+    "bé", "con", "bạn", "học sinh", "trẻ", "nhà mình", "em", "cháu",
+    "bé nhà", "con mình",
+    # Tình cảm / thân mật
+    "nhóc", "cưng",
+    # Giới tính rõ ràng
+    "con gái", "con trai",
 ]
 
 # Từ khóa liên quan đến ĂN UỐNG
@@ -27,11 +31,20 @@ EATING_KEYWORDS: list[str] = [
     # Động từ/hiện tượng
     "ăn", "bỏ mứa", "chán ăn", "tự xúc", "ngậm cơm", "dỗ", "nhai", "nuốt",
     "hết", "thèm", "đòi", "xin thêm",
+    "ăn không hết", "ăn hết phần", "ăn vặt", "đòi ăn",
+    "kén ăn", "xúc được", "nếm",
     # Thức ăn
     "cơm", "cháo", "sữa", "bánh", "thịt", "trứng", "rau", "canh",
     "sữa chua", "suất", "phần", "bát", "đũa",
+    "bún", "phở", "mì", "bánh mì", "chè", "xôi",
+    # Đồ uống
+    "nước", "sữa tươi", "sữa bột", "nước cam",
+    # Tráng miệng / hoa quả
+    "trái cây", "hoa quả", "cam", "táo", "chuối", "nho",
     # Mô tả ăn
-    "ngoan", "hào hứng", "ngon", "ít", "nhanh", "chậm", "ngon lành"
+    "ngoan", "hào hứng", "ngon", "ít", "nhanh", "chậm", "ngon lành",
+    # Trạng thái no/đói
+    "no", "đói", "no nê", "no bụng",
 ]
 
 # Từ khóa liên quan đến NGỦ
@@ -39,11 +52,16 @@ SLEEPING_KEYWORDS: list[str] = [
     # Động từ/hiện tượng
     "ngủ", "trằn trọc", "thức giấc", "quấy", "khóc đòi",
     "tè dầm", "một mạch", "lim dim", "li bì",
+    "ngon giấc", "say sưa", "thiếp đi", "ngủ thiếp",
+    "giật mình", "khóc thét", "mơ", "ác mộng",
     # Thời gian ngủ
     "giấc", "trưa", "buổi trưa", "ngắn", "dài",
+    "giấc sáng", "giấc chiều", "giấc tối", "giấc ngủ",
+    "đi ngủ", "nghỉ trưa", "nằm",
+    # Đồ vật
+    "giường", "nôi", "chiếu",
     # Yêu cầu khi ngủ
     "đòi bế", "đòi mẹ", "xin uống nước", "xin đi vệ sinh", "ngồi dậy",
-    "giật mình", "khóc thét"
 ]
 
 # Từ khóa liên quan đến SỨC KHỎE
@@ -54,11 +72,19 @@ HEALTH_KEYWORDS: list[str] = [
     "đau bụng", "nôn ói", "tiêu chảy", "táo bón",
     # Triệu chứng hô hấp
     "ho", "sổ mũi", "nghẹn", "đau họng", "rát họng", "ho khù khụ",
+    "viêm họng", "viêm mũi", "viêm phổi", "viêm tai",
+    # Triệu chứng đau
+    "đau đầu", "nhức đầu", "đau răng", "nhức răng",
     # Triệu chứng da
     "ngứa", "nổi mẩn",
+    "dị ứng", "mề đay", "phát ban",
     # Triệu chứng chung
     "sốt", "ấm đầu", "hắt hơi", "mệt", "lừ đừ",
-    "ốm", "mệt mỏi"
+    "ốm", "mệt mỏi", "bệnh", "thương",
+    # Chấn thương
+    "té", "ngã", "va", "bị thương", "xước", "bầm",
+    # Y tế
+    "bác sĩ", "thuốc", "uống thuốc", "tiêm", "chích",
 ]
 
 # Từ khóa liên quan đến HOẠT ĐỘNG
@@ -67,6 +93,24 @@ ACTIVITIES_KEYWORDS: list[str] = [
     "vẽ tranh", "xếp hình", "nặn đất", "đọc truyện", "kể chuyện",
     "hát", "nhảy múa", "âm nhạc", "gấp giấy", "tô màu",
     "chơi cầu trượt", "trốn tìm", "chơi đồ hàng", "ngắm hoa",
+    # Đồ chơi thông minh
+    "xếp lego", "ghép hình", "xếp khối", "lắp ráp",
+    # Chơi ngoài trời
+    "chơi cát", "chơi nước", "chơi đất",
+    # Thủ công
+    "cắt dán", "cắt giấy", "dán", "dán sticker",
+    # Dã ngoại
+    "đi dạo", "tham quan", "công viên", "vườn trường",
+    # Thể thao
+    "đá bóng", "ném bóng", "bắt bóng",
+    # Vệ sinh cá nhân (giáo dục kỹ năng)
+    "rửa tay", "đánh răng", "tắm",
+    # Học tập
+    "đếm", "đọc sách", "tập nói", "tập đếm",
+    # Kỹ năng xã hội
+    "chia sẻ", "giúp đỡ", "kết bạn",
+    # Thu dọn
+    "xếp đồ chơi", "dọn dẹp", "thu dọn",
     # Mô tả hoạt động
     "chơi", "hoạt động", "ngoài trời", "tập trung", "lơ đễnh",
     "tích cực", "năng động", "chạy nhảy",
@@ -80,14 +124,27 @@ ACTIVITIES_KEYWORDS: list[str] = [
 MOOD_KEYWORDS: list[str] = [
     # Tích cực
     "vui vẻ", "ngoan", "hào hứng",
-    # Tiêu cực
+    "tươi vui", "vui tươi", "rạng rỡ", "phấn khởi",
+    "thích thú", "yêu thích",
+    "được khen", "được cô khen",
+    # Tiêu cực — giận / cáu
     "buồn", "quậy phá", "nghịch ngợm", "nhõng nhẽo", "tủi thân",
     "khóc nhè", "khó chịu",
+    "cáu", "cáu bẳn", "giận", "cau có", "bực bội", "bực mình",
+    # Hờn dỗi / bướng bỉnh
+    "hờn dỗi", "ngang bướng", "bướng bỉnh", "lì lợm", "ngang ngược",
+    # Sợ / lo
+    "sợ", "sợ hãi", "lo lắng", "hồi hộp",
+    # Tò mò / tích cực
+    "tò mò", "ham hỏi", "ham học hỏi",
     # Trung tính/mô tả
-    "lơ đễnh", "bình thường"
+    "lơ đễnh", "bình thường",
+    "bình tĩnh", "yên tĩnh", "hiền",
 ]
 
 # Từ khóa báo hiệu nội dung KHÔNG liên quan (negative patterns)
+# Lưu ý: transcript có thể chứa pattern irrelevant NHƯNG vẫn hợp lệ nếu
+# có child context (vd: "trời mưa, bé Lan ốm"). Rule 2 sẽ xử lý trường hợp này.
 IRRELEVANT_PATTERNS: list[str] = [
     # Giáo dục/lớp học (người lớn)
     r"bài giảng", r"giáo viên", r"sinh viên", r"điểm danh",
@@ -100,6 +157,22 @@ IRRELEVANT_PATTERNS: list[str] = [
     r"công việc", r"họp", r"deadline", r"email",
     # Thể thao (người lớn)
     r"bóng đá", r"tennis", r"gym", r"chạy bộ",
+    # Giải trí người lớn
+    r"ca sĩ", r"diễn viên", r"nghệ sĩ", r"showbiz", r"phim ảnh",
+    r"karaoke",
+    # Đồ uống có cồn / thuốc lá
+    r"uống bia", r"uống rượu", r"bia rượu", r"hút thuốc",
+    # Đời tư cá nhân
+    r"vợ chồng", r"chồng tôi", r"vợ tôi",
+    r"bạn trai", r"bạn gái", r"hẹn hò",
+    # Tài chính người lớn
+    r"lương", r"tiền lương", r"ngân hàng", r"vay tiền",
+    # Du lịch
+    r"du lịch", r"máy bay", r"khách sạn", r"resort",
+    # Mạng xã hội
+    r"youtube", r"tiktok", r"mạng xã hội", r"facebook",
+    # Test/demo
+    r"^test\s", r"^demo\s", r"^abc\s",
 ]
 
 
@@ -223,14 +296,18 @@ def validate_transcript_content(transcript: str) -> ValidationResult:
         )
     
     # Rule 2: Transcript có patterns không liên quan
-    if irrelevant_matches:
+    # Chỉ reject khi có irrelevant AND không có child context.
+    # Lý do: transcript có thể chứa từ ngữ "người lớn" (vd: "trời mưa", "email")
+    # nhưng vẫn hợp lệ nếu có child_references (vd: "trời mưa, bé Lan ốm").
+    has_child_context = category_counts["child_references"] > 0
+    if irrelevant_matches and not has_child_context:
         raise ValidationError(
             "Nội dung transcript có vẻ không liên quan đến báo cáo học sinh. "
             "Vui lòng kiểm tra lại nội dung.",
             reason="irrelevant_content"
         )
     
-    # Rule 3: Cần ít nhất 2 categories có keywords
+    # Rule 3: Cần ít nhất 1 categories có keywords
     if len(matched_categories) < 1:
         raise ValidationError(
             "Transcript không có đủ thông tin báo cáo học sinh. "
@@ -238,7 +315,7 @@ def validate_transcript_content(transcript: str) -> ValidationResult:
             reason="insufficient_categories"
         )
     
-    # Rule 4: Cần ít nhất 1 trong 3 categories quan trọng (eating, sleeping, health)
+    # Rule 4: Cần ít nhất 1 trong 5 categories quan trọng (eating, sleeping, health, activities, mood)
     important_categories = ["eating", "sleeping", "health","activities","mood"]
     has_important = any(cat in matched_categories for cat in important_categories)
     

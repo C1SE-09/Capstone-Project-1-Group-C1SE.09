@@ -271,6 +271,7 @@ def upload_voice_record(
     voice_record = VoiceRecord(
         teacher_id=teacher_id,
         child_id=child_id,
+        class_id=class_id,
         audio_url=audio_url,
         audio_duration=duration,
         file_size_bytes=file_size,
@@ -492,21 +493,42 @@ def re_extract_from_edited_transcript(
         # QUAN TRỌNG: filter theo class_id để tránh cross-class contamination
         # (bé lớp khác cùng tên có thể bị match nhầm).
         target_class_id = voice_record.class_id
-        if target_class_id:
-            children = (
-                db.query(Child)
-                .filter(Child.class_id == target_class_id)
-                .all()
-            )
-        else:
-            # VoiceRecord chưa gắn class (legacy data) → fallback lấy tất cả
-            # nhưng log warning để dev biết.
-            logger.warning(
-                "[ReExtract] VoiceRecord %s has no class_id; "
-                "falling back to db.query(Child).all() — risk of cross-class match.",
-                voice_id,
-            )
-            children = db.query(Child).all()
+        if not target_class_id:
+            # Legacy data: VoiceRecord cũ chưa gắn class (do bug trước đó).
+            # Fallback an toàn: dùng class của teacher (homeroom) thay vì
+            # db.query(Child).all() — vì lấy all sẽ match chéo giữa các lớp.
+            teacher = db.query(Teacher).filter(
+                Teacher.teacher_id == voice_record.teacher_id
+            ).first() if voice_record.teacher_id else None
+            if teacher and teacher.class_id:
+                target_class_id = teacher.class_id
+                logger.warning(
+                    "[ReExtract] VoiceRecord %s has no class_id; "
+                    "fallback to teacher's homeroom class_id=%s",
+                    voice_id, target_class_id,
+                )
+            else:
+                logger.error(
+                    "[ReExtract] VoiceRecord %s has no class_id and teacher "
+                    "has no homeroom class — cannot safely match children. "
+                    "Refusing to fall back to db.query(Child).all() to avoid "
+                    "cross-class contamination.",
+                    voice_id,
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "VoiceRecord không gắn lớp và giáo viên cũng chưa gắn "
+                        "lớp chủ nhiệm — không thể xác định phạm vi matching. "
+                        "Vui lòng liên hệ admin."
+                    ),
+                )
+
+        children = (
+            db.query(Child)
+            .filter(Child.class_id == target_class_id)
+            .all()
+        )
 
         if not children:
             raise HTTPException(
