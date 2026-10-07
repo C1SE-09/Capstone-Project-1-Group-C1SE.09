@@ -111,7 +111,7 @@ void main() {
 
     // Verify deleted items per user request
     expect(find.text('Ghi nhớ đăng nhập'), findsNothing);
-    expect(find.text('Quên mật khẩu?'), findsNothing);
+    expect(find.text('Quên mật khẩu?'), findsOneWidget);
     expect(find.text('Chưa có tài khoản? '), findsNothing);
     expect(find.text('Đăng ký ngay'), findsNothing);
 

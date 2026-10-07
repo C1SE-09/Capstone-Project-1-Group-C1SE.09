@@ -289,7 +289,9 @@ def get_class_dashboard(
             pending.append(
                 {
                     "child": _child_dict(child),
-                    "status": "read" if report.status == DailyReportStatus.READ else "published",
+                    "status": "read"
+                    if report.status == DailyReportStatus.READ
+                    else "published",
                     "updated_at": None,
                 }
             )
@@ -581,14 +583,16 @@ def mark_report_as_read(
     - Cập nhật read_at -> thời gian hiện tại (nếu chưa có).
     """
     report = (
-        db.query(DailyReport)
-        .filter(DailyReport.daily_report_id == report_id)
-        .first()
+        db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
     )
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    if report.status in (DailyReportStatus.SENT, DailyReportStatus.PUBLISHED, DailyReportStatus.READ):
+    if report.status in (
+        DailyReportStatus.SENT,
+        DailyReportStatus.PUBLISHED,
+        DailyReportStatus.READ,
+    ):
         report.status = DailyReportStatus.READ
         if not report.read_at:
             report.read_at = datetime.now(tz=timezone.utc)
@@ -607,4 +611,3 @@ def mark_parent_report_as_read(
     db: Session = Depends(get_db),
 ):
     return mark_report_as_read(report_id=report_id, db=db)
-

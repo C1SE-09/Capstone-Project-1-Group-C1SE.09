@@ -203,12 +203,12 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                 Container(
                   margin: const EdgeInsets.only(bottom: 14),
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: KColors.surfaceSunken, borderRadius: BorderRadius.circular(KRadii.control)),
-                  child: const Row(
+                  decoration: BoxDecoration(color: context.k.surfaceSunken, borderRadius: BorderRadius.circular(KRadii.control)),
+                  child: Row(
                     children: [
-                      Icon(Icons.check_circle_outline, size: 18, color: KColors.ok),
+                      Icon(Icons.check_circle_outline, size: 18, color: context.k.ok),
                       SizedBox(width: 10),
-                      Text('Báo cáo đã gửi, không thể sửa.', style: TextStyle(fontSize: 13, color: KColors.inkSoft)),
+                      Text('Báo cáo đã gửi, không thể sửa.', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
                     ],
                   ),
                 ),
@@ -278,7 +278,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                       if (submitError != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(submitError!, style: const TextStyle(color: KColors.bad)),
+                          child: Text(submitError!, style: TextStyle(color: context.k.bad)),
                         ),
                       Row(
                         children: [
@@ -404,7 +404,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: KColors.surfaceSunken, borderRadius: BorderRadius.circular(KRadii.control)),
+            decoration: BoxDecoration(color: context.k.surfaceSunken, borderRadius: BorderRadius.circular(KRadii.control)),
             child: Row(
               children: [
                 Avatar(name: widget.child.name),
@@ -413,7 +413,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    Text('Báo cáo ngày $reportDateText', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
+                    Text('Báo cáo ngày $reportDateText', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
                   ],
                 ),
               ],
@@ -464,8 +464,8 @@ class _FieldBlock extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: KColors.surface,
-        border: Border.all(color: KColors.line),
+        color: context.k.surface,
+        border: Border.all(color: context.k.line),
         borderRadius: BorderRadius.circular(KRadii.card),
       ),
       child: Column(

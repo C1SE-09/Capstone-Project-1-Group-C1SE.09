@@ -26,16 +26,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models.user import Class_, School, Teacher
+    from app.models.user import Class_, Teacher
 
 
 class TimeSlot(Base, TimestampMixin):
-    """Standard daily time slots defined for a school.
+    """Standard daily time slots defined for the system.
 
     Columns
     -------
     slot_id     : UUID PK
-    school_id   : FK → school.school_id (CASCADE)
     name        : Display name (e.g., "7h00 - 7h30", "7h30 - 8h00")
     start_time  : Start time string (e.g., "07:00")
     end_time    : End time string (e.g., "07:30")
@@ -45,9 +44,8 @@ class TimeSlot(Base, TimestampMixin):
     __tablename__ = "time_slot"
 
     __table_args__ = (
-        Index("ix_time_slot_school_id", "school_id"),
-        Index("ix_time_slot_order", "school_id", "order_index"),
-        {"comment": "Daily time slot definitions per school"},
+        Index("ix_time_slot_order", "order_index"),
+        {"comment": "Daily time slot definitions"},
     )
 
     slot_id: Mapped[uuid.UUID] = mapped_column(
@@ -55,12 +53,6 @@ class TimeSlot(Base, TimestampMixin):
         primary_key=True,
         default=uuid.uuid4,
         comment="Surrogate primary key (UUID v4)",
-    )
-    school_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("school.school_id", ondelete="CASCADE", name="fk_time_slot_school_id"),
-        nullable=False,
-        comment="Owning school",
     )
     name: Mapped[str] = mapped_column(
         String(100),
@@ -85,13 +77,14 @@ class TimeSlot(Base, TimestampMixin):
     )
 
     # Relationships
-    school: Mapped[School] = relationship("School", lazy="joined")
     schedules: Mapped[list[ClassSchedule]] = relationship(
         "ClassSchedule", back_populates="time_slot", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:  # pragma: no cover
-        return f"<TimeSlot id={self.slot_id!s} name={self.name!r} start={self.start_time}>"
+        return (
+            f"<TimeSlot id={self.slot_id!s} name={self.name!r} start={self.start_time}>"
+        )
 
 
 class Subject(Base, TimestampMixin):
@@ -100,7 +93,6 @@ class Subject(Base, TimestampMixin):
     Columns
     -------
     subject_id  : UUID PK
-    school_id   : FK → school.school_id (CASCADE)
     name        : Subject/Activity name (e.g., "Tiếng Việt", "Tập thể dục", "Mỹ thuật")
     code        : Short code (e.g., "VIE", "ART")
     color_code  : Color code for UI rendering (e.g., "#4CAF50")
@@ -110,8 +102,8 @@ class Subject(Base, TimestampMixin):
     __tablename__ = "subject"
 
     __table_args__ = (
-        UniqueConstraint("school_id", "name", name="uq_subject_school_name"),
-        Index("ix_subject_school_id", "school_id"),
+        UniqueConstraint("name", name="uq_subject_name"),
+        Index("ix_subject_name", "name"),
         {"comment": "Subjects and activity types for timetable"},
     )
 
@@ -120,12 +112,6 @@ class Subject(Base, TimestampMixin):
         primary_key=True,
         default=uuid.uuid4,
         comment="Surrogate primary key (UUID v4)",
-    )
-    school_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("school.school_id", ondelete="CASCADE", name="fk_subject_school_id"),
-        nullable=False,
-        comment="Owning school",
     )
     name: Mapped[str] = mapped_column(
         String(100),
@@ -150,7 +136,6 @@ class Subject(Base, TimestampMixin):
     )
 
     # Relationships
-    school: Mapped[School] = relationship("School", lazy="joined")
     schedules: Mapped[list[ClassSchedule]] = relationship(
         "ClassSchedule", back_populates="subject", cascade="all, delete-orphan"
     )
@@ -193,25 +178,37 @@ class ClassSchedule(Base, TimestampMixin):
     )
     class_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("class.class_id", ondelete="CASCADE", name="fk_class_schedule_class_id"),
+        ForeignKey(
+            "class.class_id", ondelete="CASCADE", name="fk_class_schedule_class_id"
+        ),
         nullable=False,
         comment="Classroom entity",
     )
     subject_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("subject.subject_id", ondelete="CASCADE", name="fk_class_schedule_subject_id"),
+        ForeignKey(
+            "subject.subject_id",
+            ondelete="CASCADE",
+            name="fk_class_schedule_subject_id",
+        ),
         nullable=False,
         comment="Subject entity",
     )
     slot_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("time_slot.slot_id", ondelete="CASCADE", name="fk_class_schedule_slot_id"),
+        ForeignKey(
+            "time_slot.slot_id", ondelete="CASCADE", name="fk_class_schedule_slot_id"
+        ),
         nullable=False,
         comment="Time slot entity",
     )
     teacher_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("teacher.teacher_id", ondelete="SET NULL", name="fk_class_schedule_teacher_id"),
+        ForeignKey(
+            "teacher.teacher_id",
+            ondelete="SET NULL",
+            name="fk_class_schedule_teacher_id",
+        ),
         nullable=True,
         comment="Assigned teacher for this period (optional)",
     )
@@ -245,8 +242,12 @@ class ClassSchedule(Base, TimestampMixin):
 
     # Relationships
     class_: Mapped[Class_] = relationship("Class_", lazy="joined")
-    subject: Mapped[Subject] = relationship("Subject", back_populates="schedules", lazy="joined")
-    time_slot: Mapped[TimeSlot] = relationship("TimeSlot", back_populates="schedules", lazy="joined")
+    subject: Mapped[Subject] = relationship(
+        "Subject", back_populates="schedules", lazy="joined"
+    )
+    time_slot: Mapped[TimeSlot] = relationship(
+        "TimeSlot", back_populates="schedules", lazy="joined"
+    )
     teacher: Mapped[Teacher | None] = relationship("Teacher", lazy="joined")
 
     def __repr__(self) -> str:  # pragma: no cover

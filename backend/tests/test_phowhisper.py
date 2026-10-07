@@ -30,9 +30,9 @@ pytestmark = pytest.mark.skipif(
 SAMPLES_DIR = Path(__file__).parent / "audio_samples"
 SAMPLE_FILES = {
     "test-1.wav": SAMPLES_DIR / "test-1.wav",  # ~112 KB
-    "test2.wav": SAMPLES_DIR / "test2.wav",    # ~880 KB
+    "test2.wav": SAMPLES_DIR / "test2.wav",  # ~880 KB
     "test3_ad.wav": SAMPLES_DIR / "test3_ad.wav",  # ~740 KB
-    "test5.wav": SAMPLES_DIR / "test5.wav",    # ~328 KB
+    "test5.wav": SAMPLES_DIR / "test5.wav",  # ~328 KB
 }
 
 

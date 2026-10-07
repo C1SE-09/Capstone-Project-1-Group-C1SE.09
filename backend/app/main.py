@@ -7,6 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import auth
+from app.api.endpoints.schedule import (
+    router as schedule_router,
+)
+from app.api.endpoints.schedule import (
+    subject_router,
+    time_slot_router,
+)
 from app.api.endpoints.stt import router as stt_router
 from app.api.model import router as model_router
 from app.api.parent import router as parent_router
@@ -27,6 +34,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
 @app.middleware("http")
 async def timing_middleware(request: Request, call_next):
     start = time.perf_counter()
@@ -38,6 +47,8 @@ async def timing_middleware(request: Request, call_next):
     print(f"[API] {request.method} {request.url.path} - {elapsed:.2f} ms")
 
     return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -57,6 +68,9 @@ app.include_router(class_router)
 app.include_router(dashboard_router)
 app.include_router(model_router, prefix="/api/model", tags=["model"])
 app.include_router(stt_router, prefix="/api/stt", tags=["stt"])
+app.include_router(time_slot_router, prefix="/api")
+app.include_router(subject_router, prefix="/api")
+app.include_router(schedule_router, prefix="/api")
 
 
 @app.get("/")

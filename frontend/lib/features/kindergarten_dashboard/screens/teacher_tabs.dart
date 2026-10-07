@@ -6,9 +6,11 @@ import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dar
 import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class OverviewScreen extends StatefulWidget {
@@ -71,21 +73,21 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: KColors.brandTint,
+                    color: context.k.brandTint,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: KColors.brand.withValues(alpha: 0.3)),
+                    border: Border.all(color: context.k.brand.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.school_outlined, size: 15, color: KColors.brand),
+                      Icon(Icons.school_outlined, size: 15, color: context.k.brand),
                       const SizedBox(width: 5),
                       Text(
                         data.dashboard.classInfo.name.isNotEmpty ? data.dashboard.classInfo.name : 'Đổi lớp',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: KColors.brand),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.swap_horiz_rounded, size: 15, color: KColors.brand),
+                      Icon(Icons.swap_horiz_rounded, size: 15, color: context.k.brand),
                     ],
                   ),
                 ),
@@ -108,10 +110,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     Text.rich(
                       TextSpan(children: [
                         const TextSpan(text: 'Còn '),
-                        TextSpan(text: '${data.dashboard.notCompletedCount} trẻ', style: const TextStyle(fontWeight: FontWeight.w600, color: KColors.ink)),
+                        TextSpan(text: '${data.dashboard.notCompletedCount} trẻ', style: TextStyle(fontWeight: FontWeight.w600, color: context.k.ink)),
                         const TextSpan(text: ' chưa có báo cáo.'),
                       ]),
-                      style: const TextStyle(fontSize: 13, color: KColors.inkSoft),
+                      style: TextStyle(fontSize: 13, color: context.k.inkSoft),
                     ),
                   ],
                 ),
@@ -130,9 +132,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
           childAspectRatio: 1.45,
           children: [
             StatCard(value: total, label: 'Tổng số trẻ', icon: Icons.groups_outlined),
-            StatCard(value: data.dashboard.completedCount, label: 'Đã gửi', icon: Icons.check_circle_outline, tone: KColors.ok),
-            StatCard(value: data.dashboard.draftCount, label: 'Bản nháp', icon: Icons.edit_outlined, tone: KColors.info),
-            StatCard(value: healthCount, label: 'Cảnh báo sức khỏe', icon: Icons.monitor_heart_outlined, tone: KColors.warn),
+            StatCard(value: data.dashboard.completedCount, label: 'Đã gửi', icon: Icons.check_circle_outline, tone: context.k.ok),
+            StatCard(value: data.dashboard.draftCount, label: 'Bản nháp', icon: Icons.edit_outlined, tone: context.k.info),
+            StatCard(value: healthCount, label: 'Cảnh báo sức khỏe', icon: Icons.monitor_heart_outlined, tone: context.k.warn),
           ],
         ),
       ],
@@ -196,10 +198,10 @@ class _ClassListScreenState extends State<ClassListScreen> {
                   if (widget.onSelectClass != null)
                     OutlinedButton.icon(
                       onPressed: widget.onSelectClass,
-                      icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: KColors.brand),
-                      label: const Text('Đổi lớp', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: KColors.brand)),
+                      icon: Icon(Icons.swap_horiz_rounded, size: 16, color: context.k.brand),
+                      label: Text('Đổi lớp', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: context.k.brand)),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: KColors.brand, width: 1.2),
+                        side: BorderSide(color: context.k.brand, width: 1.2),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
@@ -219,7 +221,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  Expanded(child: Text('${widget.children.length} trẻ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: KColors.inkSoft))),
+                  Expanded(child: Text('${widget.children.length} trẻ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.inkSoft))),
                   Text('${widget.children.where((c) => {ReportStatus.none, ReportStatus.draft, ReportStatus.attention}.contains(c.status)).length} chưa xong', style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
@@ -228,7 +230,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
         ),
         Expanded(
           child: list.isEmpty
-              ? const Center(child: Text('Không tìm thấy trẻ phù hợp.', style: TextStyle(color: KColors.inkFaint)))
+              ? Center(child: Text('Không tìm thấy trẻ phù hợp.', style: TextStyle(color: context.k.inkFaint)))
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   children: [
@@ -300,13 +302,13 @@ class _ChildRow extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(child: Text(child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-                      if (child.allergy != null) const Padding(padding: EdgeInsets.only(left: 5), child: Icon(Icons.warning_amber_rounded, size: 15, color: KColors.warn)),
+                      if (child.allergy != null) Padding(padding: EdgeInsets.only(left: 5), child: Icon(Icons.warning_amber_rounded, size: 15, color: context.k.warn)),
                     ],
                   ),
                   if (child.severity != Severity.none)
                     Text('Sức khỏe: ${child.severity.label}', style: Theme.of(context).textTheme.bodySmall)
                   else if (child.allergy != null)
-                    Text('Dị ứng: ${child.allergy}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: KColors.warn)),
+                    Text('Dị ứng: ${child.allergy}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.warn)),
                 ],
               ),
             ),
@@ -398,14 +400,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ),
         Expanded(
           child: groups.isEmpty
-              ? const Center(child: Text('Không có báo cáo nào khớp với bộ lọc này.', style: TextStyle(color: KColors.inkFaint)))
+              ? Center(child: Text('Không có báo cáo nào khớp với bộ lọc này.', style: TextStyle(color: context.k.inkFaint)))
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                   children: [
                     for (final group in groups) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-                        child: Text(group.key, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: KColors.inkFaint, letterSpacing: .4)),
+                        child: Text(group.key, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.inkFaint, letterSpacing: .4)),
                       ),
                       KCard(
                         child: Column(
@@ -480,7 +482,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(teacher.fullName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                    Text('Giáo viên · $className', style: const TextStyle(fontSize: 13, color: KColors.inkSoft)),
+                    Text('Giáo viên · $className', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
                   ],
                 ),
               ),
@@ -513,6 +515,15 @@ class _AccountScreenState extends State<AccountScreen> {
                 _AccountRow(icon: Icons.swap_horiz_rounded, label: 'Quay lại chọn lớp khác', chevron: true, onTap: widget.onSelectClass),
                 const Divider(),
               ],
+              _AccountRow(
+                icon: Icons.lock_outline_rounded,
+                label: 'Đổi mật khẩu',
+                chevron: true,
+                onTap: () => showChangePasswordBottomSheet(context),
+              ),
+              const Divider(),
+              const _ThemeSelector(),
+              const Divider(),
               const _AccountRow(icon: Icons.info_outline, label: 'Về KinderLog', value: 'v1.0.0'),
             ],
           ),
@@ -570,11 +581,11 @@ class _AccountRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       child: Row(
         children: [
-          Icon(icon, size: 19, color: KColors.inkSoft),
+          Icon(icon, size: 19, color: context.k.inkSoft),
           const SizedBox(width: 12),
           Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
           if (value != null) Text(value!, style: Theme.of(context).textTheme.bodySmall),
-          if (chevron) const Icon(Icons.chevron_right, size: 18, color: KColors.inkFaint),
+          if (chevron) Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
         ],
       ),
     );
@@ -585,7 +596,75 @@ class _AccountRow extends StatelessWidget {
   }
 }
 
+// Theme picker: Sáng / Tối / Theo máy — persists the choice (see ThemeController).
+class _ThemeSelector extends StatelessWidget {
+  const _ThemeSelector();
+
+  static const _options = <(ThemeMode, String, IconData)>[
+    (ThemeMode.light, 'Sáng', Icons.wb_sunny_outlined),
+    (ThemeMode.dark, 'Tối', Icons.dark_mode_outlined),
+    (ThemeMode.system, 'Theo máy', Icons.smartphone_outlined),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.instance,
+      builder: (context, mode, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.brightness_6_outlined, size: 19, color: context.k.inkSoft),
+                const SizedBox(width: 12),
+                Text('Giao diện', style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                for (final (value, labelText, icon) in _options) ...[
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      selected: mode == value,
+                      label: labelText,
+                      child: InkWell(
+                        onTap: () => ThemeController.instance.set(value),
+                        borderRadius: BorderRadius.circular(7),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(7),
+                            color: mode == value ? context.k.surface : Colors.transparent,
+                            border: Border.all(color: mode == value ? context.k.brand.withValues(alpha: .4) : Colors.transparent),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(icon, size: 16, color: mode == value ? context.k.brand : context.k.inkFaint),
+                              const SizedBox(height: 4),
+                              Text(
+                                labelText,
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: mode == value ? context.k.brand : context.k.inkFaint),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // Formats today's date for the Vietnamese dashboard.
 String _longDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-// Formats report history section dates.
 String _shortDate(DateTime d) => _longDate(d);

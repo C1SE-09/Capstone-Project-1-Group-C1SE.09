@@ -1,9 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class login_request(BaseModel):
     username: str
     password: str
+
 
 class login_response(BaseModel):
     access_token: str
@@ -12,4 +13,19 @@ class login_response(BaseModel):
     user_id: str | None = None
     teacher_id: str | None = None
     parent_id: str | None = None
-    
+
+class change_password_request(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=6, max_length=72)
+
+class forgot_password_request(BaseModel):
+    email: str
+
+class verify_reset_code_request(BaseModel):
+    email: str
+    reset_code: str
+
+class reset_password_request(BaseModel):
+    email: str
+    reset_code: str
+    new_password: str
