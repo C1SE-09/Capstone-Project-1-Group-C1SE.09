@@ -54,21 +54,21 @@ class _ParentFlowState extends State<ParentFlow> {
         future: future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              backgroundColor: KColors.canvas,
+            return Scaffold(
+              backgroundColor: context.k.canvas,
               body: Center(child: CircularProgressIndicator()),
             );
           }
           if (snapshot.hasError) {
             return Scaffold(
-              backgroundColor: KColors.canvas,
+              backgroundColor: context.k.canvas,
               body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
             );
           }
           final data = snapshot.data;
           if (data == null) {
             return Scaffold(
-              backgroundColor: KColors.canvas,
+              backgroundColor: context.k.canvas,
               body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
             );
           }
@@ -122,9 +122,9 @@ class _ParentFlowState extends State<ParentFlow> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Không tải được dữ liệu phụ huynh.',
-              style: TextStyle(fontSize: 14, color: KColors.ink),
+              style: TextStyle(fontSize: 14, color: context.k.ink),
             ),
             const SizedBox(height: 8),
             TextButton(onPressed: retry, child: const Text('Thử lại')),
@@ -199,7 +199,7 @@ class _ParentHomeState extends State<_ParentHome> {
     final showBanner = hasTodayReport && !_notificationDismissed;
 
     return Scaffold(
-      backgroundColor: KColors.canvas,
+      backgroundColor: context.k.canvas,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -210,20 +210,20 @@ class _ParentHomeState extends State<_ParentHome> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Xin chào,',
                         style: TextStyle(
                           fontSize: 13,
-                          color: KColors.inkSoft,
+                          color: context.k.inkSoft,
                           decoration: TextDecoration.none,
                         ),
                       ),
                       Text(
                         widget.data.parentName.isEmpty ? 'Phụ huynh bé ${widget.child.name}' : widget.data.parentName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
-                          color: KColors.ink,
+                          color: context.k.ink,
                           decoration: TextDecoration.none,
                         ),
                       ),
@@ -246,14 +246,14 @@ class _ParentHomeState extends State<_ParentHome> {
                   IconButton(
                     onPressed: _confirmLogout,
                     tooltip: 'Đăng xuất',
-                    icon: const Icon(Icons.logout_rounded, color: KColors.inkSoft),
+                    icon: Icon(Icons.logout_rounded, color: context.k.inkSoft),
                   ),
               ],
             ),
             if (showBanner) ...[
           const SizedBox(height: 14),
           KCard(
-            color: KColors.brandTint,
+            color: context.k.brandTint,
             onTap: () {
               // Dismiss the banner, then navigate into the report.
               setState(() => _notificationDismissed = true);
@@ -262,8 +262,8 @@ class _ParentHomeState extends State<_ParentHome> {
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                const CircleAvatar(
-                  backgroundColor: KColors.brand,
+                CircleAvatar(
+                  backgroundColor: context.k.brand,
                   foregroundColor: Colors.white,
                   child: Icon(Icons.notifications_outlined, size: 18),
                 ),
@@ -278,12 +278,12 @@ class _ParentHomeState extends State<_ParentHome> {
                       ),
                       Text(
                         '${overview.teacherName} đã gửi báo cáo hoạt động ngày $date.',
-                        style: const TextStyle(fontSize: 12, color: KColors.inkSoft),
+                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: KColors.brand),
+                Icon(Icons.chevron_right, color: context.k.brand),
               ],
             ),
           ),
@@ -299,15 +299,15 @@ class _ParentHomeState extends State<_ParentHome> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
-                  Text('Lớp ${overview.className} · ${overview.teacherName}', style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
+                  Text('Lớp ${overview.className} · ${overview.teacherName}', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
                 ],
               ),
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo hôm nay', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: KColors.ink)),
+          child: Text('Báo cáo hôm nay', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.k.ink)),
         ),
         KCard(
           onTap: hasTodayReport ? () {
@@ -317,9 +317,9 @@ class _ParentHomeState extends State<_ParentHome> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              const CircleAvatar(
-                backgroundColor: KColors.brandTint,
-                foregroundColor: KColors.brand,
+              CircleAvatar(
+                backgroundColor: context.k.brandTint,
+                foregroundColor: context.k.brand,
                 child: Icon(Icons.description_outlined),
               ),
               const SizedBox(width: 12),
@@ -331,20 +331,20 @@ class _ParentHomeState extends State<_ParentHome> {
                       hasTodayReport ? 'Đã có báo cáo' : 'Chưa có báo cáo hôm nay',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
-                    Text(date, style: const TextStyle(fontSize: 12, color: KColors.inkFaint)),
+                    Text(date, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
                   ],
                 ),
               ),
               if (hasTodayReport) ...[
-                const Text('Xem báo cáo', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: KColors.brand)),
-                const Icon(Icons.chevron_right, size: 18, color: KColors.brand),
+                Text('Xem báo cáo', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.brand)),
+                Icon(Icons.chevron_right, size: 18, color: context.k.brand),
               ],
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo gần đây', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: KColors.ink)),
+          child: Text('Báo cáo gần đây', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.k.ink)),
         ),
         if (widget.data.reports.isEmpty)
           const KCard(padding: EdgeInsets.all(16), child: Text('Chưa có báo cáo gần đây.'))
@@ -355,7 +355,7 @@ class _ParentHomeState extends State<_ParentHome> {
                 for (var index = 0; index < widget.data.reports.length; index++) ...[
                   ListTile(
                     onTap: () => widget.onOpen(widget.data.reports[index]),
-                    leading: const Icon(Icons.description_outlined, color: KColors.inkSoft),
+                    leading: Icon(Icons.description_outlined, color: context.k.inkSoft),
                     title: Text(_dateLabel(widget.data.reports[index].reportDate), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -366,15 +366,15 @@ class _ParentHomeState extends State<_ParentHome> {
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: widget.data.reports[index].status.name == 'read'
-                                ? KColors.brand
+                                ? context.k.brand
                                 : (widget.data.reports[index].status.name == 'sent' ||
                                         widget.data.reports[index].status.name == 'published'
-                                    ? KColors.brand
-                                    : KColors.inkFaint),
+                                    ? context.k.brand
+                                    : context.k.inkFaint),
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right, color: KColors.inkFaint),
+                        Icon(Icons.chevron_right, color: context.k.inkFaint),
                       ],
                     ),
                   ),
@@ -481,7 +481,7 @@ class _ParentReportState extends State<_ParentReport> {
                       Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium),
                       Text(
                         'Báo cáo hoạt động · ${widget.data.overview.teacherName}',
-                        style: const TextStyle(fontSize: 12, color: KColors.inkFaint),
+                        style: TextStyle(fontSize: 12, color: context.k.inkFaint),
                       ),
                     ],
                   ),
@@ -518,8 +518,8 @@ class _ReportField extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: KColors.surface,
-        border: Border.all(color: KColors.line),
+        color: context.k.surface,
+        border: Border.all(color: context.k.line),
         borderRadius: BorderRadius.circular(KRadii.card),
       ),
       child: Column(
@@ -529,7 +529,7 @@ class _ReportField extends StatelessWidget {
             children: [
               Text(emoji),
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: KColors.inkSoft)),
+              Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
             ],
           ),
           const SizedBox(height: 8),
