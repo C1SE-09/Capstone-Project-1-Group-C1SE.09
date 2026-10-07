@@ -177,11 +177,11 @@ class _TeacherNavigation extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(item.$2, size: 22, color: tab == item.$1 ? KColors.brand : KColors.inkFaint),
+                  Icon(item.$2, size: 22, color: tab == item.$1 ? context.k.brand : context.k.inkFaint),
                   const SizedBox(height: 3),
                   Text(
                     item.$3,
-                    style: TextStyle(fontSize: 11, fontWeight: tab == item.$1 ? FontWeight.w600 : FontWeight.w500, color: tab == item.$1 ? KColors.brand : KColors.inkFaint),
+                    style: TextStyle(fontSize: 11, fontWeight: tab == item.$1 ? FontWeight.w600 : FontWeight.w500, color: tab == item.$1 ? context.k.brand : context.k.inkFaint),
                   ),
                 ],
               ),
@@ -189,7 +189,7 @@ class _TeacherNavigation extends StatelessWidget {
           ),
         );
     return DecoratedBox(
-      decoration: const BoxDecoration(color: KColors.surface, border: Border(top: BorderSide(color: KColors.line))),
+      decoration: BoxDecoration(color: context.k.surface, border: Border(top: BorderSide(color: context.k.line))),
       child: SafeArea(
         top: false,
         child: SizedBox(
@@ -205,14 +205,18 @@ class _TeacherNavigation extends StatelessWidget {
                   child: Transform.translate(
                     offset: const Offset(0, -18),
                     child: Material(
-                      color: KColors.brand,
+                      color: context.k.brand,
                       elevation: 7,
-                      shadowColor: KColors.brand.withValues(alpha: .45),
-                      shape: const CircleBorder(side: BorderSide(color: KColors.surface, width: 4)),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: onRecord,
-                        child: const SizedBox.square(dimension: 60, child: Icon(Icons.mic_none_rounded, size: 28, color: Colors.white)),
+                      shadowColor: context.k.brand.withValues(alpha: .45),
+                      shape: CircleBorder(side: BorderSide(color: context.k.surface, width: 4)),
+                      child: Semantics(
+                        button: true,
+                        label: 'Ghi nhận hoạt động',
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onRecord,
+                          child: const SizedBox.square(dimension: 60, child: Icon(Icons.mic_none_rounded, size: 28, color: Colors.white)),
+                        ),
                       ),
                     ),
                   ),

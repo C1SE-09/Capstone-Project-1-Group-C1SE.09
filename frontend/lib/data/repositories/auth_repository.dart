@@ -206,6 +206,37 @@ class AuthRepository {
     }
   }
 
+  /// Đổi mật khẩu tài khoản qua POST /api/auth/change-password.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final token = currentUser?.token;
+    if (token == null || token.isEmpty) {
+      throw const AuthException('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
+    }
+
+    try {
+      await _dio.post(
+        '/api/auth/change-password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+    } on DioException catch (e) {
+      _handleDioError(e, 'Đổi mật khẩu thất bại.');
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException('Lỗi bất ngờ: $e');
+    }
+  }
+
   Never _handleDioError(DioException e, String fallbackMsg) {
     if (e.response != null) {
       final status = e.response?.statusCode;

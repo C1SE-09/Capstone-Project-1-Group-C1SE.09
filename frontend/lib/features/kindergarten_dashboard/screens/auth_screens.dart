@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: KColors.canvas,
+      backgroundColor: context.k.canvas,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -100,14 +100,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 56,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [KColors.brand, KColors.brand.withValues(alpha: 0.8)],
+                          colors: [context.k.brand, context.k.brand.withValues(alpha: 0.8)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: KColors.brand.withValues(alpha: 0.3),
+                            color: context.k.brand.withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -132,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Hệ thống sổ liên lạc & báo cáo mầm non',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: KColors.inkSoft,
+                            color: context.k.inkSoft,
                           ),
                     ),
                   ),
@@ -154,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           'Nhập thông tin tài khoản của bạn để tiếp tục',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: KColors.inkSoft,
+                                color: context.k.inkSoft,
                               ),
                         ),
                         const SizedBox(height: 24),
@@ -203,18 +203,18 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: 'Nhập tên đăng nhập',
                             prefixIcon: const Icon(Icons.person_outline, size: 20),
                             filled: true,
-                            fillColor: KColors.surfaceSunken,
+                            fillColor: context.k.surfaceSunken,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: KColors.line),
+                              borderSide: BorderSide(color: context.k.line),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: KColors.line),
+                              borderSide: BorderSide(color: context.k.line),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: KColors.brand, width: 1.5),
+                              borderSide: BorderSide(color: context.k.brand, width: 1.5),
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           ),
@@ -238,6 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: 'Nhập mật khẩu',
                             prefixIcon: const Icon(Icons.lock_outline, size: 20),
                             suffixIcon: IconButton(
+                              tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                               icon: Icon(
                                 _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                                 size: 20,
@@ -245,18 +246,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
                             filled: true,
-                            fillColor: KColors.surfaceSunken,
+                            fillColor: context.k.surfaceSunken,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: KColors.line),
+                              borderSide: BorderSide(color: context.k.line),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: KColors.line),
+                              borderSide: BorderSide(color: context.k.line),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: KColors.brand, width: 1.5),
+                              borderSide: BorderSide(color: context.k.brand, width: 1.5),
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           ),
@@ -299,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: KColors.brand,
+                              backgroundColor: context.k.brand,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -363,7 +364,7 @@ class _ClassSelectScreenState extends State<ClassSelectScreen> {
             const SizedBox(height: 4),
             Text(
               'Chọn lớp bạn muốn ghi nhận hôm nay.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: KColors.inkSoft),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.k.inkSoft),
             ),
             const SizedBox(height: 24),
             Expanded(
@@ -403,10 +404,10 @@ class _ClassSelectScreenState extends State<ClassSelectScreen> {
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: KColors.brandTint,
+                                      color: context.k.brandTint,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: const Icon(Icons.groups_outlined, color: KColors.brand),
+                                    child: Icon(Icons.groups_outlined, color: context.k.brand),
                                   ),
                                   const SizedBox(width: 14),
                                   Expanded(
@@ -416,13 +417,13 @@ class _ClassSelectScreenState extends State<ClassSelectScreen> {
                                         Text('Lớp ${item.name}',
                                             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
                                         Text(item.school,
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: KColors.inkSoft)),
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkSoft)),
                                         Text('${item.count} trẻ · ${item.role}',
                                             style: Theme.of(context).textTheme.bodySmall),
                                       ],
                                     ),
                                   ),
-                                  const Icon(Icons.chevron_right, color: KColors.inkFaint),
+                                  Icon(Icons.chevron_right, color: context.k.inkFaint),
                                 ],
                               ),
                             ),
