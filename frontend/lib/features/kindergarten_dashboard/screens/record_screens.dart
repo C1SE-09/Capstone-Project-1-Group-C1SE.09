@@ -4376,14 +4376,17 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
 }
 
 /// AudioSource từ bytes trong bộ nhớ, dùng cho just_audio.
+// ignore: experimental_member_use
 class BytesAudioSource extends StreamAudioSource {
   BytesAudioSource(this._bytes);
   final Uint8List _bytes;
 
   @override
+  // ignore: experimental_member_use
   Future<StreamAudioResponse> request([int? start, int? end]) async {
     start ??= 0;
     end ??= _bytes.length;
+    // ignore: experimental_member_use
     return StreamAudioResponse(
       sourceLength: _bytes.length,
       contentLength: end - start,
