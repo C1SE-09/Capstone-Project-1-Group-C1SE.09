@@ -153,12 +153,14 @@ def _populate_activities(
     """
     Tạo ActivityEntry rows từ extraction dict (sau khi merge).
 
-    Nếu trường không có nội dung thì ghi "bình thường".
+    Chỉ tạo ActivityEntry cho các trường thực tế có nội dung được trích xuất.
     """
     entries = []
     for order, (key, category_str, title) in enumerate(FIELDS_MAPPING):
         value = extraction.get(key)
-        description = value.strip() if (value and value.strip()) else "bình thường"
+        if not value or not str(value).strip():
+            continue
+        description = str(value).strip()
         entry = ActivityEntry(
             daily_report_id=report.daily_report_id,
             category=ActivityCategory[category_str],
@@ -241,10 +243,8 @@ def create_classwide_drafts(
 
     for child in children:
         child_id = str(child.child_id)
-        override = child_overrides.get(child_id)
-
-        # Merge: override > class-wide default
-        merged = _merge_extraction(class_wide_extraction, override)
+        # Gán nội dung cả lớp cho toàn bộ các bé trong lớp theo mặc định.
+        # Nếu giáo viên duyệt riêng từng bé sau đó, thẻ riêng sẽ override nội dung này.
 
         # Get or create draft
         report = _get_or_create_draft(
@@ -256,13 +256,7 @@ def create_classwide_drafts(
         )
 
         note_val = None
-        if override:
-            note_val = (
-                override.get("teacher_note")
-                or override.get("notes")
-                or override.get("note")
-            )
-        if not note_val and class_wide_extraction:
+        if class_wide_extraction:
             note_val = (
                 class_wide_extraction.get("teacher_note")
                 or class_wide_extraction.get("notes")
@@ -270,8 +264,8 @@ def create_classwide_drafts(
             )
         report.summary_text = note_val.strip() if note_val else None
 
-        # Tạo ActivityEntry từ merged content
-        _populate_activities(db, report, merged)
+        # Tạo ActivityEntry từ class-wide content
+        _populate_activities(db, report, class_wide_extraction or {})
 
         draft_ids.append(report.daily_report_id)
         child_id_to_report_id[child_id] = str(report.daily_report_id)

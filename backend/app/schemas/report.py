@@ -450,3 +450,10 @@ class SendBatchResponse(BaseModel):
     skipped: int = 0
     failed: int = 0
     results: list[SendBatchItemResult] = Field(default_factory=list)
+
+
+class DeleteDraftsRequest(BaseModel):
+    """Payload cho POST /api/teacher/reports/delete-drafts."""
+
+    report_ids: list[uuid.UUID] = Field(default_factory=list)
+

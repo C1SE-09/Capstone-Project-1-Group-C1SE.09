@@ -25,11 +25,13 @@ class TimetableScreen extends StatefulWidget {
     required this.classId,
     required this.className,
     this.repository,
+    this.isReadOnly = false,
   });
 
   final String classId;
   final String className;
   final ScheduleRepository? repository;
+  final bool isReadOnly;
 
   @override
   State<TimetableScreen> createState() => _TimetableScreenState();
@@ -61,7 +63,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload([int? targetDay]) => setState(() {
+    if (targetDay != null) {
+      _selectedDay = targetDay;
+    }
+    _future = _load();
+  });
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -120,14 +127,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
         return Column(
           children: [
             Expanded(child: _buildPhone(context, data, items, conflicts, days, selected, todayIndex)),
-            BottomActionBar(
-              child: KButton(
-                label: 'Thêm hoạt động',
-                icon: Icons.add,
-                large: true,
-                onPressed: () => _openEditor(data),
+            if (!widget.isReadOnly)
+              BottomActionBar(
+                child: KButton(
+                  label: 'Thêm hoạt động',
+                  icon: Icons.add,
+                  large: true,
+                  onPressed: () => _openEditor(data),
+                ),
               ),
-            ),
           ],
         );
       },
@@ -439,7 +447,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
       await _repo.deleteSchedule(item.scheduleId);
       if (!mounted) return;
       _showMessage('Đã xóa hoạt động');
-      _reload();
+      _reload(item.dayIndex);
     } catch (e) {
       if (!mounted) return;
       _showMessage(e is ScheduleException ? e.message : 'Không thể xóa hoạt động. Vui lòng thử lại.');
@@ -454,10 +462,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
         existing: existing,
         classId: widget.classId,
         repository: _repo,
-        onSaved: (message) {
+        onSaved: (message, savedDay) {
           Navigator.pop(context);
           _showMessage(message);
-          _reload();
+          _reload(savedDay);
         },
       ),
     );
@@ -863,71 +871,6 @@ class _ScheduleRow extends StatelessWidget {
   }
 }
 
-class _PickerOption {
-  const _PickerOption({required this.id, required this.title, this.subtitle});
-  final String id;
-  final String title;
-  final String? subtitle;
-}
-
-class _PickerSheet extends StatelessWidget {
-  const _PickerSheet({required this.title, required this.options, required this.selectedId, required this.onPick, this.emptyText});
-
-  final String title;
-  final List<_PickerOption> options;
-  final String? selectedId;
-  final ValueChanged<String> onPick;
-  final String? emptyText;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        if (options.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Text(emptyText ?? 'Chưa có dữ liệu.', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
-          )
-        else
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                for (var index = 0; index < options.length; index++) ...[
-                  InkWell(
-                    onTap: () => onPick(options[index].id),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(options[index].title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                if (options[index].subtitle != null)
-                                  Text(options[index].subtitle!, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
-                              ],
-                            ),
-                          ),
-                          if (selectedId == options[index].id) Icon(Icons.check, size: 18, color: context.k.brand),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (index < options.length - 1) const Divider(),
-                ],
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
 
 class _ScheduleEditorSheet extends StatefulWidget {
   const _ScheduleEditorSheet({
@@ -941,7 +884,7 @@ class _ScheduleEditorSheet extends StatefulWidget {
   final _TimetableData data;
   final String classId;
   final ScheduleRepository repository;
-  final ValueChanged<String> onSaved;
+  final void Function(String message, int savedDay) onSaved;
   final ClassSchedule? existing;
 
   @override
@@ -951,6 +894,8 @@ class _ScheduleEditorSheet extends StatefulWidget {
 class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _roomController;
+  late final ScrollController _subjectScrollController = ScrollController();
+  late final ScrollController _slotScrollController = ScrollController();
   Subject? _subject;
   TimeSlot? _slot;
   late int _day;
@@ -980,6 +925,8 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
   void dispose() {
     _nameController.dispose();
     _roomController.dispose();
+    _subjectScrollController.dispose();
+    _slotScrollController.dispose();
     super.dispose();
   }
 
@@ -1025,7 +972,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
           activityName: name,
           roomName: _roomController.text,
         );
-        widget.onSaved('Đã thêm hoạt động');
+        widget.onSaved('Đã thêm hoạt động', _day);
       } else {
         await widget.repository.updateSchedule(
           existing.scheduleId,
@@ -1035,7 +982,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
           activityName: name,
           roomName: _roomController.text,
         );
-        widget.onSaved('Đã cập nhật hoạt động');
+        widget.onSaved('Đã cập nhật hoạt động', _day);
       }
     } catch (e) {
       if (mounted) {
@@ -1046,45 +993,6 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
     }
   }
 
-  void _pickSubject() {
-    showKSheet(
-      context,
-      Builder(
-        builder: (sheetCtx) => _PickerSheet(
-          title: 'Chọn môn / hoạt động',
-          options: widget.data.subjects
-              .map((s) => _PickerOption(id: s.subjectId, title: s.name, subtitle: s.description))
-              .toList(),
-          selectedId: _subject?.subjectId,
-          emptyText: 'Chưa có môn học nào. Vui lòng tạo môn học trước.',
-          onPick: (id) {
-            setState(() => _subject = _firstWhereOrNull(widget.data.subjects, (s) => s.subjectId == id));
-            Navigator.pop(sheetCtx);
-          },
-        ),
-      ),
-    );
-  }
-
-  void _pickSlot() {
-    showKSheet(
-      context,
-      Builder(
-        builder: (sheetCtx) => _PickerSheet(
-          title: 'Chọn khung giờ',
-          options: widget.data.slots
-              .map((s) => _PickerOption(id: s.slotId, title: s.name, subtitle: '${s.startTime}–${s.endTime}'))
-              .toList(),
-          selectedId: _slot?.slotId,
-          emptyText: 'Chưa có khung giờ nào. Vui lòng tạo khung giờ trước.',
-          onPick: (id) {
-            setState(() => _slot = _firstWhereOrNull(widget.data.slots, (s) => s.slotId == id));
-            Navigator.pop(sheetCtx);
-          },
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1112,18 +1020,10 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
             ),
           const SizedBox(height: 14),
           _fieldLabel(context, 'Môn / Hoạt động'),
-          _PickerField(
-            value: _subject?.name ?? 'Chọn môn học',
-            placeholder: _subject == null,
-            onTap: _pickSubject,
-          ),
+          _buildSubjectScrollSelector(context),
           const SizedBox(height: 14),
           _fieldLabel(context, 'Khung giờ'),
-          _PickerField(
-            value: _slot == null ? 'Chọn khung giờ' : '${_slot!.name} (${_slot!.startTime}–${_slot!.endTime})',
-            placeholder: _slot == null,
-            onTap: _pickSlot,
-          ),
+          _buildSlotScrollSelector(context),
           const SizedBox(height: 14),
           _fieldLabel(context, 'Thứ'),
           Wrap(
@@ -1188,6 +1088,206 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
     );
   }
 
+  Widget _buildSubjectScrollSelector(BuildContext context) {
+    final subjects = widget.data.subjects;
+    if (subjects.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: context.k.surfaceSunken,
+          borderRadius: BorderRadius.circular(KRadii.control),
+          border: Border.all(color: context.k.line),
+        ),
+        child: Text('Chưa có môn học nào. Vui lòng tạo môn học trước.',
+            style: TextStyle(fontSize: 12.5, color: context.k.inkSoft)),
+      );
+    }
+
+    return Scrollbar(
+      controller: _subjectScrollController,
+      thumbVisibility: true,
+      trackVisibility: true,
+      child: SingleChildScrollView(
+        controller: _subjectScrollController,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          children: [
+            for (final s in subjects) ...[
+              Builder(builder: (itemCtx) {
+                final isSelected = _subject?.subjectId == s.subjectId;
+                final color = _hexColor(s.colorCode) ?? itemCtx.k.brand;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    onTap: () => setState(() {
+                      _subject = s;
+                      _error = null;
+                    }),
+                    borderRadius: BorderRadius.circular(KRadii.control),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: isSelected ? context.k.brandTint : context.k.surface,
+                        borderRadius: BorderRadius.circular(KRadii.control),
+                        border: Border.all(
+                          color: isSelected ? context.k.brand : context.k.lineStrong,
+                          width: isSelected ? 1.6 : 1.0,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: context.k.brand.withValues(alpha: 0.12),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.16),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(_iconForSubject(s.name), size: 14, color: color),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            s.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected ? context.k.brand : context.k.ink,
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            const SizedBox(width: 6),
+                            Icon(Icons.check_circle_rounded, size: 15, color: context.k.brand),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlotScrollSelector(BuildContext context) {
+    final slots = widget.data.slots;
+    if (slots.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: context.k.surfaceSunken,
+          borderRadius: BorderRadius.circular(KRadii.control),
+          border: Border.all(color: context.k.line),
+        ),
+        child: Text('Chưa có khung giờ nào. Vui lòng tạo khung giờ trước.',
+            style: TextStyle(fontSize: 12.5, color: context.k.inkSoft)),
+      );
+    }
+
+    return Scrollbar(
+      controller: _slotScrollController,
+      thumbVisibility: true,
+      trackVisibility: true,
+      child: SingleChildScrollView(
+        controller: _slotScrollController,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          children: [
+            for (final slot in slots) ...[
+              Builder(builder: (itemCtx) {
+                final isSelected = _slot?.slotId == slot.slotId;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    onTap: () => setState(() {
+                      _slot = slot;
+                      _error = null;
+                    }),
+                    borderRadius: BorderRadius.circular(KRadii.control),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? context.k.brandTint : context.k.surface,
+                        borderRadius: BorderRadius.circular(KRadii.control),
+                        border: Border.all(
+                          color: isSelected ? context.k.brand : context.k.lineStrong,
+                          width: isSelected ? 1.6 : 1.0,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: context.k.brand.withValues(alpha: 0.12),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.schedule_rounded,
+                                  size: 13,
+                                  color: isSelected ? context.k.brand : context.k.inkSoft),
+                              const SizedBox(width: 4),
+                              Text(
+                                slot.name,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                  color: isSelected ? context.k.brand : context.k.ink,
+                                ),
+                              ),
+                              if (isSelected) ...[
+                                const SizedBox(width: 4),
+                                Icon(Icons.check_circle_rounded, size: 14, color: context.k.brand),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${slot.startTime} – ${slot.endTime}',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? context.k.brand : context.k.inkSoft,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _fieldLabel(BuildContext context, String label) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink)),
@@ -1214,42 +1314,6 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
       );
 }
 
-class _PickerField extends StatelessWidget {
-  const _PickerField({required this.value, required this.onTap, this.placeholder = false});
-
-  final String value;
-  final VoidCallback onTap;
-  final bool placeholder;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(KRadii.control),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: context.k.surface,
-          borderRadius: BorderRadius.circular(KRadii.control),
-          border: Border.all(color: context.k.lineStrong),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                value,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 14, color: placeholder ? context.k.inkFaint : context.k.ink),
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /* ======================= Helpers ======================= */
 

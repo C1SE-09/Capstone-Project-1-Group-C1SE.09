@@ -292,6 +292,9 @@ abstract class TeacherRepositoryBase {
     String? classId,
     String? reportDate,
   });
+
+  /// Xóa các bản nháp báo cáo từ DB khi giáo viên bỏ duyệt.
+  Future<void> deleteDraftReports(List<String> reportIds);
 }
 
 // ---------------------------------------------------------------------------
@@ -730,7 +733,7 @@ class TeacherRepository implements TeacherRepositoryBase {
     final body = <String, dynamic>{
       'teacher_id': teacherId,
     };
-    if (reportIds != null && reportIds.isNotEmpty) {
+    if (reportIds != null) {
       body['report_ids'] = reportIds;
     }
     if (classId != null) body['class_id'] = classId;
@@ -760,6 +763,27 @@ class TeacherRepository implements TeacherRepositoryBase {
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
       throw TeacherRepositoryException(e.toString());
+    }
+  }
+
+  @override
+  Future<void> deleteDraftReports(List<String> reportIds) async {
+    if (reportIds.isEmpty) return;
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/reports/delete-drafts',
+        data: {'report_ids': reportIds},
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+    } catch (e) {
+      // Fallback: delete từng cái
+      for (final id in reportIds) {
+        try {
+          await _dio.delete<void>('/api/teacher/reports/$id');
+        } catch (_) {}
+      }
     }
   }
 

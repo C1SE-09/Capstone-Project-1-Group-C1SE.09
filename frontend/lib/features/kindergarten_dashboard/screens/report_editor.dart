@@ -129,37 +129,28 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       try {
         final todayReport = await repository.getTodayReport(widget.child.id, DateTime.now());
         if (todayReport != null) {
-          if (todayReport.summaryText != null && todayReport.summaryText!.trim().isNotEmpty) {
-            note.text = todayReport.summaryText!.trim();
-          }
-          if (todayReport.eating != null && todayReport.eating!.trim().isNotEmpty) {
-            eating.text = todayReport.eating!.trim();
-          }
-          if (todayReport.sleeping != null && todayReport.sleeping!.trim().isNotEmpty) {
-            sleep.text = todayReport.sleeping!.trim();
-          }
-          if (todayReport.health != null && todayReport.health!.trim().isNotEmpty) {
-            health.text = todayReport.health!.trim();
-          }
-          if (todayReport.mood != null && todayReport.mood!.trim().isNotEmpty) {
-            mood.text = todayReport.mood!.trim();
-          }
-          if (todayReport.activitiesText != null && todayReport.activitiesText!.trim().isNotEmpty) {
-            activity.text = todayReport.activitiesText!.trim();
-          }
+          note.text = todayReport.summaryText?.trim() ?? '';
+          eating.text = todayReport.eating?.trim() ?? '';
+          final rawSleep = todayReport.sleeping?.trim() ?? '';
+          final digits = RegExp(r'\d+').firstMatch(rawSleep)?.group(0) ?? '';
+          sleepDuration.text = digits;
+          sleep.text = rawSleep;
+          health.text = todayReport.health?.trim() ?? '';
+          mood.text = todayReport.mood?.trim() ?? '';
+          activity.text = todayReport.activitiesText?.trim() ?? '';
         }
       } catch (_) {}
     }
     return _ReportMeta(teacher, classInfo);
   }
 
-  late final eating = TextEditingController(text: widget.readOnly ? 'Ăn hết suất cơm trưa, uống đủ nước.' : '');
-  late final sleepDuration = TextEditingController(text: widget.readOnly ? '120' : '');
-  late final sleep = TextEditingController(text: widget.readOnly ? 'Ngủ ngon, không quấy khóc.' : '');
-  late final health = TextEditingController(text: widget.readOnly ? 'Bình thường, không sốt, không ho.' : '');
-  late final mood = TextEditingController(text: widget.readOnly ? 'Vui vẻ, hòa đồng với các bạn.' : '');
-  late final activity = TextEditingController(text: widget.readOnly ? 'Tham gia hoạt động vẽ và xếp hình nhóm.' : '');
-  late final note = TextEditingController(text: widget.readOnly ? 'Bé chơi ngoan, hòa nhập tốt với các bạn trong giờ hoạt động nhóm.' : '');
+  late final eating = TextEditingController(text: '');
+  late final sleepDuration = TextEditingController(text: '');
+  late final sleep = TextEditingController(text: '');
+  late final health = TextEditingController(text: '');
+  late final mood = TextEditingController(text: '');
+  late final activity = TextEditingController(text: '');
+  late final note = TextEditingController(text: '');
 
   @override
   void dispose() {

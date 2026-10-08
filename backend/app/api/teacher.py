@@ -67,6 +67,7 @@ from app.schemas.report import (
     ApproveItemRequest,
     ApproveItemResponse,
     DailyReportDetailResponse,
+    DeleteDraftsRequest,
     DraftReportCreateRequest,
     ManualReportCreateRequest,
     SendAllItemResult,
@@ -772,7 +773,9 @@ def create_manual_report(
 
     order = 0
     for value, category, title in fields_mapping:
-        val_to_use = value.strip() if (value and value.strip()) else "bình thường"
+        if not value or not str(value).strip():
+            continue
+        val_to_use = str(value).strip()
         entry = ActivityEntry(
             daily_report_id=report.daily_report_id,
             category=category,
@@ -926,6 +929,61 @@ def publish_report(
     }
 
 
+@router.delete(
+    "/reports/{report_id}",
+    summary="Xóa bản nháp báo cáo",
+    description="Xóa draft DailyReport khi giáo viên bỏ duyệt hoặc hủy nháp.",
+)
+def delete_draft_report(
+    report_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    """Xóa 1 bản nháp DailyReport (chỉ xóa khi status == DRAFT)."""
+    report = (
+        db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
+    )
+    if not report:
+        return {"status": "ok", "deleted": False, "message": "Report not found"}
+    if report.status != DailyReportStatus.DRAFT:
+        raise HTTPException(
+            status_code=400,
+            detail="Chỉ có thể xóa báo cáo ở trạng thái bản nháp (DRAFT)",
+        )
+    db.delete(report)
+    db.commit()
+    logger.info("[DeleteDraft] Deleted draft report_id=%s", report_id)
+    return {"status": "ok", "deleted": True, "report_id": str(report_id)}
+
+
+@router.post(
+    "/reports/delete-drafts",
+    summary="Xóa nhiều bản nháp báo cáo cùng lúc",
+    description="Xóa danh sách draft DailyReport khi giáo viên bỏ duyệt item hoặc bỏ duyệt tất cả.",
+)
+def delete_draft_reports_batch(
+    payload: DeleteDraftsRequest,
+    db: Session = Depends(get_db),
+):
+    """Xóa danh sách bản nháp DailyReport theo danh sách report_ids."""
+    if not payload.report_ids:
+        return {"status": "ok", "deleted_count": 0}
+
+    reports = (
+        db.query(DailyReport)
+        .filter(
+            DailyReport.daily_report_id.in_(payload.report_ids),
+            DailyReport.status == DailyReportStatus.DRAFT,
+        )
+        .all()
+    )
+    deleted_count = len(reports)
+    for r in reports:
+        db.delete(r)
+    db.commit()
+    logger.info("[DeleteDraftsBatch] Deleted %d draft reports", deleted_count)
+    return {"status": "ok", "deleted_count": deleted_count}
+
+
 # ===========================================================================
 # Auto-detect flow: Approve-Item + Send-Batch
 # ===========================================================================
@@ -1024,8 +1082,12 @@ def approve_item(
                     status_code=400,
                     detail="child_id is required when kind='child'",
                 )
-            # Override content cho child này
-            child_override = user_extraction if user_extraction else child_extractions.get(str(payload.child_id))
+            # Override content cho child này (hỗ trợ tìm theo UUID string hoặc tên bé)
+            child_obj = db.query(Child).filter(Child.child_id == payload.child_id).first()
+            child_override = user_extraction if user_extraction else (
+                child_extractions.get(str(payload.child_id))
+                or (child_obj and child_extractions.get(child_obj.full_name))
+            )
             result = create_child_draft(
                 db=db,
                 child_id=payload.child_id,

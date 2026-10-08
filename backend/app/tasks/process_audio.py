@@ -9,7 +9,6 @@ import os
 import shutil
 import subprocess
 import tempfile
-import traceback
 import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
@@ -172,17 +171,25 @@ def process_audio_task(voice_record_id: str) -> dict:
             "extraction_keys": [],
         }
 
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("[Process] Lỗi xử lý VoiceRecord %s", voice_record_id)
         try:
             failed_record = db.get(VoiceRecord, record_id)
             if failed_record:
                 failed_record.status = VoiceRecordStatus.FAILED
-                failed_record.error_message = traceback.format_exc()
+                err_text = str(exc).strip()
+                if any(k in err_text for k in ["Micro", "Không", "File", "giọng nói", "âm thanh", "micro"]):
+                    failed_record.error_message = err_text
+                else:
+                    failed_record.error_message = (
+                        "Không thể nhận diện nội dung giọng nói từ file ghi âm. Vui lòng nói to, rõ ràng hơn hoặc thử lại."
+                    )
                 db.commit()
                 logger.error(
-                    "[Process] Đánh dấu FAILED cho VoiceRecord %s", voice_record_id
+                    "[Process] Đánh dấu FAILED cho VoiceRecord %s: %s",
+                    voice_record_id,
+                    failed_record.error_message,
                 )
         except SQLAlchemyError:
             logger.exception("[Process] Lỗi DB khi cập nhật FAILED")
