@@ -27,3 +27,5 @@ Thumbs.db
 
 # Large models
 backend/models/PhoWhisper-large-ct2/
+
+kinderlog_firebase_service.json

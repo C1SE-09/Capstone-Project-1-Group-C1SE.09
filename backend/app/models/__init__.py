@@ -21,6 +21,7 @@ from app.models.child import (
     Parent,
     ParentStatus,
 )
+from app.models.device_token import DeviceToken
 from app.models.report import (
     ActivityCategory,
     ActivityEntry,
@@ -62,6 +63,7 @@ __all__ = [
     "DailyReport",
     "DailyReportStatus",
     "DailyReportType",
+    "DeviceToken",
     "Parent",
     "ParentStatus",
     "School",
