@@ -1383,4 +1383,3 @@ def get_teacher_me(current_user: User = Depends(require_role("teacher"))):
         "role": current_user.role.value,
         "teacher_id": str(current_user.teacher_id)
     }
-

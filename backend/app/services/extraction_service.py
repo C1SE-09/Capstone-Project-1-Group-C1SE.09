@@ -291,20 +291,29 @@ def _smart_split_transcript(text: str, children: list, min_confidence: float = 0
     anchors: set[int] = set()
 
     # 1. Anchors từ tên bé match được.
-    #    Mỗi BÉ là 1 anchor duy nhất, lấy vị trí từ tên đầu tiên xuất hiện.
-    #    matched_words đã theo đúng thứ tự xuất hiện trong text, nên phần tử [0]
-    #    chính là từ sớm nhất.
-    #    (Cách cũ lấy anchor cho TỪNG từ trong matched_words, nên "Nguyễn Văn An"
-    #     bị cắt thành 3 đoạn: "Nguyễn" / "Văn" / "An hát hay lắm".)
+    #    Mỗi bé có thể có NHIỀU anchor (mỗi lần xuất hiện của tên trong text
+    #    là 1 anchor). Lý do: giáo viên có thể nhắc tên bé nhiều lần trong
+    #    cùng 1 transcript, và mỗi lần nhắc là 1 subject riêng biệt.
+    #    VD: "Bé An ăn ngon ... bé an ngủ không ngon"
+    #        → anchor tại "An" lần 1 VÀ "an" lần 2
+    #        → tách thành 2 segment độc lập
+    #    (Cách cũ chỉ lấy `re.search` (1 vị trí đầu tiên) trên `matched_words[0]`,
+    #    nên "An" lần 2 bị nuốt vào segment trước đó.)
     matches = match_single_text(text, children, min_confidence=min_confidence)
     for m in matches:
         if not m.matched_words:
             continue
+        # Tìm TẤT CẢ vị trí xuất hiện của TỪNG từ trong matched_words.
         # (?<!\w)...(?!\w) để "an" không khớp trong "anh", "bình" không khớp "bình an"
-        first_word = re.escape(m.matched_words[0].lower())
-        hit = re.search(rf"(?<!\w){first_word}(?!\w)", text_lower)
-        if hit and hit.start() > 0:
-            anchors.add(hit.start())
+        # matched_words chỉ chứa các từ từ full_name thực sự xuất hiện trong text,
+        # nên mỗi match = 1 anchor hợp lệ.
+        for word in m.matched_words:
+            word_pattern = re.escape(word.lower())
+            for hit in re.finditer(
+                rf"(?<!\w){word_pattern}(?!\w)", text_lower
+            ):
+                if hit.start() > 0:
+                    anchors.add(hit.start())
 
     # 2. Anchors từ class-wide keywords
     for kw in CLASS_WIDE_KEYWORDS:
