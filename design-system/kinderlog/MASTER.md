@@ -1,6 +1,6 @@
 # KinderLog — Design System (MASTER)
 
-**Status:** Living document · Baseline v1.0 · 2026-10-07
+**Status:** Living document · Baseline v1.1 · 2026-10-07
 **Source of truth:** the current KinderLog Figma reconstruction, mirrored by `frontend/lib/features/kindergarten_dashboard/` (Flutter).
 **Documentation method:** values captured from the existing implementation and palette definitions (`theme.dart`, `widgets.dart`, `screens/*`). UI/UX Pro Max Quick Reference used for structure, UX-state coverage, accessibility rules, and anti-patterns. Its generative `--design-system` recommendations were intentionally **not** adopted — this document records the current design, it does not propose a new one.
 **Change policy:** This baseline is descriptive. No color, type, spacing, component, or layout value changes without an explicit, recorded decision. New work must reuse these tokens; deviations are recorded in §15.
@@ -259,6 +259,22 @@ State ladder for every async screen: **loading → error (retry) → empty → c
 
 ---
 
+### 7.10 Timetable feature extensions (v1.1 — decision note)
+
+Approved with the Thời khóa biểu feature (Figma Make prototype; the Flutter port must mirror these). Extends existing tokens only — no new colors, shadows, or radii.
+
+| Extension | Definition |
+|---|---|
+| Button — `danger` variant | Solid `bad` fill with `canvas`-toned label; reserved for the final destructive confirm (delete). The action-sheet entry stays `bad`-text ghost. |
+| FilterChip — `soft` warn | Unselected warn chip: `warnTint` background, `warn`/40 border, `warnDeep` text. Informational only ("2 xung đột"); the selected state stays solid warn + white. |
+| WeekNavigator | 44×44 chevron buttons; centered week label (tabular; "Tuần này" when current, date range otherwise); "Về tuần này" ghost only when off the current week. |
+| DayStrip | Day chips T2–T6, min-height 64; selected solid brand; 6px dot when the day has items; aria-label names weekday, date, today, and empty days. |
+| Category tints | Six categories mapped to existing tones only: Học tập `brand` · Vui chơi `info` · Ăn uống `neutral` (sunken/inkSoft) · Nghỉ ngơi `info` · Thể chất `ok` · Sự kiện `brand-strong`. `warn` is never a category tone. |
+| Schedule item row | Time gutter (start 13/600 tabular; end 12 faint) · category icon 32 (radius 8, tinted) · name 14/500, 2-line clamp · teacher 12 faint · location 12 faint + MapPin only when present · conflict TriangleAlert 14 warn beside the name. |
+| Segmented control | One ARIA model everywhere: `role="radiogroup"` with `role="radio"` / `aria-checked`; options min-height 44. |
+
+---
+
 ## 8. Interaction States
 
 | Element | Default | Pressed | Focused | Disabled | Selected/Active |
@@ -359,7 +375,7 @@ All messages are Vietnamese, sentence case, user-facing (no codes).
 |---|---|---|
 | D1 | Emoji used as section markers in report field labels (🍽️ 😴 🎨 🎭 🏥 📝, 💬) | Report editor, review cards |
 | D2 | Explicit `fontSize` overrides bypass system text scaling across many widgets | Throughout screens (10.5–17 range) |
-| D3 | Hard-coded `Colors.red.shade*` in the login error banner instead of `bad`/`badTint` | `auth_screens.dart` |
+| D3 | Hard-coded `Colors.red.shade*` in the login and forgot-password error banners instead of `bad`/`badTint` | `auth_screens.dart`, `forgot_password_screen.dart` |
 | D4 | `Colors.white` literals for on-brand text instead of an on-brand token | Buttons, chips, nav mic |
 | D5 | Button minimum height 44 (< Android 48dp) | `KButton` |
 | D6 | Raised mic button uses a colored shadow/halo | Teacher shell |
@@ -379,7 +395,7 @@ D1–D4, D6–D8 are candidates for a future, explicitly-scoped cleanup task. Th
   - `KPalette` — `ThemeExtension` with both instances; register on each `ThemeData`.
   - `context.k` — the only sanctioned way for widgets to read palette colors.
   - `KSpace` (4–32) and `KRadii` (card 12, control 9).
-- `kinderTheme()` / `kinderThemeDark()` build both themes; `MaterialApp.router` uses `themeMode: ThemeMode.system`.
+- `kinderTheme()` / `kinderThemeDark()` build both themes; `ThemeController` (`theme_controller.dart`, persisted via `shared_preferences`) supplies `themeMode` (Sáng / Tối / Theo máy, system by default) to `MaterialApp.router`.
 - Global component defaults (card, divider, input, snackbar) are defined once in `_buildTheme`.
 - Shared widgets live in `widgets.dart`: `KCard`, `KButton`, `KAppBar`, `Avatar`, `StatusBadge`, `SeverityChip`, `SearchField`, `FilterChipButton`, `ProgressRing`, `StatCard`, `StepIndicator`, `BottomActionBar`, `showKSheet`.
 - Screens must compose these widgets; new one-off components require a recorded reason.
@@ -391,9 +407,10 @@ D1–D4, D6–D8 are candidates for a future, explicitly-scoped cleanup task. Th
 1. `fl_chart` is a dependency but no chart is rendered; ProgressRing is the only visualization.
 2. Dark theme is complete in code but has no captured verification pass on device.
 3. History/roster use `ListView` with prebuilt children in places; large rosters may warrant `ListView.builder` later.
-4. Login has no password-recovery path; report editor send has no confirmation.
-5. Empty/error copy is consistent by convention, not enforced by a shared widget.
+4. Timetable (Thời khóa biểu) is specified and prototyped in Figma Make; not yet implemented in Flutter — its component extensions are registered in §7.10.
+5. `forgot_password_screen.dart` and `change_password_screen.dart` repeat the login input styling; the forgot-password error banner carries the same hard-coded red debt as D3.
+6. Empty/error copy is consistent by convention, not enforced by a shared widget.
 
 ---
 
-*End of baseline v1.0 — any revision must be recorded as a new version with a decision note.*
+*End of baseline v1.1 — any revision must be recorded as a new version with a decision note.*

@@ -31,6 +31,7 @@ class KButton extends StatelessWidget {
     this.icon,
     this.secondary = false,
     this.ghost = false,
+    this.danger = false,
     this.large = false,
   });
   final String label;
@@ -38,6 +39,7 @@ class KButton extends StatelessWidget {
   final IconData? icon;
   final bool secondary;
   final bool ghost;
+  final bool danger;
   final bool large;
 
   @override
@@ -58,6 +60,16 @@ class KButton extends StatelessWidget {
         RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(KRadii.control))),
       ),
     );
+    if (danger) {
+      return FilledButton(
+        onPressed: onPressed,
+        style: style.copyWith(
+          backgroundColor: WidgetStatePropertyAll(context.k.bad),
+          foregroundColor: WidgetStatePropertyAll(context.k.canvas),
+        ),
+        child: child,
+      );
+    }
     if (ghost) return TextButton(onPressed: onPressed, style: style, child: child);
     if (secondary) return OutlinedButton(onPressed: onPressed, style: style, child: child);
     return FilledButton(onPressed: onPressed, style: style, child: child);

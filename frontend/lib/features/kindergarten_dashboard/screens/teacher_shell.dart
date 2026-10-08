@@ -11,6 +11,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/report_editor.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
@@ -104,6 +105,15 @@ class _TeacherShellState extends State<TeacherShell> {
     ));
   }
 
+  void openTimetable(String className) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => TimetableScreen(
+        classId: widget.classId,
+        className: className,
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Child>>(future: childrenFuture, builder: (context, snapshot) {
     if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -118,6 +128,7 @@ class _TeacherShellState extends State<TeacherShell> {
         classId: widget.classId,
         repository: repository,
         onSelectClass: () => appRouter.go('/class-select'),
+        onOpenTimetable: () => openTimetable(className),
         onOpenReport: (name) => openReport(childByName(name, children)),
         onHistory: () => setState(() => tab = TeacherTab.history),
         onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; }),
@@ -129,6 +140,7 @@ class _TeacherShellState extends State<TeacherShell> {
         className: className,
         schoolName: 'Chưa có thông tin trường',
         onSelectClass: () => appRouter.go('/class-select'),
+        onOpenTimetable: () => openTimetable(className),
         onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: widget.classId, className: className, repository: repository))),
         onEdit: openReport,
       ),

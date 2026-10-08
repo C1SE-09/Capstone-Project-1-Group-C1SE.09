@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
+import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart' as domain_class;
+import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
@@ -14,11 +16,12 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class OverviewScreen extends StatefulWidget {
-  const OverviewScreen({super.key, this.onOpenReport, this.onHistory, this.onHealth, this.onSelectClass, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository});
+  const OverviewScreen({super.key, this.onOpenReport, this.onHistory, this.onHealth, this.onSelectClass, this.onOpenTimetable, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository});
   final ValueChanged<String>? onOpenReport;
   final VoidCallback? onHistory;
   final VoidCallback? onHealth;
   final VoidCallback? onSelectClass;
+  final VoidCallback? onOpenTimetable;
   final String classId;
   final HttpDashboardRepository? repository;
   @override
@@ -27,18 +30,28 @@ class OverviewScreen extends StatefulWidget {
 
 class _OverviewScreenState extends State<OverviewScreen> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
+  late final ScheduleRepository scheduleRepository = HttpScheduleRepository();
   late Future<_OverviewData> future;
   @override
   void initState() { super.initState(); future = _load(); }
-  // Loads live teacher and class summary.
+  // Loads live teacher, class summary, and today's timetable.
   Future<_OverviewData> _load() async {
     final values = await Future.wait([
       repository.getCurrentTeacher(),
       repository.getClassDashboard(widget.classId, DateTime.now()),
+      scheduleRepository.getClassSchedule(widget.classId),
     ]);
+    final now = DateTime.now();
+    final todayIndex = now.weekday - 1;
+    final nowMinutes = now.hour * 60 + now.minute;
+    final todayItems = (values[2] as List<ClassSchedule>)
+        .where((item) => item.isActive && item.dayIndex == todayIndex && (_timeToMinutes(item.endTime) ?? 0) > nowMinutes)
+        .toList()
+      ..sort((a, b) => (_timeToMinutes(a.startTime) ?? 0).compareTo(_timeToMinutes(b.startTime) ?? 0));
     return _OverviewData(
       values[0] as Teacher,
       values[1] as ClassDashboardSummary,
+      todayItems.take(3).toList(growable: false),
     );
   }
   // Renders overview loading, error and data states.
@@ -50,6 +63,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     if (data == null) return const Center(child: Text('Không có dữ liệu tổng quan.'));
     final total = data.dashboard.totalChildren;
     final healthCount = data.dashboard.pendingChildren.where((item) => item.child.medicalAllergies?.trim().isNotEmpty == true).length;
+    final nowMinutes = DateTime.now().hour * 60 + DateTime.now().minute;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
@@ -123,6 +137,63 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ),
         ),
         const SizedBox(height: 20),
+        Text('Hôm nay', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.k.ink)),
+        const SizedBox(height: 10),
+        KCard(
+          child: Column(
+            children: [
+              if (data.todayItems.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Hôm nay chưa có hoạt động', style: TextStyle(fontSize: 13, color: context.k.inkFaint)),
+                  ),
+                )
+              else
+                for (final item in data.todayItems)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Row(
+                      children: [
+                        Text(item.startTime, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink)),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(item.displayName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+                        if (_timeToMinutes(item.startTime) != null &&
+                            _timeToMinutes(item.startTime)! <= nowMinutes &&
+                            nowMinutes < (_timeToMinutes(item.endTime) ?? 0))
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: context.k.okTint, borderRadius: BorderRadius.circular(99)),
+                            child: Text('Đang diễn ra', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.ok)),
+                          )
+                        else if (item.teacherLabel.isNotEmpty)
+                          Text(item.teacherLabel, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                      ],
+                    ),
+                  ),
+              const Divider(),
+              InkWell(
+                onTap: widget.onOpenTimetable,
+                child: SizedBox(
+                  height: 44,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text('Xem thời khóa biểu', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.brand)),
+                        ),
+                        Icon(Icons.chevron_right, size: 18, color: context.k.brand),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -142,15 +213,16 @@ class _OverviewScreenState extends State<OverviewScreen> {
   });
 }
 
-class _OverviewData { const _OverviewData(this.teacher, this.dashboard); final Teacher teacher; final ClassDashboardSummary dashboard; }
+class _OverviewData { const _OverviewData(this.teacher, this.dashboard, this.todayItems); final Teacher teacher; final ClassDashboardSummary dashboard; final List<ClassSchedule> todayItems; }
 
 class ClassListScreen extends StatefulWidget {
-  const ClassListScreen({super.key, required this.initialHealthOnly, required this.onRecord, required this.onEdit, required this.children, this.onSelectClass, this.className = 'Lớp', this.schoolName = 'Chưa có thông tin trường', this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
+  const ClassListScreen({super.key, required this.initialHealthOnly, required this.onRecord, required this.onEdit, required this.children, this.onSelectClass, this.onOpenTimetable, this.className = 'Lớp', this.schoolName = 'Chưa có thông tin trường', this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
   final bool initialHealthOnly;
   final ValueChanged<Child> onRecord;
   final ValueChanged<Child> onEdit;
   final List<Child> children;
   final VoidCallback? onSelectClass;
+  final VoidCallback? onOpenTimetable;
   final String classId;
   final String className;
   final String schoolName;
@@ -209,6 +281,32 @@ class _ClassListScreenState extends State<ClassListScreen> {
                 ],
               ),
               const SizedBox(height: 14),
+              KCard(
+                onTap: widget.onOpenTimetable,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(color: context.k.brandTint, borderRadius: BorderRadius.circular(8)),
+                      child: Icon(Icons.calendar_month_outlined, size: 18, color: context.k.brand),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Thời khóa biểu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                          Text('Xem lịch học cả tuần của lớp', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               SearchField(hint: 'Tìm theo tên bé…', onChanged: (value) => setState(() => query = value)),
               const SizedBox(height: 12),
               Wrap(
@@ -666,5 +764,16 @@ class _ThemeSelector extends StatelessWidget {
 }
 
 // Formats today's date for the Vietnamese dashboard.
+// Parses "HH:MM" into minutes since midnight (null when invalid).
+int? _timeToMinutes(String value) {
+  if (value.trim().isEmpty) return null;
+  final parts = value.split(':');
+  if (parts.length < 2) return null;
+  final hours = int.tryParse(parts[0]);
+  final minutes = int.tryParse(parts[1]);
+  if (hours == null || minutes == null) return null;
+  return hours * 60 + minutes;
+}
+
 String _longDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 String _shortDate(DateTime d) => _longDate(d);
