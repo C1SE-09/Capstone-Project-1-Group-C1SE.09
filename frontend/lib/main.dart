@@ -1,11 +1,21 @@
+import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeController.instance.load();
+  // Khởi tạo Firebase cho push notification. Bọc try/catch để app vẫn chạy
+  // khi chưa có google-services.json hoặc trên nền tảng không hỗ trợ.
+  try {
+    await Firebase.initializeApp();
+    await PushNotificationService.instance.init();
+  } catch (error) {
+    debugPrint('Firebase init skipped: $error');
+  }
   runApp(const MyApp());
 }
 
@@ -20,6 +30,7 @@ class MyApp extends StatelessWidget {
           theme: kinderTheme(),
           darkTheme: kinderThemeDark(),
           themeMode: mode,
+          scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
           debugShowCheckedModeBanner: false,
         ),
       );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
@@ -64,6 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final role = (user.role.toLowerCase() == 'parent')
           ? UserRole.parent
           : UserRole.teacher;
+      if (role == UserRole.parent) {
+        // Scope A: chỉ phụ huynh nhận push báo cáo mới.
+        PushNotificationService.instance.registerCurrentDevice();
+      }
       widget.onLogin(role);
     } catch (e) {
       if (!mounted) return;

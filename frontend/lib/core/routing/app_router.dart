@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
@@ -30,12 +31,20 @@ final GoRouter appRouter = GoRouter(
         className: state.uri.queryParameters['className'] ?? 'Lớp học',
       ),
     ),
-    GoRoute(path: '/parent', builder: (context, state) => const ParentFlow(onLogout: _goLogin)),
+    GoRoute(
+      path: '/parent',
+      builder: (context, state) => ParentFlow(
+        onLogout: _goLogin,
+        initialOpenReport: state.uri.queryParameters['report'] == 'today',
+      ),
+    ),
     GoRoute(path: '/change-password', builder: (context, state) => ChangePasswordScreen(onBack: () => appRouter.pop())),
   ],
 );
 
-void _goLogin() {
+Future<void> _goLogin() async {
+  // Xoá device token TRƯỚC khi logout để request còn JWT hợp lệ.
+  await PushNotificationService.instance.deleteCurrentDevice();
   AuthRepository().logout();
   appRouter.go('/login');
 }

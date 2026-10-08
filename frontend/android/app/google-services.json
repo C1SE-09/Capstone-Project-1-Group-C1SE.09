@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "632058587339",
+    "project_id": "kinderlog-ab83a",
+    "storage_bucket": "kinderlog-ab83a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:632058587339:android:454b9cc5ca1acb9725934e",
+        "android_client_info": {
+          "package_name": "com.example.adark_frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4XPZ9VERrR6dP5dVdGvo6o1-Zet7IW3Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

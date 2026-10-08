@@ -12,9 +12,12 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class ParentFlow extends StatefulWidget {
-  const ParentFlow({super.key, this.repository, this.onLogout});
+  const ParentFlow({super.key, this.repository, this.onLogout, this.initialOpenReport = false});
   final HttpDashboardRepository? repository;
   final VoidCallback? onLogout;
+
+  /// True khi mở từ push notification: vào thẳng báo cáo hôm nay (Scope A).
+  final bool initialOpenReport;
   @override
   State<ParentFlow> createState() => _ParentFlowState();
 }
@@ -29,6 +32,20 @@ class _ParentFlowState extends State<ParentFlow> {
   void initState() {
     super.initState();
     future = _load();
+    // Chạm push notification → mở thẳng báo cáo hôm nay khi dữ liệu tải xong.
+    future.then(
+      (data) {
+        if (!mounted || !widget.initialOpenReport) return;
+        final today = data.today;
+        if (today != null && !showReport) {
+          setState(() {
+            selectedReport = today;
+            showReport = true;
+          });
+        }
+      },
+      onError: (_) {},
+    );
   }
 
   // Loads parent-linked child and report history from existing endpoints.
