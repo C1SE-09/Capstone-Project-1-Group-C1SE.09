@@ -241,7 +241,7 @@ void main() {
     expect(find.text('Lưu thay đổi'), findsNothing);
   });
 
-  testWidgets('ReviewScreen sets missing fields to "bình thường" and leaves note empty',
+  testWidgets('ReviewScreen does not display missing fields and leaves note empty',
       (WidgetTester tester) async {
     final extraction = ExtractionData(
       transcript: 'Hôm nay bé ăn rất ngoan hết suất.',
@@ -272,11 +272,11 @@ void main() {
     // Verify meals is extracted
     expect(find.textContaining('Ăn rất ngoan hết suất'), findsOneWidget);
 
-    // Verify missing fields are set to "bình thường"
-    expect(find.textContaining('Giấc ngủ: bình thường'), findsOneWidget);
-    expect(find.textContaining('Hoạt động: bình thường'), findsOneWidget);
-    expect(find.textContaining('Tâm trạng: bình thường'), findsOneWidget);
-    expect(find.textContaining('Sức khỏe: bình thường'), findsOneWidget);
+    // Verify missing fields are NOT rendered
+    expect(find.textContaining('Giấc ngủ:'), findsNothing);
+    expect(find.textContaining('Hoạt động:'), findsNothing);
+    expect(find.textContaining('Tâm trạng:'), findsNothing);
+    expect(find.textContaining('Sức khỏe:'), findsNothing);
 
     // Verify Ghi chú is NOT rendered because it was left empty
     expect(find.textContaining('Ghi chú:'), findsNothing);
