@@ -104,19 +104,19 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       final ext = widget.initialExtraction!;
       eating.text = (ext.meals != null && ext.meals!.trim().isNotEmpty)
           ? ext.meals!.trim()
-          : 'bình thường';
+          : '';
       sleep.text = (ext.sleeping != null && ext.sleeping!.trim().isNotEmpty)
           ? ext.sleeping!.trim()
-          : 'bình thường';
+          : '';
       health.text = (ext.health != null && ext.health!.trim().isNotEmpty)
           ? ext.health!.trim()
-          : 'bình thường';
+          : '';
       mood.text = (ext.mood != null && ext.mood!.trim().isNotEmpty)
           ? ext.mood!.trim()
-          : 'bình thường';
+          : '';
       activity.text = (ext.activities != null && ext.activities!.trim().isNotEmpty)
           ? ext.activities!.trim()
-          : 'bình thường';
+          : '';
       final extNote = ext.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
           ? ext.rawJson!['teacher_note']!.toString().trim()
           : (ext.rawJson?['notes']?.toString().trim().isNotEmpty == true

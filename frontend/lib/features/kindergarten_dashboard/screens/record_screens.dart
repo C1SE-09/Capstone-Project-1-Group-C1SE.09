@@ -1612,11 +1612,11 @@ class ObservationItem {
       matched: true,
       decision: ObservationDecision.approved,
       kind: ObservationKind.normal,
-      eating: eating.isNotEmpty ? eating : 'bình thường',
-      sleep: sleep.isNotEmpty ? sleep : 'bình thường',
-      activities: activities.isNotEmpty ? activities : 'bình thường',
-      mood: mood.isNotEmpty ? mood : 'bình thường',
-      health: health.isNotEmpty ? health : 'bình thường',
+      eating: eating,
+      sleep: sleep,
+      activities: activities,
+      mood: mood,
+      health: health,
       note: note,
       snippet: snippet,
       severity: severity,
@@ -1717,19 +1717,19 @@ class _ReviewScreenState extends State<ReviewScreen> {
         final c = widget.child!;
         final meals = ext?.meals?.trim().isNotEmpty == true
             ? ext!.meals!.trim()
-            : 'bình thường';
+            : '';
         final sleep = ext?.sleeping?.trim().isNotEmpty == true
             ? ext!.sleeping!.trim()
-            : 'bình thường';
+            : '';
         final activities = ext?.activities?.trim().isNotEmpty == true
             ? ext!.activities!.trim()
-            : 'bình thường';
+            : '';
         final mood = ext?.mood?.trim().isNotEmpty == true
             ? ext!.mood!.trim()
-            : 'bình thường';
+            : '';
         final health = ext?.health?.trim().isNotEmpty == true
             ? ext!.health!.trim()
-            : 'bình thường';
+            : '';
         final note = ext?.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
             ? ext!.rawJson!['teacher_note']!.toString().trim()
             : (ext?.rawJson?['notes']?.toString().trim().isNotEmpty == true
@@ -1784,19 +1784,19 @@ class _ReviewScreenState extends State<ReviewScreen> {
             decision: ObservationDecision.pending,
             eating: ext?.meals?.trim().isNotEmpty == true
                 ? ext!.meals!.trim()
-                : 'bình thường',
+                : '',
             sleep: ext?.sleeping?.trim().isNotEmpty == true
                 ? ext!.sleeping!.trim()
-                : 'bình thường',
+                : '',
             activities: ext?.activities?.trim().isNotEmpty == true
                 ? ext!.activities!.trim()
-                : 'bình thường',
+                : '',
             mood: ext?.mood?.trim().isNotEmpty == true
                 ? ext!.mood!.trim()
-                : 'bình thường',
+                : '',
             health: ext?.health?.trim().isNotEmpty == true
                 ? ext!.health!.trim()
-                : 'bình thường',
+                : '',
             note: ext?.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
                 ? ext!.rawJson!['teacher_note']!.toString().trim()
                 : (ext?.rawJson?['notes']?.toString().trim().isNotEmpty == true
@@ -1850,7 +1850,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
           final text =
               seg is Map ? (seg['text']?.toString() ?? '') : seg.toString();
           if (text.trim().isNotEmpty) {
-            result.add(_unmatchedItem('unmatched_$i', text));
+            result.add(_unmatchedItem(
+              'unmatched_$i',
+              text,
+              seg is Map && seg['extraction'] is Map ? seg['extraction'] : null,
+            ));
           }
         }
       } else if (ext?.segments != null) {
@@ -1866,7 +1870,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
               }
               final text = seg['text']?.toString() ?? '';
               if (text.trim().isNotEmpty) {
-                result.add(_unmatchedItem('unmatched_${uIdx++}', text));
+                result.add(_unmatchedItem(
+                  'unmatched_${uIdx++}',
+                  text,
+                  seg['extraction'] is Map ? seg['extraction'] : null,
+                ));
               }
             }
           }
@@ -1895,18 +1903,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   /// Tạo classwide ObservationItem từ classWideExtraction map.
   ObservationItem _classwideItemFromExtraction(Map<String, dynamic> cw) {
-    String pick(String key, String fallback) {
+    String pick(String key, [String fallback = '']) {
       final v = cw[key];
       final s = v?.toString().trim();
       return (s != null && s.isNotEmpty) ? s : fallback;
     }
 
-    final noteVal = pick('notes', '') != ''
-        ? pick('notes', '')
-        : (pick('teacher_note', '') != ''
-            ? pick('teacher_note', '')
-            : (pick('note', '') != ''
-                ? pick('note', '')
+    final noteVal = pick('notes') != ''
+        ? pick('notes')
+        : (pick('teacher_note') != ''
+            ? pick('teacher_note')
+            : (pick('note') != ''
+                ? pick('note')
                 : ''));
 
     return ObservationItem(
@@ -1915,21 +1923,21 @@ class _ReviewScreenState extends State<ReviewScreen> {
       matched: true,
       kind: ObservationKind.classwide,
       decision: ObservationDecision.pending,
-      eating: pick('meals', 'bình thường'),
-      sleep: pick('sleeping', 'bình thường'),
-      activities: pick('activities', 'bình thường'),
-      mood: pick('mood', 'bình thường'),
-      health: pick('health', 'bình thường'),
+      eating: pick('meals'),
+      sleep: pick('sleeping'),
+      activities: pick('activities'),
+      mood: pick('mood'),
+      health: pick('health'),
       note: noteVal,
     );
   }
 
   /// Tạo child ObservationItem từ childExtractions[childId/name].
   ObservationItem _childItemFromExtraction(Child child, Map data) {
-    String? pick(String key) {
+    String pick(String key) {
       final v = data[key];
       final s = v?.toString().trim();
-      return (s != null && s.isNotEmpty) ? s : null;
+      return (s != null && s.isNotEmpty) ? s : '';
     }
 
     return ObservationItem(
@@ -1940,21 +1948,29 @@ class _ReviewScreenState extends State<ReviewScreen> {
       matched: true,
       kind: ObservationKind.normal,
       decision: ObservationDecision.pending,
-      eating: pick('meals') ?? 'bình thường',
-      sleep: pick('sleeping') ?? 'bình thường',
-      activities: pick('activities') ?? 'bình thường',
-      mood: pick('mood') ?? 'bình thường',
-      health: pick('health') ?? 'bình thường',
-      note: pick('notes') ??
-          pick('teacher_note') ??
-          pick('note') ??
-          '',
+      eating: pick('meals'),
+      sleep: pick('sleeping'),
+      activities: pick('activities'),
+      mood: pick('mood'),
+      health: pick('health'),
+      note: pick('notes').isNotEmpty
+          ? pick('notes')
+          : (pick('teacher_note').isNotEmpty
+              ? pick('teacher_note')
+              : pick('note')),
       severity: child.severity,
     );
   }
 
   /// Tạo unmatched ObservationItem cho 1 segment không gắn được với bé nào.
-  ObservationItem _unmatchedItem(String id, String text) {
+  ObservationItem _unmatchedItem(String id, String text, [Map? extraction]) {
+    String pick(String key) {
+      if (extraction == null) return '';
+      final v = extraction[key];
+      final s = v?.toString().trim();
+      return (s != null && s.isNotEmpty) ? s : '';
+    }
+
     return ObservationItem(
       id: id,
       name: 'Chưa rõ bé nào',
@@ -1962,10 +1978,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
       kind: ObservationKind.unmatched,
       decision: ObservationDecision.pending,
       snippet: text,
-      eating: '',
-      sleep: '',
-      activities: '',
-      mood: '',
+      eating: pick('meals'),
+      sleep: pick('sleeping'),
+      activities: pick('activities'),
+      mood: pick('mood'),
+      health: pick('health'),
+      note: pick('notes').isNotEmpty
+          ? pick('notes')
+          : (pick('teacher_note').isNotEmpty
+              ? pick('teacher_note')
+              : pick('note')),
     );
   }
 
@@ -2538,7 +2560,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -2659,92 +2681,95 @@ class _ReviewScreenState extends State<ReviewScreen> {
           );
         },
       ),
-      bottomSheet: Container(
-        decoration: BoxDecoration(
-          color: context.k.surface,
-          border: Border(top: BorderSide(color: context.k.line)),
-          boxShadow: [
-            BoxShadow(
-                color: Color(0x102a2926),
-                blurRadius: 20,
-                offset: Offset(0, -8)),
-          ],
-        ),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Sẽ gửi từ 1 lần nói này:',
-              style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: context.k.inkSoft),
-            ),
-            const SizedBox(height: 7),
-            _SummaryRow('📄', approvedCount, 'phiếu liên lạc cho phụ huynh'),
-            if (healthCount > 0)
-              _SummaryRow('🏥', healthCount, 'ghi nhận vào sổ sức khỏe'),
-            if (discardedCount > 0)
-              _SummaryRow('🗑️', discardedCount, 'đã được loại bỏ'),
-            if (unmatchedActiveCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _SurfaceBox(
-                  padding: const EdgeInsets.all(8),
-                  color: context.k.warnTint,
-                  borderColor: context.k.warnTint,
-                  child: Text(
-                    'Còn $unmatchedActiveCount đoạn chưa xử lý. Gán cho một bé, cả lớp hoặc bỏ qua để xác nhận.',
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: context.k.warn),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.k.surface,
+            border: Border(top: BorderSide(color: context.k.line)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x102a2926),
+                  blurRadius: 20,
+                  offset: Offset(0, -8)),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Sẽ gửi từ 1 lần nói này:',
+                style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: context.k.inkSoft),
+              ),
+              const SizedBox(height: 7),
+              _SummaryRow('📄', approvedCount, 'phiếu liên lạc cho phụ huynh'),
+              if (healthCount > 0)
+                _SummaryRow('🏥', healthCount, 'ghi nhận vào sổ sức khỏe'),
+              if (discardedCount > 0)
+                _SummaryRow('🗑️', discardedCount, 'đã được loại bỏ'),
+              if (unmatchedActiveCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _SurfaceBox(
+                    padding: const EdgeInsets.all(8),
+                    color: context.k.warnTint,
+                    borderColor: context.k.warnTint,
+                    child: Text(
+                      'Còn $unmatchedActiveCount đoạn chưa xử lý. Gán cho một bé, cả lớp hoặc bỏ qua để xác nhận.',
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: context.k.warn),
+                    ),
                   ),
                 ),
-              ),
-            if (pendingCount > 0 && unmatchedActiveCount == 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _SurfaceBox(
-                  padding: const EdgeInsets.all(8),
-                  color: context.k.brandTint,
-                  borderColor: context.k.brandTint,
-                  child: Text(
-                    'Còn $pendingCount mục chưa duyệt. Bấm "Duyệt" từng mục hoặc loại bỏ để tiếp tục.',
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: context.k.brand),
+              if (pendingCount > 0 && unmatchedActiveCount == 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _SurfaceBox(
+                    padding: const EdgeInsets.all(8),
+                    color: context.k.brandTint,
+                    borderColor: context.k.brandTint,
+                    child: Text(
+                      'Còn $pendingCount mục chưa duyệt. Bấm "Duyệt" từng mục hoặc loại bỏ để tiếp tục.',
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: context.k.brand),
+                    ),
                   ),
                 ),
-              ),
-            const SizedBox(height: 10),
-            FilledButton(
-              onPressed:
-                  !isSubmitting && (approvedCount > 0 || pendingCount > 0)
-                      ? () async {
-                          if (approvedCount == 0 && pendingCount > 0) {
-                            await _approveAll();
+              const SizedBox(height: 10),
+              FilledButton(
+                onPressed:
+                    !isSubmitting && (approvedCount > 0 || pendingCount > 0)
+                        ? () async {
+                            if (approvedCount == 0 && pendingCount > 0) {
+                              await _approveAll();
+                            }
+                            await _sendBatch();
                           }
-                          await _sendBatch();
-                        }
-                      : null,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 44),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KRadii.control)),
+                        : null,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(KRadii.control)),
+                ),
+                child: Text(
+                  isSubmitting
+                      ? 'Đang gửi báo cáo…'
+                      : approvedCount > 0
+                          ? 'Gửi $approvedCount báo cáo'
+                          : 'Duyệt & Gửi báo cáo cả lớp',
+                ),
               ),
-              child: Text(
-                isSubmitting
-                    ? 'Đang gửi báo cáo…'
-                    : approvedCount > 0
-                        ? 'Gửi $approvedCount báo cáo'
-                        : 'Duyệt & Gửi báo cáo cả lớp',
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -3250,10 +3275,14 @@ class _ObservationTile extends StatelessWidget {
             ),
           ],
           SizedBox(height: 10),
-          _buildReportLine(context, '🍽️', 'Bữa ăn', card.eating),
-          _buildReportLine(context, '😴', 'Giấc ngủ', card.sleep),
-          _buildReportLine(context, '🎨', 'Hoạt động', card.activities),
-          _buildReportLine(context, '🎭', 'Tâm trạng', card.mood),
+          if (card.eating.isNotEmpty)
+            _buildReportLine(context, '🍽️', 'Bữa ăn', card.eating),
+          if (card.sleep.isNotEmpty)
+            _buildReportLine(context, '😴', 'Giấc ngủ', card.sleep),
+          if (card.activities.isNotEmpty)
+            _buildReportLine(context, '🎨', 'Hoạt động', card.activities),
+          if (card.mood.isNotEmpty)
+            _buildReportLine(context, '🎭', 'Tâm trạng', card.mood),
           if (card.health.isNotEmpty)
             _buildReportLine(context, '🏥', 'Sức khỏe', card.health),
           if (card.note.trim().isNotEmpty)
