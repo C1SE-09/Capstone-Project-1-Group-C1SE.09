@@ -240,6 +240,47 @@ void main() {
     // Verify modal is closed
     expect(find.text('Lưu thay đổi'), findsNothing);
   });
+
+  testWidgets('ReviewScreen sets missing fields to "bình thường" and leaves note empty',
+      (WidgetTester tester) async {
+    final extraction = ExtractionData(
+      transcript: 'Hôm nay bé ăn rất ngoan hết suất.',
+      childExtractions: {
+        'child-1': {
+          'meals': 'Ăn rất ngoan hết suất',
+          // sleeping, activities, mood, health not provided
+          // notes not provided
+        },
+      },
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewScreen(
+          classId: 'class-1',
+          className: 'Lớp Mầm A',
+          extraction: extraction,
+          repository: MockDashboardRepository(),
+          onBack: () {},
+          onCompleted: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify meals is extracted
+    expect(find.textContaining('Ăn rất ngoan hết suất'), findsOneWidget);
+
+    // Verify missing fields are set to "bình thường"
+    expect(find.textContaining('Giấc ngủ: bình thường'), findsOneWidget);
+    expect(find.textContaining('Hoạt động: bình thường'), findsOneWidget);
+    expect(find.textContaining('Tâm trạng: bình thường'), findsOneWidget);
+    expect(find.textContaining('Sức khỏe: bình thường'), findsOneWidget);
+
+    // Verify Ghi chú is NOT rendered because it was left empty
+    expect(find.textContaining('Ghi chú:'), findsNothing);
+  });
 }
 
 class MockTeacherRepo extends TeacherRepository {

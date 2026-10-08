@@ -77,11 +77,14 @@ def change_password(
 
 @router.post("/forgot-password")
 def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)):
-    email = data.email.strip().lower()
+    input_val = data.email.strip().lower()
     user = None
+    target_email = input_val
+
+    # 1. Tìm theo Teacher email
     teacher = (
         db.query(Teacher)
-        .filter(Teacher.email.ilike(email))
+        .filter(Teacher.email.ilike(input_val))
         .first()
     )
     if teacher:
@@ -90,10 +93,13 @@ def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)
             .filter(User.teacher_id == teacher.teacher_id)
             .first()
         )
+        target_email = teacher.email
+
+    # 2. Tìm theo Parent email
     if user is None:
         parent = (
             db.query(Parent)
-            .filter(Parent.email.ilike(email))
+            .filter(Parent.email.ilike(input_val))
             .first()
         )
         if parent:
@@ -102,32 +108,58 @@ def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)
                 .filter(User.parent_id == parent.parent_id)
                 .first()
             )
-    if user is not None:
-        reset_code = generate_reset_code()
-        save_reset_code(email=email, reset_code=reset_code)
-        try:
-            send_test_email(
-                to_email=email,
-                subject="KinderLog - Mã đặt lại mật khẩu",
-                body=(
-                    "Xin chào,\n\n"
-                    f"Mã xác thực đặt lại mật khẩu của bạn là: {reset_code}\n"
-                    "Mã này sẽ hết hạn sau 5 phút.\n\n"
-                    "Nếu bạn không yêu cầu đặt lại mật khẩu, "
-                    "vui lòng bỏ qua email này.\n\n"
-                    "KinderLog"
-                ),
-            )
-        except Exception as exc:
-            delete_reset_code(email)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Gửi email thất bại: {exc!s}",
-            ) from exc
+            target_email = parent.email
+
+    # 3. Tìm theo Username (nếu nhập 'comai', 'tuan'...)
+    if user is None:
+        user = db.query(User).filter(User.username.ilike(input_val)).first()
+        if user:
+            if user.teacher_id:
+                t = db.query(Teacher).filter(Teacher.teacher_id == user.teacher_id).first()
+                if t and t.email:
+                    target_email = t.email
+            elif user.parent_id:
+                p = db.query(Parent).filter(Parent.parent_id == user.parent_id).first()
+                if p and p.email:
+                    target_email = p.email
+
+    if user is None:
+        print(f"[AUTH] Quên mật khẩu: Không tìm thấy tài khoản tương ứng với '{input_val}' trong hệ thống!")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email hoặc tên đăng nhập không tồn tại trong hệ thống.",
+        )
+
+    reset_code = generate_reset_code()
+    save_reset_code(email=input_val, reset_code=reset_code)
+    if target_email != input_val:
+        save_reset_code(email=target_email, reset_code=reset_code)
+
+    try:
+        send_test_email(
+            to_email=target_email,
+            subject="KinderLog - Mã đặt lại mật khẩu",
+            body=(
+                "Xin chào,\n\n"
+                f"Mã xác thực đặt lại mật khẩu của bạn là: {reset_code}\n"
+                "Mã này sẽ hết hạn sau 5 phút.\n\n"
+                "Nếu bạn không yêu cầu đặt lại mật khẩu, "
+                "vui lòng bỏ qua email này.\n\n"
+                "KinderLog"
+            ),
+        )
+    except Exception as exc:
+        delete_reset_code(input_val)
+        if target_email != input_val:
+            delete_reset_code(target_email)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Gửi email thất bại: {exc!s}",
+        ) from exc
+
     return {
         "message": (
-            "Nếu email tồn tại trong hệ thống, "
-            "mã xác thực đã được gửi. "
+            f"Mã xác thực đã được gửi tới {target_email}. "
             "Vui lòng kiểm tra hộp thư đến hoặc thư mục spam."
         )
     }
@@ -145,29 +177,31 @@ def verify_reset_code_endpoint(data: verify_reset_code_request):
 
 @router.post("/reset-password")
 def reset_password(data: reset_password_request, db: Session = Depends(get_db)):
-    email = data.email.strip().lower()
-    if not is_reset_code_verified(email):
+    input_val = data.email.strip().lower()
+    if not is_reset_code_verified(input_val):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mã đặt lại mật khẩu chưa được xác thực hoặc đã hết hạn.",
         )
     user = None
-    teacher = db.query(Teacher).filter(Teacher.email.ilike(email)).first()
+    teacher = db.query(Teacher).filter(Teacher.email.ilike(input_val)).first()
     if teacher:
         user = db.query(User).filter(User.teacher_id == teacher.teacher_id).first()
     if user is None:
-        parent = db.query(Parent).filter(Parent.email.ilike(email)).first()
+        parent = db.query(Parent).filter(Parent.email.ilike(input_val)).first()
         if parent:
             user = db.query(User).filter(User.parent_id == parent.parent_id).first()
     if user is None:
-        delete_reset_code(email)
+        user = db.query(User).filter(User.username.ilike(input_val)).first()
+    if user is None:
+        delete_reset_code(input_val)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Người dùng với email này không tồn tại.",
+            detail="Người dùng với email/tên đăng nhập này không tồn tại.",
         )
     user.password_hash = hash_password(data.new_password)
     db.commit()
-    delete_reset_code(email)
+    delete_reset_code(input_val)
     return {"message": "Mật khẩu đã được đặt lại thành công."}
 @router.post("/test-email")
 def test_email(to_email: str):

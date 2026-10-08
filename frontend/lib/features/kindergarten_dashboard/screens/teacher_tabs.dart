@@ -16,7 +16,17 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class OverviewScreen extends StatefulWidget {
-  const OverviewScreen({super.key, this.onOpenReport, this.onHistory, this.onHealth, this.onSelectClass, this.onOpenTimetable, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository});
+  const OverviewScreen({
+    super.key,
+    this.onOpenReport,
+    this.onHistory,
+    this.onHealth,
+    this.onSelectClass,
+    this.onOpenTimetable,
+    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.repository,
+    this.scheduleRepository,
+  });
   final ValueChanged<String>? onOpenReport;
   final VoidCallback? onHistory;
   final VoidCallback? onHealth;
@@ -24,13 +34,14 @@ class OverviewScreen extends StatefulWidget {
   final VoidCallback? onOpenTimetable;
   final String classId;
   final HttpDashboardRepository? repository;
+  final ScheduleRepository? scheduleRepository;
   @override
   State<OverviewScreen> createState() => _OverviewScreenState();
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
-  late final ScheduleRepository scheduleRepository = HttpScheduleRepository();
+  late final ScheduleRepository scheduleRepository = widget.scheduleRepository ?? HttpScheduleRepository();
   late Future<_OverviewData> future;
   @override
   void initState() { super.initState(); future = _load(); }
@@ -39,20 +50,27 @@ class _OverviewScreenState extends State<OverviewScreen> {
     final values = await Future.wait([
       repository.getCurrentTeacher(),
       repository.getClassDashboard(widget.classId, DateTime.now()),
-      scheduleRepository.getClassSchedule(widget.classId),
+      scheduleRepository.getClassSchedule(widget.classId).catchError((_) => <ClassSchedule>[]),
     ]);
     final now = DateTime.now();
     final todayIndex = now.weekday - 1;
     final nowMinutes = now.hour * 60 + now.minute;
-    final todayItems = (values[2] as List<ClassSchedule>)
-        .where((item) => item.isActive && item.dayIndex == todayIndex && (_timeToMinutes(item.endTime) ?? 0) > nowMinutes)
+    final todayAll = (values[2] as List<ClassSchedule>)
+        .where((item) => item.isActive && item.dayIndex == todayIndex)
         .toList()
       ..sort((a, b) => (_timeToMinutes(a.startTime) ?? 0).compareTo(_timeToMinutes(b.startTime) ?? 0));
+    final upcoming = todayAll.where((item) => (_timeToMinutes(item.endTime) ?? 0) > nowMinutes).toList();
+    final todayItems = upcoming.isNotEmpty ? upcoming : todayAll;
     return _OverviewData(
       values[0] as Teacher,
       values[1] as ClassDashboardSummary,
       todayItems.take(3).toList(growable: false),
     );
+  }
+
+  void _handleOpenTimetable() {
+    widget.onOpenTimetable?.call();
+    if (mounted) setState(() => future = _load());
   }
   // Renders overview loading, error and data states.
   @override
@@ -174,7 +192,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                   ),
               const Divider(),
               InkWell(
-                onTap: widget.onOpenTimetable,
+                onTap: _handleOpenTimetable,
                 child: SizedBox(
                   height: 44,
                   child: Padding(

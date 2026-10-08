@@ -7,7 +7,7 @@ FastAPI Routers cho quản lý Thời khóa biểu (TimeSlot, Subject, ClassSche
 import uuid
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_optional_current_user
 from app.models.user import User
 from app.schemas.schedule import (
     ClassScheduleBulkCreateRequest,
@@ -45,7 +45,7 @@ def get_time_slots(db: Session = Depends(get_db)):
 def create_time_slot(
     data: TimeSlotCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Tạo mới một khung giờ (Cần đăng nhập)."""
     return schedule_service.create_time_slot(db, data)
@@ -56,7 +56,7 @@ def update_time_slot(
     slot_id: uuid.UUID,
     data: TimeSlotUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Cập nhật khung giờ."""
     updated = schedule_service.update_time_slot(db, slot_id, data)
@@ -69,7 +69,7 @@ def update_time_slot(
 def delete_time_slot(
     slot_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Xóa khung giờ."""
     success = schedule_service.delete_time_slot(db, slot_id)
@@ -93,7 +93,7 @@ def get_subjects(db: Session = Depends(get_db)):
 def create_subject(
     data: SubjectCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Tạo mới môn học / hoạt động (Cần đăng nhập)."""
     return schedule_service.create_subject(db, data)
@@ -104,7 +104,7 @@ def update_subject(
     subject_id: uuid.UUID,
     data: SubjectUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Cập nhật môn học."""
     updated = schedule_service.update_subject(db, subject_id, data)
@@ -117,7 +117,7 @@ def update_subject(
 def delete_subject(
     subject_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Xóa môn học."""
     success = schedule_service.delete_subject(db, subject_id)
@@ -167,10 +167,12 @@ def get_teacher_schedule(
 def create_class_schedule(
     data: ClassScheduleCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Tạo mới 1 tiết học trong thời khóa biểu (Có kiểm tra trùng lịch)."""
     try:
+        if data.teacher_id is None and current_user and current_user.teacher_id:
+            data.teacher_id = current_user.teacher_id
         return schedule_service.create_class_schedule(db, data)
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
@@ -180,7 +182,7 @@ def create_class_schedule(
 def bulk_upsert_class_schedule(
     data: ClassScheduleBulkCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Tạo/Thay thế toàn bộ thời khóa biểu tuần cho 1 lớp."""
     return schedule_service.bulk_upsert_class_schedule(
@@ -193,7 +195,7 @@ def update_class_schedule(
     schedule_id: uuid.UUID,
     data: ClassScheduleUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Cập nhật tiết học."""
     try:
@@ -209,7 +211,7 @@ def update_class_schedule(
 def delete_class_schedule(
     schedule_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     """Xóa tiết học."""
     success = schedule_service.delete_class_schedule(db, schedule_id)

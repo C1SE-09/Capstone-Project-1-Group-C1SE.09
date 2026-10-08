@@ -674,19 +674,21 @@ def create_report_from_extraction(
         ("mood", "BEHAVIOR", "Tâm trạng"),
     ]
 
-    order = 0
-    for key, category_str, title in mapping:
+    for order, (key, category_str, title) in enumerate(mapping):
         value = result.get(key)
-        if value:
-            entry = ActivityEntry(
-                daily_report_id=report.daily_report_id,
-                category=ActivityCategory[category_str],
-                title=title,
-                description=value,
-                entry_order=order,
-            )
-            db.add(entry)
-            order += 1
+        description = (
+            value.strip()
+            if (value and isinstance(value, str) and value.strip())
+            else "bình thường"
+        )
+        entry = ActivityEntry(
+            daily_report_id=report.daily_report_id,
+            category=ActivityCategory[category_str],
+            title=title,
+            description=description,
+            entry_order=order,
+        )
+        db.add(entry)
 
     db.commit()
 
@@ -765,21 +767,30 @@ def create_manual_report(
         (payload.health, ActivityCategory.HEALTH, "Sức khỏe"),
         (payload.activities, ActivityCategory.PLAY, "Hoạt động"),
         (payload.mood, ActivityCategory.BEHAVIOR, "Tâm trạng"),
-        (payload.teacher_note, ActivityCategory.OTHER, "Ghi chú giáo viên"),
     ]
 
     order = 0
     for value, category, title in fields_mapping:
-        if value and value.strip():
-            entry = ActivityEntry(
-                daily_report_id=report.daily_report_id,
-                category=category,
-                title=title,
-                description=value.strip(),
-                entry_order=order,
-            )
-            db.add(entry)
-            order += 1
+        val_to_use = value.strip() if (value and value.strip()) else "bình thường"
+        entry = ActivityEntry(
+            daily_report_id=report.daily_report_id,
+            category=category,
+            title=title,
+            description=val_to_use,
+            entry_order=order,
+        )
+        db.add(entry)
+        order += 1
+
+    if payload.teacher_note and payload.teacher_note.strip():
+        entry = ActivityEntry(
+            daily_report_id=report.daily_report_id,
+            category=ActivityCategory.OTHER,
+            title="Ghi chú giáo viên",
+            description=payload.teacher_note.strip(),
+            entry_order=order,
+        )
+        db.add(entry)
 
     db.commit()
     db.refresh(report)

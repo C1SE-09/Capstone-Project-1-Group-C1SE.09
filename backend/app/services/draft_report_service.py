@@ -153,46 +153,21 @@ def _populate_activities(
     """
     Tạo ActivityEntry rows từ extraction dict (sau khi merge).
 
-    Chỉ tạo entry khi value != None và không empty.
+    Nếu trường không có nội dung thì ghi "bình thường".
     """
     entries = []
-    order = 0
-    for key, category_str, title in FIELDS_MAPPING:
+    for order, (key, category_str, title) in enumerate(FIELDS_MAPPING):
         value = extraction.get(key)
-        if value and value.strip():
-            entry = ActivityEntry(
-                daily_report_id=report.daily_report_id,
-                category=ActivityCategory[category_str],
-                title=title,
-                description=value.strip(),
-                entry_order=order,
-            )
-            db.add(entry)
-            entries.append(entry)
-            order += 1
-
-    if not entries:
-        defaults = [
-            ("MEAL", "Bữa ăn", "Ăn theo thực đơn chung của lớp, ăn hết suất."),
-            ("NAP", "Giấc ngủ", "Ngủ trưa đúng giờ, ngủ đủ giấc."),
-            (
-                "PLAY",
-                "Hoạt động",
-                "Tham gia tích cực các hoạt động học tập và vui chơi.",
-            ),
-            ("BEHAVIOR", "Tâm trạng", "Vui vẻ, hòa đồng cùng các bạn."),
-        ]
-        for category_str, title, desc in defaults:
-            entry = ActivityEntry(
-                daily_report_id=report.daily_report_id,
-                category=ActivityCategory[category_str],
-                title=title,
-                description=desc,
-                entry_order=order,
-            )
-            db.add(entry)
-            entries.append(entry)
-            order += 1
+        description = value.strip() if (value and value.strip()) else "bình thường"
+        entry = ActivityEntry(
+            daily_report_id=report.daily_report_id,
+            category=ActivityCategory[category_str],
+            title=title,
+            description=description,
+            entry_order=order,
+        )
+        db.add(entry)
+        entries.append(entry)
 
     return entries
 
