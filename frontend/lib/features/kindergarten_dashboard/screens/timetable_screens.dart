@@ -1,0 +1,1288 @@
+// frontend/lib/features/kindergarten_dashboard/screens/timetable_screens.dart
+// =========================================================
+// Màn hình Thời khóa biểu (Thời khóa biểu) — GV xem/sửa lịch tuần của lớp.
+// Dữ liệu thật từ /api/schedules + /api/time-slots + /api/subjects.
+// Thiết kế theo Figma Make (đã audit) + MASTER.md §7.10:
+// - Điện thoại: chế độ Ngày/Tuần, DayStrip, hàng lịch có giờ · icon môn · GV · phòng.
+// - Màn rộng (>=900): bảng 5–7 cột ngày.
+// - Sheets: hành động (Sửa/Xóa), biểu mẫu thêm/sửa, xác nhận xóa (danger).
+// - Xung đột: trùng khung giờ trong cùng ngày → cảnh báo mềm, không chặn.
+
+import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
+import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
+import 'package:adark_frontend/domain/entities/timetable/subject.dart';
+import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:flutter/material.dart';
+
+const _dayShort = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const _dayLong = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+
+class TimetableScreen extends StatefulWidget {
+  const TimetableScreen({
+    super.key,
+    required this.classId,
+    required this.className,
+    this.repository,
+  });
+
+  final String classId;
+  final String className;
+  final ScheduleRepository? repository;
+
+  @override
+  State<TimetableScreen> createState() => _TimetableScreenState();
+}
+
+class _TimetableScreenState extends State<TimetableScreen> {
+  late final ScheduleRepository _repo = widget.repository ?? HttpScheduleRepository();
+  late Future<_TimetableData> _future;
+  int? _selectedDay;
+  bool _weekMode = false;
+  bool _conflictsOnly = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<_TimetableData> _load() async {
+    final values = await Future.wait([
+      _repo.getClassSchedule(widget.classId),
+      _repo.getTimeSlots(),
+      _repo.getSubjects(),
+    ]);
+    return _TimetableData(
+      items: values[0] as List<ClassSchedule>,
+      slots: values[1] as List<TimeSlot>,
+      subjects: values[2] as List<Subject>,
+    );
+  }
+
+  void _reload() => setState(() => _future = _load());
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.k.canvas,
+      appBar: KAppBar(
+        title: 'Thời khóa biểu',
+        subtitle: widget.className,
+        onBack: () => Navigator.pop(context),
+      ),
+      body: FutureBuilder<_TimetableData>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError || snapshot.data == null) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Không tải được thời khóa biểu.', style: TextStyle(color: context.k.inkSoft)),
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: _reload, child: const Text('Thử lại')),
+                ],
+              ),
+            );
+          }
+          return _buildLoaded(context, snapshot.data!);
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoaded(BuildContext context, _TimetableData data) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 900;
+        final items = data.items.where((i) => i.isActive).toList();
+        final conflicts = _conflictMap(items);
+        final days = _activeDays(items);
+        final todayIndex = DateTime.now().weekday - 1;
+        final selected =
+            (_selectedDay != null && days.contains(_selectedDay)) ? _selectedDay! : (days.contains(todayIndex) ? todayIndex : days.first);
+
+        if (items.isEmpty) {
+          return _emptyState(context, data);
+        }
+        if (wide) {
+          return _buildBoard(context, data, items, conflicts, days, todayIndex);
+        }
+        return Column(
+          children: [
+            Expanded(child: _buildPhone(context, data, items, conflicts, days, selected, todayIndex)),
+            BottomActionBar(
+              child: KButton(
+                label: 'Thêm hoạt động',
+                icon: Icons.add,
+                large: true,
+                onPressed: () => _openEditor(data),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /* ---------------- Phone (day / week) ---------------- */
+
+  Widget _buildPhone(
+    BuildContext context,
+    _TimetableData data,
+    List<ClassSchedule> items,
+    Map<String, ClassSchedule> conflicts,
+    List<int> days,
+    int selected,
+    int todayIndex,
+  ) {
+    final dayItems = _itemsForDay(items, selected);
+    final visible = _conflictsOnly ? dayItems.where((i) => conflicts.containsKey(i.scheduleId)).toList() : dayItems;
+    final statuses = _statusesFor(dayItems, selected == todayIndex);
+    final isToday = selected == todayIndex;
+    final date = _dateOfDay(selected);
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text('Tuần này · ${_weekLabel(days)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
+              ),
+              _ViewToggle(
+                weekMode: _weekMode,
+                onChanged: (value) => setState(() => _weekMode = value),
+              ),
+            ],
+          ),
+        ),
+        if (conflicts.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FilterChipButton(
+                label: '${conflicts.length} xung đột',
+                warn: true,
+                selected: _conflictsOnly,
+                onTap: () => setState(() => _conflictsOnly = !_conflictsOnly),
+              ),
+            ),
+          ),
+        if (!_weekMode) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: _DayStrip(
+              days: days,
+              selected: selected,
+              todayIndex: todayIndex,
+              dateOfDay: _dateOfDay,
+              hasItems: (d) => _itemsForDay(items, d).isNotEmpty,
+              onPick: (d) => setState(() => _selectedDay = d),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Text(
+              '${_dayLong[selected].toUpperCase()}, ${date.day}/${date.month}${isToday ? ' · HÔM NAY' : ''}',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: context.k.inkFaint),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: KCard(
+              child: visible.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 36),
+                      child: Center(
+                        child: Text(
+                          _conflictsOnly && dayItems.isNotEmpty ? 'Không có xung đột' : 'Chưa có hoạt động',
+                          style: TextStyle(fontSize: 13, color: context.k.inkFaint),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (var index = 0; index < visible.length; index++) ...[
+                          _ScheduleRow(
+                            item: visible[index],
+                            conflict: conflicts.containsKey(visible[index].scheduleId),
+                            status: statuses[visible[index].scheduleId],
+                            onTap: () => _openActions(data, visible[index]),
+                          ),
+                          if (index < visible.length - 1) const Divider(),
+                        ],
+                      ],
+                    ),
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: 8),
+          for (final d in days) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+              child: Text(
+                '${_dayLong[d].toUpperCase()}, ${_dateOfDay(d).day}/${_dateOfDay(d).month}${d == todayIndex ? ' · HÔM NAY' : ''}',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: context.k.inkFaint),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _dayCard(data, items, conflicts, d),
+            ),
+          ],
+        ],
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _dayCard(_TimetableData data, List<ClassSchedule> items, Map<String, ClassSchedule> conflicts, int day) {
+    var list = _itemsForDay(items, day);
+    if (_conflictsOnly) list = list.where((i) => conflicts.containsKey(i.scheduleId)).toList();
+    return KCard(
+      child: list.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 22),
+              child: Center(
+                child: Text(
+                  _conflictsOnly ? 'Không có xung đột' : 'Chưa có hoạt động',
+                  style: TextStyle(fontSize: 13, color: context.k.inkFaint),
+                ),
+              ),
+            )
+          : Column(
+              children: [
+                for (var index = 0; index < list.length; index++) ...[
+                  _ScheduleRow(
+                    item: list[index],
+                    compact: true,
+                    conflict: conflicts.containsKey(list[index].scheduleId),
+                    onTap: () => _openActions(data, list[index]),
+                  ),
+                  if (index < list.length - 1) const Divider(),
+                ],
+              ],
+            ),
+    );
+  }
+
+  /* ---------------- Wide board ---------------- */
+
+  Widget _buildBoard(
+    BuildContext context,
+    _TimetableData data,
+    List<ClassSchedule> items,
+    Map<String, ClassSchedule> conflicts,
+    List<int> days,
+    int todayIndex,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+      children: [
+        Row(
+          children: [
+            Text('Tuần này · ${_weekLabel(days)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
+            const Spacer(),
+            if (conflicts.isNotEmpty) ...[
+              FilterChipButton(
+                label: '${conflicts.length} xung đột',
+                warn: true,
+                selected: _conflictsOnly,
+                onTap: () => setState(() => _conflictsOnly = !_conflictsOnly),
+              ),
+              const SizedBox(width: 12),
+            ],
+            KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final d in days)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: _DayColumn(
+                    day: d,
+                    date: _dateOfDay(d),
+                    isToday: d == todayIndex,
+                    list: _conflictsOnly
+                        ? _itemsForDay(items, d).where((i) => conflicts.containsKey(i.scheduleId)).toList()
+                        : _itemsForDay(items, d),
+                    conflicts: conflicts,
+                    onTapItem: (item) => _openActions(data, item),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /* ---------------- Actions / editor / delete ---------------- */
+
+  void _openActions(_TimetableData data, ClassSchedule item) {
+    showKSheet(
+      context,
+      Builder(
+        builder: (sheetCtx) {
+          final color = _hexColor(item.subject?.colorCode) ?? sheetCtx.k.brand;
+          final meta = [
+            _dayShort[item.dayIndex],
+            if (item.startTime.isNotEmpty) '${item.startTime}–${item.endTime}',
+            if (item.teacherLabel.isNotEmpty) item.teacherLabel,
+          ].join(' · ');
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(10)),
+                    child: Icon(_iconForSubject(item.subject?.name), size: 20, color: color),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.displayName, style: Theme.of(sheetCtx).textTheme.titleMedium),
+                        Text(meta, style: TextStyle(fontSize: 12, color: sheetCtx.k.inkFaint)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              KButton(
+                label: 'Chỉnh sửa',
+                secondary: true,
+                icon: Icons.edit_outlined,
+                onPressed: () {
+                  Navigator.pop(sheetCtx);
+                  _openEditor(data, item);
+                },
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(sheetCtx);
+                  _confirmDelete(item);
+                },
+                style: TextButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                icon: Icon(Icons.delete_outline, size: 18, color: sheetCtx.k.bad),
+                label: Text('Xóa', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sheetCtx.k.bad)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _confirmDelete(ClassSchedule item) {
+    showKSheet(
+      context,
+      Builder(
+        builder: (sheetCtx) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Xóa hoạt động này?', style: Theme.of(sheetCtx).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Hoạt động lặp lại hằng tuần — sẽ xóa khỏi thời khóa biểu của lớp.',
+              style: TextStyle(fontSize: 13, height: 1.5, color: sheetCtx.k.inkSoft),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(sheetCtx))),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: KButton(
+                    label: 'Xóa',
+                    danger: true,
+                    icon: Icons.delete_outline,
+                    onPressed: () async {
+                      Navigator.pop(sheetCtx);
+                      await _deleteItem(item);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteItem(ClassSchedule item) async {
+    try {
+      await _repo.deleteSchedule(item.scheduleId);
+      if (!mounted) return;
+      _showMessage('Đã xóa hoạt động');
+      _reload();
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage(e is ScheduleException ? e.message : 'Không thể xóa hoạt động. Vui lòng thử lại.');
+    }
+  }
+
+  void _openEditor(_TimetableData data, [ClassSchedule? existing]) {
+    showKSheet(
+      context,
+      _ScheduleEditorSheet(
+        data: data,
+        existing: existing,
+        classId: widget.classId,
+        repository: _repo,
+        onSaved: (message) {
+          Navigator.pop(context);
+          _showMessage(message);
+          _reload();
+        },
+      ),
+    );
+  }
+
+  /* ---------------- States ---------------- */
+
+  Widget _emptyState(BuildContext context, _TimetableData data) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(color: context.k.surfaceSunken, shape: BoxShape.circle),
+                child: Icon(Icons.calendar_month_outlined, size: 26, color: context.k.inkFaint),
+              ),
+              const SizedBox(height: 16),
+              const Text('Tuần này chưa có hoạt động nào.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Text('Thêm hoạt động để lên lịch cho cả lớp.', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
+              const SizedBox(height: 20),
+              KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
+            ],
+          ),
+        ),
+      );
+
+  /* ---------------- Helpers ---------------- */
+
+  List<ClassSchedule> _itemsForDay(List<ClassSchedule> items, int day) {
+    final list = items.where((i) => i.dayIndex == day).toList();
+    list.sort((a, b) {
+      final am = _toMin(a.startTime), bm = _toMin(b.startTime);
+      if (am != null && bm != null && am != bm) return am.compareTo(bm);
+      return (a.timeSlot?.orderIndex ?? 0).compareTo(b.timeSlot?.orderIndex ?? 0);
+    });
+    return list;
+  }
+
+  List<int> _activeDays(List<ClassSchedule> items) {
+    final set = <int>{0, 1, 2, 3, 4};
+    for (final item in items) {
+      if (item.dayIndex >= 0 && item.dayIndex <= 5) set.add(item.dayIndex);
+    }
+    return set.toList()..sort();
+  }
+
+  Map<String, ClassSchedule> _conflictMap(List<ClassSchedule> items) {
+    final byKey = <String, List<ClassSchedule>>{};
+    for (final item in items) {
+      byKey.putIfAbsent('${item.dayIndex}:${item.slotId}', () => []).add(item);
+    }
+    final map = <String, ClassSchedule>{};
+    for (final group in byKey.values) {
+      if (group.length > 1) {
+        for (final a in group) {
+          final other = group.firstWhere((b) => b.scheduleId != a.scheduleId, orElse: () => a);
+          map[a.scheduleId] = other;
+        }
+      }
+    }
+    return map;
+  }
+
+  Map<String, String> _statusesFor(List<ClassSchedule> dayItems, bool isToday) {
+    if (!isToday) return const {};
+    final now = DateTime.now();
+    final nowMinutes = now.hour * 60 + now.minute;
+    final map = <String, String>{};
+    ClassSchedule? next;
+    for (final item in dayItems) {
+      final start = _toMin(item.startTime);
+      final end = _toMin(item.endTime);
+      if (start == null || end == null) continue;
+      if (start <= nowMinutes && nowMinutes < end) {
+        map[item.scheduleId] = 'Đang diễn ra';
+      } else if (start > nowMinutes && next == null) {
+        next = item;
+      }
+    }
+    if (next != null && !map.containsKey(next.scheduleId)) {
+      map[next.scheduleId] = 'Tiếp theo';
+    }
+    return map;
+  }
+
+  DateTime _mondayOfWeek() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+  }
+
+  DateTime _dateOfDay(int day) => _mondayOfWeek().add(Duration(days: day));
+
+  String _weekLabel(List<int> days) {
+    final monday = _mondayOfWeek();
+    final last = _dateOfDay(days.last);
+    return monday.month == last.month
+        ? '${monday.day}–${last.day}/${last.month}/${last.year}'
+        : '${monday.day}/${monday.month}–${last.day}/${last.month}/${last.year}';
+  }
+}
+
+/* ======================= Widgets ======================= */
+
+class _TimetableData {
+  const _TimetableData({required this.items, required this.slots, required this.subjects});
+  final List<ClassSchedule> items;
+  final List<TimeSlot> slots;
+  final List<Subject> subjects;
+}
+
+class _ViewToggle extends StatelessWidget {
+  const _ViewToggle({required this.weekMode, required this.onChanged});
+  final bool weekMode;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: context.k.surfaceSunken, borderRadius: BorderRadius.circular(KRadii.control)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _option(context, label: 'Ngày', selected: !weekMode, onTap: () => onChanged(false)),
+          _option(context, label: 'Tuần', selected: weekMode, onTap: () => onChanged(true)),
+        ],
+      ),
+    );
+  }
+
+  Widget _option(BuildContext context, {required String label, required bool selected, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(7),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 40),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? context.k.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+          boxShadow: selected ? [BoxShadow(color: Colors.black.withValues(alpha: .06), blurRadius: 2, offset: const Offset(0, 1))] : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? context.k.brand : context.k.inkSoft),
+        ),
+      ),
+    );
+  }
+}
+
+class _DayStrip extends StatelessWidget {
+  const _DayStrip({
+    required this.days,
+    required this.selected,
+    required this.todayIndex,
+    required this.dateOfDay,
+    required this.hasItems,
+    required this.onPick,
+  });
+
+  final List<int> days;
+  final int selected;
+  final int todayIndex;
+  final DateTime Function(int) dateOfDay;
+  final bool Function(int) hasItems;
+  final ValueChanged<int> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final d in days)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: InkWell(
+                onTap: () => onPick(d),
+                borderRadius: BorderRadius.circular(KRadii.control),
+                child: Container(
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: d == selected ? context.k.brand : context.k.surface,
+                    borderRadius: BorderRadius.circular(KRadii.control),
+                    border: Border.all(color: d == selected ? context.k.brand : (d == todayIndex ? context.k.brand : context.k.line)),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _dayShort[d],
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: d == selected ? Colors.white : context.k.inkFaint),
+                      ),
+                      Text(
+                        '${dateOfDay(d).day}',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: d == selected ? Colors.white : context.k.ink),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: hasItems(d) ? (d == selected ? Colors.white : context.k.brand) : Colors.transparent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DayColumn extends StatelessWidget {
+  const _DayColumn({
+    required this.day,
+    required this.date,
+    required this.isToday,
+    required this.list,
+    required this.conflicts,
+    required this.onTapItem,
+  });
+
+  final int day;
+  final DateTime date;
+  final bool isToday;
+  final List<ClassSchedule> list;
+  final Map<String, ClassSchedule> conflicts;
+  final ValueChanged<ClassSchedule> onTapItem;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.k.surface,
+        borderRadius: BorderRadius.circular(KRadii.card),
+        border: Border.all(color: context.k.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            color: isToday ? context.k.brandTint : null,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_dayShort[day]} · ${date.day}/${date.month}',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isToday ? context.k.brand : context.k.inkSoft),
+                ),
+                if (isToday) Text('Hôm nay', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.brand)),
+              ],
+            ),
+          ),
+          const Divider(),
+          if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text('Chưa có hoạt động', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+              ),
+            )
+          else
+            for (var index = 0; index < list.length; index++) ...[
+              _ScheduleRow(
+                item: list[index],
+                compact: true,
+                conflict: conflicts.containsKey(list[index].scheduleId),
+                onTap: () => onTapItem(list[index]),
+              ),
+              if (index < list.length - 1) const Divider(),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleRow extends StatelessWidget {
+  const _ScheduleRow({required this.item, required this.onTap, this.conflict = false, this.status, this.compact = false});
+
+  final ClassSchedule item;
+  final VoidCallback onTap;
+  final bool conflict;
+  final String? status;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hexColor(item.subject?.colorCode) ?? context.k.brand;
+    final name = item.displayName;
+    final teacher = item.teacherLabel;
+    final room = item.roomLabel;
+
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(
+              child: Text(
+                name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, height: 1.3),
+              ),
+            ),
+            if (conflict) ...[
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(Icons.warning_amber_rounded, size: 14, color: context.k.warn),
+              ),
+            ],
+          ],
+        ),
+        if (teacher.isNotEmpty)
+          Text(teacher, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+        if (room.isNotEmpty)
+          Row(
+            children: [
+              Icon(Icons.place_outlined, size: 12, color: context.k.inkFaint),
+              const SizedBox(width: 3),
+              Flexible(child: Text(room, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: context.k.inkFaint))),
+            ],
+          ),
+        if (status != null)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: status == 'Đang diễn ra' ? context.k.okTint : context.k.infoTint,
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(
+              status!,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: status == 'Đang diễn ra' ? context.k.ok : context.k.info),
+            ),
+          ),
+      ],
+    );
+
+    final icon = Container(
+      width: compact ? 28 : 32,
+      height: compact ? 28 : 32,
+      decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(8)),
+      child: Icon(_iconForSubject(item.subject?.name), size: compact ? 15 : 17, color: color),
+    );
+
+    final time = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(item.startTime, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink)),
+        if (item.endTime.isNotEmpty) Text(item.endTime, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+      ],
+    );
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: compact
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      icon,
+                      const SizedBox(width: 8),
+                      Text(
+                        item.endTime.isNotEmpty ? '${item.startTime}–${item.endTime}' : item.startTime,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  body,
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 46, child: time),
+                  icon,
+                  const SizedBox(width: 10),
+                  Expanded(child: body),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _PickerOption {
+  const _PickerOption({required this.id, required this.title, this.subtitle});
+  final String id;
+  final String title;
+  final String? subtitle;
+}
+
+class _PickerSheet extends StatelessWidget {
+  const _PickerSheet({required this.title, required this.options, required this.selectedId, required this.onPick, this.emptyText});
+
+  final String title;
+  final List<_PickerOption> options;
+  final String? selectedId;
+  final ValueChanged<String> onPick;
+  final String? emptyText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 12),
+        if (options.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(emptyText ?? 'Chưa có dữ liệu.', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
+          )
+        else
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (var index = 0; index < options.length; index++) ...[
+                  InkWell(
+                    onTap: () => onPick(options[index].id),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(options[index].title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                if (options[index].subtitle != null)
+                                  Text(options[index].subtitle!, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                              ],
+                            ),
+                          ),
+                          if (selectedId == options[index].id) Icon(Icons.check, size: 18, color: context.k.brand),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (index < options.length - 1) const Divider(),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ScheduleEditorSheet extends StatefulWidget {
+  const _ScheduleEditorSheet({
+    required this.data,
+    required this.classId,
+    required this.repository,
+    required this.onSaved,
+    this.existing,
+  });
+
+  final _TimetableData data;
+  final String classId;
+  final ScheduleRepository repository;
+  final ValueChanged<String> onSaved;
+  final ClassSchedule? existing;
+
+  @override
+  State<_ScheduleEditorSheet> createState() => _ScheduleEditorSheetState();
+}
+
+class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _roomController;
+  Subject? _subject;
+  TimeSlot? _slot;
+  late int _day;
+  bool _saving = false;
+  String? _error;
+  String? _nameError;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _nameController = TextEditingController(text: existing?.activityName ?? '');
+    _roomController = TextEditingController(text: existing?.roomName ?? '');
+    _subject = existing != null
+        ? _firstWhereOrNull(widget.data.subjects, (s) => s.subjectId == existing.subjectId) ?? existing.subject
+        : (widget.data.subjects.length == 1 ? widget.data.subjects.first : null);
+    _slot = existing != null
+        ? _firstWhereOrNull(widget.data.slots, (s) => s.slotId == existing.slotId) ?? existing.timeSlot
+        : (widget.data.slots.length == 1 ? widget.data.slots.first : null);
+    final days = _editorDays();
+    final todayIndex = DateTime.now().weekday - 1;
+    _day = existing?.dayIndex ?? (days.contains(todayIndex) ? todayIndex : days.first);
+    if (_day < 0 || _day > 5) _day = days.first;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _roomController.dispose();
+    super.dispose();
+  }
+
+  List<int> _editorDays() {
+    final set = <int>{0, 1, 2, 3, 4};
+    for (final item in widget.data.items) {
+      if (item.dayIndex >= 0 && item.dayIndex <= 5) set.add(item.dayIndex);
+    }
+    return set.toList()..sort();
+  }
+
+  T? _firstWhereOrNull<T>(List<T> list, bool Function(T) test) {
+    for (final item in list) {
+      if (test(item)) return item;
+    }
+    return null;
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    setState(() {
+      _nameError = name.isEmpty ? 'Vui lòng nhập tên hoạt động.' : null;
+      _error = null;
+    });
+    if (_nameError != null) return;
+    if (_subject == null) {
+      setState(() => _error = 'Vui lòng chọn môn / hoạt động.');
+      return;
+    }
+    if (_slot == null) {
+      setState(() => _error = 'Vui lòng chọn khung giờ.');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final existing = widget.existing;
+      if (existing == null) {
+        await widget.repository.createSchedule(
+          classId: widget.classId,
+          subjectId: _subject!.subjectId,
+          slotId: _slot!.slotId,
+          dayOfWeek: _day + 2,
+          activityName: name,
+          roomName: _roomController.text,
+        );
+        widget.onSaved('Đã thêm hoạt động');
+      } else {
+        await widget.repository.updateSchedule(
+          existing.scheduleId,
+          subjectId: _subject!.subjectId,
+          slotId: _slot!.slotId,
+          dayOfWeek: _day + 2,
+          activityName: name,
+          roomName: _roomController.text,
+        );
+        widget.onSaved('Đã cập nhật hoạt động');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e is ScheduleException ? e.message : 'Không thể lưu hoạt động. Vui lòng thử lại.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _pickSubject() {
+    showKSheet(
+      context,
+      Builder(
+        builder: (sheetCtx) => _PickerSheet(
+          title: 'Chọn môn / hoạt động',
+          options: widget.data.subjects
+              .map((s) => _PickerOption(id: s.subjectId, title: s.name, subtitle: s.description))
+              .toList(),
+          selectedId: _subject?.subjectId,
+          emptyText: 'Chưa có môn học nào. Vui lòng tạo môn học trước.',
+          onPick: (id) {
+            setState(() => _subject = _firstWhereOrNull(widget.data.subjects, (s) => s.subjectId == id));
+            Navigator.pop(sheetCtx);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _pickSlot() {
+    showKSheet(
+      context,
+      Builder(
+        builder: (sheetCtx) => _PickerSheet(
+          title: 'Chọn khung giờ',
+          options: widget.data.slots
+              .map((s) => _PickerOption(id: s.slotId, title: s.name, subtitle: '${s.startTime}–${s.endTime}'))
+              .toList(),
+          selectedId: _slot?.slotId,
+          emptyText: 'Chưa có khung giờ nào. Vui lòng tạo khung giờ trước.',
+          onPick: (id) {
+            setState(() => _slot = _firstWhereOrNull(widget.data.slots, (s) => s.slotId == id));
+            Navigator.pop(sheetCtx);
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clashes = _slot == null
+        ? const <ClassSchedule>[]
+        : widget.data.items
+            .where((i) => i.scheduleId != widget.existing?.scheduleId && i.dayIndex == _day && i.slotId == _slot!.slotId)
+            .toList();
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.existing == null ? 'Thêm hoạt động' : 'Chỉnh sửa hoạt động', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 16),
+          _fieldLabel(context, 'Hoạt động'),
+          TextField(
+            controller: _nameController,
+            decoration: _inputDecoration(context, hint: 'VD: Vẽ sáng tạo'),
+          ),
+          if (_nameError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(_nameError!, style: TextStyle(fontSize: 12, color: context.k.bad)),
+            ),
+          const SizedBox(height: 14),
+          _fieldLabel(context, 'Môn / Hoạt động'),
+          _PickerField(
+            value: _subject?.name ?? 'Chọn môn học',
+            placeholder: _subject == null,
+            onTap: _pickSubject,
+          ),
+          const SizedBox(height: 14),
+          _fieldLabel(context, 'Khung giờ'),
+          _PickerField(
+            value: _slot == null ? 'Chọn khung giờ' : '${_slot!.name} (${_slot!.startTime}–${_slot!.endTime})',
+            placeholder: _slot == null,
+            onTap: _pickSlot,
+          ),
+          const SizedBox(height: 14),
+          _fieldLabel(context, 'Thứ'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final d in _editorDays())
+                FilterChipButton(
+                  label: _dayShort[d],
+                  selected: _day == d,
+                  onTap: () => setState(() => _day = d),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _fieldLabel(context, 'Phòng (không bắt buộc)'),
+          TextField(
+            controller: _roomController,
+            decoration: _inputDecoration(context, hint: 'VD: Phòng tạo hình'),
+          ),
+          if (clashes.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: context.k.warnTint, borderRadius: BorderRadius.circular(KRadii.control)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 15, color: context.k.warnDeep),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Khung giờ này đã có "${clashes.first.displayName}" trong ngày ${_dayShort[_day]}.',
+                      style: TextStyle(fontSize: 12, height: 1.4, color: context.k.warnDeep),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!, style: TextStyle(fontSize: 13, color: context.k.bad)),
+          ],
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(context))),
+              const SizedBox(width: 12),
+              Expanded(
+                child: KButton(
+                  label: _saving ? 'Đang lưu…' : 'Lưu hoạt động',
+                  icon: Icons.check,
+                  onPressed: _saving ? null : _save,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fieldLabel(BuildContext context, String label) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink)),
+      );
+
+  InputDecoration _inputDecoration(BuildContext context, {required String hint}) => InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: context.k.surface,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KRadii.control),
+          borderSide: BorderSide(color: context.k.lineStrong),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KRadii.control),
+          borderSide: BorderSide(color: context.k.lineStrong),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KRadii.control),
+          borderSide: BorderSide(color: context.k.brand, width: 1.5),
+        ),
+      );
+}
+
+class _PickerField extends StatelessWidget {
+  const _PickerField({required this.value, required this.onTap, this.placeholder = false});
+
+  final String value;
+  final VoidCallback onTap;
+  final bool placeholder;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(KRadii.control),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: context.k.surface,
+          borderRadius: BorderRadius.circular(KRadii.control),
+          border: Border.all(color: context.k.lineStrong),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                value,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, color: placeholder ? context.k.inkFaint : context.k.ink),
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ======================= Helpers ======================= */
+
+Color? _hexColor(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  var hex = value.trim().replaceFirst('#', '');
+  if (hex.length == 6) hex = 'FF$hex';
+  if (hex.length != 8) return null;
+  final parsed = int.tryParse(hex, radix: 16);
+  return parsed == null ? null : Color(parsed);
+}
+
+IconData _iconForSubject(String? name) {
+  final n = (name ?? '').toLowerCase();
+  bool has(List<String> keys) => keys.any(n.contains);
+  if (has(['thể dục', 'vận động', 'thể chất'])) return Icons.directions_run_outlined;
+  if (has(['vẽ', 'mỹ thuật', 'tạo hình'])) return Icons.palette_outlined;
+  if (has(['nhạc', 'hát'])) return Icons.music_note_outlined;
+  if (has(['toán'])) return Icons.calculate_outlined;
+  if (has(['chữ', 'đọc', 'kể chuyện', 'văn'])) return Icons.menu_book_outlined;
+  if (has(['ăn'])) return Icons.restaurant_outlined;
+  if (has(['ngủ'])) return Icons.bedtime_outlined;
+  if (has(['chơi', 'góc', 'lắp ghép'])) return Icons.extension_outlined;
+  if (has(['sinh hoạt', 'sự kiện', 'tham quan', 'lễ'])) return Icons.celebration_outlined;
+  return Icons.event_outlined;
+}
+
+int? _toMin(String value) {
+  if (value.trim().isEmpty) return null;
+  final parts = value.split(':');
+  if (parts.length < 2) return null;
+  final h = int.tryParse(parts[0]);
+  final m = int.tryParse(parts[1]);
+  if (h == null || m == null) return null;
+  return h * 60 + m;
+}
