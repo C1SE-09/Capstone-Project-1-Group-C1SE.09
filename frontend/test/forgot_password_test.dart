@@ -67,6 +67,7 @@ void main() {
 
     // Enter OTP
     await tester.enterText(find.byType(TextField).first, '123456');
+    await tester.ensureVisible(find.text('XÁC NHẬN MÃ OTP'));
     await tester.tap(find.text('XÁC NHẬN MÃ OTP'));
     await tester.pumpAndSettle();
 
