@@ -2,9 +2,26 @@
 
 **Purpose:** tracks UI that exists in the Flutter app but not (yet) in the Figma Make prototype. Make is the team's visual blueprint — drift erodes its reliability, so gaps are recorded here instead of rotting in chat.
 
-**Status:** deferred — run as ONE batched Make session **after** the Timetable feature ships (Make fix + Flutter port + push). Doing it earlier buys nothing: none of these items block or overlap the Timetable.
+**Status:** ✅ pass completed 2026-10-08 (Make verified against Flutter source). Items 1–5 added to Make; item 6 requires no Make change.
 
-**Trigger to run:** before any capstone report/demo that uses Make as the app's visual record.
+**Trigger to run:** before any capstone report/demo that uses Make as the app's visual record — done for this pass.
+
+---
+
+## Completed — 2026-10-08
+
+Verified in Make source (`advURIMI3Zgnv462eZJMpU`):
+
+| # | Result |
+|---|---|
+| 1 | ✅ `src/screens/ForgotPassword.tsx` — 3 steps via the shared StepIndicator, OTP input, 60s resend countdown, success sheet, back link; wired as `stage: 'forgot'` in `App.tsx` |
+| 2 | ✅ `src/components/ChangePasswordSheet.tsx` — sheet with lock header, 3 password fields (eye toggles), exact validation copy; also exports `ErrorBanner` + `PasswordField` reused by ForgotPassword (no duplicated form) |
+| 3 | ✅ `Login.tsx` — right-aligned "Quên mật khẩu?" link under the password field (44px), opens the forgot stage |
+| 4 | ✅ `Account.tsx` — "Đổi mật khẩu" row (KeyRound) between "Quay lại chọn lớp khác" and the theme block; saves close the sheet + Toast |
+| 5 | ✅ `ParentFlow.tsx` — KeyRound lock button in the home header (between bell and logout); same sheet + toast |
+| 6 | ➖ No Make change — Make's login banner already uses `bad`/`badTint`; the Flutter cleanup (hard-coded `Colors.red.shade*`) remains tracked as MASTER §13.2 D3 |
+
+Decisions made: Make mirrors the **cleaned** version (design-system components, no hard-coded colors); Flutter keeps its debt as a separate cleanup task. No MASTER version bump needed — §7.10 and §15 remain accurate.
 
 ---
 
