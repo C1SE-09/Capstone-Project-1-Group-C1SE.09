@@ -10,8 +10,9 @@ import logging
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.exc import OperationalError
+
+from alembic import op
 
 logger = logging.getLogger("alembic.migration")
 
