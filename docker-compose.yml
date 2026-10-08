@@ -87,7 +87,7 @@ services:
       celery -A app.tasks.celery_app.celery_app worker
       --loglevel=info
       --concurrency=1
-      -Q audio
+      -Q audio,notifications
 
 volumes:
   postgres_data:

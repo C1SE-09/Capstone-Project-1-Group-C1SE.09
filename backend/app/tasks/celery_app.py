@@ -22,7 +22,7 @@ celery_app = Celery(
     "kinderlog",
     broker=settings.redis_url,
     backend=_derive_result_backend(settings.redis_url),
-    include=["app.tasks.process_audio"],
+    include=["app.tasks.process_audio", "app.tasks.notifications"],
 )
 
 celery_app.conf.update(
@@ -38,7 +38,10 @@ celery_app.conf.update(
     # Task chưa ACK sẽ trở lại queue nếu worker mất kết nối/crash.
     task_acks_late=True,
     task_reject_on_worker_lost=True,
-    task_routes={"process_audio_task": {"queue": "audio"}},
+    task_routes={
+        "process_audio_task": {"queue": "audio"},
+        "send_report_notifications": {"queue": "notifications"},
+    },
 )
 
 

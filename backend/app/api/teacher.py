@@ -88,8 +88,9 @@ from app.services.draft_report_service import (
 from app.services.extraction_service import (
     extract_multi_person,
 )
-from app.services.notification_service import notification_service
+from app.services.notification_service import parent_device_tokens
 from app.services.validation_service import ValidationError, validate_transcript_content
+from app.tasks.notifications import send_report_notifications
 from app.tasks.process_audio import process_audio_task
 
 logger = logging.getLogger(__name__)
@@ -870,6 +871,19 @@ def get_report_detail(
     )
 
 
+def _queue_report_notification(db, report, child) -> int:
+    """Đếm device token của phụ huynh (đồng bộ) rồi đẩy job gửi push vào Celery.
+
+    Dùng chung cho cả /send và /publish để mọi cách gửi báo cáo đều phát thông
+    báo; lỗi provider không được làm hỏng thao tác gửi báo cáo.
+    """
+    targeted_devices = 0
+    if child is not None and child.parent_id is not None:
+        targeted_devices = len(parent_device_tokens(db, child.parent_id))
+    send_report_notifications.delay(str(report.daily_report_id))
+    return targeted_devices
+
+
 @router.post("/reports/{report_id}/publish", summary="Publish báo cáo gửi phụ huynh")
 def publish_report(
     report_id: uuid.UUID,
@@ -893,6 +907,17 @@ def publish_report(
     report.published_at = datetime.now(timezone.utc).date()
     db.commit()
     db.refresh(report)
+
+    # Thông báo SAU commit — app gọi endpoint này khi cô bấm "Gửi báo cáo",
+    # nên đây là luồng push chính cho gửi từng trẻ.
+    try:
+        _queue_report_notification(db, report, report.child)
+    except Exception:
+        logger.exception(
+            "[Publish] Notification failed for report_id=%s - report stays '%s'",
+            report.daily_report_id,
+            report.status.value,
+        )
 
     return {
         "report_id": str(report.daily_report_id),
@@ -1240,7 +1265,6 @@ def _send_one_report(
         db.refresh(report)
 
     child = report.child
-    child_name = (child.nickname or child.full_name) if child else "be"
     linked_parents = 1 if (child and child.parent_id) else 0
 
     # 7. Đổi trạng thái, save thời điểm gửi, commit TRƯỚC khi tb..
@@ -1257,15 +1281,11 @@ def _send_one_report(
         report.sent_at,
     )
 
-    # 8. Thông báo SAU commit. Provider lỗi != revert lần gửi này.
+    # 8. Thông báo SAU commit — đếm token đích (đồng bộ) rồi đẩy job vào Celery.
+    # Provider lỗi != revert lần gửi này.
     targeted_devices = 0
     try:
-        targeted_devices = notification_service.notify_report_sent(
-            report_id=str(report.daily_report_id),
-            child_id=str(report.child_id),
-            child_name=child_name,
-            linked_parents=linked_parents,
-        )
+        targeted_devices = _queue_report_notification(db, report, child)
     except Exception:
         logger.exception(
             "[Send] Notification failed for report_id=%s - report stays '%s'",
