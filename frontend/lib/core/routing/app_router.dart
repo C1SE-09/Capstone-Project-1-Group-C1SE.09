@@ -5,6 +5,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_scre
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
@@ -22,6 +23,13 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(path: '/class-select', builder: (context, state) => Scaffold(body: SafeArea(child: ClassSelectScreen(onPick: (classId) => appRouter.go(Uri(path: '/teacher', queryParameters: {'classId': classId}).toString()))))),
     GoRoute(path: '/teacher', builder: (context, state) => TeacherShell(onLogout: _goLogin, classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001')),
+    GoRoute(
+      path: '/timetable',
+      builder: (context, state) => TimetableScreen(
+        classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001',
+        className: state.uri.queryParameters['className'] ?? 'Lớp học',
+      ),
+    ),
     GoRoute(path: '/parent', builder: (context, state) => const ParentFlow(onLogout: _goLogin)),
     GoRoute(path: '/change-password', builder: (context, state) => ChangePasswordScreen(onBack: () => appRouter.pop())),
   ],

@@ -102,24 +102,29 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       }
     } else if (widget.initialExtraction != null) {
       final ext = widget.initialExtraction!;
-      if (ext.meals != null && ext.meals!.trim().isNotEmpty) {
-        eating.text = ext.meals!.trim();
-      }
-      if (ext.sleeping != null && ext.sleeping!.trim().isNotEmpty) {
-        sleep.text = ext.sleeping!.trim();
-      }
-      if (ext.health != null && ext.health!.trim().isNotEmpty) {
-        health.text = ext.health!.trim();
-      }
-      if (ext.mood != null && ext.mood!.trim().isNotEmpty) {
-        mood.text = ext.mood!.trim();
-      }
-      if (ext.activities != null && ext.activities!.trim().isNotEmpty) {
-        activity.text = ext.activities!.trim();
-      }
-      if (widget.transcript != null && widget.transcript!.trim().isNotEmpty) {
-        note.text = widget.transcript!.trim();
-      }
+      eating.text = (ext.meals != null && ext.meals!.trim().isNotEmpty)
+          ? ext.meals!.trim()
+          : 'bình thường';
+      sleep.text = (ext.sleeping != null && ext.sleeping!.trim().isNotEmpty)
+          ? ext.sleeping!.trim()
+          : 'bình thường';
+      health.text = (ext.health != null && ext.health!.trim().isNotEmpty)
+          ? ext.health!.trim()
+          : 'bình thường';
+      mood.text = (ext.mood != null && ext.mood!.trim().isNotEmpty)
+          ? ext.mood!.trim()
+          : 'bình thường';
+      activity.text = (ext.activities != null && ext.activities!.trim().isNotEmpty)
+          ? ext.activities!.trim()
+          : 'bình thường';
+      final extNote = ext.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
+          ? ext.rawJson!['teacher_note']!.toString().trim()
+          : (ext.rawJson?['notes']?.toString().trim().isNotEmpty == true
+              ? ext.rawJson!['notes']!.toString().trim()
+              : (ext.rawJson?['note']?.toString().trim().isNotEmpty == true
+                  ? ext.rawJson!['note']!.toString().trim()
+                  : ''));
+      note.text = extNote;
     } else if (widget.child.id.isNotEmpty) {
       try {
         final todayReport = await repository.getTodayReport(widget.child.id, DateTime.now());

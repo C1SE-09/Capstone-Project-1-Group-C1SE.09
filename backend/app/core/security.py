@@ -58,6 +58,29 @@ def get_current_user(
     return user
 
 
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl="/api/auth/login",
+    auto_error=False,
+)
+
+
+def get_optional_current_user(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        user_uuid = uuid.UUID(str(user_id))
+    except (JWTError, ValueError):
+        return None
+    return db.query(User).filter(User.user_id == user_uuid).first()
+
+
 def require_role(required_role: str) -> Callable:
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role.value != required_role:

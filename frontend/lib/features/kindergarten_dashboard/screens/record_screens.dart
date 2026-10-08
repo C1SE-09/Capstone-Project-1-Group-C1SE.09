@@ -1612,11 +1612,11 @@ class ObservationItem {
       matched: true,
       decision: ObservationDecision.approved,
       kind: ObservationKind.normal,
-      eating: eating,
-      sleep: sleep,
-      activities: activities,
-      mood: mood,
-      health: health,
+      eating: eating.isNotEmpty ? eating : 'bình thường',
+      sleep: sleep.isNotEmpty ? sleep : 'bình thường',
+      activities: activities.isNotEmpty ? activities : 'bình thường',
+      mood: mood.isNotEmpty ? mood : 'bình thường',
+      health: health.isNotEmpty ? health : 'bình thường',
       note: note,
       snippet: snippet,
       severity: severity,
@@ -1715,18 +1715,28 @@ class _ReviewScreenState extends State<ReviewScreen> {
       // nhưng giữ lại để không vỡ các entry-point cũ nếu còn gọi tới).
       if (widget.mode == RecordMode.child && widget.child != null) {
         final c = widget.child!;
-        final meals =
-            ext?.meals?.trim().isNotEmpty == true ? ext!.meals!.trim() : '';
+        final meals = ext?.meals?.trim().isNotEmpty == true
+            ? ext!.meals!.trim()
+            : 'bình thường';
         final sleep = ext?.sleeping?.trim().isNotEmpty == true
             ? ext!.sleeping!.trim()
-            : '';
+            : 'bình thường';
         final activities = ext?.activities?.trim().isNotEmpty == true
             ? ext!.activities!.trim()
-            : '';
-        final mood =
-            ext?.mood?.trim().isNotEmpty == true ? ext!.mood!.trim() : '';
-        final health =
-            ext?.health?.trim().isNotEmpty == true ? ext!.health!.trim() : '';
+            : 'bình thường';
+        final mood = ext?.mood?.trim().isNotEmpty == true
+            ? ext!.mood!.trim()
+            : 'bình thường';
+        final health = ext?.health?.trim().isNotEmpty == true
+            ? ext!.health!.trim()
+            : 'bình thường';
+        final note = ext?.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
+            ? ext!.rawJson!['teacher_note']!.toString().trim()
+            : (ext?.rawJson?['notes']?.toString().trim().isNotEmpty == true
+                ? ext!.rawJson!['notes']!.toString().trim()
+                : (ext?.rawJson?['note']?.toString().trim().isNotEmpty == true
+                    ? ext!.rawJson!['note']!.toString().trim()
+                    : ''));
 
         return [
           ObservationItem(
@@ -1740,7 +1750,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             activities: activities,
             mood: mood,
             health: health,
-            note: widget.transcript ?? '',
+            note: note,
             severity: c.severity,
           ),
         ];
@@ -1772,22 +1782,28 @@ class _ReviewScreenState extends State<ReviewScreen> {
             matched: true,
             kind: ObservationKind.classwide,
             decision: ObservationDecision.pending,
-            eating:
-                ext?.meals?.trim().isNotEmpty == true ? ext!.meals!.trim() : '',
+            eating: ext?.meals?.trim().isNotEmpty == true
+                ? ext!.meals!.trim()
+                : 'bình thường',
             sleep: ext?.sleeping?.trim().isNotEmpty == true
                 ? ext!.sleeping!.trim()
-                : '',
+                : 'bình thường',
             activities: ext?.activities?.trim().isNotEmpty == true
                 ? ext!.activities!.trim()
-                : '',
-            mood: ext?.mood?.trim().isNotEmpty == true ? ext!.mood!.trim() : '',
+                : 'bình thường',
+            mood: ext?.mood?.trim().isNotEmpty == true
+                ? ext!.mood!.trim()
+                : 'bình thường',
             health: ext?.health?.trim().isNotEmpty == true
                 ? ext!.health!.trim()
-                : '',
-            note: ext?.rawJson?['teacher_note']?.toString() ??
-                ext?.rawJson?['notes']?.toString() ??
-                ext?.rawJson?['note']?.toString() ??
-                '',
+                : 'bình thường',
+            note: ext?.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
+                ? ext!.rawJson!['teacher_note']!.toString().trim()
+                : (ext?.rawJson?['notes']?.toString().trim().isNotEmpty == true
+                    ? ext!.rawJson!['notes']!.toString().trim()
+                    : (ext?.rawJson?['note']?.toString().trim().isNotEmpty == true
+                        ? ext!.rawJson!['note']!.toString().trim()
+                        : '')),
           ),
         );
       }
@@ -1899,11 +1915,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
       matched: true,
       kind: ObservationKind.classwide,
       decision: ObservationDecision.pending,
-      eating: pick('meals', ''),
-      sleep: pick('sleeping', ''),
-      activities: pick('activities', ''),
-      mood: pick('mood', ''),
-      health: pick('health', ''),
+      eating: pick('meals', 'bình thường'),
+      sleep: pick('sleeping', 'bình thường'),
+      activities: pick('activities', 'bình thường'),
+      mood: pick('mood', 'bình thường'),
+      health: pick('health', 'bình thường'),
       note: noteVal,
     );
   }
@@ -1924,11 +1940,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
       matched: true,
       kind: ObservationKind.normal,
       decision: ObservationDecision.pending,
-      eating: pick('meals') ?? '',
-      sleep: pick('sleeping') ?? '',
-      activities: pick('activities') ?? '',
-      mood: pick('mood') ?? '',
-      health: pick('health') ?? '',
+      eating: pick('meals') ?? 'bình thường',
+      sleep: pick('sleeping') ?? 'bình thường',
+      activities: pick('activities') ?? 'bình thường',
+      mood: pick('mood') ?? 'bình thường',
+      health: pick('health') ?? 'bình thường',
       note: pick('notes') ??
           pick('teacher_note') ??
           pick('note') ??

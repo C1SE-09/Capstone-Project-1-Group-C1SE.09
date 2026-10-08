@@ -105,13 +105,14 @@ class _TeacherShellState extends State<TeacherShell> {
     ));
   }
 
-  void openTimetable(String className) {
-    Navigator.of(context).push(MaterialPageRoute(
+  Future<void> openTimetable(String className) async {
+    await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TimetableScreen(
         classId: widget.classId,
         className: className,
       ),
     ));
+    if (mounted) setState(() {});
   }
 
   @override

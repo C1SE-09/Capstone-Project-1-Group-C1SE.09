@@ -215,17 +215,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
+          backgroundColor: context.k.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: Colors.green, size: 28),
-              SizedBox(width: 10),
-              Text('Thành công', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+              Icon(Icons.check_circle_rounded, color: context.k.ok, size: 28),
+              const SizedBox(width: 10),
+              Text('Thành công', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: context.k.ink)),
             ],
           ),
-          content: const Text(
+          content: Text(
             'Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập với mật khẩu mới.',
-            style: TextStyle(fontSize: 14, height: 1.4),
+            style: TextStyle(fontSize: 14, height: 1.4, color: context.k.inkSoft),
           ),
           actions: [
             ElevatedButton(
@@ -234,7 +235,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 _goBackToLogin();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: KColors.brand,
+                backgroundColor: context.k.brand,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -256,7 +257,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: KColors.canvas,
+      backgroundColor: context.k.canvas,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -267,6 +268,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Top bar: Quay lại
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: _isLoading ? null : _goBackToLogin,
+                      icon: Icon(Icons.arrow_back_rounded, color: context.k.inkSoft),
+                      tooltip: 'Quay lại đăng nhập',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
                   // App Brand Logo & Name
                   Center(
                     child: Container(
@@ -274,14 +286,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       height: 52,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [KColors.brand, KColors.brand.withValues(alpha: 0.8)],
+                          colors: [context.k.brand, context.k.brand.withValues(alpha: 0.8)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: KColors.brand.withValues(alpha: 0.3),
+                            color: context.k.brand.withValues(alpha: 0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -297,6 +309,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.5,
+                            color: context.k.ink,
                           ),
                     ),
                   ),
@@ -317,21 +330,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.shade50,
+                              color: context.k.badTint,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade200),
+                              border: Border.all(color: context.k.bad.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.error_outline, size: 18, color: Colors.red.shade700),
+                                Icon(Icons.error_outline, size: 18, color: context.k.bad),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.red.shade800,
+                                      color: context.k.bad,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -347,21 +360,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: context.k.infoTint,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue.shade200),
+                              border: Border.all(color: context.k.info.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+                                Icon(Icons.info_outline, size: 18, color: context.k.info),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _infoMessage!,
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.blue.shade900,
+                                      color: context.k.info,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -385,11 +398,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   Center(
                     child: TextButton.icon(
                       onPressed: _isLoading ? null : _goBackToLogin,
-                      icon: const Icon(Icons.arrow_back_rounded, size: 16, color: KColors.inkSoft),
-                      label: const Text(
+                      icon: Icon(Icons.arrow_back_rounded, size: 16, color: context.k.inkSoft),
+                      label: Text(
                         'Quay lại màn hình đăng nhập',
                         style: TextStyle(
-                          color: KColors.inkSoft,
+                          color: context.k.inkSoft,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -430,13 +443,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           height: 32,
           decoration: BoxDecoration(
             color: isDone
-                ? Colors.green
-                : (isActive ? KColors.brand : KColors.surfaceSunken),
+                ? context.k.ok
+                : (isActive ? context.k.brand : context.k.surfaceSunken),
             shape: BoxShape.circle,
             border: Border.all(
               color: isDone
-                  ? Colors.green
-                  : (isActive ? KColors.brand : KColors.line),
+                  ? context.k.ok
+                  : (isActive ? context.k.brand : context.k.line),
               width: 1.5,
             ),
           ),
@@ -448,7 +461,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: isActive ? Colors.white : KColors.inkSoft,
+                      color: isActive ? Colors.white : context.k.inkSoft,
                     ),
                   ),
           ),
@@ -459,7 +472,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           style: TextStyle(
             fontSize: 11,
             fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-            color: isActive ? KColors.brand : KColors.inkSoft,
+            color: isActive ? context.k.brand : context.k.inkSoft,
           ),
         ),
       ],
@@ -472,7 +485,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       child: Container(
         height: 2,
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
-        color: isDone ? Colors.green : KColors.line,
+        color: isDone ? context.k.ok : context.k.line,
       ),
     );
   }
@@ -487,10 +500,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: KColors.brand.withValues(alpha: 0.1),
+                color: context.k.brandTint,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.mail_outline_rounded, color: KColors.brand, size: 22),
+              child: Icon(Icons.mail_outline_rounded, color: context.k.brand, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -501,13 +514,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     'Quên mật khẩu?',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
+                          color: context.k.ink,
                         ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Nhận mã xác thực qua email đã đăng ký',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: KColors.inkSoft,
+                          color: context.k.inkSoft,
                         ),
                   ),
                 ],
@@ -521,6 +535,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
+                color: context.k.ink,
               ),
         ),
         const SizedBox(height: 8),
@@ -528,23 +543,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.done,
+          style: TextStyle(color: context.k.ink),
           onSubmitted: (_) => _handleSendEmail(),
           decoration: InputDecoration(
             hintText: 'vidu@gmail.com',
-            prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
+            hintStyle: TextStyle(color: context.k.inkFaint),
+            prefixIcon: Icon(Icons.alternate_email_rounded, size: 20, color: context.k.inkSoft),
             filled: true,
-            fillColor: KColors.surfaceSunken,
+            fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.brand, width: 1.5),
+              borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
@@ -555,7 +572,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: ElevatedButton(
             onPressed: _isLoading ? null : _handleSendEmail,
             style: ElevatedButton.styleFrom(
-              backgroundColor: KColors.brand,
+              backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -587,10 +604,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.amber.shade50,
+                color: context.k.warnTint,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.pin_rounded, color: Colors.amber.shade800, size: 22),
+              child: Icon(Icons.pin_rounded, color: context.k.warn, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -601,13 +618,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     'Xác thực mã OTP',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
+                          color: context.k.ink,
                         ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Kiểm tra email ${_emailController.text}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: KColors.inkSoft,
+                          color: context.k.inkSoft,
                         ),
                   ),
                 ],
@@ -621,6 +639,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
+                color: context.k.ink,
               ),
         ),
         const SizedBox(height: 8),
@@ -632,29 +651,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             LengthLimitingTextInputFormatter(6),
           ],
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
             letterSpacing: 12,
+            color: context.k.ink,
           ),
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _handleVerifyOtp(),
           decoration: InputDecoration(
             hintText: '------',
-            hintStyle: const TextStyle(letterSpacing: 10, color: KColors.inkSoft),
+            hintStyle: TextStyle(letterSpacing: 10, color: context.k.inkFaint),
             filled: true,
-            fillColor: KColors.surfaceSunken,
+            fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.brand, width: 1.5),
+              borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
@@ -673,28 +693,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 });
               },
               style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              child: const Text(
+              child: Text(
                 'Đổi email khác',
-                style: TextStyle(fontSize: 12, color: KColors.inkSoft),
+                style: TextStyle(fontSize: 12, color: context.k.inkSoft),
               ),
             ),
             if (_canResend)
               TextButton(
                 onPressed: _isLoading ? null : _handleResendOtp,
                 style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                child: const Text(
+                child: Text(
                   'Gửi lại mã',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: KColors.brand,
+                    color: context.k.brand,
                   ),
                 ),
               )
             else
               Text(
                 'Gửi lại sau ${_resendCountdown}s',
-                style: const TextStyle(fontSize: 12, color: KColors.inkSoft),
+                style: TextStyle(fontSize: 12, color: context.k.inkSoft),
               ),
           ],
         ),
@@ -704,7 +724,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: ElevatedButton(
             onPressed: _isLoading ? null : _handleVerifyOtp,
             style: ElevatedButton.styleFrom(
-              backgroundColor: KColors.brand,
+              backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -736,10 +756,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
+                color: context.k.okTint,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.lock_reset_rounded, color: Colors.green, size: 22),
+              child: Icon(Icons.lock_reset_rounded, color: context.k.ok, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -750,13 +770,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     'Đặt mật khẩu mới',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
+                          color: context.k.ink,
                         ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Mật khẩu mới tối thiểu 6 ký tự',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: KColors.inkSoft,
+                          color: context.k.inkSoft,
                         ),
                   ),
                 ],
@@ -770,35 +791,39 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
+                color: context.k.ink,
               ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _newPasswordController,
           obscureText: _obscureNewPassword,
+          style: TextStyle(color: context.k.ink),
           decoration: InputDecoration(
             hintText: 'Nhập mật khẩu mới',
-            prefixIcon: const Icon(Icons.lock_outline, size: 20),
+            hintStyle: TextStyle(color: context.k.inkFaint),
+            prefixIcon: Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscureNewPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                 size: 20,
+                color: context.k.inkSoft,
               ),
               onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
             ),
             filled: true,
-            fillColor: KColors.surfaceSunken,
+            fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.brand, width: 1.5),
+              borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
@@ -810,35 +835,39 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
+                color: context.k.ink,
               ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _confirmPasswordController,
           obscureText: _obscureConfirmPassword,
+          style: TextStyle(color: context.k.ink),
           decoration: InputDecoration(
             hintText: 'Nhập lại mật khẩu mới',
-            prefixIcon: const Icon(Icons.lock_outline, size: 20),
+            hintStyle: TextStyle(color: context.k.inkFaint),
+            prefixIcon: Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                 size: 20,
+                color: context.k.inkSoft,
               ),
               onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
             filled: true,
-            fillColor: KColors.surfaceSunken,
+            fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.line),
+              borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: KColors.brand, width: 1.5),
+              borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
@@ -851,7 +880,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: ElevatedButton(
             onPressed: _isLoading ? null : _handleResetPassword,
             style: ElevatedButton.styleFrom(
-              backgroundColor: KColors.brand,
+              backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
