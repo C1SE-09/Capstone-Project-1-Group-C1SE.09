@@ -13,12 +13,11 @@ import os
 import uuid
 
 import firebase_admin
-from firebase_admin import credentials, messaging
-from sqlalchemy.orm import Session
-
 from app.config import settings
 from app.models.device_token import DeviceToken
 from app.models.user import User
+from firebase_admin import credentials, messaging
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
