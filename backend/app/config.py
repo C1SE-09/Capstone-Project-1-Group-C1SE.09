@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # AI (optional until sprint 2)
     gemini_api_key: str = ""
 
+    # Firebase Cloud Messaging (push notification) — đường dẫn service account JSON
+    firebase_credentials_path: str = ""
+
     # MinIO object storage
     minio_endpoint: str = "localhost:9000"
     minio_user: str = "minioadmin"

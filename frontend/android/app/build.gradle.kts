@@ -1,8 +1,10 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // Flutter Gradle Plugin phải được apply sau Android và Kotlin.
     id("dev.flutter.flutter-gradle-plugin")
+    // Firebase Cloud Messaging (đọc google-services.json trong app/).
+    id("com.google.gms.google-services")
 }
 
 android {
