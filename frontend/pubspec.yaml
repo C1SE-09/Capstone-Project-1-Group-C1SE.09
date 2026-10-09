@@ -49,6 +49,9 @@ dependencies:
   # Audio recording plugin
   record: 6.0.0
 
+  # Audio playback (nghe lại bản ghi âm)
+  just_audio: ^0.9.40
+
   # Cross-platform file abstraction for audio bytes
   cross_file: ^0.3.5+2
 

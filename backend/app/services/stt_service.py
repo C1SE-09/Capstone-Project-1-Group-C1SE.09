@@ -96,6 +96,31 @@ def _ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
+def _detect_audio_volume(path: str) -> dict[str, float]:
+    """Kiểm tra max_volume và mean_volume của file audio bằng ffmpeg."""
+    if not _ffmpeg_available():
+        return {}
+    try:
+        res = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-i", path, "-af", "volumedetect", "-f", "null", "-"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        vol_info = {}
+        for line in res.stderr.splitlines():
+            if "max_volume:" in line:
+                val = line.split("max_volume:")[1].replace("dB", "").strip()
+                vol_info["max_volume"] = float(val)
+            elif "mean_volume:" in line:
+                val = line.split("mean_volume:")[1].replace("dB", "").strip()
+                vol_info["mean_volume"] = float(val)
+        return vol_info
+    except (subprocess.SubprocessError, OSError):
+        return {}
+
+
 def _convert_to_wav(src_path: str) -> str | None:
     """
     Chuyển audio (.m4a/.mp3/.webm/...) sang WAV 16kHz mono bằng ffmpeg.
@@ -200,6 +225,21 @@ class STTService:
 
     def _transcribe_path(self, audio_path: str) -> str:
         """Chạy model PhoWhisper trên một file audio đã đọc được."""
+        vol = _detect_audio_volume(audio_path)
+        if vol:
+            max_v = vol.get("max_volume", 0.0)
+            mean_v = vol.get("mean_volume", 0.0)
+            if max_v < -36.0 or mean_v < -65.0:
+                logger.warning(
+                    "[STT] Âm thanh quá nhỏ / không có tiếng nói: max_volume=%.1fdB, mean_volume=%.1fdB",
+                    max_v,
+                    mean_v,
+                )
+                raise ValueError(
+                    "Micro không thu được âm thanh (bị tắt tiếng hoặc quá nhỏ). "
+                    "Vui lòng kiểm tra lại micro trong Cài đặt và nói to rõ ràng hơn."
+                )
+
         try:
             segments, _ = self.model.transcribe(
                 audio_path,
@@ -211,8 +251,26 @@ class STTService:
             )
             transcript = "".join(seg.text for seg in segments).strip()
             if not transcript:
+                if vol and (vol.get("max_volume", 0.0) < -28.0 or vol.get("mean_volume", 0.0) < -50.0):
+                    raise ValueError(
+                        "Không nhận diện được nội dung giọng nói từ file âm thanh. Vui lòng nói to, rõ ràng hơn hoặc thử lại."
+                    )
+                logger.info(
+                    "[STT] VAD filter trả về rỗng, thử lại không dùng vad_filter cho %s...",
+                    audio_path,
+                )
+                segments, _ = self.model.transcribe(
+                    audio_path,
+                    language="vi",
+                    vad_filter=False,
+                    beam_size=1,
+                    condition_on_previous_text=False,
+                )
+                transcript = "".join(seg.text for seg in segments).strip()
+
+            if not transcript:
                 raise ValueError(
-                    f"Nội dung file âm thanh rỗng hoặc không thể nhận dạng tiếng nói: {audio_path}"
+                    "Không nhận diện được nội dung giọng nói từ file âm thanh. Vui lòng nói to, rõ ràng hơn hoặc thử lại."
                 )
             return transcript
         except RuntimeError as exc:

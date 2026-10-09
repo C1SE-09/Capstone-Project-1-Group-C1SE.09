@@ -8,6 +8,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
@@ -248,6 +249,26 @@ class _ParentHomeState extends State<_ParentHome> {
                   ),
                 ),
                 IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TimetableScreen(
+                          classId: overview.child.classId?.isNotEmpty == true
+                              ? overview.child.classId!
+                              : 'aaaaaaaa-0000-0000-0000-000000000001',
+                          className: overview.className.isNotEmpty
+                              ? 'Lớp ${overview.className}'
+                              : 'Lớp của bé',
+                          isReadOnly: true,
+                        ),
+                      ),
+                    );
+                  },
+                  tooltip: 'Thời khóa biểu',
+                  icon: const Icon(Icons.calendar_month_outlined, color: KColors.inkSoft),
+                ),
+                IconButton(
                   onPressed: () => showChangePasswordBottomSheet(context),
                   tooltip: 'Đổi mật khẩu',
                   icon: const Icon(Icons.lock_outline_rounded, color: KColors.inkSoft),
@@ -308,16 +329,63 @@ class _ParentHomeState extends State<_ParentHome> {
         const SizedBox(height: 20),
         KCard(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             children: [
-              Avatar(name: widget.child.name, size: 48),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
-                  Text('Lớp ${overview.className} · ${overview.teacherName}', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                  Avatar(name: widget.child.name, size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
+                        Text('Lớp ${overview.className} · ${overview.teacherName}', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                      ],
+                    ),
+                  ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TimetableScreen(
+                        classId: overview.child.classId?.isNotEmpty == true
+                            ? overview.child.classId!
+                            : 'aaaaaaaa-0000-0000-0000-000000000001',
+                        className: overview.className.isNotEmpty
+                            ? 'Lớp ${overview.className}'
+                            : 'Lớp của bé',
+                        isReadOnly: true,
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_month_outlined, size: 18, color: context.k.brand),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Thời khóa biểu của lớp',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: context.k.brand,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.arrow_forward_rounded, size: 16, color: context.k.brand),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

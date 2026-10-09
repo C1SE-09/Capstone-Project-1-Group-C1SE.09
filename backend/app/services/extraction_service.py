@@ -723,7 +723,8 @@ def extract_multi_person(
         key: ", ".join(values) if values else None
         for key, values in class_wide_lists.items()
     }
-
+    if all(v is None for v in class_wide_extraction.values()):
+        class_wide_extraction = None
     # Bucket 2: child_extractions (CHỈ children có override)
     child_extractions: dict[str, dict[str, str | None]] = {}
     for child_id, data in child_overrides_lists.items():

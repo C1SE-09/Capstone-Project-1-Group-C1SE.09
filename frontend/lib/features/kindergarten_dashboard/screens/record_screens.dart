@@ -16,6 +16,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:cross_file/cross_file.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
@@ -304,6 +305,7 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
           extraction: extractionData,
           transcript: transcript,
           voiceRecord: voiceRecord,
+          recordedBytes: uploadedFile?.bytes,
           repository: widget.repository,
           teacherRepository: teacherRepository,
           onBack: () => setState(() => step = 'record'),
@@ -393,8 +395,24 @@ class _RecordingScreenState extends State<RecordingScreen>
         timer?.cancel();
         wave.stop();
         wave2.stop();
+        var file = result.files.single;
+        if (file.bytes == null &&
+            !kIsWeb &&
+            file.path != null &&
+            file.path!.isNotEmpty) {
+          try {
+            final xFile = XFile(file.path!);
+            final bytes = await xFile.readAsBytes();
+            file = PlatformFile(
+              name: file.name,
+              size: bytes.length,
+              bytes: bytes,
+              path: file.path,
+            );
+          } catch (_) {}
+        }
         setState(() {
-          selectedFile = result.files.single;
+          selectedFile = file;
           phase = 'file_selected';
         });
       }
@@ -455,6 +473,17 @@ class _RecordingScreenState extends State<RecordingScreen>
           encoder = AudioEncoder.wav;
           extension = 'wav';
         }
+      } else {
+        if (await _recorder.isEncoderSupported(AudioEncoder.aacLc)) {
+          encoder = AudioEncoder.aacLc;
+          extension = 'm4a';
+        } else if (await _recorder.isEncoderSupported(AudioEncoder.wav)) {
+          encoder = AudioEncoder.wav;
+          extension = 'wav';
+        } else if (await _recorder.isEncoderSupported(AudioEncoder.pcm16bits)) {
+          encoder = AudioEncoder.pcm16bits;
+          extension = 'wav';
+        }
       }
 
       String recordPath = '';
@@ -477,8 +506,11 @@ class _RecordingScreenState extends State<RecordingScreen>
         RecordConfig(
           encoder: encoder,
           bitRate: 128000,
-          sampleRate: 44100,
-          numChannels: 1,
+          sampleRate: kIsWeb ? 48000 : 44100,
+          numChannels: kIsWeb ? 2 : 1,
+          autoGain: true,
+          echoCancel: true,
+          noiseSuppress: true,
         ),
         path: recordPath,
       );
@@ -574,9 +606,18 @@ class _RecordingScreenState extends State<RecordingScreen>
 
     if (mounted) {
       setState(() {
-        phase = 'done';
+        seconds = 0;
+        phase = 'ready';
+        selectedFile = null;
         isBusy = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Không thể hoàn tất lưu bản ghi âm. Vui lòng bấm ghi âm lại.'),
+          backgroundColor: context.k.bad,
+        ),
+      );
     }
   }
 
@@ -606,7 +647,8 @@ class _RecordingScreenState extends State<RecordingScreen>
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                              color: context.k.brandTint, shape: BoxShape.circle),
+                              color: context.k.brandTint,
+                              shape: BoxShape.circle),
                           child: Icon(Icons.groups_outlined,
                               color: context.k.brand))
                       : Avatar(name: widget.child?.name ?? 'Trẻ', size: 44),
@@ -815,7 +857,8 @@ class _RecordingScreenState extends State<RecordingScreen>
                             shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),
-                              onTap: (phase == 'done' || isBusy) ? null : toggle,
+                              onTap:
+                                  (phase == 'done' || isBusy) ? null : toggle,
                               child: SizedBox.square(
                                 dimension: 96,
                                 child: isBusy
@@ -846,8 +889,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                         style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w600,
-                            color:
-                                seconds >= 150 ? context.k.warn : context.k.ink)),
+                            color: seconds >= 150
+                                ? context.k.warn
+                                : context.k.ink)),
                     Text(
                       phase == 'ready'
                           ? 'Nhấn để bắt đầu ghi âm'
@@ -872,8 +916,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                               color: context.k.brand),
                         ),
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                              color: context.k.brand, width: 1.4),
+                          side: BorderSide(color: context.k.brand, width: 1.4),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 22, vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -1145,15 +1188,19 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             voiceId: voiceRecord.id,
             teacherId: teacherId,
           );
-          if (currentRecord.status == 'completed') {
-            transcript = currentRecord.effectiveTranscript;
-            break;
-          } else if (currentRecord.status == 'failed') {
-            throw Exception(currentRecord.errorMessage ??
-                'Quá trình nhận dạng giọng nói thất bại.');
-          }
         } catch (e) {
           if (attempt >= 58) rethrow;
+          continue;
+        }
+
+        if (currentRecord.status == 'completed') {
+          transcript = currentRecord.effectiveTranscript;
+          break;
+        } else if (currentRecord.status == 'failed') {
+          final errMsg = currentRecord.errorMessage?.trim();
+          throw Exception((errMsg != null && errMsg.isNotEmpty)
+              ? errMsg
+              : 'Quá trình nhận dạng giọng nói thất bại.');
         }
       }
 
@@ -1311,8 +1358,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
             Icon(Icons.error_outline_rounded,
@@ -1434,6 +1480,14 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       return 'Máy chủ đang gặp sự cố khi xử lý file âm thanh. Vui lòng thử lại sau ít phút.';
     }
 
+    if (lower.contains('nội dung file âm thanh rỗng') ||
+        lower.contains('không nhận diện được nội dung') ||
+        lower.contains('không thể nhận dạng tiếng nói') ||
+        lower.contains('không nhận dạng được') ||
+        lower.contains('không có âm thanh')) {
+      return 'Không nhận diện được giọng nói từ file ghi âm. Vui lòng nói to, rõ ràng hơn hoặc thử lại.';
+    }
+
     if (lower.contains('nhận dạng giọng nói thất bại') ||
         lower.contains('speech-to-text') ||
         lower.contains('phowhisper')) {
@@ -1461,7 +1515,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         !raw.contains('{') &&
         !raw.contains('(') &&
         !raw.contains('http') &&
-        raw.length < 150) {
+        raw.length < 300) {
       return raw;
     }
 
@@ -1638,6 +1692,7 @@ class ReviewScreen extends StatefulWidget {
     this.extraction,
     this.transcript,
     this.voiceRecord,
+    this.recordedBytes,
   });
 
   final VoidCallback onBack;
@@ -1651,6 +1706,9 @@ class ReviewScreen extends StatefulWidget {
   final ExtractionData? extraction;
   final String? transcript;
   final VoiceRecord? voiceRecord;
+
+  /// Bytes của file ghi âm gốc, dùng để phát lại ở màn hình done.
+  final Uint8List? recordedBytes;
 
   @override
   State<ReviewScreen> createState() => _ReviewScreenState();
@@ -1706,6 +1764,17 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
   }
 
+  bool _hasAnyLegacyContent(ExtractionData ext) {
+    return (ext.meals?.trim().isNotEmpty ?? false) ||
+        (ext.sleeping?.trim().isNotEmpty ?? false) ||
+        (ext.activities?.trim().isNotEmpty ?? false) ||
+        (ext.mood?.trim().isNotEmpty ?? false) ||
+        (ext.health?.trim().isNotEmpty ?? false) ||
+        (ext.rawJson?['teacher_note']?.toString().trim().isNotEmpty ?? false) ||
+        (ext.rawJson?['notes']?.toString().trim().isNotEmpty ?? false) ||
+        (ext.rawJson?['note']?.toString().trim().isNotEmpty ?? false);
+  }
+
   List<ObservationItem> _buildObservations(List<Child> children,
       [ExtractionData? customExtraction]) {
     try {
@@ -1715,28 +1784,27 @@ class _ReviewScreenState extends State<ReviewScreen> {
       // nhưng giữ lại để không vỡ các entry-point cũ nếu còn gọi tới).
       if (widget.mode == RecordMode.child && widget.child != null) {
         final c = widget.child!;
-        final meals = ext?.meals?.trim().isNotEmpty == true
-            ? ext!.meals!.trim()
-            : '';
+        final meals =
+            ext?.meals?.trim().isNotEmpty == true ? ext!.meals!.trim() : '';
         final sleep = ext?.sleeping?.trim().isNotEmpty == true
             ? ext!.sleeping!.trim()
             : '';
         final activities = ext?.activities?.trim().isNotEmpty == true
             ? ext!.activities!.trim()
             : '';
-        final mood = ext?.mood?.trim().isNotEmpty == true
-            ? ext!.mood!.trim()
-            : '';
-        final health = ext?.health?.trim().isNotEmpty == true
-            ? ext!.health!.trim()
-            : '';
-        final note = ext?.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
-            ? ext!.rawJson!['teacher_note']!.toString().trim()
-            : (ext?.rawJson?['notes']?.toString().trim().isNotEmpty == true
-                ? ext!.rawJson!['notes']!.toString().trim()
-                : (ext?.rawJson?['note']?.toString().trim().isNotEmpty == true
-                    ? ext!.rawJson!['note']!.toString().trim()
-                    : ''));
+        final mood =
+            ext?.mood?.trim().isNotEmpty == true ? ext!.mood!.trim() : '';
+        final health =
+            ext?.health?.trim().isNotEmpty == true ? ext!.health!.trim() : '';
+        final note =
+            ext?.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
+                ? ext!.rawJson!['teacher_note']!.toString().trim()
+                : (ext?.rawJson?['notes']?.toString().trim().isNotEmpty == true
+                    ? ext!.rawJson!['notes']!.toString().trim()
+                    : (ext?.rawJson?['note']?.toString().trim().isNotEmpty ==
+                            true
+                        ? ext!.rawJson!['note']!.toString().trim()
+                        : ''));
 
         return [
           ObservationItem(
@@ -1773,8 +1841,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
       if (ext?.hasClassWideContent == true) {
         final cw = ext!.classWideExtraction!;
         result.add(_classwideItemFromExtraction(cw));
-      } else if (widget.mode == RecordMode.classroom && !hasChildOverrides) {
+      } else if (widget.mode == RecordMode.classroom &&
+          !hasChildOverrides &&
+          ext != null &&
+          ext.classWideExtraction != null &&
+          _hasAnyLegacyContent(ext)) {
+        // Fallback: BE trả class_wide_extraction là dict hợp lệ (không null)
+        // nhưng rỗng content (hasClassWideContent = false). Khi đó thử dùng
+        // top-level legacy fields (ext.meals, ext.sleeping, ...). Nếu cũng
+        // rỗng hết thì KHÔNG tạo item — để Unmatched items từ segments là
+        // đầu mục duy nhất giáo viên cần review.
         // Chỉ thêm fallback "Chung cả lớp" nếu không có bất kỳ override nào theo từng bé
+
         result.add(
           ObservationItem(
             id: 'classwide',
@@ -1782,27 +1860,25 @@ class _ReviewScreenState extends State<ReviewScreen> {
             matched: true,
             kind: ObservationKind.classwide,
             decision: ObservationDecision.pending,
-            eating: ext?.meals?.trim().isNotEmpty == true
-                ? ext!.meals!.trim()
+            eating:
+                ext.meals?.trim().isNotEmpty == true ? ext.meals!.trim() : '',
+            sleep: ext.sleeping?.trim().isNotEmpty == true
+                ? ext.sleeping!.trim()
                 : '',
-            sleep: ext?.sleeping?.trim().isNotEmpty == true
-                ? ext!.sleeping!.trim()
+            activities: ext.activities?.trim().isNotEmpty == true
+                ? ext.activities!.trim()
                 : '',
-            activities: ext?.activities?.trim().isNotEmpty == true
-                ? ext!.activities!.trim()
-                : '',
-            mood: ext?.mood?.trim().isNotEmpty == true
-                ? ext!.mood!.trim()
-                : '',
-            health: ext?.health?.trim().isNotEmpty == true
-                ? ext!.health!.trim()
-                : '',
-            note: ext?.rawJson?['teacher_note']?.toString().trim().isNotEmpty == true
-                ? ext!.rawJson!['teacher_note']!.toString().trim()
-                : (ext?.rawJson?['notes']?.toString().trim().isNotEmpty == true
-                    ? ext!.rawJson!['notes']!.toString().trim()
-                    : (ext?.rawJson?['note']?.toString().trim().isNotEmpty == true
-                        ? ext!.rawJson!['note']!.toString().trim()
+            mood: ext.mood?.trim().isNotEmpty == true ? ext.mood!.trim() : '',
+            health:
+                ext.health?.trim().isNotEmpty == true ? ext.health!.trim() : '',
+            note: ext.rawJson?['teacher_note']?.toString().trim().isNotEmpty ==
+                    true
+                ? ext.rawJson!['teacher_note']!.toString().trim()
+                : (ext.rawJson?['notes']?.toString().trim().isNotEmpty == true
+                    ? ext.rawJson!['notes']!.toString().trim()
+                    : (ext.rawJson?['note']?.toString().trim().isNotEmpty ==
+                            true
+                        ? ext.rawJson!['note']!.toString().trim()
                         : '')),
           ),
         );
@@ -1913,9 +1989,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ? pick('notes')
         : (pick('teacher_note') != ''
             ? pick('teacher_note')
-            : (pick('note') != ''
-                ? pick('note')
-                : ''));
+            : (pick('note') != '' ? pick('note') : ''));
 
     return ObservationItem(
       id: 'classwide',
@@ -2148,6 +2222,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
         approvedDraftIds[item.id] = newDraftIds;
         item.decision = ObservationDecision.approved;
       });
+
+      if (kind == 'classwide') {
+        for (final childItem in items) {
+          if (childItem.kind != ObservationKind.classwide &&
+              childItem.decision == ObservationDecision.approved &&
+              childItem.id != item.id) {
+            _approveItem(childItem);
+          }
+        }
+      }
     } catch (e) {
       debugPrint('Approve item error: $e, trying manual fallback...');
       await _approveItemManualFallback(item, teacherId);
@@ -2226,23 +2310,97 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   /// Bỏ duyệt 1 item đã được duyệt.
-  void _unapproveItem(ObservationItem item) {
+  /// Nếu cả lớp đang được duyệt, bé này sẽ được gán lại nội dung cả lớp thay vì xóa bỏ hoàn toàn khỏi báo cáo.
+  Future<void> _unapproveItem(ObservationItem item) async {
     if (approvingIds.contains(item.id)) return;
+    final draftIdsToDelete =
+        List<String>.from(approvedDraftIds[item.id] ?? <String>[]);
     setState(() {
       item.decision = ObservationDecision.pending;
       approvedDraftIds.remove(item.id);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Đã bỏ duyệt mục "${item.name}".'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+
+    // Kiểm tra xem mục "Chung cả lớp" có đang được duyệt hay không
+    ObservationItem? classwideItem;
+    for (final it in items) {
+      if (it.kind == ObservationKind.classwide &&
+          it.decision == ObservationDecision.approved) {
+        classwideItem = it;
+        break;
+      }
+    }
+
+    if (item.kind != ObservationKind.classwide && classwideItem != null) {
+      // Bé này có thẻ riêng nhưng vừa bị hủy duyệt, trong khi cả lớp vẫn duyệt:
+      // Gán lại nội dung cả lớp cho bé này thay vì xóa báo cáo!
+      try {
+        String teacherId;
+        try {
+          final t = await repository.getCurrentTeacher();
+          teacherId =
+              t.teacherId.isNotEmpty ? t.teacherId : repository.teacherId;
+        } catch (_) {
+          teacherId =
+              AuthRepository.currentUser?.teacherId ?? repository.teacherId;
+        }
+        final voiceRecordId = widget.voiceRecord?.id ??
+            '00000000-0000-0000-0000-000000000000';
+        await teacherRepository.approveItem(
+          voiceRecordId: voiceRecordId,
+          teacherId: teacherId,
+          kind: 'child',
+          childId: item.childId,
+          extraction: {
+            if (classwideItem.eating.isNotEmpty) 'meals': classwideItem.eating,
+            if (classwideItem.sleep.isNotEmpty) 'sleeping': classwideItem.sleep,
+            if (classwideItem.health.isNotEmpty) 'health': classwideItem.health,
+            if (classwideItem.activities.isNotEmpty)
+              'activities': classwideItem.activities,
+            if (classwideItem.mood.isNotEmpty) 'mood': classwideItem.mood,
+            if (classwideItem.note.isNotEmpty) 'teacher_note': classwideItem.note,
+          },
+        );
+      } catch (e) {
+        debugPrint('Lỗi gán lại classwide cho bé khi bỏ duyệt: $e');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Đã bỏ duyệt mục riêng của "${item.name}". Bé sẽ nhận báo cáo chung của cả lớp.'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (draftIdsToDelete.isNotEmpty) {
+      try {
+        await teacherRepository.deleteDraftReports(draftIdsToDelete);
+      } catch (e) {
+        debugPrint('Lỗi xóa bản nháp khi bỏ duyệt: $e');
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Đã bỏ duyệt mục "${item.name}". Đã xóa khỏi bản nháp.'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
-  /// Bỏ duyệt tất cả các mục đã duyệt.
-  void _unapproveAll() {
+  /// Bỏ duyệt tất cả các mục đã duyệt. Xóa tất cả draft reports khỏi backend DB.
+  Future<void> _unapproveAll() async {
+    final allDraftIdsToDelete = <String>[];
+    for (final ids in approvedDraftIds.values) {
+      allDraftIdsToDelete.addAll(ids);
+    }
     setState(() {
       for (final item in items) {
         if (item.decision == ObservationDecision.approved) {
@@ -2251,13 +2409,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
       }
       approvedDraftIds.clear();
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đã bỏ duyệt tất cả các mục.'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (allDraftIdsToDelete.isNotEmpty) {
+      try {
+        await teacherRepository.deleteDraftReports(allDraftIdsToDelete);
+      } catch (e) {
+        debugPrint('Lỗi xóa tất cả bản nháp khi bỏ duyệt: $e');
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã bỏ duyệt tất cả các mục và xóa khỏi bản nháp.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   /// Hiển thị hộp thoại xem đầy đủ nội dung văn bản đã phân tích.
@@ -2331,15 +2498,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
     );
   }
 
-  /// Gửi batch tất cả draft đã thu được.
+  /// Gửi batch tất cả draft đã thu được từ các mục ĐÃ ĐƯỢC DUYỆT.
   /// Gọi POST /api/teacher/reports/send-batch với list tất cả draft_report_ids.
   Future<void> _sendBatch() async {
     if (isSendingBatch) return;
 
-    // Gom tất cả draft ids từ approved items
+    // CHỈ gom draft ids từ các mục có decision == approved
     final allDraftIds = <String>[];
-    for (final ids in approvedDraftIds.values) {
-      allDraftIds.addAll(ids);
+    for (final item in items) {
+      if (item.decision == ObservationDecision.approved) {
+        final ids = approvedDraftIds[item.id];
+        if (ids != null) allDraftIds.addAll(ids);
+      }
     }
     // dedupe (giữ thứ tự)
     final uniqueDraftIds = <String>[];
@@ -2348,21 +2518,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
       if (seen.add(id)) uniqueDraftIds.add(id);
     }
 
+    // Tuyệt đối không tự ý duyệt ngầm - chỉ mục nào được duyệt mới gửi
     if (uniqueDraftIds.isEmpty) {
-      // Tự động duyệt các mục pending nếu chưa duyệt
-      if (items.any((i) => i.decision != ObservationDecision.discarded)) {
-        await _approveAll();
-        for (final ids in approvedDraftIds.values) {
-          allDraftIds.addAll(ids);
-        }
-        for (final id in allDraftIds) {
-          if (seen.add(id)) uniqueDraftIds.add(id);
-        }
-      }
-      if (uniqueDraftIds.isEmpty) {
-        _showError('Chưa có báo cáo nào được duyệt để gửi.');
-        return;
-      }
+      _showError(
+          'Chưa có mục nào được duyệt. Hãy bấm "Duyệt" ít nhất 1 mục để gửi.');
+      return;
+    }
+
+    final pendingCount = items
+        .where((i) =>
+            i.decision != ObservationDecision.discarded &&
+            i.decision != ObservationDecision.approved)
+        .length;
+    if (pendingCount > 0) {
+      _showError(
+          'Còn $pendingCount mục chưa duyệt hoặc loại bỏ. Vui lòng xử lý tất cả các mục trước khi gửi.');
+      return;
     }
 
     String teacherId;
@@ -2490,6 +2661,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         parentReportsCount: savedReportsCount,
         healthRecordsCount: savedHealthCount,
         recordingTime: _timeNow(),
+        recordedBytes: widget.recordedBytes,
         onBack: widget.onCompleted,
       );
     }
@@ -2530,8 +2702,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
         onBack: widget.onBack,
         trailing: effectiveTranscript.isNotEmpty
             ? IconButton(
-                icon: Icon(Icons.description_outlined,
-                    color: context.k.brand),
+                icon: Icon(Icons.description_outlined, color: context.k.brand),
                 tooltip: 'Xem text đã phân tích',
                 onPressed: () =>
                     _showTranscriptDialog(context, effectiveTranscript),
@@ -2630,6 +2801,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
                 ),
                 const SizedBox(height: 16),
+                if (widget.recordedBytes != null &&
+                    widget.recordedBytes!.isNotEmpty)
+                  _AudioPlayerCard(
+                    recordedBytes: widget.recordedBytes!,
+                  ),
                 if (effectiveTranscript.isNotEmpty)
                   _AnalyzedTextCard(
                     text: effectiveTranscript,
@@ -2654,24 +2830,43 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           }
                         },
                         onUnapprove: () => _unapproveItem(items[i]),
-                        onDiscard: () => setState(() {
-                          items[i].decision = ObservationDecision.discarded;
-                          // Bỏ draft ids đã thu (nếu có) để không gửi nhầm
-                          approvedDraftIds.remove(items[i].id);
-                        }),
-                        onRestore: () => setState(() {
-                          items[i].decision = ObservationDecision.pending;
-                          // Xóa draft ids để user phải approve lại
-                          approvedDraftIds.remove(items[i].id);
-                        }),
+                        onDiscard: () {
+                          final draftIds = List<String>.from(
+                              approvedDraftIds[items[i].id] ?? <String>[]);
+                          setState(() {
+                            items[i].decision = ObservationDecision.discarded;
+                            approvedDraftIds.remove(items[i].id);
+                          });
+                          if (draftIds.isNotEmpty) {
+                            teacherRepository.deleteDraftReports(draftIds);
+                          }
+                        },
+                        onRestore: () {
+                          final draftIds = List<String>.from(
+                              approvedDraftIds[items[i].id] ?? <String>[]);
+                          setState(() {
+                            items[i].decision = ObservationDecision.pending;
+                            approvedDraftIds.remove(items[i].id);
+                          });
+                          if (draftIds.isNotEmpty) {
+                            teacherRepository.deleteDraftReports(draftIds);
+                          }
+                        },
                         onAssign: () => _assignChild(items[i]),
-                        onAssignClass: () => setState(() {
-                          items[i].kind = ObservationKind.classwide;
-                          items[i].name = 'Chung cả lớp';
-                          items[i].matched = true;
-                          items[i].decision = ObservationDecision.pending;
-                          approvedDraftIds.remove(items[i].id);
-                        }),
+                        onAssignClass: () {
+                          final draftIds = List<String>.from(
+                              approvedDraftIds[items[i].id] ?? <String>[]);
+                          setState(() {
+                            items[i].kind = ObservationKind.classwide;
+                            items[i].name = 'Chung cả lớp';
+                            items[i].matched = true;
+                            items[i].decision = ObservationDecision.pending;
+                            approvedDraftIds.remove(items[i].id);
+                          });
+                          if (draftIds.isNotEmpty) {
+                            teacherRepository.deleteDraftReports(draftIds);
+                          }
+                        },
                         onEdit: () => _editObservation(items[i]),
                       ),
                     ),
@@ -2733,28 +2928,35 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   padding: const EdgeInsets.only(top: 8),
                   child: _SurfaceBox(
                     padding: const EdgeInsets.all(8),
-                    color: context.k.brandTint,
-                    borderColor: context.k.brandTint,
+                    color: approvedCount == 0
+                        ? context.k.brandTint
+                        : context.k.warnTint.withValues(alpha: 0.45),
+                    borderColor: approvedCount == 0
+                        ? context.k.brandTint
+                        : context.k.warn,
                     child: Text(
-                      'Còn $pendingCount mục chưa duyệt. Bấm "Duyệt" từng mục hoặc loại bỏ để tiếp tục.',
+                      approvedCount == 0
+                          ? 'Chưa có mục nào được duyệt. Bấm "Duyệt" hoặc "Loại bỏ" từng mục để tiếp tục.'
+                          : 'Còn $pendingCount mục chưa xử lý. Vui lòng duyệt hoặc loại bỏ tất cả các mục để có thể gửi.',
                       style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          color: context.k.brand),
+                          color: approvedCount == 0
+                              ? context.k.brand
+                              : context.k.warn),
                     ),
                   ),
                 ),
               const SizedBox(height: 10),
               FilledButton(
-                onPressed:
-                    !isSubmitting && (approvedCount > 0 || pendingCount > 0)
-                        ? () async {
-                            if (approvedCount == 0 && pendingCount > 0) {
-                              await _approveAll();
-                            }
-                            await _sendBatch();
-                          }
-                        : null,
+                onPressed: !isSubmitting &&
+                        approvedCount > 0 &&
+                        pendingCount == 0 &&
+                        unmatchedActiveCount == 0
+                    ? () async {
+                        await _sendBatch();
+                      }
+                    : null,
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(double.infinity, 44),
                   shape: RoundedRectangleBorder(
@@ -2763,9 +2965,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 child: Text(
                   isSubmitting
                       ? 'Đang gửi báo cáo…'
-                      : approvedCount > 0
-                          ? 'Gửi $approvedCount báo cáo'
-                          : 'Duyệt & Gửi báo cáo cả lớp',
+                      : approvedCount == 0
+                          ? 'Chưa duyệt mục nào để gửi'
+                          : pendingCount > 0
+                              ? 'Còn $pendingCount mục chưa duyệt hoặc loại bỏ'
+                              : 'Gửi $approvedCount báo cáo cho phụ huynh',
                 ),
               ),
             ],
@@ -2951,6 +3155,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
         if (!mounted) return;
         Navigator.pop(context); // close loading dialog
 
+        final oldDraftIds = <String>[];
+        for (final ids in approvedDraftIds.values) {
+          oldDraftIds.addAll(ids);
+        }
+        if (oldDraftIds.isNotEmpty) {
+          try {
+            await teacherRepository.deleteDraftReports(oldDraftIds);
+          } catch (e) {
+            debugPrint('Lỗi xóa bản nháp cũ khi phân tích lại: $e');
+          }
+        }
+
+        if (!mounted) return;
+
         setState(() {
           editedTranscript = newText;
           currentExtraction = newExtraction;
@@ -2970,6 +3188,222 @@ class _ReviewScreenState extends State<ReviewScreen> {
         _showError('Lỗi khi phân tích lại: $e');
       }
     }
+  }
+}
+
+// ===========================================================================
+// Audio Player Card trong màn hình phân tích (ReviewScreen)
+// ===========================================================================
+
+class _AudioPlayerCard extends StatefulWidget {
+  const _AudioPlayerCard({required this.recordedBytes});
+
+  final Uint8List recordedBytes;
+
+  @override
+  State<_AudioPlayerCard> createState() => _AudioPlayerCardState();
+}
+
+class _AudioPlayerCardState extends State<_AudioPlayerCard> {
+  AudioPlayer? _player;
+  bool _isPlaying = false;
+  bool _isLoading = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPlayer();
+  }
+
+  Future<void> _initPlayer() async {
+    if (widget.recordedBytes.isEmpty) return;
+    final player = AudioPlayer();
+    _player = player;
+
+    player.playerStateStream.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = state.playing;
+        if (state.processingState == ProcessingState.completed) {
+          _isPlaying = false;
+          _position = Duration.zero;
+          player.seek(Duration.zero);
+          player.pause();
+        }
+      });
+    });
+    player.positionStream.listen((pos) {
+      if (!mounted) return;
+      setState(() => _position = pos);
+    });
+    player.durationStream.listen((dur) {
+      if (!mounted) return;
+      setState(() => _duration = dur ?? Duration.zero);
+    });
+
+    try {
+      setState(() => _isLoading = true);
+      await player.setAudioSource(BytesAudioSource(widget.recordedBytes));
+    } catch (e) {
+      debugPrint('Audio player init error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _player?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlay() async {
+    final player = _player;
+    if (player == null) return;
+    if (_isPlaying) {
+      await player.pause();
+    } else {
+      await player.play();
+    }
+  }
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: context.k.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.k.brand.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: context.k.brand.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: context.k.brandTint,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.headphones_rounded,
+                    color: context.k.brand, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nghe lại bản ghi âm',
+                      style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: context.k.ink),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Chạm để nghe lại giọng nói cô vừa ghi âm',
+                      style:
+                          TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: _togglePlay,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: context.k.brand,
+                    shape: BoxShape.circle,
+                  ),
+                  child: _isLoading
+                      ? const Padding(
+                          padding: EdgeInsets.all(9),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          _isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape:
+                  const RoundSliderThumbShape(enabledThumbRadius: 6),
+              overlayShape:
+                  const RoundSliderOverlayShape(overlayRadius: 12),
+              activeTrackColor: context.k.brand,
+              inactiveTrackColor: context.k.brand.withValues(alpha: 0.18),
+              thumbColor: context.k.brand,
+              overlayColor: context.k.brand.withValues(alpha: 0.15),
+            ),
+            child: Slider(
+              value: (_duration.inMilliseconds > 0)
+                  ? (_position.inMilliseconds / _duration.inMilliseconds)
+                      .clamp(0.0, 1.0)
+                  : 0.0,
+              onChanged: (v) {
+                if (_duration.inMilliseconds > 0) {
+                  _player?.seek(Duration(
+                      milliseconds:
+                          (v * _duration.inMilliseconds).round()));
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                Text(
+                  _formatDuration(_position),
+                  style:
+                      TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                ),
+                const Spacer(),
+                Text(
+                  _formatDuration(_duration),
+                  style:
+                      TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -3243,8 +3677,7 @@ class _ObservationTile extends StatelessWidget {
                       isUnmatched
                           ? 'Đoạn này có nhắc tên nhưng chưa khớp'
                           : 'Đoạn ${index + 1}',
-                      style: TextStyle(
-                          fontSize: 11, color: context.k.inkFaint),
+                      style: TextStyle(fontSize: 11, color: context.k.inkFaint),
                     ),
                   ],
                 ),
@@ -3267,8 +3700,7 @@ class _ObservationTile extends StatelessWidget {
                     card.snippet.isNotEmpty
                         ? card.snippet
                         : 'Chưa nhận diện chính xác được bé trong lớp.',
-                    style:
-                        TextStyle(fontSize: 12, color: context.k.inkSoft),
+                    style: TextStyle(fontSize: 12, color: context.k.inkSoft),
                   ),
                 ],
               ),
@@ -3451,7 +3883,8 @@ class _ObservationTile extends StatelessWidget {
     );
   }
 
-  Widget _buildReportLine(BuildContext context, String emoji, String label, String text) {
+  Widget _buildReportLine(
+      BuildContext context, String emoji, String label, String text) {
     if (text.isEmpty) return SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.only(bottom: 5),
@@ -3624,12 +4057,13 @@ class _AssignSheetState extends State<_AssignSheet> {
   }
 }
 
-class _DoneScreenView extends StatelessWidget {
+class _DoneScreenView extends StatefulWidget {
   const _DoneScreenView({
     required this.parentReportsCount,
     required this.healthRecordsCount,
     required this.recordingTime,
     required this.onBack,
+    this.recordedBytes,
   });
 
   final int parentReportsCount;
@@ -3637,13 +4071,95 @@ class _DoneScreenView extends StatelessWidget {
   final String recordingTime;
   final VoidCallback onBack;
 
+  /// Bytes ghi âm local (ưu tiên nếu có)
+  final Uint8List? recordedBytes;
+
+  @override
+  State<_DoneScreenView> createState() => _DoneScreenViewState();
+}
+
+class _DoneScreenViewState extends State<_DoneScreenView> {
+  AudioPlayer? _player;
+  bool _isPlaying = false;
+  bool _isLoading = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPlayer();
+  }
+
+  Future<void> _initPlayer() async {
+    final hasAudio =
+        (widget.recordedBytes != null && widget.recordedBytes!.isNotEmpty);
+    if (!hasAudio) return;
+
+    final player = AudioPlayer();
+    _player = player;
+
+    player.playerStateStream.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = state.playing;
+        if (state.processingState == ProcessingState.completed) {
+          _isPlaying = false;
+          _position = Duration.zero;
+          player.seek(Duration.zero);
+          player.pause();
+        }
+      });
+    });
+    player.positionStream.listen((pos) {
+      if (!mounted) return;
+      setState(() => _position = pos);
+    });
+    player.durationStream.listen((dur) {
+      if (!mounted) return;
+      setState(() => _duration = dur ?? Duration.zero);
+    });
+
+    try {
+      setState(() => _isLoading = true);
+      await player.setAudioSource(BytesAudioSource(widget.recordedBytes!));
+    } catch (e) {
+      debugPrint('Audio player init error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _player?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlay() async {
+    final player = _player;
+    if (player == null) return;
+    if (_isPlaying) {
+      await player.pause();
+    } else {
+      await player.play();
+    }
+  }
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasAudio = _player != null;
     return Scaffold(
       appBar: KAppBar(
-        title: 'Đã tạo hồ sơ',
-        subtitle: 'Xác nhận lúc $recordingTime',
-        onBack: onBack,
+        title: 'Đã gửi thành công',
+        subtitle: 'Xác nhận lúc ${widget.recordingTime}',
+        onBack: widget.onBack,
       ),
       body: ListView(
         padding: const EdgeInsets.all(24),
@@ -3653,19 +4169,22 @@ class _DoneScreenView extends StatelessWidget {
             child: CircleAvatar(
               radius: 36,
               backgroundColor: context.k.brand,
-              child: Icon(Icons.check_rounded, size: 40, color: Colors.white),
+              child: const Icon(Icons.check_rounded,
+                  size: 40, color: Colors.white),
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            'Cô nói một lần.\nBa nơi đã nhận.',
+            'Đã gửi thành công.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 22, fontWeight: FontWeight.w800, color: context.k.ink),
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: context.k.ink),
           ),
           const SizedBox(height: 8),
           Text(
-            'Không phải nhập lại ở đâu cả. Chạm từng nơi để xem hồ sơ đã tới đúng người.',
+            'Không phải nhập lại ở đâu cả. Báo cáo đã được gửi tới phụ huynh.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
           ),
@@ -3674,24 +4193,166 @@ class _DoneScreenView extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _SummaryRow(
-                    '📄', parentReportsCount, 'phiếu liên lạc cho phụ huynh'),
+                _SummaryRow('📄', widget.parentReportsCount,
+                    'phiếu liên lạc cho phụ huynh'),
                 const SizedBox(height: 6),
-                _SummaryRow(
-                    '🏥', healthRecordsCount, 'ghi nhận vào sổ sức khỏe'),
+                _SummaryRow('🏥', widget.healthRecordsCount,
+                    'ghi nhận vào sổ sức khỏe'),
               ],
             ),
           ),
           const SizedBox(height: 16),
           _SurfaceBox(
             child: Text(
-              '$parentReportsCount phụ huynh nhận phiếu. Sổ sức khỏe có $healthRecordsCount dòng mới. Tất cả đến từ ghi âm lúc $recordingTime.',
+              '${widget.parentReportsCount} phụ huynh nhận phiếu. Sổ sức khỏe có ${widget.healthRecordsCount} dòng mới. Tất cả đến từ ghi âm lúc ${widget.recordingTime}.',
               style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
             ),
           ),
+          // ── Audio player ──────────────────────────────────────────────────
+          if (hasAudio) ...[
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: context.k.surface,
+                borderRadius: BorderRadius.circular(14),
+                border:
+                    Border.all(color: context.k.brand.withValues(alpha: 0.25)),
+                boxShadow: [
+                  BoxShadow(
+                    color: context.k.brand.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: context.k.brandTint,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.headphones_rounded,
+                            color: context.k.brand, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Nghe lại bản ghi âm',
+                              style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.k.ink),
+                            ),
+                            Text(
+                              'Bản ghi âm đã được gửi đi',
+                              style: TextStyle(
+                                  fontSize: 11.5, color: context.k.inkSoft),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  // Slider tiến trình
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3,
+                      thumbShape:
+                          const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      overlayShape:
+                          const RoundSliderOverlayShape(overlayRadius: 12),
+                      activeTrackColor: context.k.brand,
+                      inactiveTrackColor:
+                          context.k.brand.withValues(alpha: 0.18),
+                      thumbColor: context.k.brand,
+                      overlayColor: context.k.brand.withValues(alpha: 0.15),
+                    ),
+                    child: Slider(
+                      value: (_duration.inMilliseconds > 0)
+                          ? (_position.inMilliseconds /
+                                  _duration.inMilliseconds)
+                              .clamp(0.0, 1.0)
+                          : 0.0,
+                      onChanged: (v) {
+                        if (_duration.inMilliseconds > 0) {
+                          _player?.seek(Duration(
+                              milliseconds:
+                                  (v * _duration.inMilliseconds).round()));
+                        }
+                      },
+                    ),
+                  ),
+                  // Thời gian + nút play
+                  Row(
+                    children: [
+                      Text(
+                        _formatDuration(_position),
+                        style:
+                            TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _formatDuration(_duration),
+                        style:
+                            TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : GestureDetector(
+                            onTap: _togglePlay,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: context.k.brand,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        context.k.brand.withValues(alpha: 0.35),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 5),
+                                  )
+                                ],
+                              ),
+                              child: Icon(
+                                _isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          // ─────────────────────────────────────────────────────────────────
           const SizedBox(height: 24),
           OutlinedButton(
-            onPressed: onBack,
+            onPressed: widget.onBack,
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 46),
               shape: RoundedRectangleBorder(
@@ -3702,7 +4363,7 @@ class _DoneScreenView extends StatelessWidget {
           const SizedBox(height: 10),
           TextButton.icon(
             onPressed: () {
-              onBack();
+              widget.onBack();
               appRouter.go('/class-select');
             },
             icon: const Icon(Icons.swap_horiz_rounded, size: 18),
@@ -3710,6 +4371,28 @@ class _DoneScreenView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// AudioSource từ bytes trong bộ nhớ, dùng cho just_audio.
+// ignore: experimental_member_use
+class BytesAudioSource extends StreamAudioSource {
+  BytesAudioSource(this._bytes);
+  final Uint8List _bytes;
+
+  @override
+  // ignore: experimental_member_use
+  Future<StreamAudioResponse> request([int? start, int? end]) async {
+    start ??= 0;
+    end ??= _bytes.length;
+    // ignore: experimental_member_use
+    return StreamAudioResponse(
+      sourceLength: _bytes.length,
+      contentLength: end - start,
+      offset: start,
+      stream: Stream.value(_bytes.sublist(start, end)),
+      contentType: 'audio/mpeg',
     );
   }
 }
@@ -3882,8 +4565,7 @@ class _EditObservationSheet extends StatelessWidget {
                           : isUnmatched
                               ? 'Chỉnh sửa nội dung đoạn chưa phân loại'
                               : 'Chỉnh sửa chi tiết thông tin cho bé',
-                      style:
-                          TextStyle(fontSize: 12, color: context.k.inkSoft),
+                      style: TextStyle(fontSize: 12, color: context.k.inkSoft),
                     ),
                   ],
                 ),
@@ -3904,7 +4586,8 @@ class _EditObservationSheet extends StatelessWidget {
               child: Column(
                 children: [
                   if (isUnmatched) ...[
-                    _buildField(context,
+                    _buildField(
+                      context,
                       emoji: '💬',
                       label: 'Nội dung đoạn nói',
                       controller: snippetCtrl,
@@ -3912,13 +4595,15 @@ class _EditObservationSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  _buildField(context,
+                  _buildField(
+                    context,
                     emoji: '🍽️',
                     label: 'Bữa ăn',
                     controller: eatingCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(context,
+                  _buildField(
+                    context,
                     emoji: '😴',
                     label: 'Giấc ngủ',
                     controller: sleepCtrl,
@@ -3927,25 +4612,29 @@ class _EditObservationSheet extends StatelessWidget {
                     suffixText: 'phút',
                   ),
                   const SizedBox(height: 12),
-                  _buildField(context,
+                  _buildField(
+                    context,
                     emoji: '🎨',
                     label: 'Hoạt động',
                     controller: activitiesCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(context,
+                  _buildField(
+                    context,
                     emoji: '🎭',
                     label: 'Tâm trạng',
                     controller: moodCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(context,
+                  _buildField(
+                    context,
                     emoji: '🏥',
                     label: 'Sức khỏe',
                     controller: healthCtrl,
                   ),
                   const SizedBox(height: 12),
-                  _buildField(context,
+                  _buildField(
+                    context,
                     emoji: '📝',
                     label: 'Ghi chú cho phụ huynh',
                     controller: noteCtrl,
@@ -3990,7 +4679,8 @@ class _EditObservationSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildField(BuildContext context, {
+  Widget _buildField(
+    BuildContext context, {
     required String emoji,
     required String label,
     required TextEditingController controller,
@@ -4032,8 +4722,8 @@ class _EditObservationSheet extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       '$currentLength/$maxLength ký tự',
-                      style: TextStyle(
-                          fontSize: 11.5, color: context.k.inkSoft),
+                      style:
+                          TextStyle(fontSize: 11.5, color: context.k.inkSoft),
                     ),
                   );
                 }

@@ -240,5 +240,31 @@ void main() {
     // Verify logout callback invoked
     expect(loggedOut, isTrue);
   });
+
+  testWidgets('ParentFlow displays timetable action and navigates to TimetableScreen',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: kinderTheme(),
+        home: ParentFlow(
+          repository: MockParentDashboardRepository(),
+          onLogout: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify timetable button is visible on child card
+    expect(find.text('Thời khóa biểu của lớp'), findsOneWidget);
+    expect(find.byTooltip('Thời khóa biểu'), findsOneWidget);
+
+    // Tap on timetable button
+    await tester.tap(find.text('Thời khóa biểu của lớp'));
+    await tester.pumpAndSettle();
+
+    // Verify TimetableScreen is opened
+    expect(find.text('Thời khóa biểu'), findsOneWidget);
+  });
 }
 
