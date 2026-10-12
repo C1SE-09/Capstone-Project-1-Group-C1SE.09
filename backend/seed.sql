@@ -297,7 +297,7 @@ ON CONFLICT (parent_id) DO UPDATE SET
     updated_at = NOW();
 
 -- 4.5. Thêm Tài khoản Đăng nhập (Users)
--- Tất cả mật khẩu mặc định: 123456 (hashed với bcrypt: $2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW)
+-- Tất cả mật khẩu mặc định: 123456 (hashed với bcrypt: $2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW)
 INSERT INTO users (
     user_id,
     username,
@@ -310,11 +310,24 @@ INSERT INTO users (
     created_at,
     updated_at
 ) VALUES
+-- Tài khoản Quản trị viên (Admin)
+(
+    '00000000-0000-0000-0000-000000000001',
+    'admin',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
+    'admin',
+    NULL,
+    NULL,
+    'active',
+    true,
+    NOW(),
+    NOW()
+),
 -- Tài khoản Giáo viên
 (
     '11111111-0000-0000-0000-000000000001',
     'comai',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'teacher',
     'bbbbbbbb-0000-0000-0000-000000000001',
     NULL,
@@ -326,7 +339,7 @@ INSERT INTO users (
 (
     '11111111-0000-0000-0000-000000000002',
     'colan',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'teacher',
     'bbbbbbbb-0000-0000-0000-000000000002',
     NULL,
@@ -339,7 +352,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000001',
     'tuan',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000001',
@@ -351,7 +364,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000002',
     'nam',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000002',
@@ -363,7 +376,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000003',
     'hung',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000003',
@@ -375,7 +388,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000004',
     'thao',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000004',
@@ -387,7 +400,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000005',
     'thanh',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000005',
@@ -399,7 +412,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000006',
     'dung',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000006',
@@ -411,7 +424,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000007',
     'minh',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000007',
@@ -423,7 +436,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000008',
     'trong',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000008',
@@ -435,7 +448,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000009',
     'tuand',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000009',
@@ -447,7 +460,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000010',
     'khang',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000010',

@@ -33,7 +33,7 @@ import subprocess
 import tempfile
 import unicodedata
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import (
@@ -640,7 +640,7 @@ def create_report_from_extraction(
         )
 
     # 3. Tạo DailyReport
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     existing_report = (
         db.query(DailyReport)
         .filter(
@@ -731,7 +731,7 @@ def create_manual_report(
             )
 
     # 2. Check trùng lặp báo cáo trong ngày
-    target_date = payload.report_date or datetime.now(timezone.utc).date()
+    target_date = payload.report_date or datetime.now(UTC).date()
     existing_report = (
         db.query(DailyReport)
         .filter(
@@ -907,7 +907,7 @@ def publish_report(
             report.teacher_id = teacher_id
 
     report.status = DailyReportStatus.PUBLISHED
-    report.published_at = datetime.now(timezone.utc).date()
+    report.published_at = datetime.now(UTC).date()
     db.commit()
     db.refresh(report)
 
@@ -1331,7 +1331,7 @@ def _send_one_report(
 
     # 7. Đổi trạng thái, save thời điểm gửi, commit TRƯỚC khi tb..
     report.status = SENT_STATUS
-    report.sent_at = datetime.now(timezone.utc)
+    report.sent_at = datetime.now(UTC)
     report.published_at = report.sent_at.date()  # sync w frontend
     db.commit()
     db.refresh(report)
