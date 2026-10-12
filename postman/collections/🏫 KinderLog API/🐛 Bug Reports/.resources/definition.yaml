@@ -1,0 +1,30 @@
+$kind: collection
+description: |-
+  # 🐛 Bug Reports API
+
+  API cho phép người dùng (teacher / parent / admin) gửi báo cáo lỗi từ trong app,
+  và admin xử lý các báo cáo này.
+
+  ## 7 Endpoints
+
+  | Method | Endpoint | Role | Mô tả |
+  |---|---|---|---|
+  | `POST` | `/api/bug-reports` | teacher/parent/admin | Tạo bug report mới (multipart, kèm ảnh được) |
+  | `GET` | `/api/bug-reports/me` | teacher/parent/admin | Danh sách report CỦA TÔI (phân trang) |
+  | `GET` | `/api/bug-reports/me/{id}` | teacher/parent/admin | Chi tiết 1 report CỦA TÔI |
+  | `GET` | `/api/bug-reports` | admin | Danh sách TẤT CẢ report (filter + phân trang) |
+  | `GET` | `/api/bug-reports/{id}` | admin | Chi tiết 1 report (bất kỳ) |
+  | `PATCH` | `/api/bug-reports/{id}` | admin | Cập nhật status / assignee / note |
+  | `POST` | `/api/bug-reports/{id}/attachments` | author/admin | Upload thêm ảnh |
+
+  ## Auth flow
+
+  1. Chạy **POST /api/auth/login** với `username/password` để lấy JWT token
+  2. Token sẽ tự động được lưu vào collection variable (`admin_token`, `teacher_token`, `parent_token`)
+  3. Mọi request sau đó tự gắn `Authorization: Bearer <token>` từ variable
+
+  ## Test scripts
+
+  Mỗi request có test script tự động lưu ID / token vào collection variable
+  để request sau dùng tiếp. Có thể chạy tuần tự từ trên xuống dưới để demo full flow.
+order: 2000

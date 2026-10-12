@@ -1,0 +1,3 @@
+$kind: collection
+description: "Các endpoint mà teacher / parent / admin đều có thể gọi: tạo report, xem danh sách của tôi."
+order: 2000

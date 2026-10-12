@@ -1,0 +1,19 @@
+$kind: http-request
+description: |-
+  **[Admin]** Lấy danh sách report với filter nâng cao:
+  - `status=open` — chỉ lấy report chưa xử lý
+  - `severity=high` hoặc `critical` — ưu tiên
+  - `order_by=severity_desc` — critical trước, high sau
+
+  Có thể thay đổi param tùy nhu cầu filter.
+url: "{{base_url}}/api/bug-reports?status=open&severity=high&order_by=severity_desc&page=1&page_size=20"
+method: GET
+headers:
+  Authorization: "Bearer {{admin_token}}"
+queryParams:
+  status: open
+  severity: high
+  order_by: severity_desc
+  page: "1"
+  page_size: "20"
+order: 2000

@@ -297,7 +297,9 @@ ON CONFLICT (parent_id) DO UPDATE SET
     updated_at = NOW();
 
 -- 4.5. Thêm Tài khoản Đăng nhập (Users)
--- Tất cả mật khẩu mặc định: 123456 (hashed với bcrypt: $2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW)
+-- Tất cả mật khẩu mặc định: 123456
+-- (Hash bcrypt được generate bằng passlib; nếu copy/paste thủ công,
+--  chạy lại seed.sql là sẽ tự ON CONFLICT update về hash hiện tại trong DB)
 INSERT INTO users (
     user_id,
     username,
@@ -314,7 +316,7 @@ INSERT INTO users (
 (
     '11111111-0000-0000-0000-000000000001',
     'comai',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'teacher',
     'bbbbbbbb-0000-0000-0000-000000000001',
     NULL,
@@ -326,7 +328,7 @@ INSERT INTO users (
 (
     '11111111-0000-0000-0000-000000000002',
     'colan',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'teacher',
     'bbbbbbbb-0000-0000-0000-000000000002',
     NULL,
@@ -339,7 +341,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000001',
     'tuan',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000001',
@@ -351,7 +353,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000002',
     'nam',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000002',
@@ -363,7 +365,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000003',
     'hung',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000003',
@@ -375,7 +377,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000004',
     'thao',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000004',
@@ -387,7 +389,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000005',
     'thanh',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000005',
@@ -399,7 +401,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000006',
     'dung',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000006',
@@ -411,7 +413,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000007',
     'minh',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000007',
@@ -423,7 +425,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000008',
     'trong',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000008',
@@ -435,7 +437,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000009',
     'tuand',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000009',
@@ -447,7 +449,7 @@ INSERT INTO users (
 (
     '22222222-0000-0000-0000-000000000010',
     'khang',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
     'parent',
     NULL,
     'cccccccc-0000-0000-0000-000000000010',
@@ -748,3 +750,301 @@ INSERT INTO class_schedule (
 ('fa000000-0000-0000-0006-000000000014', 'aaaaaaaa-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000014', 'bbbbbbbb-0000-0000-0000-000000000001', 6, 'Trả trẻ', '- Cô quản trẻ chơi tự do. Cô trao đổi với phụ huynh những sinh hoạt trong ngày của trẻ tại nhóm lớp', 'Phòng Mầm A', true, NOW(), NOW())
 ON CONFLICT (schedule_id) DO UPDATE SET
     class_id = EXCLUDED.class_id, subject_id = EXCLUDED.subject_id, slot_id = EXCLUDED.slot_id, teacher_id = EXCLUDED.teacher_id, day_of_week = EXCLUDED.day_of_week, activity_name = EXCLUDED.activity_name, content = EXCLUDED.content, room_name = EXCLUDED.room_name, is_active = EXCLUDED.is_active, updated_at = NOW();
+
+-- ===========================================================================
+-- 9. Thêm Tài khoản Admin (cho Bug Report B-04)
+-- ===========================================================================
+INSERT INTO users (
+    user_id,
+    username,
+    password_hash,
+    role,
+    teacher_id,
+    parent_id,
+    status,
+    is_verified,
+    created_at,
+    updated_at
+) VALUES
+(
+    '99999999-0000-0000-0000-000000000001',
+    'admin',
+    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
+    'admin',
+    NULL,
+    NULL,
+    'active',
+    true,
+    NOW(),
+    NOW()
+)
+ON CONFLICT (user_id) DO UPDATE SET
+    username = EXCLUDED.username,
+    password_hash = EXCLUDED.password_hash,
+    role = EXCLUDED.role,
+    status = EXCLUDED.status,
+    is_verified = EXCLUDED.is_verified,
+    updated_at = NOW();
+
+-- ===========================================================================
+-- 10. Thêm Bug Report mẫu (US-BUG-01 → US-BUG-04) — cho môi trường dev
+-- Bao gồm đầy đủ 5 trạng thái: open / in_progress / resolved / closed / wont_fix
+-- Mỗi report có 1 history entry initial (created) + các entry khi status thay đổi
+-- ===========================================================================
+
+-- 10.1. Bug Report #1: App crash khi mở báo cáo (HIGH, OPEN) — Cô Mai report
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000001',
+    '11111111-0000-0000-0000-000000000001',  -- comai (teacher)
+    NULL,
+    'App crash khi mở báo cáo của bé An',
+    'Bước tái hiện: 1) Mở trang Dashboard 2) Bấm vào bé An 3) App thoát ra ngay. Đã thử 3 lần đều crash. Điện thoại Samsung Galaxy A54, Android 14, app v1.2.3 build 42.',
+    'crash', 'high', 'open',
+    '1.2.3', '42', 'Android 14', 'Samsung SM-A546B', 'wifi',
+    NULL, NULL,
+    NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    updated_at = NOW();
+
+-- 10.2. Bug Report #2: Notification không gửi (MEDIUM, IN_PROGRESS) — Phụ huynh Tuấn report
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000002',
+    '22222222-0000-0000-0000-000000000001',  -- tuan (parent)
+    'bbbbbbbb-0000-0000-0000-000000000001',  -- assigned to Cô Mai
+    'Không nhận được thông báo khi có báo cáo mới',
+    'Tôi đã bật notification trong cài đặt app nhưng không nhận được thông báo nào khi cô giáo gửi báo cáo. Đã thử cả wifi và 4G. Pixel 7, Android 14.',
+    'notification', 'medium', 'in_progress',
+    '1.2.3', '42', 'Android 14', 'Google Pixel 7', 'cellular',
+    NULL, NULL,
+    NOW() - INTERVAL '1 day', NOW() - INTERVAL '12 hours'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    teacher_id = EXCLUDED.teacher_id,
+    updated_at = NOW();
+
+-- 10.3. Bug Report #3: Giao diện bị lệch trên màn hình nhỏ (LOW, RESOLVED) — Cô Lan report
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000003',
+    '11111111-0000-0000-0000-000000000002',  -- colan (teacher)
+    'bbbbbbbb-0000-0000-0000-000000000001',  -- assigned to Cô Mai
+    'Giao diện bị lệch trên điện thoại màn hình nhỏ',
+    'Trên điện thoại nhỏ hơn 5.5 inch, button "Tạo báo cáo" bị che bởi navigation bar. Đã test trên iPhone SE 2 và Samsung A13.',
+    'ui', 'low', 'resolved',
+    '1.2.2', '40', 'iOS 17.2', 'iPhone SE 2', 'wifi',
+    NOW() - INTERVAL '2 hours', NULL,
+    NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 hours'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    teacher_id = EXCLUDED.teacher_id,
+    resolved_at = EXCLUDED.resolved_at,
+    updated_at = NOW();
+
+-- 10.4. Bug Report #4: Upload audio chậm (CRITICAL, CLOSED) — Phụ huynh Nam report
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000004',
+    '22222222-0000-0000-0000-000000000002',  -- nam (parent)
+    'bbbbbbbb-0000-0000-0000-000000000002',  -- assigned to Cô Lan
+    'Upload audio bị timeout sau 30 giây',
+    'Mỗi lần upload file audio 3-5 phút, app báo timeout dù wifi rất ổn định. Phải upload lại 3-4 lần mới được. Đã test trên wifi 100Mbps.',
+    'performance', 'critical', 'closed',
+    '1.2.0', '38', 'Android 13', 'Xiaomi Redmi Note 11', 'wifi',
+    NOW() - INTERVAL '10 days', NOW() - INTERVAL '8 days',
+    NOW() - INTERVAL '15 days', NOW() - INTERVAL '8 days'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    teacher_id = EXCLUDED.teacher_id,
+    resolved_at = EXCLUDED.resolved_at,
+    closed_at = EXCLUDED.closed_at,
+    updated_at = NOW();
+
+-- 10.5. Bug Report #5: Đề xuất thêm Dark mode (OTHER, WONT_FIX) — Phụ huynh Hùng report
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000005',
+    '22222222-0000-0000-0000-000000000003',  -- hung (parent)
+    NULL,
+    'Đề xuất: Thêm chế độ Dark mode',
+    'App hiện tại chỉ có light mode, mong muốn team thêm dark mode để bảo vệ mắt khi dùng ban đêm. Cảm ơn team!',
+    'other', 'low', 'wont_fix',
+    NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL,
+    NOW() - INTERVAL '7 days', NOW() - INTERVAL '6 days'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    updated_at = NOW();
+
+-- ===========================================================================
+-- 11. Bug Report History (audit trail) — ghi log cho từng status change
+-- Mỗi report có 1 entry "created" + các entry khi admin đổi status
+-- ===========================================================================
+
+-- Report #1: chỉ có 1 entry created (status=open, hiện tại vẫn OPEN)
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    '11111111-0000-0000-0000-000000000001',  -- Cô Mai tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by teacher',
+    NOW() - INTERVAL '2 hours'
+)
+ON CONFLICT (history_id) DO NOTHING;
+
+-- Report #2: created → in_progress (admin assign + đổi status)
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-000000000002',
+    '10000000-0000-0000-0000-000000000002',
+    '22222222-0000-0000-0000-000000000001',  -- Phụ huynh Tuấn tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by parent',
+    NOW() - INTERVAL '1 day'
+),
+(
+    'a0000000-0000-0000-0000-000000000003',
+    '10000000-0000-0000-0000-000000000002',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'open', 'in_progress', NULL, 'bbbbbbbb-0000-0000-0000-000000000001',
+    'Đã assign cho Cô Mai xử lý FCM token. Đang kiểm tra log.',
+    NOW() - INTERVAL '12 hours'
+)
+ON CONFLICT (history_id) DO NOTHING;
+
+-- Report #3: created → in_progress → resolved (full lifecycle)
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-000000000004',
+    '10000000-0000-0000-0000-000000000003',
+    '11111111-0000-0000-0000-000000000002',  -- Cô Lan tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by teacher',
+    NOW() - INTERVAL '5 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000005',
+    '10000000-0000-0000-0000-000000000003',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'open', 'in_progress', NULL, 'bbbbbbbb-0000-0000-0000-000000000001',
+    'Đang fix responsive layout cho mobile nhỏ.',
+    NOW() - INTERVAL '3 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000006',
+    '10000000-0000-0000-0000-000000000003',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'in_progress', 'resolved', 'bbbbbbbb-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001',
+    'Đã fix bằng cách thêm SafeArea + MediaQuery padding. Build mới 1.2.3 đã deploy lên TestFlight.',
+    NOW() - INTERVAL '2 hours'
+)
+ON CONFLICT (history_id) DO NOTHING;
+
+-- Report #4: created → in_progress → resolved → closed
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-000000000007',
+    '10000000-0000-0000-0000-000000000004',
+    '22222222-0000-0000-0000-000000000002',  -- Phụ huynh Nam tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by parent',
+    NOW() - INTERVAL '15 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000008',
+    '10000000-0000-0000-0000-000000000004',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'open', 'in_progress', NULL, 'bbbbbbbb-0000-0000-0000-000000000002',
+    'Cô Lan đang investigate timeout issue.',
+    NOW() - INTERVAL '12 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000009',
+    '10000000-0000-0000-0000-000000000004',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'in_progress', 'resolved', 'bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002',
+    'Root cause: MinIO chunk size quá nhỏ (5MB). Đã bump lên 15MB. PR #141 merged.',
+    NOW() - INTERVAL '10 days'
+),
+(
+    'a0000000-0000-0000-0000-00000000000a',
+    '10000000-0000-0000-0000-000000000004',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'resolved', 'closed', 'bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002',
+    'Phụ huynh Nam đã xác nhận app upload OK. Đóng ticket.',
+    NOW() - INTERVAL '8 days'
+)
+ON CONFLICT (history_id) DO NOTHING;
+
+-- Report #5: created → wont_fix
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-00000000000b',
+    '10000000-0000-0000-0000-000000000005',
+    '22222222-0000-0000-0000-000000000003',  -- Phụ huynh Hùng tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by parent',
+    NOW() - INTERVAL '7 days'
+),
+(
+    'a0000000-0000-0000-0000-00000000000c',
+    '10000000-0000-0000-0000-000000000005',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'open', 'wont_fix', NULL, NULL,
+    'Dark mode là feature mới, không phải bug. Sẽ đưa vào backlog Q1/2027.',
+    NOW() - INTERVAL '6 days'
+)
+ON CONFLICT (history_id) DO NOTHING;

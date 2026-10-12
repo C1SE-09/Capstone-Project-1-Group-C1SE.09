@@ -47,7 +47,7 @@ jobs:
         # Lọc bỏ extra-index-url cu121, các gói nvidia và torch để tránh kéo lại bản GPU
         grep -v -E "extra-index-url|nvidia-|torch" backend/requirements.txt > req_ci.txt
         pip install --no-cache-dir -r req_ci.txt
-        pip install --no-cache-dir ruff pytest httpx
+        pip install --no-cache-dir ruff pytest httpx pytest-cov
 
     - name: Lint code with Ruff
       run: ruff check backend/
@@ -67,3 +67,86 @@ jobs:
         JWT_SECRET_KEY: test-jwt-secret-key
         PYTHONPATH: ${{ github.workspace }}/backend
       run: pytest backend/tests/ -v
+
+  # ========================================================================
+  # Bug Report tests (US-BUG-01 → US-BUG-07) với coverage gate 80%
+  # Chạy song song với job test chính; fail nếu coverage dưới 80%
+  # ========================================================================
+  bug-report-tests:
+    name: Bug Report tests + coverage
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Free Disk Space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        grep -v -E "extra-index-url|nvidia-|torch" backend/requirements.txt > req_ci.txt
+        pip install --no-cache-dir -r req_ci.txt
+        pip install --no-cache-dir ruff pytest httpx pytest-cov
+
+    - name: Run Bug Report tests
+      env:
+        DATABASE_URL: postgresql+psycopg://postgres:testpassword@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379/0
+        CELERY_BROKER_URL: redis://localhost:6379/0
+        CELERY_RESULT_BACKEND: redis://localhost:6379/1
+        MINIO_ENDPOINT: localhost:9000
+        MINIO_USER: minioadmin
+        MINIO_PASSWORD: minioadmin123
+        MINIO_BUCKET: audio
+        MINIO_SECURE: "false"
+        SECRET_KEY: test-secret-key
+        JWT_SECRET_KEY: test-jwt-secret-key
+        PYTHONPATH: ${{ github.workspace }}/backend
+      run: |
+        pytest backend/tests/test_bug_reports.py \
+               backend/tests/test_bug_report_notifications.py \
+               --cov=app.services.bug_report_service \
+               --cov=app.api.endpoints.bug_reports \
+               --cov=app.schemas.bug_report \
+               --cov=app.models.bug_report \
+               --cov=app.tasks.bug_report_notifications \
+               --cov-report=term \
+               --cov-report=xml \
+               --cov-fail-under=80 \
+               -v
+
+    - name: Upload coverage to Codecov
+      if: always()
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: bug-report
+        name: bug-report-coverage
+        fail_ci_if_error: false
