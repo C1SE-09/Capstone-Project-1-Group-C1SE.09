@@ -14,7 +14,7 @@ drop them at the end of ``downgrade()``. Column references use
 ``create_type=False`` so SQLAlchemy does not attempt to re-create them
 during ``op.create_table``.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -23,9 +23,9 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "c1c17a05262a"
-down_revision: Union[str, Sequence[str], None] = "e3fa1008e0bb"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "e3fa1008e0bb"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # Column-level ENUM references (create_type=False to avoid duplicate CREATE TYPE)

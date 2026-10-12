@@ -32,7 +32,7 @@ import io
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, BinaryIO
+from typing import Any
 
 from app.core.storage import _ensure_bucket_exists, minio_client
 from app.models.bug_report import (
@@ -44,7 +44,7 @@ from app.models.bug_report import (
     BugStatus,
 )
 from app.models.user import User, UserRole
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session, selectinload
 
 logger = logging.getLogger(__name__)
@@ -516,8 +516,7 @@ def list_reports(
     Returns:
         (list[BugReport], total)
     """
-    if page < 1:
-        page = 1
+    page = max(page, 1)
     if page_size < 1 or page_size > 100:
         page_size = 20
 
@@ -627,8 +626,7 @@ def get_user_reports(
     Returns:
         (list[BugReport], total)
     """
-    if page < 1:
-        page = 1
+    page = max(page, 1)
     if page_size < 1 or page_size > 100:
         page_size = 20
 

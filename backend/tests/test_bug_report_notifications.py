@@ -15,7 +15,7 @@ thay vì dùng counter dễ bị trôi khi function query nhiều lần.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -100,7 +100,9 @@ def _make_report(**overrides) -> BugReport:
     report.device_model = "Pixel 7"
     report.network_type = "wifi"
     report.teacher_id = None
-    report.created_at = overrides.get("created_at", datetime(2026, 10, 12))
+    report.created_at = overrides.get(
+        "created_at", datetime(2026, 10, 12, tzinfo=timezone.utc)
+    )
     report.updated_at = report.created_at
     report.resolved_at = overrides.get("resolved_at", None)
     return report
@@ -346,7 +348,7 @@ class TestDeliveUserNotification:
         """Push tới device tokens của user đã gửi report."""
         report = _make_report()
         user = _make_user(USER_ID, UserRole.TEACHER, teacher_email="user@x.com")
-        admin = _make_user(ADMIN1_ID, UserRole.ADMIN, teacher_email="admin@x.com")
+        _admin = _make_user(ADMIN1_ID, UserRole.ADMIN, teacher_email="admin@x.com")
         tokens = [
             _make_token("user_tok1", USER_ID),
             _make_token("user_tok2", USER_ID),

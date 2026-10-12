@@ -1,0 +1,13 @@
+# frontend/l10n.yaml
+# =========================================================
+# Config cho flutter_localizations.
+# Generate code từ file .arb → AppLocalizations (Vietnamese + English).
+# Sau khi file này tồn tại + generate: true trong pubspec,
+# chạy `flutter pub get` rồi `flutter gen-l10n` để tạo code.
+
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+synthetic-package: false
+output-dir: lib/l10n/generated

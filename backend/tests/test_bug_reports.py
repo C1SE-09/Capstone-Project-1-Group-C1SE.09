@@ -42,7 +42,6 @@ from app.models.bug_report import (
 from app.models.user import User, UserRole
 from fastapi.testclient import TestClient
 
-
 # ===========================================================================
 # Constants
 # ===========================================================================
@@ -251,7 +250,7 @@ class TestServiceLayer:
             title="Test", description="Desc"
         ).model_dump()
 
-        report, used, reset_at = create_report(
+        _report, used, reset_at = create_report(
             db=mock_db, user=teacher_user, data=data, attachments=[]
         )
         assert mock_db.add.called
@@ -476,7 +475,7 @@ class TestEndpointsAuth:
         from app.api.endpoints import bug_reports as br_module
 
         with patch.object(
-            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now())
+            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now(tz=timezone.utc))
         ), patch.object(
             br_module, "get_report", return_value=_make_report_obj()
         ), patch.object(
@@ -507,7 +506,7 @@ class TestEndpointCreate:
         from app.api.endpoints import bug_reports as br_module
 
         with patch.object(
-            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now())
+            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now(tz=timezone.utc))
         ), patch.object(
             br_module, "get_report", return_value=_make_report_obj()
         ), patch.object(
@@ -536,7 +535,7 @@ class TestEndpointCreate:
         report_with_att.attachments = [_make_attachment_obj()]
 
         with patch.object(
-            br_module, "create_report", return_value=(report_with_att, 1, datetime.now())
+            br_module, "create_report", return_value=(report_with_att, 1, datetime.now(tz=timezone.utc))
         ), patch.object(
             br_module, "get_report", return_value=report_with_att
         ), patch.object(
@@ -602,7 +601,7 @@ class TestEndpointCreate:
         from app.api.endpoints import bug_reports as br_module
 
         with patch.object(
-            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now())
+            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now(tz=timezone.utc))
         ), patch.object(
             br_module, "get_report", return_value=_make_report_obj()
         ), patch.object(
@@ -971,7 +970,7 @@ class TestRateLimit:
         from app.api.endpoints import bug_reports as br_module
 
         with patch.object(
-            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now())
+            br_module, "create_report", return_value=(_make_report_obj(), 0, datetime.now(tz=timezone.utc))
         ), patch.object(
             br_module, "get_report", return_value=_make_report_obj()
         ), patch.object(br_module, "_safe_dispatch_celery"):
@@ -1103,7 +1102,8 @@ class TestHistoryAudit:
         # count query returns 10 (== limit)
         mock_db.query.return_value.filter.return_value.scalar.return_value = 10
         # oldest query returns a tuple (created_at,)
-        from datetime import datetime as _dt, timezone as _tz
+        from datetime import datetime as _dt
+        from datetime import timezone as _tz
         mock_db.query.return_value.filter.return_value.first.return_value = (
             _dt.now(_tz.utc),
         )
@@ -1151,6 +1151,7 @@ class TestHistoryAudit:
     def test_get_user_reports_service_layer(self, mock_db):
         """get_user_reports trả về items + total cho 1 user."""
         import uuid as uuid_mod
+
         from app.services.bug_report_service import get_user_reports
 
         user_id = uuid_mod.uuid4()
@@ -1190,7 +1191,7 @@ class TestHistoryAudit:
             atts = [
                 {"file_data": b"abc", "file_name": "f.png", "mime_type": "image/png"},
             ]
-            returned_report, new_atts = add_attachments(
+            _returned_report, new_atts = add_attachments(
                 db=mock_db, user=teacher_user,
                 report_id=REPORT_ID, attachments=atts,
             )
@@ -1221,6 +1222,7 @@ class TestHistoryAudit:
     def test_build_filter_query_with_all_filters(self):
         """_build_filter_query tạo conditions cho tất cả filter keys."""
         import uuid as uuid_mod
+
         from app.services.bug_report_service import _build_filter_query
 
         filters = {
@@ -1249,7 +1251,6 @@ class TestHistoryAudit:
 
         # Capture history entries added
         history_entries = []
-        real_add = mock_db.add.side_effect
 
         def capture_add(obj):
             history_entries.append(obj)
@@ -1305,6 +1306,7 @@ class TestHistoryAudit:
     ):
         """Khi đổi assignee, history ghi lại old/new teacher_id."""
         import uuid as uuid_mod
+
         from app.models.user import Teacher
         from app.services.bug_report_service import update_status
 

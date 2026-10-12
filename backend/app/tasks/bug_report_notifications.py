@@ -30,6 +30,8 @@ import os
 import uuid
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.core.database import SessionLocal
 from app.models.bug_report import BugReport, BugStatus
@@ -41,7 +43,6 @@ from app.services.notification_service import (
     send_push_notification,
 )
 from app.tasks.celery_app import celery_app
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

@@ -19,7 +19,6 @@ from typing import Annotated, Literal
 from app.models.bug_report import BugCategory, BugSeverity, BugStatus
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 # ===========================================================================
 # Re-export Enum values (string-based) cho OpenAPI doc và client
 # ===========================================================================
@@ -162,8 +161,10 @@ class BugReportCreate(BaseModel):
         ...,
         description="Mô tả chi tiết, tối đa 4000 ký tự",
         examples=[
-            "Khi em bấm vào report của bé An, app thoát ra ngay. "
-            "Đã thử 3 lần đều crash."
+            (
+                "Khi em bấm vào report của bé An, app thoát ra ngay. "
+                "Đã thử 3 lần đều crash."
+            )
         ],
     )
     category: BugCategoryEnum = Field(

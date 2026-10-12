@@ -1048,3 +1048,305 @@ INSERT INTO bug_report_history (
     NOW() - INTERVAL '6 days'
 )
 ON CONFLICT (history_id) DO NOTHING;
+
+-- ===========================================================================
+-- 12. EDGE CASES (bổ sung) — 4 report + 5 attachment + 12 history entry
+-- Mục đích: test boundary (max length), SLA (stale open), re-assignment,
+-- pagination (multi-reports cùng user), enum mới (network/auth),
+-- và populate bảng bug_report_attachment trước giờ đang rỗng.
+-- ===========================================================================
+
+-- 12.1. Report #6: BOUNDARY TEST — title dài tối đa, description gần 4000 chars,
+--       kèm 3 attachment (nhiều MIME khác nhau) → test form validation + UI grid
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000006',
+    '11111111-0000-0000-0000-000000000002',  -- colan (teacher)
+    NULL,
+    -- title 200 ký tự (đúng giới hạn VARCHAR(200))
+    'Lỗi giao diện: danh sách trẻ trong lớp bị tràn ra ngoài khung màn hình khi cuộn xuống dưới cùng - đã thử trên nhiều thiết bị Android và iOS khác nhau',
+    -- description ~3800 ký tự (gần giới hạn TEXT 4000) — test max length validation
+    E'Lỗi mô tả chi tiết:\n\n' ||
+    repeat(E'Khi em cuộn danh sách trẻ trong lớp xuống khoảng 20 dòng thì giao diện bắt đầu hiển thị tràn ra ngoài khung màn hình và làm che mất nút "Tạo báo cáo mới" ở phía dưới. Em đã thử trên nhiều thiết bị khác nhau gồm: Samsung Galaxy A54 (Android 14), Google Pixel 7 (Android 14), iPhone 14 Pro (iOS 17.4), iPhone SE 2 (iOS 17.2), iPad Air thế hệ 5 (iPadOS 17) — đều gặp tình trạng tương tự như nhau. Em cũng đã thử xoay ngang màn hình nhưng vẫn bị tràn.\n\nCác bước tái hiện:\n1. Đăng nhập bằng tài khoản giáo viên Cô Lan (colan)\n2. Chọn lớp Mầm B\n3. Bấm vào "Xem danh sách trẻ" trong menu bên trái\n4. Cuộn danh sách xuống khoảng 20 dòng\n5. Quan sát: layout bị tràn, nút bị che\n\nMong team kiểm tra vấn đề này sớm để giáo viên và phụ huynh không bị gián đoạn khi sử dụng. Cảm ơn team rất nhiều!\n\n', 16),
+    'ui', 'medium', 'open',
+    '1.2.3', '42', 'Android 14', 'Samsung SM-A546B', 'wifi',
+    NULL, NULL,
+    NOW() - INTERVAL '6 hours', NOW() - INTERVAL '6 hours'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    updated_at = NOW();
+
+-- 12.2. Report #7: STALE OPEN — báo lỗi cũ 35 ngày chưa được xử lý → test SLA badge
+--       Dùng enum `network` chưa xuất hiện ở các report trước
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000007',
+    '22222222-0000-0000-0000-000000000004',  -- thao (parent)
+    NULL,
+    'Không tải được danh sách trẻ khi dùng 3G',
+    'Khi tôi dùng 3G (mạng di động) để mở danh sách trẻ, app báo lỗi "Không thể kết nối máy chủ" dù trước đó vẫn dùng bình thường. Wifi thì vẫn OK. Mong admin xem xét.',
+    'network', 'medium', 'open',
+    '1.1.5', '35', 'Android 12', 'Samsung Galaxy A13', 'cellular',
+    NULL, NULL,
+    NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    updated_at = NOW();
+
+-- 12.3. Report #8: RE-ASSIGNMENT — test audit trail với teacher được assign 2 lần
+--       Dùng enum `auth` chưa xuất hiện + 2 attachment (hóa đơn + screenshot)
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000008',
+    '22222222-0000-0000-0000-000000000005',  -- thanh (parent)
+    'bbbbbbbb-0000-0000-0000-000000000002',  -- hiện tại: assigned to Cô Lan (sau khi re-assign)
+    'Lỗi thanh toán học phí: hệ thống báo sai số tiền',
+    'Tôi thanh toán học phí tháng 10 là 2.500.000đ nhưng hệ thống ghi nhận 5.000.000đ (gấp đôi). Tôi đã gửi kèm hóa đơn chuyển khoản ngân hàng và ảnh chụp màn hình lỗi. Mong team xử lý sớm để khỏi ảnh hưởng tới bé.',
+    'auth', 'high', 'in_progress',
+    '1.2.3', '42', 'Android 14', 'OPPO Reno 8', 'wifi',
+    NULL, NULL,
+    NOW() - INTERVAL '3 days', NOW() - INTERVAL '6 hours'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    teacher_id = EXCLUDED.teacher_id,
+    updated_at = NOW();
+
+-- 12.4. Report #9: 4th report từ cùng user (Cô Mai) → test pagination "my reports"
+--       Full lifecycle: open → in_progress → resolved → closed
+INSERT INTO bug_report (
+    bug_report_id, user_id, teacher_id, title, description,
+    category, severity, status,
+    app_version, build_number, os_version, device_model, network_type,
+    resolved_at, closed_at, created_at, updated_at
+) VALUES (
+    '10000000-0000-0000-0000-000000000009',
+    '11111111-0000-0000-0000-000000000001',  -- comai (teacher) — user này đã có report #1
+    'bbbbbbbb-0000-0000-0000-000000000002',  -- assigned to Cô Lan
+    'Âm thanh thông báo bị ngắt giữa chừng khi nhận báo cáo mới',
+    'Mỗi lần có thông báo báo cáo mới từ phụ huynh, âm thanh chỉ phát được 1-2 giây rồi bị ngắt, dù file âm thanh dài 5 giây. Đã test trên cả chế độ im lặng và chuông.',
+    'notification', 'low', 'closed',
+    '1.2.1', '39', 'Android 13', 'Xiaomi Redmi Note 11', 'wifi',
+    NOW() - INTERVAL '20 days', NOW() - INTERVAL '18 days',
+    NOW() - INTERVAL '25 days', NOW() - INTERVAL '18 days'
+)
+ON CONFLICT (bug_report_id) DO UPDATE SET
+    title = EXCLUDED.title, description = EXCLUDED.description,
+    category = EXCLUDED.category, severity = EXCLUDED.severity, status = EXCLUDED.status,
+    teacher_id = EXCLUDED.teacher_id,
+    resolved_at = EXCLUDED.resolved_at,
+    closed_at = EXCLUDED.closed_at,
+    updated_at = NOW();
+
+-- ===========================================================================
+-- 13. Bug Report Attachments (populate bảng đang rỗng) — 5 file
+-- Phân bổ: Report #6 (3 ảnh), Report #8 (2 ảnh)
+-- MIME mix: image/jpeg, image/png để test ảnh đa định dạng
+-- ===========================================================================
+
+-- Report #6: 3 ảnh
+INSERT INTO bug_report_attachment (
+    attachment_id, bug_report_id, file_url, file_name, file_size, mime_type, description,
+    created_at, updated_at
+) VALUES
+(
+    'b0000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000006',
+    'https://minio.kinderlog.local/bug-reports/2026/10/12/screenshot-trang-chi-tiet.jpeg',
+    'screenshot-trang-chi-tiet.jpeg',
+    248531, 'image/jpeg',
+    'Ảnh chụp màn hình trang chi tiết lớp khi bị tràn layout',
+    NOW() - INTERVAL '6 hours', NOW() - INTERVAL '6 hours'
+),
+(
+    'b0000000-0000-0000-0000-000000000002',
+    '10000000-0000-0000-0000-000000000006',
+    'https://minio.kinderlog.local/bug-reports/2026/10/12/screenshot-ipad-portrait.png',
+    'screenshot-ipad-portrait.png',
+    412876, 'image/png',
+    'Ảnh chụp trên iPad Air xoay dọc - vẫn bị lỗi tương tự',
+    NOW() - INTERVAL '6 hours', NOW() - INTERVAL '6 hours'
+),
+(
+    'b0000000-0000-0000-0000-000000000003',
+    '10000000-0000-0000-0000-000000000006',
+    'https://minio.kinderlog.local/bug-reports/2026/10/12/screenshot-iphone-se.jpeg',
+    'screenshot-iphone-se.jpeg',
+    187432, 'image/jpeg',
+    'Ảnh chụp trên iPhone SE 2 (màn hình nhỏ nhất trong bộ test)',
+    NOW() - INTERVAL '5 hours', NOW() - INTERVAL '5 hours'
+)
+ON CONFLICT (attachment_id) DO UPDATE SET
+    file_url = EXCLUDED.file_url,
+    file_name = EXCLUDED.file_name,
+    file_size = EXCLUDED.file_size,
+    mime_type = EXCLUDED.mime_type,
+    description = EXCLUDED.description,
+    updated_at = NOW();
+
+-- Report #8: 2 ảnh (hóa đơn + screenshot)
+INSERT INTO bug_report_attachment (
+    attachment_id, bug_report_id, file_url, file_name, file_size, mime_type, description,
+    created_at, updated_at
+) VALUES
+(
+    'b0000000-0000-0000-0000-000000000004',
+    '10000000-0000-0000-0000-000000000008',
+    'https://minio.kinderlog.local/bug-reports/2026/10/09/hoa-don-ngan-hang.jpeg',
+    'hoa-don-chuyen-khoan-thang-10.jpeg',
+    356201, 'image/jpeg',
+    'Hóa đơn chuyển khoản ngân hàng - số tiền thực tế 2.500.000đ',
+    NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'
+),
+(
+    'b0000000-0000-0000-0000-000000000005',
+    '10000000-0000-0000-0000-000000000008',
+    'https://minio.kinderlog.local/bug-reports/2026/10/09/screenshot-loi-thanh-toan.png',
+    'screenshot-app-bao-sai-so-tien.png',
+    198437, 'image/png',
+    'Screenshot app báo số tiền sai (5.000.000đ thay vì 2.500.000đ)',
+    NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'
+)
+ON CONFLICT (attachment_id) DO UPDATE SET
+    file_url = EXCLUDED.file_url,
+    file_name = EXCLUDED.file_name,
+    file_size = EXCLUDED.file_size,
+    mime_type = EXCLUDED.mime_type,
+    description = EXCLUDED.description,
+    updated_at = NOW();
+
+-- ===========================================================================
+-- 14. Bug Report History (bổ sung) — 10 entry cho 4 report mới
+-- Pattern: Report #6 (1 created), Report #7 (1 created),
+--          Report #8 (4: created → assign A → re-assign A→B → comment),
+--          Report #9 (4: created → in_progress → resolved → closed)
+-- ===========================================================================
+
+-- Report #6: chỉ 1 entry "created" (chưa ai xem)
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-00000000000d',
+    '10000000-0000-0000-0000-000000000006',
+    '11111111-0000-0000-0000-000000000002',  -- Cô Lan tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by teacher',
+    NOW() - INTERVAL '6 hours'
+)
+ON CONFLICT (history_id) DO NOTHING;
+
+-- Report #7: chỉ 1 entry "created" 35 ngày trước (stale, chưa xử lý)
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-00000000000e',
+    '10000000-0000-0000-0000-000000000007',
+    '22222222-0000-0000-0000-000000000004',  -- Phụ huynh Thảo tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by parent',
+    NOW() - INTERVAL '35 days'
+)
+ON CONFLICT (history_id) DO NOTHING;
+
+-- Report #8: 4 entry (created → assign A → re-assign A→B → admin comment kèm status update)
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-00000000000f',
+    '10000000-0000-0000-0000-000000000008',
+    '22222222-0000-0000-0000-000000000005',  -- Phụ huynh Thành tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by parent',
+    NOW() - INTERVAL '3 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000010',
+    '10000000-0000-0000-0000-000000000008',
+    '99999999-0000-0000-0000-000000000001',  -- Admin assign lần đầu
+    'open', 'in_progress', NULL, 'bbbbbbbb-0000-0000-0000-000000000001',  -- Cô Mai
+    'Đã giao cho Cô Mai liên hệ phụ huynh xác minh hóa đơn.',
+    NOW() - INTERVAL '2 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000011',
+    '10000000-0000-0000-0000-000000000008',
+    '99999999-0000-0000-0000-000000000001',  -- Admin re-assign
+    NULL, NULL, 'bbbbbbbb-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002',  -- Cô Mai → Cô Lan
+    'Cô Mai bận họp phụ huynh, chuyển qua Cô Lan (có kinh nghiệm xử lý payment issues).',
+    NOW() - INTERVAL '1 day'
+),
+(
+    'a0000000-0000-0000-0000-000000000012',
+    '10000000-0000-0000-0000-000000000008',
+    'bbbbbbbb-0000-0000-0000-000000000002',  -- Cô Lan (giáo viên được assign) tự thêm ghi chú
+    NULL, NULL, 'bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002',
+    'Đã xác minh: payment gateway trả về amount*2 do bug ở webhook handler. Đang liên hệ backend team rollback.',
+    NOW() - INTERVAL '6 hours'
+)
+ON CONFLICT (history_id) DO NOTHING;
+
+-- Report #9: 4 entry full lifecycle
+INSERT INTO bug_report_history (
+    history_id, bug_report_id, changed_by_id,
+    old_status, new_status, old_teacher_id, new_teacher_id,
+    comment, created_at
+) VALUES
+(
+    'a0000000-0000-0000-0000-000000000013',
+    '10000000-0000-0000-0000-000000000009',
+    '11111111-0000-0000-0000-000000000001',  -- Cô Mai tạo
+    NULL, 'open', NULL, NULL,
+    'Report created by teacher',
+    NOW() - INTERVAL '25 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000014',
+    '10000000-0000-0000-0000-000000000009',
+    '99999999-0000-0000-0000-000000000001',  -- Admin assign
+    'open', 'in_progress', NULL, 'bbbbbbbb-0000-0000-0000-000000000002',
+    'Cô Lan đang kiểm tra AudioService config.',
+    NOW() - INTERVAL '23 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000015',
+    '10000000-0000-0000-0000-000000000009',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'in_progress', 'resolved', 'bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002',
+    'Root cause: notification channel dùng IMPORTANCE_LOW bị hệ thống cắt ngắn. Đã bump lên IMPORTANCE_DEFAULT. Build 1.2.2 deploy lên Play Store.',
+    NOW() - INTERVAL '20 days'
+),
+(
+    'a0000000-0000-0000-0000-000000000016',
+    '10000000-0000-0000-0000-000000000009',
+    '99999999-0000-0000-0000-000000000001',  -- Admin
+    'resolved', 'closed', 'bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002',
+    'Cô Mai xác nhận âm thanh phát đủ sau khi cập nhật app. Đóng ticket.',
+    NOW() - INTERVAL '18 days'
+)
+ON CONFLICT (history_id) DO NOTHING;

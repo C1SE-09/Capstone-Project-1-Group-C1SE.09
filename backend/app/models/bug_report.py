@@ -28,11 +28,10 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -52,7 +51,7 @@ from app.models.base import Base, TimestampMixin
 # Forward-reference imports (avoid circular imports)
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
-    from app.models.user import User, Teacher
+    from app.models.user import Teacher, User
 
 
 # ===========================================================================

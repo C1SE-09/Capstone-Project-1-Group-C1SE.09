@@ -33,7 +33,6 @@ from app.schemas.bug_report import (
     BugReportAttachmentOut,
     BugReportCreate,
     BugReportDetail,
-    BugReportFilter,
     BugReportListResponse,
     BugReportOut,
     BugReportUpdate,
@@ -42,10 +41,6 @@ from app.schemas.bug_report import (
 )
 from app.services.bug_report_service import (
     BugReportError,
-    BugReportNotFoundError,
-    BugReportPermissionError,
-    BugReportRateLimitError,
-    BugReportValidationError,
     add_attachments,
     create_report,
     get_report,
@@ -63,7 +58,6 @@ from fastapi import (
     File,
     Form,
     HTTPException,
-    Path,
     Query,
     UploadFile,
     status,

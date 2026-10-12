@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -63,6 +65,24 @@ dependencies:
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
 
+  # ============================================================
+  # Bug Report feature (TASK: F-01)
+  # ============================================================
+  # Chọn ảnh từ thư viện / camera
+  image_picker: ^1.1.2
+  # Lấy thông tin thiết bị (OS version, model) để đính kèm vào bug report
+  device_info_plus: ^10.1.2
+  # Lấy thông tin app (version, build number) để đính kèm vào bug report
+  package_info_plus: ^8.0.2
+  # Pinch-to-zoom ảnh trong màn chi tiết bug report
+  photo_view: ^0.15.0
+  # Format ngày giờ (resolved_at, closed_at, created_at)
+  intl: ^0.19.0
+  # MediaType parser cho dio multipart upload (transitive nhưng thêm cho chắc)
+  http_parser: ^4.0.2
+  # Lấy trạng thái mạng (wifi/cellular/offline) cho bug report
+  connectivity_plus: ^6.0.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -84,6 +104,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Tự động generate code cho localization (AppLocalizations.*) từ file .arb
+  generate: true
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
