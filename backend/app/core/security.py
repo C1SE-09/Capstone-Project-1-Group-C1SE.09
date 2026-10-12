@@ -91,3 +91,36 @@ def require_role(required_role: str) -> Callable:
         return current_user
 
     return role_checker
+
+
+def require_any_role(*allowed_roles: str) -> Callable:
+    """Dependency factory: cho phép nhiều role truy cập.
+
+    Dùng khi endpoint chấp nhận nhiều loại user (vd: teacher/parent/admin).
+
+    Usage:
+        @router.post(...)
+        def endpoint(user: User = Depends(require_any_role("teacher", "parent", "admin"))):
+            ...
+
+    Args:
+        *allowed_roles: Danh sach role cho phep (string value cua UserRole enum).
+
+    Returns:
+        Callable: dependency function kiem tra role.
+
+    Raises:
+        HTTPException 403 neu user.role khong nam trong allowed_roles.
+    """
+    allowed_set = {r.lower() for r in allowed_roles}
+
+    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        user_role = current_user.role.value.lower() if current_user.role else ""
+        if user_role not in allowed_set:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Endpoint nay chi danh cho: {sorted(allowed_set)}",
+            )
+        return current_user
+
+    return role_checker

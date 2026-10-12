@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
 
+    # Bug report notifications (B-04)
+    # Comma-separated list of admin emails to notify when new bug report created.
+    # Nếu rỗng → sẽ tìm tất cả User.role=ADMIN và gửi tới email của họ (nếu có).
+    bug_report_notify_email: str = ""
+
     # Cấu hình để Pydantic tự động đọc dữ liệu từ file .env
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),

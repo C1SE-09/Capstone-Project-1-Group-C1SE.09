@@ -15,6 +15,14 @@ SQLAlchemy's mapper registry is populated correctly.
 """
 
 from app.models.base import Base, TimestampMixin
+from app.models.bug_report import (
+    BugCategory,
+    BugReport,
+    BugReportAttachment,
+    BugReportHistory,
+    BugSeverity,
+    BugStatus,
+)
 from app.models.child import (
     Child,
     ChildStatus,
@@ -55,6 +63,12 @@ __all__ = [
     "ActivityEntry",
     "Base",
     "BroadcastReportStatus",
+    "BugCategory",
+    "BugReport",
+    "BugReportAttachment",
+    "BugReportHistory",
+    "BugSeverity",
+    "BugStatus",
     "Child",
     "ChildStatus",
     "ClassBroadcastReport",
