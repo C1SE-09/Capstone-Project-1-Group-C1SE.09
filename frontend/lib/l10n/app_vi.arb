@@ -1,0 +1,73 @@
+{
+  "@@locale": "vi",
+  "appTitle": "KinderLog",
+
+  "bugReportTitle": "Báo cáo lỗi",
+  "bugReportNewButton": "Báo cáo lỗi",
+  "bugReportAdminListButton": "Quản lý báo cáo lỗi",
+
+  "bugReportFormTitleLabel": "Tiêu đề",
+  "bugReportFormTitleHint": "Mô tả ngắn gọn vấn đề (tối đa 200 ký tự)",
+  "bugReportFormDescriptionLabel": "Mô tả chi tiết",
+  "bugReportFormDescriptionHint": "Các bước tái hiện, bạn kỳ vọng gì, thực tế xảy ra gì (tối đa 4000 ký tự)",
+  "bugReportFormCategoryLabel": "Loại lỗi",
+  "bugReportFormSeverityLabel": "Mức độ",
+  "bugReportFormAttachmentsLabel": "Ảnh đính kèm",
+  "bugReportFormAddAttachment": "Thêm ảnh",
+  "bugReportFormRemoveAttachment": "Xóa",
+  "bugReportFormSubmit": "Gửi báo cáo",
+  "bugReportFormSubmitting": "Đang gửi...",
+  "bugReportFormSuccess": "Đã gửi báo cáo. Admin sẽ xem xét sớm.",
+  "bugReportFormOfflineQueued": "Đã lưu cục bộ. Sẽ tự gửi khi có mạng.",
+  "bugReportFormValidationEmpty": "Vui lòng nhập tiêu đề và mô tả.",
+  "bugReportFormValidationTitleTooLong": "Tiêu đề tối đa 200 ký tự.",
+  "bugReportFormValidationDescriptionTooLong": "Mô tả tối đa 4000 ký tự.",
+
+  "bugReportDetailTitle": "Chi tiết báo cáo lỗi",
+  "bugReportDetailSectionMetadata": "Môi trường",
+  "bugReportDetailSectionAttachments": "Ảnh đính kèm",
+  "bugReportDetailSectionHistory": "Lịch sử trạng thái",
+  "bugReportDetailTapToZoom": "Bấm để phóng to",
+
+  "bugReportAdminTitle": "Quản lý báo cáo lỗi (Admin)",
+  "bugReportAdminFilter": "Bộ lọc",
+  "bugReportAdminSearchHint": "Tìm theo tiêu đề...",
+  "bugReportAdminEmpty": "Không có báo cáo nào khớp bộ lọc hiện tại.",
+  "bugReportAdminUpdateStatus": "Cập nhật trạng thái",
+  "bugReportAdminNewStatus": "Trạng thái mới",
+  "bugReportAdminAssignee": "Gán cho giáo viên",
+  "bugReportAdminComment": "Ghi chú nội bộ",
+  "bugReportAdminCommentHint": "Chỉ admin thấy (không bắt buộc)",
+  "bugReportAdminSave": "Lưu",
+  "bugReportAdminSaving": "Đang lưu...",
+  "bugReportAdminSaved": "Đã cập nhật báo cáo.",
+
+  "bugReportStatusOpen": "Mới",
+  "bugReportStatusInProgress": "Đang xử lý",
+  "bugReportStatusResolved": "Đã sửa",
+  "bugReportStatusClosed": "Đã đóng",
+  "bugReportStatusWontFix": "Không sửa",
+
+  "bugReportSeverityLow": "Thấp",
+  "bugReportSeverityMedium": "Trung bình",
+  "bugReportSeverityHigh": "Cao",
+  "bugReportSeverityCritical": "Nghiêm trọng",
+
+  "bugReportCategoryUi": "Giao diện",
+  "bugReportCategoryPerformance": "Hiệu năng",
+  "bugReportCategoryCrash": "Crash",
+  "bugReportCategoryData": "Dữ liệu",
+  "bugReportCategoryNotification": "Thông báo",
+  "bugReportCategoryNetwork": "Mạng",
+  "bugReportCategoryAuth": "Xác thực",
+  "bugReportCategoryOther": "Khác",
+
+  "bugReportCommonAttachmentsCount": "{count, plural, =0{Không có ảnh} =1{1 ảnh} other{{count} ảnh}}",
+  "@bugReportCommonAttachmentsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "bugReportCommonRetry": "Thử lại",
+  "bugReportCommonCancel": "Hủy",
+  "bugReportCommonClose": "Đóng"
+}

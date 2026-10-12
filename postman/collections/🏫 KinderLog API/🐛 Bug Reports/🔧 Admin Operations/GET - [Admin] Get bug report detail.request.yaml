@@ -1,0 +1,12 @@
+$kind: http-request
+description: |-
+  **[Admin]** Lấy chi tiết 1 report BẤT KỲ (của user nào cũng xem được).
+
+  Khác với `/me/{id}`: endpoint này không kiểm tra quyền sở hữu.
+
+  Dùng `bug_report_id_2_in_progress` (status=in_progress, đã có 2 history entries) làm ví dụ.
+url: "{{base_url}}/api/bug-reports/{{bug_report_id_2_in_progress}}"
+method: GET
+headers:
+  Authorization: "Bearer {{admin_token}}"
+order: 3000

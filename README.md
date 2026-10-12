@@ -104,3 +104,70 @@
   | `database "kinderlog" does not exist` | Volume was built with other credentials: `docker compose down -v` then `up` |
   | Worker runs but tasks never finish | On Windows, Celery needs `--pool=solo` |
   | Everything broken | `docker compose down -v` then `docker compose up --build` |
+
+## Bug reporting
+
+KinderLog has a built-in **bug reporting** feature that lets teachers, parents, and admins
+submit bug reports from inside the app, and lets admins triage them in a dashboard.
+
+### Quick start
+
+1. **From the app** — go to **Settings → Help & Support → Report a bug**.
+2. **From the admin dashboard** — log in as admin → **Bug Reports** menu.
+
+See the [User Guide](docs/bug-report-user-guide.md) for end-user instructions and the
+[Admin Guide](docs/bug-report-admin-guide.md) for handling workflow.
+
+### API
+
+REST API is documented in [docs/bug-report-api.md](docs/bug-report-api.md).
+A ready-to-use **Postman collection** is at
+`postman/collections/🏫 KinderLog API/🐛 Bug Reports/` — import it into Postman v10+.
+
+7 endpoints under `/api/bug-reports`:
+
+| Method | Endpoint | Role |
+|---|---|---|
+| `POST` | `/api/bug-reports` | teacher / parent / admin |
+| `GET` | `/api/bug-reports/me` | teacher / parent / admin |
+| `GET` | `/api/bug-reports/me/{id}` | teacher / parent / admin |
+| `GET` | `/api/bug-reports` | admin |
+| `GET` | `/api/bug-reports/{id}` | admin |
+| `PATCH` | `/api/bug-reports/{id}` | admin |
+| `POST` | `/api/bug-reports/{id}/attachments` | author / admin |
+
+Interactive Swagger UI: <http://localhost:8000/docs#tag/bug-reports>
+
+### Database
+
+3 new tables (created by Alembic migration `c1c17a05262a_add_bug_report_tables`):
+
+- `bug_report` — main table
+- `bug_report_attachment` — 1:N from `bug_report` (screenshots, logs)
+- `bug_report_history` — 1:N from `bug_report` (audit trail of status changes)
+
+### Testing
+
+```powershell
+cd backend
+pytest tests/test_bug_reports.py tests/test_bug_report_notifications.py -v
+```
+
+72 tests · coverage 91% on bug-report modules.
+
+### Seed data
+
+Run `backend/seed.sql` (after `alembic upgrade head`) to get:
+
+- 1 admin user (`admin` / `123456`)
+- 5 sample bug reports covering all 5 statuses (open / in_progress / resolved / closed / wont_fix)
+- 12 history entries (audit trail examples)
+
+### Configuration
+
+| Env var | Default | Description |
+|---|---|---|
+| `BUG_REPORT_NOTIFY_EMAIL` | `""` | Comma-separated admin emails. Empty = auto-detect all admins. |
+| `MAX_ATTACHMENT_SIZE_MB` | `5` | Max size per attachment. |
+| `MAX_ATTACHMENTS_PER_REPORT` | `5` | Max attachments per report. |
+| `RATE_LIMIT_REPORTS_PER_HOUR` | `10` | Rate limit per user. |

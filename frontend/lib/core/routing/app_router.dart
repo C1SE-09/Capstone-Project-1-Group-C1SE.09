@@ -45,6 +45,37 @@ final GoRouter appRouter = GoRouter(
       ),
     ),
     GoRoute(path: '/change-password', builder: (context, state) => ChangePasswordScreen(onBack: () => appRouter.pop())),
+
+    // ══════════════════════════════════════════════════════════
+    // Bug Report feature (TASK: F-05)
+    // TODO bạn của tôi: thay _PendingScreen(...) bằng screen thật
+    // khi đã tạo file trong features/bug_report/screens/.
+    //
+    // User (teacher/parent) chỉ CẦN gửi bug — không xem lại.
+    // Admin xem + xử lý tất cả bug.
+    // ══════════════════════════════════════════════════════════
+    // 1. Form báo cáo mới (user: teacher/parent)
+    GoRoute(
+      path: '/bug-report/new',
+      builder: (context, state) => const _PendingScreen(
+        label: 'Bug Report Form — TODO: thay bằng BugReportFormScreen()',
+      ),
+    ),
+    // 2. Danh sách tất cả báo cáo (admin only — guard ở screen level)
+    GoRoute(
+      path: '/admin/bug-reports',
+      builder: (context, state) => const _PendingScreen(
+        label: 'Admin Bug Reports — TODO: thay bằng AdminReportsListScreen()',
+      ),
+    ),
+    // 3. Chi tiết 1 báo cáo (admin only)
+    GoRoute(
+      path: '/admin/bug-reports/:id',
+      builder: (context, state) => _PendingScreen(
+        label:
+            'Admin Bug Report Detail — TODO: thay bằng AdminReportDetailScreen(id: ${state.pathParameters['id']})',
+      ),
+    ),
   ],
 );
 
@@ -75,4 +106,28 @@ class _LoginRoute extends StatelessWidget {
         },
         onForgotPassword: () => appRouter.push('/forgot-password'),
       );
+}
+
+/// Placeholder widget cho 3 route bug report mới.
+/// Bạn của tôi: tìm và replace `_PendingScreen(...)` bằng screen thật.
+class _PendingScreen extends StatelessWidget {
+  const _PendingScreen({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Coming soon')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16),
+          ),
+        ),
+      ),
+    );
+  }
 }

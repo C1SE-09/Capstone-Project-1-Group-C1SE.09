@@ -1,0 +1,3 @@
+$kind: collection
+description: "Các endpoint chỉ admin mới gọi được: list tất cả report, xem chi tiết bất kỳ, cập nhật status, upload thêm ảnh."
+order: 3000

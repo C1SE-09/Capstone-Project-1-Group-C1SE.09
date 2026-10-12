@@ -47,7 +47,7 @@ jobs:
         # Lọc bỏ extra-index-url cu121, các gói nvidia và torch để tránh kéo lại bản GPU
         grep -v -E "extra-index-url|nvidia-|torch" backend/requirements.txt > req_ci.txt
         pip install --no-cache-dir -r req_ci.txt
-        pip install --no-cache-dir ruff pytest httpx
+        pip install --no-cache-dir ruff pytest httpx pytest-cov
 
     - name: Lint code with Ruff
       run: ruff check backend/

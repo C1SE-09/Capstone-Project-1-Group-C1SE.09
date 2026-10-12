@@ -1,0 +1,3 @@
+$kind: collection
+description: Login với 3 role khác nhau để có token test. Mỗi login sẽ tự lưu token vào biến tương ứng.
+order: 1000

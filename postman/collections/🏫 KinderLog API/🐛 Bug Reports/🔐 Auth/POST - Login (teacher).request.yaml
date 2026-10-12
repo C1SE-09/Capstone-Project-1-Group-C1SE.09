@@ -1,0 +1,28 @@
+$kind: http-request
+description: |-
+  Login với tài khoản teacher (username: `comai`, password: `123456`).
+
+  **Test script** tự lưu `access_token` vào `teacher_token` collection variable.
+url: "{{base_url}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "username": "comai",
+      "password": "123456"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.collectionVariables.set('teacher_token', json.access_token);
+          console.log('[teacher] token saved, role=' + json.role + ', user_id=' + json.user_id);
+      } else {
+          console.error('[teacher] login failed:', pm.response.text());
+      }
+    language: text/javascript
+order: 2000

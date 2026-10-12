@@ -1,0 +1,19 @@
+$kind: http-request
+description: |-
+  **[Admin]** Đổi status: bất kỳ → `wont_fix` (không sửa: duplicate / outside scope / feature request).
+
+  - Không set `resolved_at` hay `closed_at`.
+  - Ghi 1 history entry mới.
+url: "{{base_url}}/api/bug-reports/{{bug_report_id_1_open}}"
+method: PATCH
+headers:
+  Authorization: "Bearer {{admin_token}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "status": "wont_fix",
+      "comment": "[Postman] Duplicate với #NH-001 đã fix ở 1.2.2. Đóng ticket."
+    }
+order: 7000

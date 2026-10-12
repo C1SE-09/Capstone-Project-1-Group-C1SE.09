@@ -1,0 +1,81 @@
+$kind: http-request
+description: |-
+  Tạo bug report mới (multipart/form-data, có thể kèm ảnh).
+
+  - **Auth**: Bearer teacher_token (tự động từ collection variable)
+  - **Limit**: 10 reports / user / hour (rate limit ở service layer)
+  - **Attachments**: tối đa 5 ảnh, mỗi ảnh ≤ 5MB, MIME `image/*` hoặc `text/plain`
+
+  **Test script** tự lưu `bug_report_id` vừa tạo vào collection variable.
+
+  **Response 201:**
+  ```json
+  {
+    "bug_report_id": "<uuid>",
+    "user_id": "<uuid>",
+    "title": "...",
+    "description": "...",
+    "category": "crash",
+    "severity": "high",
+    "status": "open",
+    "app_version": "1.2.3",
+    "attachments": [{"attachment_id": "...", "file_url": "..."}],
+    "created_at": "..."
+  }
+  ```
+url: "{{base_url}}/api/bug-reports"
+method: POST
+headers:
+  Authorization: "Bearer {{teacher_token}}"
+body:
+  type: formdata
+  content:
+    - type: text
+      key: title
+      value: "[Postman] App crash khi mở trang chi tiết"
+    - type: text
+      key: description
+      value: |-
+        Bước tái hiện:
+        1) Mở Dashboard
+        2) Bấm vào bé Bảo
+        3) App thoát ra ngay không báo lỗi
+        Đã thử 3 lần, Galaxy A54 Android 14.
+    - type: text
+      key: category
+      value: crash
+    - type: text
+      key: severity
+      value: high
+    - type: text
+      key: app_version
+      value: 1.2.3
+    - type: text
+      key: build_number
+      value: "42"
+    - type: text
+      key: os_version
+      value: Android 14
+    - type: text
+      key: device_model
+      value: Samsung SM-A546B
+    - type: text
+      key: network_type
+      value: wifi
+    - type: file
+      key: attachments
+      src:
+        - ""
+      description: File ảnh PNG / JPG screenshot (tùy chọn)
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+          const json = pm.response.json();
+          pm.collectionVariables.set('bug_report_id', json.bug_report_id);
+          console.log('[POST] bug_report_id saved:', json.bug_report_id);
+      } else {
+          console.error('[POST] create failed:', pm.response.text());
+      }
+    language: text/javascript
+order: 1000

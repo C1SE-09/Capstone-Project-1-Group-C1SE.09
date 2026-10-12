@@ -1,0 +1,22 @@
+$kind: http-request
+description: |-
+  **[Admin]** Đổi status: `open` → `in_progress` (bắt đầu xử lý).
+
+  - Tự động ghi 1 entry vào `bug_report_history` (audit trail) với `old_status=open`, `new_status=in_progress`.
+  - Celery task `notify_user_status_changed` được dispatch SAU khi commit (gửi push + email cho user tạo report).
+  - Có thể thêm `comment` để giải thích lý do đổi status.
+
+  Dùng `bug_report_id_1_open` (hiện tại status=open).
+url: "{{base_url}}/api/bug-reports/{{bug_report_id_1_open}}"
+method: PATCH
+headers:
+  Authorization: "Bearer {{admin_token}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "status": "in_progress",
+      "comment": "[Postman] Đang reproduce trên Galaxy A54, check logcat"
+    }
+order: 4000

@@ -16,6 +16,16 @@ description: |-
   | Parent 1 | `cccccccc-0000-0000-0000-000000000001` | Trần Văn Tuấn |
   | Child 1 | `dddddddd-0000-0000-0000-000000000001` | Trần Gia Bảo |
   | Child 2 | `dddddddd-0000-0000-0000-000000000002` | Lê Ngọc Ánh |
+
+  ## Bug Report Seed Data (sau khi chạy backend/seed.sql)
+  | Loại | ID | Status |
+  |---|---|---|
+  | Admin user | `99999999-0000-0000-0000-000000000001` | role=admin, username=admin |
+  | Report #1 (open) | `10000000-0000-0000-0000-000000000001` | open, high |
+  | Report #2 (in_progress) | `10000000-0000-0000-0000-000000000002` | in_progress, medium |
+  | Report #3 (resolved) | `10000000-0000-0000-0000-000000000003` | resolved, low |
+  | Report #4 (closed) | `10000000-0000-0000-0000-000000000004` | closed, critical |
+  | Report #5 (wont_fix) | `10000000-0000-0000-0000-000000000005` | wont_fix, low |
 variables:
   base_url: http://localhost:8000
   teacher_id_1: bbbbbbbb-0000-0000-0000-000000000001
@@ -26,3 +36,17 @@ variables:
   child_id_1: dddddddd-0000-0000-0000-000000000001
   child_id_2: dddddddd-0000-0000-0000-000000000002
   voice_id: ""
+  # Bug report (sẽ được set bởi test script sau khi tạo report mới)
+  bug_report_id: ""
+  bug_report_id_1_open: 10000000-0000-0000-0000-000000000001
+  bug_report_id_2_in_progress: 10000000-0000-0000-0000-000000000002
+  bug_report_id_3_resolved: 10000000-0000-0000-0000-000000000003
+  bug_report_id_4_closed: 10000000-0000-0000-0000-000000000004
+  bug_report_id_5_wont_fix: 10000000-0000-0000-0000-000000000005
+  admin_user_id: 99999999-0000-0000-0000-000000000001
+  teacher1_user_id: 11111111-0000-0000-0000-000000000001
+  parent1_user_id: 22222222-0000-0000-0000-000000000001
+  # JWT tokens (sẽ được set bởi test script của Login requests)
+  admin_token: ""
+  teacher_token: ""
+  parent_token: ""

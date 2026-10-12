@@ -22,7 +22,11 @@ celery_app = Celery(
     "kinderlog",
     broker=settings.redis_url,
     backend=_derive_result_backend(settings.redis_url),
-    include=["app.tasks.process_audio", "app.tasks.notifications"],
+    include=[
+        "app.tasks.process_audio",
+        "app.tasks.notifications",
+        "app.tasks.bug_report_notifications",
+    ],
 )
 
 celery_app.conf.update(
@@ -41,6 +45,8 @@ celery_app.conf.update(
     task_routes={
         "process_audio_task": {"queue": "audio"},
         "send_report_notifications": {"queue": "notifications"},
+        "bug_report_notify_admin": {"queue": "notifications"},
+        "bug_report_notify_user": {"queue": "notifications"},
     },
 )
 
