@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.models.child import Child
@@ -176,7 +176,7 @@ def _populate_activities(
 
 def _today_utc() -> datetime:
     """Lấy ngày hiện tại theo UTC (chỉ date part)."""
-    return datetime.now(timezone.utc).date()
+    return datetime.now(UTC).date()
 
 
 # ===========================================================================

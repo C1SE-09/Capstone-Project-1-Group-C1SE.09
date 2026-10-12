@@ -1,2 +1,2 @@
 // Shared UI-only types for the kindergarten dashboard feature.
-enum UserRole { teacher, parent }
+enum UserRole { teacher, parent, admin }
