@@ -252,7 +252,7 @@ class TestDeliveAdminNotification:
 
         def fail_on_bad(**kw):
             if kw["token"] == "bad_tok":
-                from app.services.notification_service import (
+                from firebase_admin.exceptions import (
                     InvalidArgumentError as _IA,
                 )
 

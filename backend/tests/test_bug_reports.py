@@ -1043,6 +1043,325 @@ class TestAttachmentValidation:
 
 
 # ===========================================================================
+# TestHistoryAudit (audit trail cho status changes)
+# ===========================================================================
+
+
+class TestHistoryAudit:
+    """Mọi status change đều phải ghi 1 entry vào bug_report_history."""
+
+    def _make_report(self, status=BugStatus.OPEN):
+        """Tạo report mock với .filter().first() chain (cho update_status)."""
+        report = MagicMock(spec=BugReport)
+        report.bug_report_id = REPORT_ID
+        report.user_id = TEACHER_ID
+        report.user = None
+        report.teacher = None
+        report.attachments = []
+        report.history = []
+        report.status = status
+        report.resolved_at = None
+        report.closed_at = None
+        report.teacher_id = None
+        return report
+
+    @patch("app.services.bug_report_service._upload_to_minio")
+    def test_create_records_initial_history_entry(
+        self, mock_upload, mock_db, teacher_user
+    ):
+        """create_report phải ghi 1 history entry initial (status=open)."""
+        from app.schemas.bug_report import BugReportCreate
+        from app.services.bug_report_service import create_report
+
+        mock_upload.return_value = "http://minio/file.png"
+        data = BugReportCreate(title="X", description="Y").model_dump()
+
+        # Capture all objects added to db
+        added_objects = []
+        mock_db.add.side_effect = lambda obj: added_objects.append(obj)
+
+        create_report(db=mock_db, user=teacher_user, data=data, attachments=[])
+
+        # Phải có ít nhất 2 add: 1 cho BugReport, 1 cho BugReportHistory
+        history_entries = [
+            obj for obj in added_objects
+            if isinstance(obj, BugReportHistory)
+            or (hasattr(obj, "__class__") and obj.__class__.__name__ == "BugReportHistory")
+        ]
+        assert len(history_entries) >= 1, (
+            f"Expected at least 1 BugReportHistory entry on create, "
+            f"got {len(history_entries)} (added: {added_objects})"
+        )
+
+    def test_check_rate_limit_raises_when_exceeded(self, mock_db, teacher_user):
+        """check_rate_limit raise BugReportRateLimitError khi used >= limit."""
+        from app.services.bug_report_service import (
+            BugReportRateLimitError,
+            check_rate_limit,
+        )
+
+        # count query returns 10 (== limit)
+        mock_db.query.return_value.filter.return_value.scalar.return_value = 10
+        # oldest query returns a tuple (created_at,)
+        from datetime import datetime as _dt, timezone as _tz
+        mock_db.query.return_value.filter.return_value.first.return_value = (
+            _dt.now(_tz.utc),
+        )
+
+        with pytest.raises(BugReportRateLimitError) as exc_info:
+            check_rate_limit(db=mock_db, user_id=TEACHER_ID, limit=10)
+        assert exc_info.value.status_code == 429
+        assert "10" in exc_info.value.message
+
+    def test_check_rate_limit_returns_count_under_limit(
+        self, mock_db, teacher_user
+    ):
+        """check_rate_limit returns (used, reset_at) khi dưới limit."""
+        from app.services.bug_report_service import check_rate_limit
+
+        mock_db.query.return_value.filter.return_value.scalar.return_value = 3
+        used, reset_at = check_rate_limit(db=mock_db, user_id=TEACHER_ID, limit=10)
+        assert used == 3
+        assert reset_at is not None
+
+    def test_list_reports_service_layer(self, mock_db):
+        """list_reports trả về items + total khi gọi service trực tiếp."""
+        from app.services.bug_report_service import list_reports
+
+        report_obj = MagicMock(spec=BugReport)
+        report_obj.bug_report_id = REPORT_ID
+        report_obj.user = None
+        report_obj.teacher = None
+
+        # Khi filters=None: _build_filter_query returns []; query chain
+        # là: .query().join().order_by().options().offset().limit().all()
+        items_query = MagicMock()
+        items_query.join.return_value.order_by.return_value.options.return_value.offset.return_value.limit.return_value.all.return_value = [
+            report_obj
+        ]
+        # Count: .query().join().scalar()
+        count_query = MagicMock()
+        count_query.join.return_value.scalar.return_value = 1
+
+        mock_db.query.side_effect = [items_query, count_query]
+        items, total = list_reports(db=mock_db, filters=None)
+        assert total == 1
+        assert items == [report_obj]
+
+    def test_get_user_reports_service_layer(self, mock_db):
+        """get_user_reports trả về items + total cho 1 user."""
+        import uuid as uuid_mod
+        from app.services.bug_report_service import get_user_reports
+
+        user_id = uuid_mod.uuid4()
+        report_obj = MagicMock(spec=BugReport)
+        report_obj.bug_report_id = REPORT_ID
+        report_obj.user = None
+        report_obj.teacher = None
+
+        # Items query: .query().options().filter().order_by().offset().limit().all()
+        items_query = MagicMock()
+        items_query.options.return_value.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [
+            report_obj
+        ]
+        # Count query: .query().filter().scalar()
+        count_query = MagicMock()
+        count_query.filter.return_value.scalar.return_value = 1
+        mock_db.query.side_effect = [items_query, count_query]
+
+        items, total = get_user_reports(db=mock_db, user_id=user_id)
+        assert total == 1
+        assert items == [report_obj]
+
+    def test_add_attachments_service_layer(self, mock_db, teacher_user):
+        """add_attachments upload + gắn attachments vào report."""
+        from app.services.bug_report_service import add_attachments
+
+        report = MagicMock(spec=BugReport)
+        report.bug_report_id = REPORT_ID
+        report.user_id = teacher_user.user_id
+        report.attachments = []  # empty
+        mock_db.query.return_value.options.return_value.filter.return_value.first.return_value = report
+
+        with patch(
+            "app.services.bug_report_service._upload_to_minio",
+            return_value="http://minio/f.png",
+        ) as mock_upload:
+            atts = [
+                {"file_data": b"abc", "file_name": "f.png", "mime_type": "image/png"},
+            ]
+            returned_report, new_atts = add_attachments(
+                db=mock_db, user=teacher_user,
+                report_id=REPORT_ID, attachments=atts,
+            )
+            assert mock_upload.call_count == 1
+            assert len(new_atts) == 1
+            assert mock_db.add.called
+            assert mock_db.commit.called
+
+    def test_get_stats_service_layer(self, mock_db):
+        """get_stats trả về total + by_status/severity/category."""
+        from app.services.bug_report_service import get_stats
+
+        # group_by(...).all() returns list of (enum, count)
+        mock_db.query.return_value.group_by.return_value.all.side_effect = [
+            [(BugStatus.OPEN, 5), (BugStatus.RESOLVED, 2)],
+            [(BugSeverity.HIGH, 3), (BugSeverity.LOW, 4)],
+            [(BugCategory.UI, 6), (BugCategory.CRASH, 1)],
+        ]
+        # final count query
+        mock_db.query.return_value.scalar.return_value = 7
+
+        stats = get_stats(db=mock_db)
+        assert stats["total"] == 7
+        assert stats["by_status"]["open"] == 5
+        assert stats["by_severity"]["high"] == 3
+        assert stats["by_category"]["ui"] == 6
+
+    def test_build_filter_query_with_all_filters(self):
+        """_build_filter_query tạo conditions cho tất cả filter keys."""
+        import uuid as uuid_mod
+        from app.services.bug_report_service import _build_filter_query
+
+        filters = {
+            "status": "open",
+            "severity": "high",
+            "category": "ui",
+            "user_id": uuid_mod.uuid4(),
+            "teacher_id": uuid_mod.uuid4(),
+            "user_role": "teacher",
+            "search": "crash",
+            "date_from": None,  # None values must be skipped
+            "date_to": None,
+        }
+        conditions = _build_filter_query(filters)
+        # status + severity + category + user_id + teacher_id + user_role + search = 7
+        assert len(conditions) == 7
+
+    def test_update_status_records_history_with_old_and_new(
+        self, mock_db, admin_user
+    ):
+        """update_status ghi history với old_status và new_status đúng."""
+        from app.services.bug_report_service import update_status
+
+        report = self._make_report(status=BugStatus.OPEN)
+        mock_db.query.return_value.filter.return_value.first.return_value = report
+
+        # Capture history entries added
+        history_entries = []
+        real_add = mock_db.add.side_effect
+
+        def capture_add(obj):
+            history_entries.append(obj)
+
+        mock_db.add.side_effect = capture_add
+
+        update_status(
+            db=mock_db,
+            report_id=REPORT_ID,
+            changed_by=admin_user,
+            new_status=BugStatus.IN_PROGRESS,
+            comment="Bat dau xu ly",
+        )
+
+        # Tìm entry history được add
+        assert len(history_entries) >= 1
+        entry = history_entries[-1]
+        assert entry.old_status == BugStatus.OPEN
+        assert entry.new_status == BugStatus.IN_PROGRESS
+        assert entry.comment == "Bat dau xu ly"
+        assert entry.changed_by_id == admin_user.user_id
+        assert entry.bug_report_id == REPORT_ID
+
+    def test_update_status_no_change_no_history(
+        self, mock_db, admin_user
+    ):
+        """update_status với status giống cũ → không ghi history."""
+        from app.services.bug_report_service import update_status
+
+        report = self._make_report(status=BugStatus.IN_PROGRESS)
+        mock_db.query.return_value.filter.return_value.first.return_value = report
+
+        history_entries = []
+        mock_db.add.side_effect = lambda obj: history_entries.append(obj)
+
+        update_status(
+            db=mock_db,
+            report_id=REPORT_ID,
+            changed_by=admin_user,
+            new_status=BugStatus.IN_PROGRESS,  # same as current
+        )
+
+        history_entries = [
+            obj for obj in history_entries
+            if obj.__class__.__name__ == "BugReportHistory"
+        ]
+        assert len(history_entries) == 0, (
+            f"No history should be recorded on no-op, got {len(history_entries)}"
+        )
+
+    def test_update_assignee_change_records_history(
+        self, mock_db, admin_user
+    ):
+        """Khi đổi assignee, history ghi lại old/new teacher_id."""
+        import uuid as uuid_mod
+        from app.models.user import Teacher
+        from app.services.bug_report_service import update_status
+
+        old_teacher_id = uuid_mod.uuid4()
+        new_teacher_id = uuid_mod.uuid4()
+
+        report = self._make_report(status=BugStatus.OPEN)
+        report.teacher_id = old_teacher_id
+
+        # update_status gọi 2 queries tuần tự:
+        #   1) db.query(BugReport).filter().first() → report
+        #   2) db.query(Teacher).filter().first()   → Teacher tồn tại
+        teacher_obj = MagicMock(spec=Teacher)
+        mock_db.query.return_value.filter.return_value.first.side_effect = [
+            report,
+            teacher_obj,
+        ]
+
+        history_entries = []
+        mock_db.add.side_effect = lambda obj: history_entries.append(obj)
+
+        update_status(
+            db=mock_db,
+            report_id=REPORT_ID,
+            changed_by=admin_user,
+            new_teacher_id=new_teacher_id,
+        )
+
+        assert len(history_entries) >= 1
+        entry = history_entries[-1]
+        assert entry.old_teacher_id == old_teacher_id
+        assert entry.new_teacher_id == new_teacher_id
+
+    def test_history_endpoint_returns_audit_trail(self, admin_client):
+        """GET /api/bug-reports/{id} trả về history list (audit trail)."""
+        from app.api.endpoints import bug_reports as br_module
+
+        report = _make_report_obj(status="in_progress")
+        report.history = [
+            _make_history_obj(new_status="open", note="Tao report"),
+            _make_history_obj(
+                old_status="open", new_status="in_progress", note="Dang xu ly"
+            ),
+        ]
+        with patch.object(br_module, "get_report", return_value=report):
+            resp = admin_client.get(f"/api/bug-reports/{REPORT_ID}")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert "history" in data
+            assert len(data["history"]) == 2
+            # Verify thứ tự audit trail: created → updated
+            assert data["history"][0]["new_status"] == "open"
+            assert data["history"][1]["new_status"] == "in_progress"
+            assert data["history"][1]["comment"] == "Dang xu ly"
+
+
+# ===========================================================================
 # TestOpenAPIDocs
 # ===========================================================================
 
