@@ -6,8 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
-from app.api.endpoints import auth, bug_reports, notifications
-from app.api.endpoints import admin, auth, notifications
+from app.api.endpoints import admin, auth, bug_reports, notifications
 from app.api.endpoints.schedule import (
     router as schedule_router,
 )
