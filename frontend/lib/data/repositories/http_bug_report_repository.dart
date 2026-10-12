@@ -27,7 +27,7 @@ class HttpBugReportRepository implements BugReportRepository {
 
   final Dio _dio;
 
-  /// Header Authorization Bearer +<token> nếu user đã login.
+  /// Header Authorization Bearer `<token>` nếu user đã login.
   Options get _authOptions {
     final token = AuthRepository.currentUser?.token;
     if (token == null || token.isEmpty) return Options();

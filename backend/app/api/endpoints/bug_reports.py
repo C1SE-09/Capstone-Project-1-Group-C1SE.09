@@ -332,9 +332,7 @@ def admin_list_bug_reports(
         filters["search"] = search
     if date_from:
         try:
-            filters["date_from"] = datetime.fromisoformat(
-                date_from.replace("Z", "+00:00")
-            )
+            filters["date_from"] = datetime.fromisoformat(date_from)
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -342,9 +340,7 @@ def admin_list_bug_reports(
             ) from exc
     if date_to:
         try:
-            filters["date_to"] = datetime.fromisoformat(
-                date_to.replace("Z", "+00:00")
-            )
+            filters["date_to"] = datetime.fromisoformat(date_to)
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

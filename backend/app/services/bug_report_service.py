@@ -31,7 +31,7 @@ from __future__ import annotations
 import io
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.core.storage import _ensure_bucket_exists, minio_client
@@ -179,7 +179,7 @@ def check_rate_limit(
     Raises:
         BugReportRateLimitError: Nếu user đã vượt quá giới hạn
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     window_start = now - timedelta(hours=window_hours)
 
     used = (
@@ -268,7 +268,7 @@ def _upload_to_minio(
     safe_name = "".join(
         c if c.isalnum() or c in "._-" else "_" for c in file_name
     )[:100]
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
     object_name = f"bug_reports/{user_id}/{timestamp}_{unique_id}_{safe_name}"
 
@@ -741,9 +741,9 @@ def update_status(
         report.status = new_status
         # Set resolved_at / closed_at tương ứng
         if new_status == BugStatus.RESOLVED and report.resolved_at is None:
-            report.resolved_at = datetime.now(timezone.utc)
+            report.resolved_at = datetime.now(UTC)
         if new_status == BugStatus.CLOSED and report.closed_at is None:
-            report.closed_at = datetime.now(timezone.utc)
+            report.closed_at = datetime.now(UTC)
 
     if teacher_changed:
         report.teacher_id = new_teacher_id
