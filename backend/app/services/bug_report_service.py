@@ -742,21 +742,13 @@ def update_status(
     teacher_changed = new_teacher_id != old_teacher_id  # cũng cover set None
     category_changed = new_category is not None and new_category != old_category
     severity_changed = new_severity is not None and new_severity != old_severity
-    has_comment = bool(comment and comment.strip())
 
     if not (status_changed or teacher_changed or category_changed or severity_changed):
-        if not has_comment:
-            # Không có gì thay đổi, không có comment → no-op thật sự
-            logger.info(
-                "[bug_report_service] update_status no-op: report_id=%s",
-                report_id,
-            )
-            return report
-        # Chỉ có comment, không đổi field nào → vẫn ghi history với comment
+        # Không có gì thay đổi
         logger.info(
-            "[bug_report_service] update_status comment-only: report_id=%s",
-            report_id,
+            "[bug_report_service] update_status no-op: report_id=%s", report_id
         )
+        return report
 
     # Build comment bổ sung mô tả thay đổi category/severity (nếu có)
     change_parts: list[str] = []
