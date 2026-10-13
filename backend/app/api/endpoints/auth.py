@@ -1,15 +1,18 @@
+import logging
+
+import redis
 from app.core.database import get_db
 from app.core.security import (
     ALGORITHM,
     SECRET_KEY,
     create_session,
+    get_current_user,
+    hash_password,
     oauth2_scheme,
     oauth2_scheme_optional,
     refresh_session,
-    revoke_session,
     revoke_other_sessions,
-    get_current_user,
-    hash_password,
+    revoke_session,
     verify_password,
 )
 from app.models.child import Parent
@@ -32,8 +35,10 @@ from app.services.password_reset_service import (
     verify_reset_code,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from jose import jwt
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -76,11 +81,11 @@ def refresh_token(data: refresh_token_request):
 def logout(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        sid=payload.get("session_id")
+        sid = payload.get("session_id")
         if sid:
             revoke_session(sid)
-    except Exception:
-        pass
+    except (JWTError, redis.RedisError) as e:
+        logger.warning("Không thể thu hồi session khi đăng xuất: %s", e)
     return {"message": "Đăng xuất thành công"}
 
 
@@ -104,14 +109,14 @@ def change_password(
 
     current_user.password_hash = hash_password(data.new_password)
     db.commit()
-    if data.logout_other_devices:
+    if data.logout_other_devices and token:
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             sid = payload.get("session_id")
             if sid:
                 revoke_other_sessions(str(current_user.user_id), sid)
-        except Exception:
-            pass
+        except (JWTError, redis.RedisError) as e:
+            logger.warning("Không thể thu hồi các session khác: %s", e)
     return {"message": "Đổi mật khẩu thành công!"}
 
 @router.post("/forgot-password")

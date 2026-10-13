@@ -4,7 +4,7 @@ import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 
 import redis
 from fastapi import Depends, HTTPException, status
@@ -51,7 +51,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(user_id: str, role: str, session_id: Optional[str] = None) -> str:
+def create_access_token(user_id: str, role: str, session_id: str | None = None) -> str:
     now = int(time.time())
     expire = now + ACCESS_TOKEN_EXPIRE_SECONDS
     payload = {
@@ -65,7 +65,7 @@ def create_access_token(user_id: str, role: str, session_id: Optional[str] = Non
 
 
 # ─── QUẢN LÝ PHIÊN TRÊN REDIS (TỐI ĐA 4 MÁY - ĐÁ MÁY CŨ NHẤT LRU) ───────────
-def create_session(user_id: str, role: str, device_id: str, device_name: str) -> Dict[str, Any]:
+def create_session(user_id: str, role: str, device_id: str, device_name: str) -> dict[str, Any]:
     client = get_redis_client()
     user_id_str = str(user_id)
     device_id_clean = (device_id or "default_device").strip()
@@ -116,7 +116,7 @@ def create_session(user_id: str, role: str, device_id: str, device_name: str) ->
     }
 
 
-def refresh_session(session_id: str, refresh_token: str) -> Dict[str, Any]:
+def refresh_session(session_id: str, refresh_token: str) -> dict[str, Any]:
     client = get_redis_client()
     session_key = f"{KEY_SESSION_PREFIX}{session_id}"
     data = client.hgetall(session_key)
@@ -155,7 +155,8 @@ def refresh_session(session_id: str, refresh_token: str) -> Dict[str, Any]:
 def validate_session(session_id: str) -> bool:
     try:
         return bool(get_redis_client().exists(f"{KEY_SESSION_PREFIX}{session_id}"))
-    except Exception:
+    except redis.RedisError as e:
+        logger.warning("Lỗi kiểm tra session trên Redis: %s", e)
         return True
 
 
@@ -167,7 +168,7 @@ def revoke_session(session_id: str) -> None:
         client.delete(session_key)
         if user_id:
             client.zrem(f"{KEY_USER_SESSIONS_PREFIX}{user_id}", session_id)
-    except Exception as e:
+    except redis.RedisError as e:
         logger.error("Lỗi khi revoke session: %s", e)
 
 
@@ -179,7 +180,7 @@ def revoke_other_sessions(user_id: str, current_session_id: str) -> None:
             if sid != current_session_id:
                 client.delete(f"{KEY_SESSION_PREFIX}{sid}")
                 client.zrem(user_sessions_key, sid)
-    except Exception as e:
+    except redis.RedisError as e:
         logger.error("Lỗi khi revoke other sessions: %s", e)
 
 
