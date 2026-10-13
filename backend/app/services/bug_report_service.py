@@ -7,9 +7,7 @@ Business logic:
     - create_report       : tạo bug report + initial history + upload attachments
     - list_reports        : admin list với filter + pagination
     - get_report          : lấy chi tiết (kèm attachments + history)
-    - get_user_reports    : list reports của 1 user
-    - update_status       : admin update status/assignee + record history
-    - add_attachments     : thêm attachments vào report đã tồn tại
+    - update_status       : admin update status/assignee/category/severity + record history
     - check_rate_limit    : 10 reports / user / giờ (chống spam)
 
 Side effects:
@@ -35,6 +33,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.core.storage import _ensure_bucket_exists, minio_client
+from app.models.admin_user import AdminUser
 from app.models.bug_report import (
     BugCategory,
     BugReport,
@@ -129,29 +128,42 @@ class BugReportValidationError(BugReportError):
 # ===========================================================================
 
 
-def _is_admin(user: User) -> bool:
-    """True nếu user có role admin."""
-    return user.role == UserRole.ADMIN
+def _is_admin(actor: User | AdminUser) -> bool:
+    """True nếu actor là admin (User.role=admin hoặc AdminUser)."""
+    if isinstance(actor, AdminUser):
+        return actor.is_active
+    if isinstance(actor, User):
+        return actor.role == UserRole.ADMIN
+    return False
 
 
-def _can_view_report(user: User, report: BugReport) -> bool:
-    """User có thể xem report này không?
-    - Admin: luôn được
+def _is_web_admin(actor: User | AdminUser) -> bool:
+    """True nếu actor là AdminUser (web admin)."""
+    return isinstance(actor, AdminUser)
+
+
+def _can_view_report(actor: User | AdminUser, report: BugReport) -> bool:
+    """Actor có thể xem report này không?
+    - Admin (User hoặc AdminUser): luôn được
     - User khác: chỉ xem được report do chính mình tạo
     """
-    if _is_admin(user):
+    if _is_admin(actor):
         return True
-    return report.user_id == user.user_id
+    if isinstance(actor, User):
+        return report.user_id == actor.user_id
+    return False
 
 
-def _can_modify_report(user: User, report: BugReport) -> bool:
-    """User có thể modify report này không?
+def _can_modify_report(actor: User | AdminUser, report: BugReport) -> bool:
+    """Actor có thể modify report này không?
     - Admin: luôn được
-    - Author: được thêm attachments vào report của mình
+    - Author (User): được thêm attachments vào report của mình
     """
-    if _is_admin(user):
+    if _is_admin(actor):
         return True
-    return report.user_id == user.user_id
+    if isinstance(actor, User):
+        return report.user_id == actor.user_id
+    return False
 
 
 # ===========================================================================
@@ -296,17 +308,34 @@ def _upload_to_minio(
 def _record_history(
     db: Session,
     report: BugReport,
-    changed_by: User,
+    changed_by: User | AdminUser,
     old_status: BugStatus | None,
     new_status: BugStatus | None,
     old_teacher_id: uuid.UUID | None,
     new_teacher_id: uuid.UUID | None,
     comment: str | None,
 ) -> BugReportHistory:
-    """Ghi 1 entry vào bug_report_history (audit trail)."""
+    """Ghi 1 entry vào bug_report_history (audit trail).
+
+    ``changed_by`` có thể là User (admin nhà trường) hoặc AdminUser
+    (web admin). Vì ``changed_by_id`` FK tới ``users.user_id`` nên:
+    - Nếu là User: lưu ``user_id`` vào changed_by_id
+    - Nếu là AdminUser: để changed_by_id = NULL, thêm "[WebAdmin: email]" vào comment
+    """
+    if isinstance(changed_by, User):
+        changed_by_id: uuid.UUID | None = changed_by.user_id
+    else:  # AdminUser
+        changed_by_id = None
+        # Append admin email vào comment để audit rõ ràng
+        actor_tag = f"[WebAdmin: {changed_by.email}]"
+        if comment:
+            comment = f"{actor_tag} {comment}"
+        else:
+            comment = actor_tag
+
     entry = BugReportHistory(
         bug_report_id=report.bug_report_id,
-        changed_by_id=changed_by.user_id,
+        changed_by_id=changed_by_id,
         old_status=old_status,
         new_status=new_status,
         old_teacher_id=old_teacher_id,
@@ -571,14 +600,14 @@ def list_reports(
 def get_report(
     db: Session,
     report_id: uuid.UUID,
-    user: User | None = None,
+    user: User | AdminUser | None = None,
 ) -> BugReport:
     """Lấy chi tiết 1 bug report.
 
     Args:
         db: SQLAlchemy session
         report_id: UUID của report
-        user: User hiện tại (optional, dùng để check permission)
+        user: User hoặc AdminUser hiện tại (optional, dùng để check permission)
 
     Returns:
         BugReport với attachments + history đã eager load
@@ -609,49 +638,6 @@ def get_report(
     return report
 
 
-def get_user_reports(
-    db: Session,
-    user_id: uuid.UUID,
-    page: int = 1,
-    page_size: int = 20,
-) -> tuple[list[BugReport], int]:
-    """List bug reports của 1 user (dùng cho endpoint ``/me``).
-
-    Args:
-        db: SQLAlchemy session
-        user_id: UUID của user
-        page: trang hiện tại
-        page_size: số item / trang
-
-    Returns:
-        (list[BugReport], total)
-    """
-    page = max(page, 1)
-    if page_size < 1 or page_size > 100:
-        page_size = 20
-
-    query = (
-        db.query(BugReport)
-        .options(
-            selectinload(BugReport.user),
-            selectinload(BugReport.teacher),
-        )
-        .filter(BugReport.user_id == user_id)
-        .order_by(BugReport.created_at.desc())
-    )
-    # Independent count query (no order_by)
-    total = (
-        db.query(func.count(BugReport.bug_report_id))
-        .filter(BugReport.user_id == user_id)
-        .scalar()
-        or 0
-    )
-
-    offset = (page - 1) * page_size
-    items = query.offset(offset).limit(page_size).all()
-    return items, total
-
-
 # ===========================================================================
 # Public API: Update
 # ===========================================================================
@@ -660,21 +646,25 @@ def get_user_reports(
 def update_status(
     db: Session,
     report_id: uuid.UUID,
-    changed_by: User,
+    changed_by: User | AdminUser,
     new_status: str | BugStatus | None = None,
     new_teacher_id: uuid.UUID | None = None,
+    new_category: str | BugCategory | None = None,
+    new_severity: str | BugSeverity | None = None,
     comment: str | None = None,
 ) -> BugReport:
-    """Admin cập nhật status / assignee cho 1 bug report.
+    """Admin cập nhật status / assignee / category / severity cho 1 bug report.
 
     Mọi thay đổi đều được ghi vào bug_report_history.
 
     Args:
         db: SQLAlchemy session
         report_id: UUID của report
-        changed_by: User thực hiện thay đổi (phải là admin)
+        changed_by: User (admin nhà trường) hoặc AdminUser (web admin)
         new_status: status mới (optional)
         new_teacher_id: teacher_id mới (optional, None = bỏ gán)
+        new_category: loại lỗi mới (optional, để admin sửa lại cho đúng)
+        new_severity: mức độ mới (optional, để admin sửa lại cho đúng)
         comment: ghi chú (optional)
 
     Returns:
@@ -683,7 +673,7 @@ def update_status(
     Raises:
         BugReportNotFoundError: nếu không tìm thấy
         BugReportPermissionError: nếu changed_by không phải admin
-        BugReportValidationError: nếu new_status invalid
+        BugReportValidationError: nếu new_status / new_category / new_severity invalid
     """
     if not _is_admin(changed_by):
         raise BugReportPermissionError(
@@ -708,8 +698,30 @@ def update_status(
                 f"Cho phép: {[s.value for s in BugStatus]}"
             ) from exc
 
+    # Normalize new_category
+    if isinstance(new_category, str):
+        try:
+            new_category = BugCategory(new_category)
+        except ValueError as exc:
+            raise BugReportValidationError(
+                f"Category '{new_category}' không hợp lệ. "
+                f"Cho phép: {[c.value for c in BugCategory]}"
+            ) from exc
+
+    # Normalize new_severity
+    if isinstance(new_severity, str):
+        try:
+            new_severity = BugSeverity(new_severity)
+        except ValueError as exc:
+            raise BugReportValidationError(
+                f"Severity '{new_severity}' không hợp lệ. "
+                f"Cho phép: {[s.value for s in BugSeverity]}"
+            ) from exc
+
     old_status = report.status
     old_teacher_id = report.teacher_id
+    old_category = report.category
+    old_severity = report.severity
 
     # Validate: teacher_id phải tồn tại nếu được cung cấp
     if new_teacher_id is not None:
@@ -728,13 +740,37 @@ def update_status(
     # Detect xem có thay đổi gì không
     status_changed = new_status is not None and new_status != old_status
     teacher_changed = new_teacher_id != old_teacher_id  # cũng cover set None
+    category_changed = new_category is not None and new_category != old_category
+    severity_changed = new_severity is not None and new_severity != old_severity
 
-    if not status_changed and not teacher_changed:
+    if not (status_changed or teacher_changed or category_changed or severity_changed):
         # Không có gì thay đổi
         logger.info(
             "[bug_report_service] update_status no-op: report_id=%s", report_id
         )
         return report
+
+    # Build comment bổ sung mô tả thay đổi category/severity (nếu có)
+    change_parts: list[str] = []
+    if category_changed:
+        change_parts.append(
+            f"category: {old_category.value} → {new_category.value}"
+        )
+    if severity_changed:
+        change_parts.append(
+            f"severity: {old_severity.value} → {new_severity.value}"
+        )
+    change_note = "; ".join(change_parts)
+
+    # Ghép change_note vào comment nếu user không truyền comment riêng
+    final_comment: str | None = comment
+    if change_note:
+        prefix = "[Reclassified] " if not (status_changed or teacher_changed) else ""
+        change_line = f"{prefix}{change_note}"
+        if final_comment:
+            final_comment = f"{change_line} | {final_comment}"
+        else:
+            final_comment = change_line
 
     # Update report
     if status_changed:
@@ -748,7 +784,16 @@ def update_status(
     if teacher_changed:
         report.teacher_id = new_teacher_id
 
+    if category_changed:
+        report.category = new_category  # type: ignore[assignment]
+
+    if severity_changed:
+        report.severity = new_severity  # type: ignore[assignment]
+
     # Ghi history
+    # - Nếu có status/teacher đổi: ghi entry với old/new status/teacher
+    # - Nếu chỉ category/severity đổi: ghi entry với status/teacher = None,
+    #   comment sẽ chứa mô tả thay đổi (đã build ở final_comment)
     _record_history(
         db=db,
         report=report,
@@ -757,115 +802,40 @@ def update_status(
         new_status=new_status if status_changed else None,
         old_teacher_id=old_teacher_id if teacher_changed else None,
         new_teacher_id=new_teacher_id if teacher_changed else None,
-        comment=comment,
+        comment=final_comment,
     )
 
     db.commit()
     db.refresh(report)
 
+    # Lấy actor id để log
+    if isinstance(changed_by, User):
+        actor_id = str(changed_by.user_id)
+        actor_type = "user"
+    else:
+        actor_id = str(changed_by.admin_user_id)
+        actor_type = "web_admin"
+
     logger.info(
-        "[bug_report_service] Updated report id=%s: status=%s→%s, teacher=%s→%s by user_id=%s",
+        "[bug_report_service] Updated report id=%s: "
+        "status=%s→%s, teacher=%s→%s, category=%s→%s, severity=%s→%s "
+        "by %s_id=%s",
         report.bug_report_id,
         old_status.value if old_status else None,
         new_status.value if new_status else None,
         old_teacher_id,
         new_teacher_id,
-        changed_by.user_id,
+        old_category.value,
+        new_category.value if new_category else old_category.value,
+        old_severity.value,
+        new_severity.value if new_severity else old_severity.value,
+        actor_type,
+        actor_id,
     )
     return report
 
 
 # ===========================================================================
-# Public API: Add Attachments
-# ===========================================================================
-
-
-def add_attachments(
-    db: Session,
-    report_id: uuid.UUID,
-    user: User,
-    attachments: list[dict[str, Any]],
-) -> tuple[BugReport, list[BugReportAttachment]]:
-    """Thêm attachments vào bug report đã tồn tại.
-
-    Args:
-        db: SQLAlchemy session
-        report_id: UUID của report
-        user: User upload (phải là author hoặc admin)
-        attachments: list of dict, mỗi dict có:
-            {
-                "file_data": bytes,
-                "file_name": str,
-                "mime_type": str,
-            }
-
-    Returns:
-        (BugReport, list[BugReportAttachment vừa tạo])
-
-    Raises:
-        BugReportNotFoundError, BugReportPermissionError, BugReportValidationError
-    """
-    report = (
-        db.query(BugReport)
-        .options(selectinload(BugReport.attachments))
-        .filter(BugReport.bug_report_id == report_id)
-        .first()
-    )
-    if report is None:
-        raise BugReportNotFoundError()
-
-    if not _can_modify_report(user, report):
-        raise BugReportPermissionError(
-            "Bạn chỉ có thể upload attachments vào report của mình"
-        )
-
-    # Validate số lượng
-    current_count = len(report.attachments) if report.attachments else 0
-    if current_count + len(attachments) > MAX_ATTACHMENTS_PER_REPORT:
-        raise BugReportValidationError(
-            f"Report đã có {current_count} attachments. "
-            f"Tối đa {MAX_ATTACHMENTS_PER_REPORT}. "
-            f"Bạn đang upload {len(attachments)} thêm."
-        )
-
-    new_attachments = []
-    for att in attachments:
-        file_data: bytes = att["file_data"]
-        file_name: str = att["file_name"]
-        mime_type: str = att.get("mime_type") or "application/octet-stream"
-
-        _validate_attachment_file(file_data, file_name, mime_type)
-        file_url = _upload_to_minio(
-            file_data=file_data,
-            file_name=file_name,
-            mime_type=mime_type,
-            user_id=user.user_id,
-        )
-
-        attachment = BugReportAttachment(
-            bug_report_id=report.bug_report_id,
-            file_url=file_url,
-            file_name=file_name,
-            file_size=len(file_data),
-            mime_type=mime_type,
-            description=att.get("description"),
-        )
-        db.add(attachment)
-        new_attachments.append(attachment)
-
-    db.commit()
-    for att in new_attachments:
-        db.refresh(att)
-
-    logger.info(
-        "[bug_report_service] Added %d attachments to report_id=%s by user_id=%s",
-        len(new_attachments),
-        report_id,
-        user.user_id,
-    )
-    return report, new_attachments
-
-
 # ===========================================================================
 # Utility
 # ===========================================================================
@@ -919,12 +889,10 @@ __all__ = [
     "BugReportValidationError",
     "BugSeverity",
     "BugStatus",
-    "add_attachments",
     "check_rate_limit",
     "create_report",
     "get_report",
     "get_stats",
-    "get_user_reports",
     "list_reports",
     "update_status",
 ]
