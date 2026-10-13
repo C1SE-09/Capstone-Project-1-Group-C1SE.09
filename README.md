@@ -124,17 +124,14 @@ REST API is documented in [docs/bug-report-api.md](docs/bug-report-api.md).
 A ready-to-use **Postman collection** is at
 `postman/collections/🏫 KinderLog API/🐛 Bug Reports/` — import it into Postman v10+.
 
-7 endpoints under `/api/bug-reports`:
+4 endpoints under `/api/bug-reports`:
 
 | Method | Endpoint | Role |
 |---|---|---|
 | `POST` | `/api/bug-reports` | teacher / parent / admin |
-| `GET` | `/api/bug-reports/me` | teacher / parent / admin |
-| `GET` | `/api/bug-reports/me/{id}` | teacher / parent / admin |
 | `GET` | `/api/bug-reports` | admin |
 | `GET` | `/api/bug-reports/{id}` | admin |
 | `PATCH` | `/api/bug-reports/{id}` | admin |
-| `POST` | `/api/bug-reports/{id}/attachments` | author / admin |
 
 Interactive Swagger UI: <http://localhost:8000/docs#tag/bug-reports>
 
@@ -165,9 +162,8 @@ Run `backend/seed.sql` (after `alembic upgrade head`) to get:
 
 ### Configuration
 
-| Env var | Default | Description |
+| Constant | Value | Description |
 |---|---|---|
-| `BUG_REPORT_NOTIFY_EMAIL` | `""` | Comma-separated admin emails. Empty = auto-detect all admins. |
-| `MAX_ATTACHMENT_SIZE_MB` | `5` | Max size per attachment. |
+| `MAX_ATTACHMENT_SIZE_BYTES` | `5 * 1024 * 1024` (5 MB) | Max size per attachment. Hardcoded in `backend/app/services/bug_report_service.py`. |
 | `MAX_ATTACHMENTS_PER_REPORT` | `5` | Max attachments per report. |
 | `RATE_LIMIT_REPORTS_PER_HOUR` | `10` | Rate limit per user. |

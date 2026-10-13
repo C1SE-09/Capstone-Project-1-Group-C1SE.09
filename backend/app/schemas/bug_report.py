@@ -215,8 +215,13 @@ class BugReportCreate(BaseModel):
 class BugReportUpdate(BaseModel):
     """Payload cho ``PATCH /api/bug-reports/{id}`` (chỉ admin).
 
-    Admin có thể đổi status, gán teacher, hoặc thêm ghi chú.
-    Mọi thay đổi status/assignee đều được ghi vào ``bug_report_history``.
+    Admin có thể đổi status, gán teacher, sửa lại category/severity,
+    hoặc thêm ghi chú. Mọi thay đổi status/assignee/category/severity
+    đều được ghi vào ``bug_report_history``.
+
+    Lưu ý: ``category`` và ``severity`` mặc định khi user gửi là
+    ``"other"`` / ``"medium"``. Admin có thể sửa lại cho đúng
+    (vd: user mô tả "app sập" → admin tick lại category=crash, severity=critical).
     """
 
     status: BugStatusEnum | None = Field(
@@ -226,6 +231,17 @@ class BugReportUpdate(BaseModel):
     teacher_id: uuid.UUID | None = Field(
         None,
         description="UUID của teacher được gán xử lý bug này (null = bỏ gán)",
+    )
+    category: BugCategoryEnum | None = Field(
+        None,
+        description=(
+            "Loại lỗi (sửa lại cho đúng). "
+            "ui | performance | crash | data | notification | network | auth | other"
+        ),
+    )
+    severity: BugSeverityEnum | None = Field(
+        None,
+        description="Mức độ nghiêm trọng (sửa lại cho đúng). low | medium | high | critical",
     )
     comment: str | None = Field(
         None,
@@ -334,7 +350,7 @@ class BugReportOut(BaseModel):
 class BugReportDetail(BaseModel):
     """Response chi tiết: bao gồm đầy đủ attachments + history.
 
-    Dùng cho ``GET /api/bug-reports/{id}`` và ``GET /api/bug-reports/me/{id}``.
+    Dùng cho ``GET /api/bug-reports/{id}``.
     """
 
     bug_report_id: uuid.UUID = Field(..., description="UUID của bug report")
@@ -377,7 +393,7 @@ class BugReportDetail(BaseModel):
 
 
 class BugReportListResponse(BaseModel):
-    """Response phân trang cho ``GET /api/bug-reports`` và ``/me``."""
+    """Response phân trang cho ``GET /api/bug-reports`` (admin list)."""
 
     items: list[BugReportOut] = Field(
         default_factory=list, description="Danh sách bug reports"
@@ -388,23 +404,6 @@ class BugReportListResponse(BaseModel):
     total_pages: int = Field(..., description="Tổng số trang")
     has_next: bool = Field(..., description="Có trang kế tiếp không")
     has_prev: bool = Field(..., description="Có trang trước không")
-
-
-# ===========================================================================
-# Response: Upload Attachment(s)
-# ===========================================================================
-
-
-class BugReportAttachmentListResponse(BaseModel):
-    """Response cho ``POST /api/bug-reports/{id}/attachments``."""
-
-    bug_report_id: uuid.UUID = Field(..., description="UUID của report")
-    attachments: list[BugReportAttachmentOut] = Field(
-        ..., description="Danh sách attachments vừa upload"
-    )
-    total_attachments: int = Field(
-        ..., description="Tổng số attachments của report sau khi upload"
-    )
 
 
 # ===========================================================================
@@ -481,7 +480,6 @@ def bug_report_to_detail(report) -> dict:
 __all__ = [
     "BugCategory",
     "BugCategoryEnum",
-    "BugReportAttachmentListResponse",
     "BugReportAttachmentOut",
     "BugReportCreate",
     "BugReportDetail",

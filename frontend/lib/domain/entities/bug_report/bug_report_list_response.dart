@@ -4,7 +4,7 @@
 // app/schemas/bug_report.py (BugReportListResponse).
 //
 // Response phân trang cho 2 list endpoint:
-//   GET /api/bug-reports/me     → list report của user hiện tại
+//   GET /api/bug-reports           → list report (admin)
 //   GET /api/bug-reports        → admin list tất cả (có filter)
 
 import 'package:adark_frontend/domain/entities/base_entity.dart';

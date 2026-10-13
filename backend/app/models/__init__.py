@@ -14,6 +14,7 @@ Import order matters: Base must be imported before any model so that
 SQLAlchemy's mapper registry is populated correctly.
 """
 
+from app.models.admin_user import AdminUser
 from app.models.base import Base, TimestampMixin
 from app.models.bug_report import (
     BugCategory,
@@ -61,6 +62,7 @@ from app.models.user import (
 __all__ = [
     "ActivityCategory",
     "ActivityEntry",
+    "AdminUser",
     "Base",
     "BroadcastReportStatus",
     "BugCategory",

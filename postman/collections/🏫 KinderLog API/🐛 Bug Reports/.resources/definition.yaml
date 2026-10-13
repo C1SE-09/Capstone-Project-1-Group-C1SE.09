@@ -5,17 +5,14 @@ description: |-
   API cho phép người dùng (teacher / parent / admin) gửi báo cáo lỗi từ trong app,
   và admin xử lý các báo cáo này.
 
-  ## 7 Endpoints
+  ## 4 Endpoints
 
   | Method | Endpoint | Role | Mô tả |
   |---|---|---|---|
   | `POST` | `/api/bug-reports` | teacher/parent/admin | Tạo bug report mới (multipart, kèm ảnh được) |
-  | `GET` | `/api/bug-reports/me` | teacher/parent/admin | Danh sách report CỦA TÔI (phân trang) |
-  | `GET` | `/api/bug-reports/me/{id}` | teacher/parent/admin | Chi tiết 1 report CỦA TÔI |
   | `GET` | `/api/bug-reports` | admin | Danh sách TẤT CẢ report (filter + phân trang) |
   | `GET` | `/api/bug-reports/{id}` | admin | Chi tiết 1 report (bất kỳ) |
-  | `PATCH` | `/api/bug-reports/{id}` | admin | Cập nhật status / assignee / note |
-  | `POST` | `/api/bug-reports/{id}/attachments` | author/admin | Upload thêm ảnh |
+  | `PATCH` | `/api/bug-reports/{id}` | admin | Cập nhật status / assignee / category / severity / note |
 
   ## Auth flow
 

@@ -4,8 +4,8 @@
 // app/schemas/bug_report.py (BugReportOut + BugReportDetail).
 //
 // Hai class tách riêng vì backend trả 2 shape khác nhau:
-//   - GET /me, /api/bug-reports        → BugReportOut (không có attachment, history)
-//   - GET /me/{id}, /api/bug-reports/{id} → BugReportDetail (full)
+//   - GET /api/bug-reports        → BugReportOut (không có attachment, history)
+//   - GET /api/bug-reports/{id}   → BugReportDetail (full)
 //
 // Pattern mirror domain/entities/report/daily_report.dart (extend BaseEntity).
 

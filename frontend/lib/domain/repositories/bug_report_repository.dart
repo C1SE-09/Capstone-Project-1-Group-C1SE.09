@@ -6,12 +6,11 @@
 // Hiện tại: HttpBugReportRepository (gọi FastAPI backend).
 // Sau này có thể có MockBugReportRepository cho testing.
 //
-// 5 endpoint (MIRROR backend/app/api/endpoints/bug_reports.py):
+// 4 endpoint (MIRROR backend/app/api/endpoints/bug_reports.py):
 //   1. create()                  → POST   /api/bug-reports
 //   2. listAllReports() (admin)  → GET    /api/bug-reports
 //   3. getReport() (admin)       → GET    /api/bug-reports/{id}
 //   4. updateReport() (admin)    → PATCH  /api/bug-reports/{id}
-//   5. addAttachments()          → POST   /api/bug-reports/{id}/attachments
 //
 // Lưu ý: User (teacher/parent) CHỈ gọi create() để gửi bug.
 //        Admin gọi các endpoint còn lại để xem và xử lý.
@@ -137,25 +136,6 @@ abstract class BugReportRepository {
     String reportId,
     BugReportUpdatePayload payload,
   );
-
-  /// 5. Upload thêm ảnh vào report đã có (author hoặc admin).
-  /// Trả về danh sách attachment mới + tổng số attachment của report.
-  Future<AddAttachmentsResult> addAttachments(
-    String reportId,
-    List<BugReportAttachmentDraft> files,
-  );
-}
-
-class AddAttachmentsResult {
-  const AddAttachmentsResult({
-    required this.bugReportId,
-    required this.newAttachmentCount,
-    required this.totalAttachments,
-  });
-
-  final String bugReportId;
-  final int newAttachmentCount;
-  final int totalAttachments;
 }
 
 /// Exception riêng cho bug report — UI sẽ dịch sang tiếng Việt.

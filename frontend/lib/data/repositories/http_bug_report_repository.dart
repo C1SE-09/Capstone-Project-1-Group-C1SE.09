@@ -168,50 +168,6 @@ class HttpBugReportRepository implements BugReportRepository {
   }
 
   // ══════════════════════════════════════════════════════════
-  // 5. ADD ATTACHMENTS
-  // ══════════════════════════════════════════════════════════
-
-  @override
-  Future<AddAttachmentsResult> addAttachments(
-    String reportId,
-    List<BugReportAttachmentDraft> files,
-  ) async {
-    try {
-      final form = FormData();
-      for (final f in files) {
-        form.files.add(
-          MapEntry(
-            'attachments',
-            MultipartFile.fromBytes(
-              f.bytes,
-              filename: f.fileName,
-              contentType: _parseMediaType(f.mimeType),
-            ),
-          ),
-        );
-      }
-
-      final response = await _dio.post(
-        '/api/bug-reports/$reportId/attachments',
-        data: form,
-        options: _authOptions.copyWith(
-          contentType: 'multipart/form-data',
-        ),
-      );
-      final data = _asMap(response.data);
-      final rawList = data['attachments'];
-      final newCount = rawList is List ? rawList.length : 0;
-      return AddAttachmentsResult(
-        bugReportId: data['bug_report_id'] as String? ?? reportId,
-        newAttachmentCount: newCount,
-        totalAttachments: data['total_attachments'] as int? ?? newCount,
-      );
-    } on DioException catch (error) {
-      throw _toException(error, fallback: 'Không thể upload ảnh.');
-    }
-  }
-
-  // ══════════════════════════════════════════════════════════
   // Helpers
   // ══════════════════════════════════════════════════════════
 
