@@ -3,7 +3,7 @@ import secrets
 import time
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import redis
@@ -102,7 +102,7 @@ def create_session(user_id: str, role: str, device_id: str, device_name: str) ->
             "device_id": device_id_clean,
             "device_name": device_name_clean,
             "refresh_token": refresh_token,
-            "last_active_at": datetime.now(timezone.utc).isoformat(),
+            "last_active_at": datetime.now(UTC).isoformat(),
         },
     )
     client.expire(session_key, REFRESH_TOKEN_EXPIRE_SECONDS)
@@ -137,7 +137,7 @@ def refresh_session(session_id: str, refresh_token: str) -> dict[str, Any]:
         session_key,
         mapping={
             "refresh_token": new_refresh,
-            "last_active_at": datetime.now(timezone.utc).isoformat(),
+            "last_active_at": datetime.now(UTC).isoformat(),
         },
     )
     client.expire(session_key, REFRESH_TOKEN_EXPIRE_SECONDS)

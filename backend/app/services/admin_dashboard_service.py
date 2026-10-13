@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import redis
 from app.config import settings
@@ -35,7 +35,7 @@ SENT_STATUSES = {
 
 def get_overview_stats(db: Session, target_date: date | None = None) -> AdminOverviewStats:
     """Tính toán các chỉ số thống kê tổng quan toàn hệ thống."""
-    today = target_date or datetime.now(timezone.utc).date()
+    today = target_date or datetime.now(UTC).date()
 
     total_schools = db.query(func.count(School.school_id)).scalar() or 0
     total_classes = db.query(func.count(Class_.class_id)).scalar() or 0
@@ -84,7 +84,7 @@ def get_overview_stats(db: Session, target_date: date | None = None) -> AdminOve
 
 def get_classes_progress(db: Session, target_date: date | None = None) -> list[ClassProgressStat]:
     """Lấy danh sách tiến độ nộp báo cáo theo từng lớp trong ngày."""
-    today = target_date or datetime.now(timezone.utc).date()
+    today = target_date or datetime.now(UTC).date()
     classes = db.query(Class_).order_by(Class_.name).all()
 
     results: list[ClassProgressStat] = []
@@ -131,7 +131,7 @@ def get_classes_progress(db: Session, target_date: date | None = None) -> list[C
 def get_report_trends(db: Session, days: int = 7) -> list[ReportTrendItem]:
     """Lấy xu hướng tạo và duyệt báo cáo theo N ngày gần nhất."""
     days = max(1, min(days, 60))
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     start_date = today - timedelta(days=days - 1)
 
     reports = (
@@ -226,5 +226,5 @@ def get_system_health(db: Session) -> SystemHealthStats:
         database_status=db_status,
         redis_status=redis_status,
         api_status="healthy",
-        server_time=datetime.now(timezone.utc),
+        server_time=datetime.now(UTC),
     )
