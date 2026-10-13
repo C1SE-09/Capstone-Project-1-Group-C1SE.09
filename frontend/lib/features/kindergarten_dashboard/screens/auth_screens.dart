@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Đăng nhập không thành công: $e';
+        _errorMessage = e is AuthException ? e.message : 'Đăng nhập không thành công. Quý phụ huynh và thầy cô vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.';
       });
     } finally {
       if (mounted) {

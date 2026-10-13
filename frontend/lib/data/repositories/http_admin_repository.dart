@@ -430,4 +430,187 @@ class HttpAdminRepository {
   Future<void> deleteSchedule(String id) async {
     await _dio.delete('/api/admin/schedules/$id');
   }
+
+  // ---------------------------------------------------------
+  // Dashboard Metrics & Charts API (/api/admin/dashboard)
+  // ---------------------------------------------------------
+
+  Future<AdminOverviewStatsDto> getDashboardOverviewStats({DateTime? targetDate}) async {
+    final dateStr = targetDate?.toIso8601String().substring(0, 10);
+    final response = await _dio.get(
+      '/api/admin/dashboard/stats',
+      queryParameters: dateStr != null ? {'target_date': dateStr} : null,
+    );
+    return AdminOverviewStatsDto.fromJson(Map<String, dynamic>.from(response.data as Map));
+  }
+
+  Future<List<AdminClassProgressDto>> getDashboardClassesProgress({DateTime? targetDate}) async {
+    final dateStr = targetDate?.toIso8601String().substring(0, 10);
+    final response = await _dio.get(
+      '/api/admin/dashboard/classes-progress',
+      queryParameters: dateStr != null ? {'target_date': dateStr} : null,
+    );
+    final list = response.data as List? ?? [];
+    return list.map((e) => AdminClassProgressDto.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+  }
+
+  Future<AdminVoiceStatsDto> getDashboardVoiceStats() async {
+    final response = await _dio.get('/api/admin/dashboard/voice-stats');
+    return AdminVoiceStatsDto.fromJson(Map<String, dynamic>.from(response.data as Map));
+  }
+
+  Future<List<AdminReportTrendDto>> getDashboardReportTrends({int days = 7}) async {
+    final response = await _dio.get(
+      '/api/admin/dashboard/report-trends',
+      queryParameters: {'days': days},
+    );
+    final list = response.data as List? ?? [];
+    return list.map((e) => AdminReportTrendDto.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+  }
+
+  Future<AdminSystemHealthDto> getDashboardSystemHealth() async {
+    final response = await _dio.get('/api/admin/dashboard/system-health');
+    return AdminSystemHealthDto.fromJson(Map<String, dynamic>.from(response.data as Map));
+  }
+}
+
+class AdminOverviewStatsDto {
+  final int totalSchools;
+  final int totalClasses;
+  final int totalChildren;
+  final int totalTeachers;
+  final int totalParents;
+  final int todayReportsCount;
+  final int todaySentReportsCount;
+  final int todayDraftReportsCount;
+  final double todayCompletionRate;
+  final int totalVoiceRecords;
+  final int todayVoiceRecords;
+
+  AdminOverviewStatsDto({
+    required this.totalSchools,
+    required this.totalClasses,
+    required this.totalChildren,
+    required this.totalTeachers,
+    required this.totalParents,
+    required this.todayReportsCount,
+    required this.todaySentReportsCount,
+    required this.todayDraftReportsCount,
+    required this.todayCompletionRate,
+    required this.totalVoiceRecords,
+    required this.todayVoiceRecords,
+  });
+
+  factory AdminOverviewStatsDto.fromJson(Map<String, dynamic> json) => AdminOverviewStatsDto(
+        totalSchools: json['total_schools'] as int? ?? 0,
+        totalClasses: json['total_classes'] as int? ?? 0,
+        totalChildren: json['total_children'] as int? ?? 0,
+        totalTeachers: json['total_teachers'] as int? ?? 0,
+        totalParents: json['total_parents'] as int? ?? 0,
+        todayReportsCount: json['today_reports_count'] as int? ?? 0,
+        todaySentReportsCount: json['today_sent_reports_count'] as int? ?? 0,
+        todayDraftReportsCount: json['today_draft_reports_count'] as int? ?? 0,
+        todayCompletionRate: (json['today_completion_rate'] as num?)?.toDouble() ?? 0.0,
+        totalVoiceRecords: json['total_voice_records'] as int? ?? 0,
+        todayVoiceRecords: json['today_voice_records'] as int? ?? 0,
+      );
+}
+
+class AdminClassProgressDto {
+  final String classId;
+  final String className;
+  final String gradeLabel;
+  final String teacherName;
+  final int totalChildren;
+  final int reportedChildren;
+  final int pendingChildren;
+  final double completionRate;
+
+  AdminClassProgressDto({
+    required this.classId,
+    required this.className,
+    required this.gradeLabel,
+    required this.teacherName,
+    required this.totalChildren,
+    required this.reportedChildren,
+    required this.pendingChildren,
+    required this.completionRate,
+  });
+
+  factory AdminClassProgressDto.fromJson(Map<String, dynamic> json) => AdminClassProgressDto(
+        classId: json['class_id'] as String? ?? '',
+        className: json['class_name'] as String? ?? '',
+        gradeLabel: json['grade_label'] as String? ?? '',
+        teacherName: json['teacher_name'] as String? ?? 'Chưa phân công',
+        totalChildren: json['total_children'] as int? ?? 0,
+        reportedChildren: json['reported_children'] as int? ?? 0,
+        pendingChildren: json['pending_children'] as int? ?? 0,
+        completionRate: (json['completion_rate'] as num?)?.toDouble() ?? 0.0,
+      );
+}
+
+class AdminVoiceStatsDto {
+  final int totalRecords;
+  final int completedRecords;
+  final int pendingRecords;
+  final int failedRecords;
+  final double totalDurationSeconds;
+
+  AdminVoiceStatsDto({
+    required this.totalRecords,
+    required this.completedRecords,
+    required this.pendingRecords,
+    required this.failedRecords,
+    required this.totalDurationSeconds,
+  });
+
+  factory AdminVoiceStatsDto.fromJson(Map<String, dynamic> json) => AdminVoiceStatsDto(
+        totalRecords: json['total_records'] as int? ?? 0,
+        completedRecords: json['completed_records'] as int? ?? 0,
+        pendingRecords: json['pending_records'] as int? ?? 0,
+        failedRecords: json['failed_records'] as int? ?? 0,
+        totalDurationSeconds: (json['total_duration_seconds'] as num?)?.toDouble() ?? 0.0,
+      );
+}
+
+class AdminReportTrendDto {
+  final String reportDate;
+  final int totalReports;
+  final int sentReports;
+  final int draftReports;
+
+  AdminReportTrendDto({
+    required this.reportDate,
+    required this.totalReports,
+    required this.sentReports,
+    required this.draftReports,
+  });
+
+  factory AdminReportTrendDto.fromJson(Map<String, dynamic> json) => AdminReportTrendDto(
+        reportDate: json['report_date'] as String? ?? '',
+        totalReports: json['total_reports'] as int? ?? 0,
+        sentReports: json['sent_reports'] as int? ?? 0,
+        draftReports: json['draft_reports'] as int? ?? 0,
+      );
+}
+
+class AdminSystemHealthDto {
+  final String databaseStatus;
+  final String redisStatus;
+  final String apiStatus;
+  final String serverTime;
+
+  AdminSystemHealthDto({
+    required this.databaseStatus,
+    required this.redisStatus,
+    required this.apiStatus,
+    required this.serverTime,
+  });
+
+  factory AdminSystemHealthDto.fromJson(Map<String, dynamic> json) => AdminSystemHealthDto(
+        databaseStatus: json['database_status'] as String? ?? 'healthy',
+        redisStatus: json['redis_status'] as String? ?? 'healthy',
+        apiStatus: json['api_status'] as String? ?? 'healthy',
+        serverTime: json['server_time'] as String? ?? '',
+      );
 }

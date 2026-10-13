@@ -1,8 +1,18 @@
+import logging
+
+import redis
 from app.core.database import get_db
 from app.core.security import (
-    create_access_token,
+    ALGORITHM,
+    SECRET_KEY,
+    create_session,
     get_current_user,
     hash_password,
+    oauth2_scheme,
+    oauth2_scheme_optional,
+    refresh_session,
+    revoke_other_sessions,
+    revoke_session,
     verify_password,
 )
 from app.models.child import Parent
@@ -12,6 +22,7 @@ from app.schemas.auth_schema import (
     forgot_password_request,
     login_request,
     login_response,
+    refresh_token_request,
     reset_password_request,
     verify_reset_code_request,
 )
@@ -24,7 +35,10 @@ from app.services.password_reset_service import (
     verify_reset_code,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -38,9 +52,18 @@ def login(data: login_request, db: Session = Depends(get_db)):
             detail="Tên đăng nhập hoặc mật khẩu không chính xác",
         )
     role = user.role.value
-    access_token = create_access_token(user_id=str(user.user_id), role=role)
+
+    sess = create_session(
+        user_id=str(user.user_id),
+        role=role,
+        device_id=data.device_id or "default_device",
+        device_name=data.device_name or "thiết bị không rõ"
+    )
+
     return login_response(
-        access_token=access_token,
+        access_token=sess["access_token"],
+        refresh_token=sess["refresh_token"],
+        session_id=sess["session_id"],
         token_type="bearer",
         role=role,
         user_id=str(user.user_id),
@@ -48,15 +71,28 @@ def login(data: login_request, db: Session = Depends(get_db)):
         parent_id=str(user.parent_id) if user.parent_id else None,
     )
 
-
+@router.post("/refresh")
+def refresh_token(data: refresh_token_request):
+    return refresh_session(
+        session_id=data.session_id,
+        refresh_token=data.refresh_token
+    )
 @router.post("/logout")
-def logout(current_user: User = Depends(get_current_user)):
-    return {"message": "Đăng xuất thành công!"}
+def logout(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        sid = payload.get("session_id")
+        if sid:
+            revoke_session(sid)
+    except (JWTError, redis.RedisError) as e:
+        logger.warning("Không thể thu hồi session khi đăng xuất: %s", e)
+    return {"message": "Đăng xuất thành công"}
 
 
 @router.post("/change-password")
 def change_password(
     data: change_password_request,
+    token: str | None = Depends(oauth2_scheme_optional),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -73,6 +109,14 @@ def change_password(
 
     current_user.password_hash = hash_password(data.new_password)
     db.commit()
+    if data.logout_other_devices and token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            sid = payload.get("session_id")
+            if sid:
+                revoke_other_sessions(str(current_user.user_id), sid)
+        except (JWTError, redis.RedisError) as e:
+            logger.warning("Không thể thu hồi các session khác: %s", e)
     return {"message": "Đổi mật khẩu thành công!"}
 
 @router.post("/forgot-password")
@@ -124,7 +168,9 @@ def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)
                     target_email = p.email
 
     if user is None:
-        print(f"[AUTH] Quên mật khẩu: Không tìm thấy tài khoản tương ứng với '{input_val}' trong hệ thống!")
+        logger.warning(
+            f"[AUTH] Quên mật khẩu: Không tìm thấy tài khoản tương ứng với '{input_val}' trong hệ thống!"
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Email hoặc tên đăng nhập không tồn tại trong hệ thống.",
@@ -149,12 +195,13 @@ def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)
             ),
         )
     except Exception as exc:
+        logger.error(f"[AUTH] Gửi email đặt lại mật khẩu thất bại: {exc!s}")
         delete_reset_code(input_val)
         if target_email != input_val:
             delete_reset_code(target_email)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Gửi email thất bại: {exc!s}",
+            detail="Hệ thống tạm thời chưa thể gửi email xác thực. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút hoặc kiểm tra lại địa chỉ email.",
         ) from exc
 
     return {
@@ -220,7 +267,8 @@ def test_email(to_email: str):
         }
 
     except Exception as exc:
+        logger.error(f"[AUTH] Gửi email thử nghiệm thất bại tới {to_email}: {exc!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Gửi email thất bại: {exc!s}",
+            detail="Hệ thống tạm thời chưa thể gửi email thử nghiệm. Vui lòng kiểm tra lại cấu hình hòm thư.",
         ) from exc

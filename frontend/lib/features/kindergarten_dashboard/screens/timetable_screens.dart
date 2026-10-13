@@ -313,7 +313,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
               ),
               const SizedBox(width: 12),
             ],
-            KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
+            if (!widget.isReadOnly)
+              KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
           ],
         ),
         const SizedBox(height: 16),
@@ -378,26 +379,49 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              KButton(
-                label: 'Chỉnh sửa',
-                secondary: true,
-                icon: Icons.edit_outlined,
-                onPressed: () {
-                  Navigator.pop(sheetCtx);
-                  _openEditor(data, item);
-                },
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pop(sheetCtx);
-                  _confirmDelete(item);
-                },
-                style: TextButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                icon: Icon(Icons.delete_outline, size: 18, color: sheetCtx.k.bad),
-                label: Text('Xóa', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sheetCtx.k.bad)),
-              ),
+              if (item.roomLabel.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.place_outlined, size: 14, color: sheetCtx.k.inkFaint),
+                    const SizedBox(width: 4),
+                    Text('Phòng: ${item.roomLabel}', style: TextStyle(fontSize: 13, color: sheetCtx.k.inkSoft)),
+                  ],
+                ),
+              ],
+              if (item.content?.trim().isNotEmpty ?? false) ...[
+                const SizedBox(height: 6),
+                Text(item.content!.trim(), style: TextStyle(fontSize: 13, color: sheetCtx.k.inkSoft)),
+              ],
+              if (!widget.isReadOnly) ...[
+                const SizedBox(height: 16),
+                KButton(
+                  label: 'Chỉnh sửa',
+                  secondary: true,
+                  icon: Icons.edit_outlined,
+                  onPressed: () {
+                    Navigator.pop(sheetCtx);
+                    _openEditor(data, item);
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(sheetCtx);
+                    _confirmDelete(item);
+                  },
+                  style: TextButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                  icon: Icon(Icons.delete_outline, size: 18, color: sheetCtx.k.bad),
+                  label: Text('Xóa', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sheetCtx.k.bad)),
+                ),
+              ] else ...[
+                const SizedBox(height: 16),
+                KButton(
+                  label: 'Đóng',
+                  secondary: true,
+                  onPressed: () => Navigator.pop(sheetCtx),
+                ),
+              ],
             ],
           );
         },
@@ -406,6 +430,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   void _confirmDelete(ClassSchedule item) {
+    if (widget.isReadOnly) return;
     showKSheet(
       context,
       Builder(
@@ -443,6 +468,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   Future<void> _deleteItem(ClassSchedule item) async {
+    if (widget.isReadOnly) return;
     try {
       await _repo.deleteSchedule(item.scheduleId);
       if (!mounted) return;
@@ -455,6 +481,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   void _openEditor(_TimetableData data, [ClassSchedule? existing]) {
+    if (widget.isReadOnly) return;
     showKSheet(
       context,
       _ScheduleEditorSheet(
@@ -488,9 +515,14 @@ class _TimetableScreenState extends State<TimetableScreen> {
               const SizedBox(height: 16),
               const Text('Tuần này chưa có hoạt động nào.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
-              Text('Thêm hoạt động để lên lịch cho cả lớp.', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
-              const SizedBox(height: 20),
-              KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
+              Text(
+                widget.isReadOnly ? 'Lớp chưa có hoạt động nào trong tuần.' : 'Thêm hoạt động để lên lịch cho cả lớp.',
+                style: TextStyle(fontSize: 13, color: context.k.inkSoft),
+              ),
+              if (!widget.isReadOnly) ...[
+                const SizedBox(height: 20),
+                KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
+              ],
             ],
           ),
         ),

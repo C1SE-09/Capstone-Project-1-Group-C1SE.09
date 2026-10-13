@@ -372,7 +372,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       final body = response.data;
       if (body == null) {
         throw const TeacherRepositoryException(
-          'Server returned an empty response.',
+          'Máy chủ không phản hồi dữ liệu. Vui lòng thử lại sau.',
         );
       }
 
@@ -381,10 +381,10 @@ class TeacherRepository implements TeacherRepositoryBase {
       final statusCode = e.response?.statusCode;
       final detail = _extractDetail(e.response?.data) ??
           e.message ??
-          'Unknown network error.';
+          'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -437,7 +437,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -470,7 +470,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -491,7 +491,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       final body = response.data;
       if (body == null || body['extraction'] == null) {
         throw const TeacherRepositoryException(
-          'Server returned an empty extraction result.',
+          'Không nhận được kết quả nhận diện từ hệ thống. Vui lòng thử lại.',
         );
       }
 
@@ -503,7 +503,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -526,7 +526,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       final body = response.data;
       if (body == null || body['extraction'] == null) {
         throw const TeacherRepositoryException(
-          'Server returned an empty re-extraction result.',
+          'Không nhận được kết quả phân tích lại từ hệ thống. Vui lòng thử lại.',
         );
       }
 
@@ -538,7 +538,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -575,7 +575,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       final body = response.data;
       if (body == null) {
         throw const TeacherRepositoryException(
-          'Server returned an empty draft report response.',
+          'Không nhận được phản hồi tạo báo cáo từ hệ thống. Vui lòng thử lại.',
         );
       }
 
@@ -587,7 +587,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -640,7 +640,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -673,7 +673,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -708,7 +708,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       final data = response.data;
       if (data == null) {
         throw const TeacherRepositoryException(
-          'Server returned an empty approve-item response.',
+          'Không nhận được phản hồi duyệt báo cáo từ hệ thống. Vui lòng thử lại.',
         );
       }
       return data;
@@ -719,7 +719,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -751,7 +751,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       final data = response.data;
       if (data == null) {
         throw const TeacherRepositoryException(
-          'Server returned an empty send-batch response.',
+          'Không nhận được phản hồi gửi báo cáo từ hệ thống. Vui lòng thử lại.',
         );
       }
       return data;
@@ -762,7 +762,7 @@ class TeacherRepository implements TeacherRepositoryBase {
           'Unknown network error.';
       throw TeacherRepositoryException(detail, statusCode: statusCode);
     } catch (e) {
-      throw TeacherRepositoryException(e.toString());
+      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
     }
   }
 

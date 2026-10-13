@@ -8,7 +8,7 @@ import uuid
 
 from app.core.database import get_db
 from app.core.security import get_optional_current_user
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.schedule import (
     ClassScheduleBulkCreateRequest,
     ClassScheduleCreate,
@@ -30,6 +30,24 @@ time_slot_router = APIRouter(prefix="/time-slots", tags=["time-slots"])
 subject_router = APIRouter(prefix="/subjects", tags=["subjects"])
 
 
+def check_can_edit_schedule(
+    current_user: User | None = Depends(get_optional_current_user),
+) -> User | None:
+    """Kiểm tra quyền chỉnh sửa lịch: Phụ huynh không được phép chỉnh sửa."""
+    if current_user:
+        role_val = (
+            current_user.role.value
+            if hasattr(current_user.role, "value")
+            else str(current_user.role)
+        )
+        if role_val == UserRole.PARENT.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Phụ huynh không có quyền chỉnh sửa thời khóa biểu",
+            )
+    return current_user
+
+
 # ===========================================================================
 # 1. TimeSlot APIs
 # ===========================================================================
@@ -45,7 +63,7 @@ def get_time_slots(db: Session = Depends(get_db)):
 def create_time_slot(
     data: TimeSlotCreate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Tạo mới một khung giờ (Cần đăng nhập)."""
     return schedule_service.create_time_slot(db, data)
@@ -56,7 +74,7 @@ def update_time_slot(
     slot_id: uuid.UUID,
     data: TimeSlotUpdate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Cập nhật khung giờ."""
     updated = schedule_service.update_time_slot(db, slot_id, data)
@@ -69,7 +87,7 @@ def update_time_slot(
 def delete_time_slot(
     slot_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Xóa khung giờ."""
     success = schedule_service.delete_time_slot(db, slot_id)
@@ -93,7 +111,7 @@ def get_subjects(db: Session = Depends(get_db)):
 def create_subject(
     data: SubjectCreate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Tạo mới môn học / hoạt động (Cần đăng nhập)."""
     return schedule_service.create_subject(db, data)
@@ -104,7 +122,7 @@ def update_subject(
     subject_id: uuid.UUID,
     data: SubjectUpdate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Cập nhật môn học."""
     updated = schedule_service.update_subject(db, subject_id, data)
@@ -117,7 +135,7 @@ def update_subject(
 def delete_subject(
     subject_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Xóa môn học."""
     success = schedule_service.delete_subject(db, subject_id)
@@ -167,7 +185,7 @@ def get_teacher_schedule(
 def create_class_schedule(
     data: ClassScheduleCreate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Tạo mới 1 tiết học trong thời khóa biểu (Có kiểm tra trùng lịch)."""
     try:
@@ -182,7 +200,7 @@ def create_class_schedule(
 def bulk_upsert_class_schedule(
     data: ClassScheduleBulkCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Tạo/Thay thế toàn bộ thời khóa biểu tuần cho 1 lớp."""
     return schedule_service.bulk_upsert_class_schedule(
@@ -195,7 +213,7 @@ def update_class_schedule(
     schedule_id: uuid.UUID,
     data: ClassScheduleUpdate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Cập nhật tiết học."""
     try:
@@ -211,7 +229,7 @@ def update_class_schedule(
 def delete_class_schedule(
     schedule_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(check_can_edit_schedule),
 ):
     """Xóa tiết học."""
     success = schedule_service.delete_class_schedule(db, schedule_id)

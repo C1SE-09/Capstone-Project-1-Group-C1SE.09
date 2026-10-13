@@ -312,7 +312,7 @@ INSERT INTO users (
 ) VALUES
 -- Tài khoản Quản trị viên (Admin)
 (
-    '00000000-0000-0000-0000-000000000001',
+    '99999999-0000-0000-0000-000000000001',
     'admin',
     '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'admin',
@@ -780,7 +780,7 @@ INSERT INTO users (
 (
     '99999999-0000-0000-0000-000000000001',
     'admin',
-    '$2b$12$foo34pxPuwbC5qq8Ca2ZjOzu8Du0EGRaHeu6ZJhwV6.zHHrjfyRB.',
+    '$2b$12$TkaOWed2gmZwMOYzn3zHt.cTK7wQjAkvhy0gSDTPovjxZ9A/8k.PW',
     'admin',
     NULL,
     NULL,
@@ -1315,7 +1315,7 @@ INSERT INTO bug_report_history (
 (
     'a0000000-0000-0000-0000-000000000012',
     '10000000-0000-0000-0000-000000000008',
-    'bbbbbbbb-0000-0000-0000-000000000002',  -- Cô Lan (giáo viên được assign) tự thêm ghi chú
+    '11111111-0000-0000-0000-000000000002',  -- Cô Lan (giáo viên được assign) tự thêm ghi chú
     NULL, NULL, 'bbbbbbbb-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002',
     'Đã xác minh: payment gateway trả về amount*2 do bug ở webhook handler. Đang liên hệ backend team rollback.',
     NOW() - INTERVAL '6 hours'

@@ -42,7 +42,7 @@ class HttpClassDataRepository implements ClassDataRepository {
       );
     } on DioException catch (error) {
       throw ClassDataException(
-        error.message ?? 'Không thể tải thông tin lớp.',
+        'Không thể tải thông tin lớp. Vui lòng kiểm tra kết nối mạng và thử lại.',
         statusCode: error.response?.statusCode,
       );
     }
@@ -61,7 +61,7 @@ class HttpClassDataRepository implements ClassDataRepository {
           .toList(growable: false);
     } on DioException catch (error) {
       throw ClassDataException(
-        error.message ?? 'Không thể tải danh sách trẻ.',
+        'Không thể tải danh sách trẻ. Vui lòng kiểm tra kết nối mạng và thử lại.',
         statusCode: error.response?.statusCode,
       );
     }
@@ -70,6 +70,6 @@ class HttpClassDataRepository implements ClassDataRepository {
   Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
-    throw const ClassDataException('API trả về dữ liệu không hợp lệ.');
+    throw const ClassDataException('Dữ liệu lớp học nhận được không hợp lệ. Vui lòng thử lại sau.');
   }
 }

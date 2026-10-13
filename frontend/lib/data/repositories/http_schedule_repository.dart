@@ -175,7 +175,7 @@ class HttpScheduleRepository implements ScheduleRepository {
   Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
-    throw const ScheduleException('API trả về dữ liệu không hợp lệ.');
+    throw const ScheduleException('Dữ liệu thời khóa biểu nhận được không hợp lệ.');
   }
 
   /// Ưu tiên `detail` của backend (ví dụ thông báo trùng lịch) cho thân thiện hơn.
@@ -184,6 +184,14 @@ class HttpScheduleRepository implements ScheduleRepository {
     if (data is Map && data['detail'] is String && (data['detail'] as String).trim().isNotEmpty) {
       return (data['detail'] as String).trim();
     }
-    return error.message ?? fallback;
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return 'Thời gian kết nối quá lâu. Thầy cô vui lòng kiểm tra đường truyền mạng và thử lại.';
+    }
+    if (error.type == DioExceptionType.connectionError) {
+      return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.';
+    }
+    return fallback;
   }
 }

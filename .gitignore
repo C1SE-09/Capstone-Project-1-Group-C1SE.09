@@ -29,3 +29,9 @@ Thumbs.db
 backend/models/PhoWhisper-large-ct2/
 
 kinderlog_firebase_service.json
+
+GEMINI.md
+.agents/
+
+# Docs & Design references
+docs/
