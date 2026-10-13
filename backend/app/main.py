@@ -7,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import admin, auth, bug_reports, notifications
+from app.api.endpoints.admin_dashboard import (
+    router as admin_dashboard_router,
+)
 from app.api.endpoints.schedule import (
     router as schedule_router,
 )
@@ -74,6 +77,7 @@ app.include_router(subject_router, prefix="/api")
 app.include_router(schedule_router, prefix="/api")
 app.include_router(notifications.router)
 app.include_router(bug_reports.router)
+app.include_router(admin_dashboard_router, prefix="/api")
 
 
 @app.get("/")

@@ -99,16 +99,16 @@ class AuthRepository {
           );
         }
         throw AuthException(
-          detailMsg ?? 'Đăng nhập không thành công (mã lỗi: $status).',
+          detailMsg ?? 'Đăng nhập không thành công. Quý phụ huynh và thầy cô vui lòng kiểm tra lại thông tin đăng nhập hoặc thử lại sau.',
           statusCode: status,
         );
       }
       throw AuthException(
-        'Không thể kết nối đến máy chủ backend ($kApiBaseUrl). Vui lòng kiểm tra kết nối mạng.',
+        'Không thể kết nối đến máy chủ. Quý phụ huynh và thầy cô vui lòng kiểm tra lại kết nối mạng Wifi/4G.',
       );
     } catch (e) {
       if (e is AuthException) rethrow;
-      throw AuthException('Lỗi bất ngờ: $e');
+      throw const AuthException('Đã xảy ra sự cố ngoài ý muốn. Vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -148,7 +148,7 @@ class AuthRepository {
       _handleDioError(e, 'Không thể gửi yêu cầu đặt lại mật khẩu.');
     } catch (e) {
       if (e is AuthException) rethrow;
-      throw AuthException('Lỗi bất ngờ: $e');
+      throw const AuthException('Đã xảy ra sự cố ngoài ý muốn. Vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -174,7 +174,7 @@ class AuthRepository {
       _handleDioError(e, 'Mã xác thực không hợp lệ hoặc đã hết hạn.');
     } catch (e) {
       if (e is AuthException) rethrow;
-      throw AuthException('Lỗi bất ngờ: $e');
+      throw const AuthException('Đã xảy ra sự cố ngoài ý muốn. Vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -202,7 +202,7 @@ class AuthRepository {
       _handleDioError(e, 'Đặt lại mật khẩu không thành công.');
     } catch (e) {
       if (e is AuthException) rethrow;
-      throw AuthException('Lỗi bất ngờ: $e');
+      throw const AuthException('Đã xảy ra sự cố ngoài ý muốn. Vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -233,7 +233,7 @@ class AuthRepository {
       _handleDioError(e, 'Đổi mật khẩu thất bại.');
     } catch (e) {
       if (e is AuthException) rethrow;
-      throw AuthException('Lỗi bất ngờ: $e');
+      throw const AuthException('Đã xảy ra sự cố ngoài ý muốn. Vui lòng thử lại sau ít phút.');
     }
   }
 
@@ -248,7 +248,7 @@ class AuthRepository {
       throw AuthException(detailMsg ?? fallbackMsg, statusCode: status);
     }
     throw AuthException(
-      'Không thể kết nối đến máy chủ backend ($kApiBaseUrl). Vui lòng kiểm tra kết nối mạng.',
+      'Không thể kết nối đến máy chủ. Quý phụ huynh và thầy cô vui lòng kiểm tra lại kết nối mạng Wifi/4G.',
     );
   }
 }

@@ -234,7 +234,29 @@ def get_optional_current_user(
 
 def require_role(required_role: str) -> Callable:
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role.value != required_role:
+        user_role = (
+            current_user.role.value
+            if hasattr(current_user.role, "value")
+            else str(current_user.role)
+        )
+        if user_role != required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không có quyền truy cập",
+            )
+        return current_user
+
+    return role_checker
+
+
+def require_any_role(*roles: str) -> Callable:
+    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        user_role = (
+            current_user.role.value
+            if hasattr(current_user.role, "value")
+            else str(current_user.role)
+        )
+        if user_role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Bạn không có quyền truy cập",

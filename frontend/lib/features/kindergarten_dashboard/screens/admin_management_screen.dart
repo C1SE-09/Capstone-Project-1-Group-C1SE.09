@@ -68,10 +68,14 @@ class AdminManagementScreen extends StatefulWidget {
     super.key,
     required this.onLogout,
     this.repository,
+    this.initialCategory,
+    this.embedded = false,
   });
 
   final VoidCallback onLogout;
   final HttpAdminRepository? repository;
+  final AdminCategory? initialCategory;
+  final bool embedded;
 
   @override
   State<AdminManagementScreen> createState() => _AdminManagementScreenState();
@@ -79,7 +83,7 @@ class AdminManagementScreen extends StatefulWidget {
 
 class _AdminManagementScreenState extends State<AdminManagementScreen> {
   late final HttpAdminRepository _repo = widget.repository ?? HttpAdminRepository();
-  AdminCategory _selectedCategory = AdminCategory.parents;
+  late AdminCategory _selectedCategory = widget.initialCategory ?? AdminCategory.parents;
   int _selectedDayOfWeek = 2; // 2: Thứ 2, 3: Thứ 3, ..., 6: Thứ 6
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -97,6 +101,19 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminManagementScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialCategory != null && widget.initialCategory != _selectedCategory) {
+      setState(() {
+        _selectedCategory = widget.initialCategory!;
+        _searchController.clear();
+        _searchQuery = '';
+      });
+      _loadData();
+    }
   }
 
   @override
@@ -1374,8 +1391,10 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
 
     return Scaffold(
       backgroundColor: context.k.canvas,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              automaticallyImplyLeading: false,
         backgroundColor: context.k.canvas,
         surfaceTintColor: Colors.transparent,
         elevation: 0,

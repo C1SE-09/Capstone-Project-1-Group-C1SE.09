@@ -542,7 +542,7 @@ class _RecordingScreenState extends State<RecordingScreen>
         setState(() => isBusy = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Không thể bắt đầu ghi âm: $e'),
+            content: const Text('Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé.'),
             backgroundColor: context.k.bad,
           ),
         );
