@@ -108,15 +108,15 @@ class UserFacingException implements Exception {
 /// Ngoại lệ khi mất kết nối mạng.
 class OfflineException extends UserFacingException {
   const OfflineException([
-    String message = 'Không có kết nối mạng. Vui lòng kiểm tra Wifi/4G của bạn.',
-  ]) : super(message);
+    super.message = 'Không có kết nối mạng. Vui lòng kiểm tra Wifi/4G của bạn.',
+  ]);
 }
 
 /// Ngoại lệ khi phiên làm việc hết hạn và cần đăng nhập lại.
 class SessionExpiredException extends UserFacingException {
   const SessionExpiredException([
-    String message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.',
-  ]) : super(message, statusCode: 401);
+    super.message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.',
+  ]) : super(statusCode: 401);
 }
 
 /// Dữ liệu phiên đăng nhập lưu trong máy

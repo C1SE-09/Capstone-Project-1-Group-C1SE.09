@@ -53,7 +53,7 @@ class HttpNotificationRepository implements NotificationRepository {
       );
     } on DioException catch (error) {
       throw NotificationException(
-        error.message ?? 'Không thể đăng ký nhận thông báo.',
+        'Không thể đăng ký nhận thông báo. Vui lòng thử lại sau.',
         statusCode: error.response?.statusCode,
       );
     }
@@ -69,7 +69,7 @@ class HttpNotificationRepository implements NotificationRepository {
       );
     } on DioException catch (error) {
       throw NotificationException(
-        error.message ?? 'Không thể xoá đăng ký thông báo.',
+        'Không thể xoá đăng ký thông báo. Vui lòng thử lại sau.',
         statusCode: error.response?.statusCode,
       );
     }

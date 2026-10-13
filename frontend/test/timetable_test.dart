@@ -96,4 +96,51 @@ void main() {
     expect(find.text('Tuần này chưa có hoạt động nào.'), findsOneWidget);
     expect(find.text('Thêm hoạt động'), findsWidgets);
   });
+
+  testWidgets('isReadOnly=true không cho phép phụ huynh thêm/sửa/xóa lịch', (tester) async {
+    final repo = _FakeScheduleRepository([
+      buildItem('a', 'Vẽ sáng tạo', 'slot1'),
+    ]);
+
+    await tester.pumpWidget(wrap(TimetableScreen(
+      classId: 'c1',
+      className: 'Lớp Mầm A',
+      repository: repo,
+      isReadOnly: true,
+    )));
+    await tester.pumpAndSettle();
+
+    // Không có nút Thêm hoạt động
+    expect(find.text('Thêm hoạt động'), findsNothing);
+
+    // Bấm vào hoạt động để mở chi tiết
+    await tester.tap(find.text('Vẽ sáng tạo'));
+    await tester.pumpAndSettle();
+
+    // Hiển thị nút Đóng, KHÔNG hiển thị Chỉnh sửa hay Xóa
+    expect(find.text('Đóng'), findsOneWidget);
+    expect(find.text('Chỉnh sửa'), findsNothing);
+    expect(find.text('Xóa'), findsNothing);
+
+    // Bấm Đóng để đóng sheet
+    await tester.tap(find.text('Đóng'));
+    await tester.pumpAndSettle();
+    expect(find.text('Đóng'), findsNothing);
+  });
+
+  testWidgets('isReadOnly=true khi danh sách trống không hiển thị nút thêm hoạt động', (tester) async {
+    final repo = _FakeScheduleRepository(const []);
+
+    await tester.pumpWidget(wrap(TimetableScreen(
+      classId: 'c1',
+      className: 'Lớp Mầm A',
+      repository: repo,
+      isReadOnly: true,
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tuần này chưa có hoạt động nào.'), findsOneWidget);
+    expect(find.text('Lớp chưa có hoạt động nào trong tuần.'), findsOneWidget);
+    expect(find.text('Thêm hoạt động'), findsNothing);
+  });
 }

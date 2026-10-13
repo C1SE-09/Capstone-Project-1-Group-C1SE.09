@@ -109,7 +109,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Lỗi gửi yêu cầu: $e';
+        _errorMessage = e is AuthException ? e.message : 'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -145,7 +145,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Xác thực thất bại: $e';
+        _errorMessage = e is AuthException ? e.message : 'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -170,7 +170,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Không thể gửi lại mã: $e';
+        _errorMessage = e is AuthException ? e.message : 'Không thể gửi lại mã xác thực vào lúc này. Vui lòng thử lại sau ít phút.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -247,7 +247,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Đặt lại mật khẩu thất bại: $e';
+        _errorMessage = e is AuthException ? e.message : 'Đặt lại mật khẩu không thành công. Vui lòng thử lại sau ít phút.';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);

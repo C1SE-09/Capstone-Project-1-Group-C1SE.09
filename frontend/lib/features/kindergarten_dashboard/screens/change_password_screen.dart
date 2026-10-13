@@ -92,7 +92,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       setState(() => _errorMessage = e.message);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Có lỗi xảy ra: $e');
+      setState(() => _errorMessage = 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -422,7 +422,7 @@ class __ChangePasswordFormSheetState
       setState(() => _errorMessage = e.message);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Có lỗi xảy ra: $e');
+      setState(() => _errorMessage = 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

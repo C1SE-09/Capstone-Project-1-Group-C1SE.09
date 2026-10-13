@@ -168,7 +168,9 @@ def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)
                     target_email = p.email
 
     if user is None:
-        print(f"[AUTH] Quên mật khẩu: Không tìm thấy tài khoản tương ứng với '{input_val}' trong hệ thống!")
+        logger.warning(
+            f"[AUTH] Quên mật khẩu: Không tìm thấy tài khoản tương ứng với '{input_val}' trong hệ thống!"
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Email hoặc tên đăng nhập không tồn tại trong hệ thống.",
@@ -193,12 +195,13 @@ def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)
             ),
         )
     except Exception as exc:
+        logger.error(f"[AUTH] Gửi email đặt lại mật khẩu thất bại: {exc!s}")
         delete_reset_code(input_val)
         if target_email != input_val:
             delete_reset_code(target_email)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Gửi email thất bại: {exc!s}",
+            detail="Hệ thống tạm thời chưa thể gửi email xác thực. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút hoặc kiểm tra lại địa chỉ email.",
         ) from exc
 
     return {
@@ -264,7 +267,8 @@ def test_email(to_email: str):
         }
 
     except Exception as exc:
+        logger.error(f"[AUTH] Gửi email thử nghiệm thất bại tới {to_email}: {exc!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Gửi email thất bại: {exc!s}",
+            detail="Hệ thống tạm thời chưa thể gửi email thử nghiệm. Vui lòng kiểm tra lại cấu hình hòm thư.",
         ) from exc
