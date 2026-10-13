@@ -5,6 +5,12 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!-- Quyền hiển thị thông báo (Android 13+) cho push notification -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Quyền camera + đọc thư viện ảnh cho bug report (image_picker) -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Android 13+ trở xuống: READ_EXTERNAL_STORAGE (chỉ cần maxSdkVersion 32) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <!-- Android 13+ dùng READ_MEDIA_IMAGES để chọn ảnh từ thư viện -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 
     <application
         android:label="adark_frontend"
@@ -48,6 +54,10 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- image_picker cần query camera app trên Android 11+ -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE"/>
         </intent>
     </queries>
 </manifest>

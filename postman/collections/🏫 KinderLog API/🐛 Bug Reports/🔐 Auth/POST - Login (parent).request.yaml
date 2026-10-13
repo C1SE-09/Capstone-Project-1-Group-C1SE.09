@@ -1,0 +1,28 @@
+$kind: http-request
+description: |-
+  Login với tài khoản parent (username: `tuan`, password: `123456`).
+
+  **Test script** tự lưu `access_token` vào `parent_token` collection variable.
+url: "{{base_url}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "username": "tuan",
+      "password": "123456"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.collectionVariables.set('parent_token', json.access_token);
+          console.log('[parent] token saved, role=' + json.role + ', user_id=' + json.user_id);
+      } else {
+          console.error('[parent] login failed:', pm.response.text());
+      }
+    language: text/javascript
+order: 3000

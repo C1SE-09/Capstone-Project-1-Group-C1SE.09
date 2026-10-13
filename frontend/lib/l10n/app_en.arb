@@ -1,0 +1,74 @@
+{
+  "@@locale": "en",
+  "appTitle": "KinderLog",
+  "@appTitle": { "description": "App name shown in title bar" },
+
+  "bugReportTitle": "Report a Bug",
+  "bugReportNewButton": "Report a bug",
+  "bugReportAdminListButton": "Manage bug reports",
+
+  "bugReportFormTitleLabel": "Title",
+  "bugReportFormTitleHint": "Briefly describe the issue (max 200 chars)",
+  "bugReportFormDescriptionLabel": "Description",
+  "bugReportFormDescriptionHint": "Steps to reproduce, what you expected, what happened (max 4000 chars)",
+  "bugReportFormCategoryLabel": "Category",
+  "bugReportFormSeverityLabel": "Severity",
+  "bugReportFormAttachmentsLabel": "Screenshots",
+  "bugReportFormAddAttachment": "Add image",
+  "bugReportFormRemoveAttachment": "Remove",
+  "bugReportFormSubmit": "Submit",
+  "bugReportFormSubmitting": "Submitting...",
+  "bugReportFormSuccess": "Bug report submitted. Admin will review soon.",
+  "bugReportFormOfflineQueued": "Saved locally. Will be sent when you are back online.",
+  "bugReportFormValidationEmpty": "Please fill in title and description.",
+  "bugReportFormValidationTitleTooLong": "Title must be at most 200 characters.",
+  "bugReportFormValidationDescriptionTooLong": "Description must be at most 4000 characters.",
+
+  "bugReportDetailTitle": "Bug Report Detail",
+  "bugReportDetailSectionMetadata": "Environment",
+  "bugReportDetailSectionAttachments": "Attachments",
+  "bugReportDetailSectionHistory": "Status History",
+  "bugReportDetailTapToZoom": "Tap to zoom",
+
+  "bugReportAdminTitle": "Bug Reports (Admin)",
+  "bugReportAdminFilter": "Filters",
+  "bugReportAdminSearchHint": "Search by title...",
+  "bugReportAdminEmpty": "No reports match the current filter.",
+  "bugReportAdminUpdateStatus": "Update status",
+  "bugReportAdminNewStatus": "New status",
+  "bugReportAdminAssignee": "Assign to teacher",
+  "bugReportAdminComment": "Internal comment",
+  "bugReportAdminCommentHint": "Visible to admin only (optional)",
+  "bugReportAdminSave": "Save",
+  "bugReportAdminSaving": "Saving...",
+  "bugReportAdminSaved": "Report updated.",
+
+  "bugReportStatusOpen": "Open",
+  "bugReportStatusInProgress": "In progress",
+  "bugReportStatusResolved": "Resolved",
+  "bugReportStatusClosed": "Closed",
+  "bugReportStatusWontFix": "Won't fix",
+
+  "bugReportSeverityLow": "Low",
+  "bugReportSeverityMedium": "Medium",
+  "bugReportSeverityHigh": "High",
+  "bugReportSeverityCritical": "Critical",
+
+  "bugReportCategoryUi": "UI",
+  "bugReportCategoryPerformance": "Performance",
+  "bugReportCategoryCrash": "Crash",
+  "bugReportCategoryData": "Data",
+  "bugReportCategoryNotification": "Notification",
+  "bugReportCategoryNetwork": "Network",
+  "bugReportCategoryAuth": "Authentication",
+  "bugReportCategoryOther": "Other",
+
+  "bugReportCommonAttachmentsCount": "{count, plural, =0{No attachments} =1{1 attachment} other{{count} attachments}}",
+  "@bugReportCommonAttachmentsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "bugReportCommonRetry": "Retry",
+  "bugReportCommonCancel": "Cancel",
+  "bugReportCommonClose": "Close"
+}

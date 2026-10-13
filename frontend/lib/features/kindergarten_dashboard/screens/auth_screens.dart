@@ -62,9 +62,15 @@ class _LoginScreenState extends State<LoginScreen> {
         username: username,
         password: password,
       );
-      final role = (user.role.toLowerCase() == 'parent')
-          ? UserRole.parent
-          : UserRole.teacher;
+      final rawRole = user.role.toLowerCase();
+      final UserRole role;
+      if (rawRole == 'admin') {
+        role = UserRole.admin;
+      } else if (rawRole == 'parent') {
+        role = UserRole.parent;
+      } else {
+        role = UserRole.teacher;
+      }
       if (role == UserRole.parent) {
         // Scope A: chỉ phụ huynh nhận push báo cáo mới.
         PushNotificationService.instance.registerCurrentDevice();
