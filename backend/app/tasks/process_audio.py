@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import uuid
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlsplit, urlunsplit
 from urllib.request import urlopen
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -21,9 +22,6 @@ from app.services.stt_service import stt_service
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
-
-
-from urllib.parse import quote, urlsplit, urlunsplit
 
 
 def _download_audio(audio_url: str) -> str:

@@ -1,2 +1,5 @@
 [tool.ruff.lint]
+# Select tường minh: đóng băng bộ rules (E4/E7/E9/F) để không bị đổi default
+# của ruff bản mới (0.17 mở rộng default → 123 lỗi nếu để rủ tự khám phá).
+select = ["E4", "E7", "E9", "F"]
 ignore = ["B008"]
