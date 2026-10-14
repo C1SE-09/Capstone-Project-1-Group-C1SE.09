@@ -46,6 +46,9 @@ abstract class DashboardRepository {
   /// Đứa con (duy nhất trong MVP) kèm lớp + giáo viên — cho card con.
   Future<ChildOverview> getPrimaryChildOverview(String parentId);
 
+  /// Phụ huynh tự cập nhật SĐT của mình — PUT /api/parent/{parentId}.
+  Future<void> updateMyPhone(String parentId, String phone);
+
   /// Báo cáo hôm nay của trẻ (null nếu chưa có) — dùng cho banner.
   Future<DailyReport?> getTodayReport(
     String childId,

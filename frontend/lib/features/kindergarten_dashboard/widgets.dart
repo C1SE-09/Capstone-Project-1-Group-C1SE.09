@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'models.dart';
 import 'theme.dart';
+import 'theme_controller.dart';
 
 class KCard extends StatelessWidget {
   const KCard({super.key, required this.child, this.padding, this.onTap, this.color});
@@ -447,6 +448,158 @@ class BottomActionBar extends StatelessWidget {
         border: Border(top: BorderSide(color: context.k.line)),
       ),
       child: SafeArea(top: false, minimum: const EdgeInsets.all(14), child: child),
+    );
+  }
+}
+
+/// Định dạng ngày kiểu Việt Nam: 12/03/2026.
+String kDateLabel(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+/// Một dòng nhãn — giá trị, dùng cho các card thông tin (liên hệ, thông tin bé).
+class KInfoRow extends StatelessWidget {
+  const KInfoRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.danger = false,
+    this.onTap,
+    this.icon,
+  });
+
+  final String label;
+  final String value;
+  final bool danger;
+  final VoidCallback? onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 13, color: context.k.inkSoft),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (danger && icon != null) ...[
+                    Icon(icon, size: 15, color: context.k.bad),
+                    const SizedBox(width: 5),
+                  ],
+                  Flexible(
+                    child: Text(
+                      value,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: danger ? context.k.bad : context.k.ink,
+                      ),
+                    ),
+                  ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.edit_outlined, size: 16, color: context.k.brand),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (onTap == null) return row;
+    return InkWell(onTap: onTap, child: row);
+  }
+}
+
+/// Bộ chọn giao diện Sáng / Tối / Theo máy — dùng chung cho mọi vai trò.
+/// (Trước đây nằm riêng trong teacher_tabs.dart.)
+class ThemeSelector extends StatelessWidget {
+  const ThemeSelector({super.key});
+
+  static const _options = <(ThemeMode, String, IconData)>[
+    (ThemeMode.light, 'Sáng', Icons.wb_sunny_outlined),
+    (ThemeMode.dark, 'Tối', Icons.dark_mode_outlined),
+    (ThemeMode.system, 'Theo máy', Icons.smartphone_outlined),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.instance,
+      builder: (context, mode, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.brightness_6_outlined, size: 19, color: context.k.inkSoft),
+                const SizedBox(width: 12),
+                Text('Giao diện', style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                for (final (value, labelText, icon) in _options) ...[
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      selected: mode == value,
+                      label: labelText,
+                      child: InkWell(
+                        onTap: () => ThemeController.instance.set(value),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: mode == value ? context.k.surface : Colors.transparent,
+                            border: Border.all(
+                              color: mode == value
+                                  ? context.k.brand.withValues(alpha: .4)
+                                  : Colors.transparent,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                icon,
+                                size: 16,
+                                color: mode == value ? context.k.brand : context.k.inkFaint,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                labelText,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: mode == value ? context.k.brand : context.k.inkFaint,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

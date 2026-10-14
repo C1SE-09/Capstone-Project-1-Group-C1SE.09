@@ -224,7 +224,7 @@ def delete_teacher(teacher_id: str, db: Session = Depends(get_db)):
 
 @router.get("/classes")
 def list_classes(db: Session = Depends(get_db)):
-    classes = db.query(Class_).filter(Class_.is_active == True).order_by(Class_.name.asc()).all()
+    classes = db.query(Class_).filter(Class_.is_active.is_(True)).order_by(Class_.name.asc()).all()
     return [
         {
             "id": str(c.class_id),

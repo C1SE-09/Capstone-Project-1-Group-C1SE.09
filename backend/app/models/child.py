@@ -239,6 +239,7 @@ class Parent(Base, TimestampMixin):
     phone        : Primary contact phone number (unique, max 20 chars)
     email        : Contact email (optional, unique if provided, max 255 chars)
     avatar_url   : Profile photo URL (optional)
+    relationship : Quan hệ với bé (vd. Bố, Mẹ) — optional
     status       : ParentStatus enum – defaults to ACTIVE
     is_verified  : True after school admin links the parent to a child
 
@@ -288,6 +289,14 @@ class Parent(Base, TimestampMixin):
         String(512),
         nullable=True,
         comment="Profile photo URL in object storage",
+    )
+    # Attr có "_" để không shadow relationship() của SQLAlchemy trong class body;
+    # tên cột DB vẫn là "relationship".
+    relationship_: Mapped[str | None] = mapped_column(
+        "relationship",
+        String(20),
+        nullable=True,
+        comment="Quan hệ với bé (vd: Bố, Mẹ) do phụ huynh tự khai",
     )
 
     # --- Status ---

@@ -179,9 +179,10 @@ void main() {
     await tester.tap(find.byIcon(Icons.chevron_right).last);
     await tester.pumpAndSettle();
 
-    // Verify report detail screen is displayed with 'Báo cáo hằng ngày' and 'Đã đọc' badge
+    // Verify report sheet is displayed with 'Báo cáo hằng ngày' and 'Đã đọc' badge
     expect(find.text('Báo cáo hằng ngày'), findsOneWidget);
-    expect(find.text('Đã đọc'), findsOneWidget);
+    // Mở dạng sheet: badge trong sheet + pill của danh sách phía sau đều là 'Đã đọc'
+    expect(find.text('Đã đọc'), findsWidgets);
 
     // Tap back button
     await tester.tap(find.byTooltip('Quay lại'));
@@ -194,6 +195,11 @@ void main() {
   testWidgets('ParentFlow clicking logout shows confirmation popup and handles Cancel/Logout',
       (WidgetTester tester) async {
     var loggedOut = false;
+
+    // Màn Tài khoản dài — dựng ở viewport cao để nút đăng xuất cuối tab được build.
+    tester.view.physicalSize = const Size(1100, 3200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -209,8 +215,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify logout button is visible
-    final logoutBtn = find.byTooltip('Đăng xuất');
+    // Nút đăng xuất nằm ở cuối tab Tài khoản
+    await tester.tap(find.text('Tài khoản'));
+    await tester.pumpAndSettle();
+
+    final logoutBtn = find.widgetWithText(KButton, 'Đăng xuất');
     expect(logoutBtn, findsOneWidget);
 
     // Tap logout button
@@ -233,8 +242,8 @@ void main() {
     await tester.tap(logoutBtn);
     await tester.pumpAndSettle();
 
-    // Tap Đăng xuất inside popup
-    await tester.tap(find.widgetWithText(KButton, 'Đăng xuất'));
+    // Tap Đăng xuất inside popup (nút thứ hai, sau nút ở tab Tài khoản)
+    await tester.tap(find.widgetWithText(KButton, 'Đăng xuất').last);
     await tester.pumpAndSettle();
 
     // Verify logout callback invoked
@@ -256,8 +265,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify timetable button is visible on child card
+    // (header không còn icon TKB — thiết kế v4 chỉ để TKB ở card bé)
     expect(find.text('Thời khóa biểu của lớp'), findsOneWidget);
-    expect(find.byTooltip('Thời khóa biểu'), findsOneWidget);
 
     // Tap on timetable button
     await tester.tap(find.text('Thời khóa biểu của lớp'));

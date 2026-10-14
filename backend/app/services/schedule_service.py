@@ -134,7 +134,7 @@ def get_schedules_by_class(
             joinedload(ClassSchedule.subject),
             joinedload(ClassSchedule.teacher),
         )
-        .filter(ClassSchedule.class_id == class_id, ClassSchedule.is_active == True)
+        .filter(ClassSchedule.class_id == class_id, ClassSchedule.is_active.is_(True))
     )
 
     if day_of_week is not None:
@@ -158,7 +158,7 @@ def get_schedules_by_teacher(
             joinedload(ClassSchedule.subject),
             joinedload(ClassSchedule.class_),
         )
-        .filter(ClassSchedule.teacher_id == teacher_id, ClassSchedule.is_active == True)
+        .filter(ClassSchedule.teacher_id == teacher_id, ClassSchedule.is_active.is_(True))
     )
 
     if day_of_week is not None:
@@ -190,7 +190,7 @@ def check_schedule_conflict(
         ClassSchedule.class_id == class_id,
         ClassSchedule.slot_id == slot_id,
         ClassSchedule.day_of_week == day_of_week,
-        ClassSchedule.is_active == True,
+        ClassSchedule.is_active.is_(True),
     )
     if exclude_schedule_id:
         class_query = class_query.filter(
@@ -206,7 +206,7 @@ def check_schedule_conflict(
             ClassSchedule.teacher_id == teacher_id,
             ClassSchedule.slot_id == slot_id,
             ClassSchedule.day_of_week == day_of_week,
-            ClassSchedule.is_active == True,
+            ClassSchedule.is_active.is_(True),
         )
         if exclude_schedule_id:
             teacher_query = teacher_query.filter(

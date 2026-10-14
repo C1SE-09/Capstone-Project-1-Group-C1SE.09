@@ -1,14 +1,19 @@
+// parent_screens.dart
+// =========================================================
+// Màn phụ huynh: shell 2 tab (Tổng quan / Tài khoản) + sheet báo cáo.
+// Tab Tài khoản nằm ở parent_account.dart.
+
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
+
+import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_account.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
@@ -27,24 +32,21 @@ class ParentFlow extends StatefulWidget {
 class _ParentFlowState extends State<ParentFlow> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
   late Future<_ParentData> future;
-  bool showReport = false;
-  DailyReport? selectedReport;
+  int _tab = 0;
 
   @override
   void initState() {
     super.initState();
     future = _load();
-    // Chạm push notification → mở thẳng báo cáo hôm nay khi dữ liệu tải xong.
+    // Chạm push notification → mở thẳng sheet báo cáo hôm nay khi dữ liệu tải xong.
     future.then(
       (data) {
         if (!mounted || !widget.initialOpenReport) return;
         final today = data.today;
-        if (today != null && !showReport) {
-          setState(() {
-            selectedReport = today;
-            showReport = true;
-          });
-        }
+        if (today == null) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openReport(data, today);
+        });
       },
       onError: (_) {},
     );
@@ -64,7 +66,53 @@ class _ParentFlowState extends State<ParentFlow> {
       today,
       includeDraft: false,
     );
-    return _ParentData(parent.fullName, overview, reports, todayReport);
+    return _ParentData(parent, overview, reports, todayReport);
+  }
+
+  void _openReport(_ParentData data, DailyReport report) {
+    showParentReportSheet(
+      context,
+      report: report,
+      childName: data.overview.child.fullName,
+      teacherName: data.overview.teacherName,
+      repository: repository,
+      onReportRead: (updated) => setState(() {
+        future = future.then((current) => current.withReport(updated));
+      }),
+    );
+  }
+
+  void _onPhoneUpdated(String phone) {
+    setState(() {
+      future = future.then(
+        (current) => _ParentData(
+          current.parent.copyWith(phone: phone),
+          current.overview,
+          current.reports,
+          current.today,
+        ),
+      );
+    });
+  }
+
+  /// Báo cáo chưa đọc (đã gửi nhưng phụ huynh chưa mở).
+  int _unreadCount(_ParentData data) {
+    // API trả báo cáo hôm nay nằm luôn trong danh sách gần đây → khử trùng theo id,
+    // nếu không badge sẽ đếm gấp đôi cùng một báo cáo.
+    final unique = <String, DailyReport>{};
+    for (final report in <DailyReport>[
+      if (data.today != null) data.today!,
+      ...data.reports,
+    ]) {
+      unique[report.dailyReportId] = report;
+    }
+    return unique.values
+        .where(
+          (r) =>
+              r.status != domain_status.ReportStatus.read &&
+              r.status != domain_status.ReportStatus.draft,
+        )
+        .length;
   }
 
   // Renders loading, error, empty, and fetched parent data states.
@@ -75,64 +123,62 @@ class _ParentFlowState extends State<ParentFlow> {
           if (snapshot.connectionState != ConnectionState.done) {
             return Scaffold(
               backgroundColor: context.k.canvas,
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError) {
-            return Scaffold(
-              backgroundColor: context.k.canvas,
-              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+              body: const Center(child: CircularProgressIndicator()),
             );
           }
           final data = snapshot.data;
-          if (data == null) {
+          if (snapshot.hasError || data == null) {
             return Scaffold(
               backgroundColor: context.k.canvas,
               body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
             );
           }
-          final todayReport = data.today;
-          final child = uiChildFromDomain(
-            child: data.overview.child,
-            reportStatus: todayReport == null ? ReportStatus.none : uiReportStatusFromBackend(todayReport.status.name),
-            severity: severityFromDescription(todayReport?.summaryText),
+          final unread = _unreadCount(data);
+          return Scaffold(
+            backgroundColor: context.k.canvas,
+            body: SafeArea(
+              child: _tab == 0
+                  ? _ParentOverview(
+                      data: data,
+                      onOpenReport: (report) => _openReport(data, report),
+                    )
+                  : ParentAccount(
+                      parent: data.parent,
+                      overview: data.overview,
+                      reports: data.reports,
+                      repository: repository,
+                      onOpenReport: (report) => _openReport(data, report),
+                      onPhoneUpdated: _onPhoneUpdated,
+                      onLogout: widget.onLogout,
+                    ),
+            ),
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: _tab,
+              onDestinationSelected: (index) => setState(() => _tab = index),
+              destinations: [
+                NavigationDestination(
+                  icon: Badge(
+                    key: const ValueKey('parent-unread-badge'),
+                    isLabelVisible: unread > 0,
+                    label: Text('$unread'),
+                    child: const Icon(Icons.home_outlined),
+                  ),
+                  selectedIcon: Badge(
+                    key: const ValueKey('parent-unread-badge-selected'),
+                    isLabelVisible: unread > 0,
+                    label: Text('$unread'),
+                    child: const Icon(Icons.home),
+                  ),
+                  label: 'Tổng quan',
+                ),
+                const NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Tài khoản',
+                ),
+              ],
+            ),
           );
-          return showReport
-              ? _ParentReport(
-                  data: data,
-                  child: child,
-                  report: selectedReport ?? data.today,
-                  repository: repository,
-                  onReportRead: (updated) {
-                    setState(() {
-                      if (selectedReport?.dailyReportId == updated.dailyReportId) {
-                        selectedReport = updated;
-                      }
-                      future = future.then((current) {
-                        final newReports = current.reports
-                            .map((r) => r.dailyReportId == updated.dailyReportId ? updated : r)
-                            .toList();
-                        final newToday = current.today?.dailyReportId == updated.dailyReportId
-                            ? updated
-                            : current.today;
-                        return _ParentData(current.parentName, current.overview, newReports, newToday);
-                      });
-                    });
-                  },
-                  onBack: () => setState(() {
-                    showReport = false;
-                    selectedReport = null;
-                  }),
-                )
-              : _ParentHome(
-                  data: data,
-                  child: child,
-                  onLogout: widget.onLogout,
-                  onOpen: (report) => setState(() {
-                    selectedReport = report;
-                    showReport = true;
-                  }),
-                );
         },
       );
 
@@ -153,58 +199,72 @@ class _ParentFlowState extends State<ParentFlow> {
 }
 
 class _ParentData {
-  const _ParentData(this.parentName, this.overview, this.reports, this.today);
-  final String parentName;
+  const _ParentData(this.parent, this.overview, this.reports, this.today);
+  final Parent parent;
   final ChildOverview overview;
   final List<DailyReport> reports;
   final DailyReport? today;
+
+  _ParentData withReport(DailyReport updated) => _ParentData(
+        parent,
+        overview,
+        reports
+            .map((r) => r.dailyReportId == updated.dailyReportId ? updated : r)
+            .toList(),
+        today?.dailyReportId == updated.dailyReportId ? updated : today,
+      );
 }
 
-// Converted to StatefulWidget so the notification banner can be dismissed after reading.
-class _ParentHome extends StatefulWidget {
-  const _ParentHome({
-    required this.data,
-    required this.child,
-    required this.onOpen,
-    this.onLogout,
-  });
+/// Tab Tổng quan: lời chào, card bé + thời khoá biểu, lưu ý sức khỏe,
+/// báo cáo hôm nay và báo cáo gần đây.
+class _ParentOverview extends StatelessWidget {
+  const _ParentOverview({required this.data, required this.onOpenReport});
+
   final _ParentData data;
-  final Child child;
-  final ValueChanged<DailyReport> onOpen;
-  final VoidCallback? onLogout;
+  final ValueChanged<DailyReport> onOpenReport;
 
-  @override
-  State<_ParentHome> createState() => _ParentHomeState();
-}
+  void _openTimetable(BuildContext context) {
+    final overview = data.overview;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TimetableScreen(
+          classId: overview.child.classId?.isNotEmpty == true
+              ? overview.child.classId!
+              : 'aaaaaaaa-0000-0000-0000-000000000001',
+          className: overview.className.isNotEmpty ? 'Lớp ${overview.className}' : 'Lớp của bé',
+          isReadOnly: true,
+        ),
+      ),
+    );
+  }
 
-class _ParentHomeState extends State<_ParentHome> {
-  // Tracks whether the notification banner has been dismissed by the user.
-  bool _notificationDismissed = false;
-
-  void _confirmLogout() {
+  void _showNotifications(BuildContext context) {
+    final unread = data.reports
+        .where((r) => r.status != domain_status.ReportStatus.read)
+        .toList();
     showKSheet(
       context,
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Bạn có muốn đăng xuất không ?', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(context))),
-              const SizedBox(width: 12),
-              Expanded(
-                child: KButton(
-                  label: 'Đăng xuất',
-                  icon: Icons.logout,
-                  onPressed: () {
-                    Navigator.pop(context);
-                    widget.onLogout?.call();
-                  },
-                ),
+          Text('Thông báo', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          if (unread.isEmpty)
+            const Text('Bạn đã đọc tất cả báo cáo.')
+          else ...[
+            KCard(
+              onTap: () {
+                Navigator.pop(context);
+                onOpenReport(unread.first);
+              },
+              padding: const EdgeInsets.all(14),
+              child: Text(
+                'Bạn có ${unread.length} báo cáo chưa đọc. Báo cáo gần nhất ngày ${kDateLabel(unread.first.reportDate)}.',
               ),
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -212,169 +272,84 @@ class _ParentHomeState extends State<_ParentHome> {
 
   @override
   Widget build(BuildContext context) {
-    final overview = widget.data.overview;
-    final date = _dateLabel(DateTime.now());
-    final hasTodayReport = widget.data.today != null;
-    final showBanner = hasTodayReport && !_notificationDismissed;
+    final overview = data.overview;
+    final child = overview.child;
+    final date = kDateLabel(DateTime.now());
+    final hasTodayReport = data.today != null;
+    final allergy = child.medicalAllergies?.trim();
 
-    return Scaffold(
-      backgroundColor: context.k.canvas,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Xin chào,',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: context.k.inkSoft,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                      Text(
-                        widget.data.parentName.isEmpty ? 'Phụ huynh bé ${widget.child.name}' : widget.data.parentName,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: context.k.ink,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => TimetableScreen(
-                          classId: overview.child.classId?.isNotEmpty == true
-                              ? overview.child.classId!
-                              : 'aaaaaaaa-0000-0000-0000-000000000001',
-                          className: overview.className.isNotEmpty
-                              ? 'Lớp ${overview.className}'
-                              : 'Lớp của bé',
-                          isReadOnly: true,
-                        ),
-                      ),
-                    );
-                  },
-                  tooltip: 'Thời khóa biểu',
-                  icon: const Icon(Icons.calendar_month_outlined, color: KColors.inkSoft),
-                ),
-                IconButton(
-                  onPressed: () => showChangePasswordBottomSheet(context),
-                  tooltip: 'Đổi mật khẩu',
-                  icon: const Icon(Icons.lock_outline_rounded, color: KColors.inkSoft),
-                ),
-                IconButton(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Thông báo chưa được hỗ trợ.')),
-                  ),
-                  tooltip: 'Thông báo',
-                  icon: const Icon(Icons.notifications_outlined),
-                ),
-                IconButton(
-                  onPressed: () => showBugReportBottomSheet(context),
-                  tooltip: 'Báo cáo lỗi & Góp ý',
-                  icon: const Icon(Icons.bug_report_outlined, color: KColors.inkSoft),
-                ),
-                if (widget.onLogout != null)
-                  IconButton(
-                    onPressed: _confirmLogout,
-                    tooltip: 'Đăng xuất',
-                    icon: Icon(Icons.logout_rounded, color: context.k.inkSoft),
-                  ),
-              ],
-            ),
-            if (showBanner) ...[
-          const SizedBox(height: 14),
-          KCard(
-            color: context.k.brandTint,
-            onTap: () {
-              // Dismiss the banner, then navigate into the report.
-              setState(() => _notificationDismissed = true);
-              widget.onOpen(widget.data.today!);
-            },
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: context.k.brand,
-                  foregroundColor: Colors.white,
-                  child: Icon(Icons.notifications_outlined, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Báo cáo hôm nay của ${widget.child.name} đã sẵn sàng',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                      Text(
-                        '${overview.teacherName} đã gửi báo cáo hoạt động ngày $date.',
-                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: context.k.brand),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 20),
-        KCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Avatar(name: widget.child.name, size: 48),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
-                        Text('Lớp ${overview.className} · ${overview.teacherName}', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
-                      ],
+                  Text(
+                    'Xin chào,',
+                    style: TextStyle(fontSize: 13, color: context.k.inkSoft),
+                  ),
+                  Text(
+                    data.parent.fullName.isEmpty ? 'Phụ huynh bé ${child.fullName}' : data.parent.fullName,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: context.k.ink,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
+            ),
+            IconButton(
+              onPressed: () => _showNotifications(context),
+              tooltip: 'Thông báo',
+              icon: Icon(Icons.notifications_outlined, color: context.k.inkSoft),
+            ),
+            IconButton(
+              onPressed: () => showBugReportBottomSheet(context),
+              tooltip: 'Báo cáo lỗi',
+              icon: Icon(Icons.bug_report_outlined, color: context.k.inkSoft),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        KCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
               InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TimetableScreen(
-                        classId: overview.child.classId?.isNotEmpty == true
-                            ? overview.child.classId!
-                            : 'aaaaaaaa-0000-0000-0000-000000000001',
-                        className: overview.className.isNotEmpty
-                            ? 'Lớp ${overview.className}'
-                            : 'Lớp của bé',
-                        isReadOnly: true,
+                onTap: () => showParentChildSheet(context, overview: overview),
+                child: Row(
+                  children: [
+                    Avatar(name: child.fullName, size: 48),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            child.fullName,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
+                          ),
+                          Text(
+                            'Lớp ${overview.className} · ${overview.teacherName}',
+                            style: TextStyle(fontSize: 12, color: context.k.inkFaint),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(8),
+                    Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              InkWell(
+                onTap: () => _openTimetable(context),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Row(
                     children: [
                       Icon(Icons.calendar_month_outlined, size: 18, color: context.k.brand),
@@ -387,8 +362,6 @@ class _ParentHomeState extends State<_ParentHome> {
                           color: context.k.brand,
                         ),
                       ),
-                      const Spacer(),
-                      Icon(Icons.arrow_forward_rounded, size: 16, color: context.k.brand),
                     ],
                   ),
                 ),
@@ -396,22 +369,57 @@ class _ParentHomeState extends State<_ParentHome> {
             ],
           ),
         ),
+        if (allergy != null && allergy.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: context.k.badTint,
+              borderRadius: BorderRadius.circular(KRadii.control),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.health_and_safety_outlined, size: 20, color: context.k.bad),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Lưu ý sức khỏe',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: context.k.bad,
+                        ),
+                      ),
+                      Text(
+                        'Bé bị dị ứng $allergy — nhà trường đã nắm thông tin',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         Padding(
-          padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo hôm nay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink)),
+          padding: const EdgeInsets.only(top: 24, bottom: 10),
+          child: Text(
+            'Báo cáo hôm nay',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink),
+          ),
         ),
         KCard(
-          onTap: hasTodayReport ? () {
-            setState(() => _notificationDismissed = true);
-            widget.onOpen(widget.data.today!);
-          } : null,
+          onTap: hasTodayReport ? () => onOpenReport(data.today!) : null,
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               CircleAvatar(
                 backgroundColor: context.k.brandTint,
                 foregroundColor: context.k.brand,
-                child: Icon(Icons.description_outlined),
+                child: const Icon(Icons.description_outlined),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -427,41 +435,49 @@ class _ParentHomeState extends State<_ParentHome> {
                 ),
               ),
               if (hasTodayReport) ...[
-                Text('Xem báo cáo', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.brand)),
+                Text(
+                  'Xem báo cáo',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.brand),
+                ),
                 Icon(Icons.chevron_right, size: 18, color: context.k.brand),
               ],
             ],
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo gần đây', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink)),
+          padding: const EdgeInsets.only(top: 24, bottom: 10),
+          child: Text(
+            'Báo cáo gần đây',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink),
+          ),
         ),
-        if (widget.data.reports.isEmpty)
+        if (data.reports.isEmpty)
           const KCard(padding: EdgeInsets.all(16), child: Text('Chưa có báo cáo gần đây.'))
         else
           KCard(
             child: Column(
               children: [
-                for (var index = 0; index < widget.data.reports.length; index++) ...[
+                for (var index = 0; index < data.reports.length; index++) ...[
                   ListTile(
-                    onTap: () => widget.onOpen(widget.data.reports[index]),
+                    onTap: () => onOpenReport(data.reports[index]),
                     leading: Icon(Icons.description_outlined, color: context.k.inkSoft),
-                    title: Text(_dateLabel(widget.data.reports[index].reportDate), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    title: Text(
+                      kDateLabel(data.reports[index].reportDate),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          uiReportStatusFromBackend(widget.data.reports[index].status.name).label,
+                          uiReportStatusFromBackend(data.reports[index].status.name).label,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: widget.data.reports[index].status.name == 'read'
+                            color: data.reports[index].status.name == 'read' ||
+                                    data.reports[index].status.name == 'sent' ||
+                                    data.reports[index].status.name == 'published'
                                 ? context.k.brand
-                                : (widget.data.reports[index].status.name == 'sent' ||
-                                        widget.data.reports[index].status.name == 'published'
-                                    ? context.k.brand
-                                    : context.k.inkFaint),
+                                : context.k.inkFaint,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -469,40 +485,58 @@ class _ParentHomeState extends State<_ParentHome> {
                       ],
                     ),
                   ),
-                  if (index < widget.data.reports.length - 1) const Divider(),
+                  if (index < data.reports.length - 1) const Divider(),
                 ],
               ],
             ),
           ),
-        ],
-      ),
-    ),
-  );
+      ],
+    );
   }
 }
 
+/// Sheet báo cáo hằng ngày — mở từ card báo cáo, danh sách gần đây,
+/// hoặc push notification.
+Future<void> showParentReportSheet(
+  BuildContext context, {
+  required DailyReport? report,
+  required String childName,
+  required String teacherName,
+  HttpDashboardRepository? repository,
+  ValueChanged<DailyReport>? onReportRead,
+}) {
+  return showKSheet(
+    context,
+    _ParentReportBody(
+      report: report,
+      childName: childName,
+      teacherName: teacherName,
+      repository: repository,
+      onReportRead: onReportRead,
+    ),
+  );
+}
 
-class _ParentReport extends StatefulWidget {
-  const _ParentReport({
-    required this.data,
-    required this.child,
+class _ParentReportBody extends StatefulWidget {
+  const _ParentReportBody({
     required this.report,
-    required this.onBack,
+    required this.childName,
+    required this.teacherName,
     this.repository,
     this.onReportRead,
   });
-  final _ParentData data;
-  final Child child;
+
   final DailyReport? report;
-  final VoidCallback onBack;
+  final String childName;
+  final String teacherName;
   final HttpDashboardRepository? repository;
   final ValueChanged<DailyReport>? onReportRead;
 
   @override
-  State<_ParentReport> createState() => _ParentReportState();
+  State<_ParentReportBody> createState() => _ParentReportBodyState();
 }
 
-class _ParentReportState extends State<_ParentReport> {
+class _ParentReportBodyState extends State<_ParentReportBody> {
   late DailyReport? _currentReport = widget.report;
 
   @override
@@ -512,7 +546,7 @@ class _ParentReportState extends State<_ParentReport> {
   }
 
   @override
-  void didUpdateWidget(_ParentReport oldWidget) {
+  void didUpdateWidget(_ParentReportBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.report?.dailyReportId != oldWidget.report?.dailyReportId) {
       _currentReport = widget.report;
@@ -526,11 +560,7 @@ class _ParentReportState extends State<_ParentReport> {
         rep.status != domain_status.ReportStatus.read &&
         rep.status != domain_status.ReportStatus.draft) {
       widget.repository?.markReportAsRead(rep.dailyReportId).then((updated) {
-        if (mounted) {
-          setState(() {
-            _currentReport = updated;
-          });
-        }
+        if (mounted) setState(() => _currentReport = updated);
         widget.onReportRead?.call(updated);
       }).catchError((_) {});
     }
@@ -539,9 +569,9 @@ class _ParentReportState extends State<_ParentReport> {
   @override
   Widget build(BuildContext context) {
     final report = _currentReport;
-    final date = _dateLabel(report?.reportDate ?? DateTime.now());
+    final date = kDateLabel(report?.reportDate ?? DateTime.now());
 
-    // Use reported structured values or standard daily defaults to ensure a complete report.
+    // Dùng giá trị đã trích xuất, thiếu thì lấy mặc định để báo cáo luôn đủ mục.
     final eating = _nonEmpty(report?.eating) ?? 'Ăn hết suất cơm trưa, uống đủ nước.';
     final sleeping = _nonEmpty(report?.sleeping) ?? 'Ngủ ngon giấc, đúng giờ.';
     final activities = _nonEmpty(report?.activitiesText) ?? 'Tham gia tích cực các hoạt động học tập và vui chơi.';
@@ -549,47 +579,53 @@ class _ParentReportState extends State<_ParentReport> {
     final health = _nonEmpty(report?.health);
     final note = _nonEmpty(report?.summaryText);
 
-    return Scaffold(
-      appBar: KAppBar(
-        title: 'Báo cáo hằng ngày',
-        subtitle: date,
-        onBack: widget.onBack,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Child info header
-          KCard(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Avatar(name: widget.child.name, size: 48),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          KAppBar(
+            title: 'Báo cáo hằng ngày',
+            subtitle: date,
+            onBack: () => Navigator.pop(context),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Text(widget.child.name, style: Theme.of(context).textTheme.titleMedium),
-                      Text(
-                        'Báo cáo hoạt động · ${widget.data.overview.teacherName}',
-                        style: TextStyle(fontSize: 12, color: context.k.inkFaint),
+                      Avatar(name: widget.childName, size: 48),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.childName, style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'Báo cáo hoạt động · ${widget.teacherName}',
+                              style: TextStyle(fontSize: 12, color: context.k.inkFaint),
+                            ),
+                          ],
+                        ),
                       ),
+                      if (_currentReport != null)
+                        StatusBadge(uiReportStatusFromBackend(_currentReport!.status.name)),
                     ],
                   ),
-                ),
-                if (_currentReport != null)
-                  StatusBadge(uiReportStatusFromBackend(_currentReport!.status.name)),
-              ],
+                  const SizedBox(height: 16),
+                  _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
+                  _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
+                  _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
+                  _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
+                  if (health != null) _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
+                  if (note != null) _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          // Structured report fields (always display all core sections)
-          _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
-          _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
-          _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
-          _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
-          if (health != null) _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
-          if (note != null) _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
         ],
       ),
     );
@@ -637,6 +673,3 @@ String? _nonEmpty(String? value) {
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
 }
-
-// Formats dates using the app's Vietnamese day/month/year display convention.
-String _dateLabel(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';

@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from pathlib import Path
 from typing import Literal
 
 import ctranslate2
@@ -66,8 +67,6 @@ else:
                             pass
     except (AttributeError, ImportError, OSError):
         pass
-
-from pathlib import Path
 
 _DEFAULT_REPO_ID = "vudang449/PhoWhisper-large-ct2"
 _LOCAL_MODEL_PATH = (
