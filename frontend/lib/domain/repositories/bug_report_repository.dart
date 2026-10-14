@@ -117,8 +117,15 @@ class BugReportUpdatePayload {
 
 abstract class BugReportRepository {
   /// 1. Tạo bug report mới (form có ảnh đính kèm).
-  ///    ← User (teacher/parent) gọi duy nhất method này.
+  ///    ← User (teacher/parent) gọi method này.
   Future<BugReportDetail> create(BugReportCreatePayload payload);
+
+  /// 1b. [User: Teacher/Parent] Danh sách bug report do chính user gửi.
+  Future<BugReportListResponse> listMyReports({
+    int page = 1,
+    int pageSize = 20,
+    String? status,
+  });
 
   /// 2. [Admin] Danh sách tất cả report, có filter + phân trang.
   Future<BugReportListResponse> listAllReports({

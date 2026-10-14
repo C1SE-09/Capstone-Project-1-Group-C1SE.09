@@ -6,6 +6,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_ad
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
@@ -279,6 +280,11 @@ class _ParentHomeState extends State<_ParentHome> {
                   ),
                   tooltip: 'Thông báo',
                   icon: const Icon(Icons.notifications_outlined),
+                ),
+                IconButton(
+                  onPressed: () => showBugReportBottomSheet(context),
+                  tooltip: 'Báo cáo lỗi & Góp ý',
+                  icon: const Icon(Icons.bug_report_outlined, color: KColors.inkSoft),
                 ),
                 if (widget.onLogout != null)
                   IconButton(

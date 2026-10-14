@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ===========================================================================
 # Request: Login
@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class AdminLoginRequest(BaseModel):
     """Payload cho ``POST /api/admin-auth/login``."""
 
-    email: EmailStr = Field(
+    email: str = Field(
         ...,
         description="Email đăng nhập",
         examples=["admin@kinderlog.dev"],

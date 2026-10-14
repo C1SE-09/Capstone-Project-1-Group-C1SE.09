@@ -9,6 +9,7 @@ import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -639,6 +640,13 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
               const Divider(),
               const _ThemeSelector(),
+              const Divider(),
+              _AccountRow(
+                icon: Icons.bug_report_outlined,
+                label: 'Báo cáo lỗi & Góp ý',
+                chevron: true,
+                onTap: () => showBugReportBottomSheet(context),
+              ),
               const Divider(),
               const _AccountRow(icon: Icons.info_outline, label: 'Về KinderLog', value: 'v1.0.0'),
             ],
