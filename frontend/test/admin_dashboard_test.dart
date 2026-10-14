@@ -147,13 +147,13 @@ void main() {
 
     // Verify Right Widgets
     expect(find.text('Hàng đợi xử lý giọng nói STT'), findsOneWidget);
-    expect(find.text('Tình trạng hạ tầng'), findsOneWidget);
-    expect(find.text('Cơ sở dữ liệu (PostgreSQL)'), findsOneWidget);
+    expect(find.text('Tình trạng hạ tầng máy chủ'), findsOneWidget);
+    expect(find.text('Cơ sở dữ liệu'), findsOneWidget);
 
     // Verify 7-day Trend Chart Card
     expect(find.text('Xu hướng báo cáo 7 ngày gần nhất'), findsOneWidget);
-    expect(find.text('Đã gửi phụ huynh'), findsOneWidget);
-    expect(find.text('Bản nháp'), findsOneWidget);
+    // Legend is embedded in the chart caption
+    expect(find.textContaining('Xanh: đã gửi, Vàng: bản nháp'), findsOneWidget);
   });
 
   testWidgets('AdminDashboardScreen search filters the class list', (tester) async {
@@ -191,9 +191,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // Find and tap the logout button
-    final logoutButton = find.byTooltip('Đăng xuất');
+    final logoutButton = find.text('Đăng xuất');
     expect(logoutButton, findsOneWidget);
     await tester.tap(logoutButton);
+    await tester.pumpAndSettle();
+
+    // Confirm in the dialog
+    await tester.tap(find.widgetWithText(FilledButton, 'Đăng xuất'));
     await tester.pumpAndSettle();
 
     expect(loggedOut, isTrue);
