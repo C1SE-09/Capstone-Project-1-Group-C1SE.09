@@ -450,6 +450,7 @@ def get_parent(
         "phone": parent.phone,
         "email": parent.email,
         "avatar_url": parent.avatar_url,
+        "relationship": parent.relationship_,
         "is_verified": parent.is_verified,
     }
 
