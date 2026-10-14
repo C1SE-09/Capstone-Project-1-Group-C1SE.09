@@ -350,7 +350,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
       context,
       Builder(
         builder: (sheetCtx) {
-          final color = _hexColor(item.subject?.colorCode) ?? sheetCtx.k.brand;
+          final Color color = _hexColor(item.subject?.colorCode) ?? sheetCtx.k.brand;
           final meta = [
             _dayShort[item.dayIndex],
             if (item.startTime.isNotEmpty) '${item.startTime}–${item.endTime}',
@@ -798,7 +798,7 @@ class _ScheduleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _hexColor(item.subject?.colorCode) ?? context.k.brand;
+    final Color color = _hexColor(item.subject?.colorCode) ?? context.k.brand;
     final name = item.displayName;
     final teacher = item.teacherLabel;
     final room = item.roomLabel;
@@ -1149,7 +1149,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
             for (final s in subjects) ...[
               Builder(builder: (itemCtx) {
                 final isSelected = _subject?.subjectId == s.subjectId;
-                final color = _hexColor(s.colorCode) ?? itemCtx.k.brand;
+                final Color color = _hexColor(s.colorCode) ?? itemCtx.k.brand;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: InkWell(
