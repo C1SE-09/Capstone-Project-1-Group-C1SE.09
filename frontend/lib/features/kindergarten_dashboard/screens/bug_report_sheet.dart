@@ -347,7 +347,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: k.badTint,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: k.bad.withValues(alpha: 0.3)),
                 ),
                 child: Row(
@@ -377,15 +377,15 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                 fillColor: k.surfaceSunken,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: k.line),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: k.line),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: k.brand, width: 1.5),
                 ),
               ),
@@ -484,15 +484,15 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                 fillColor: k.surfaceSunken,
                 contentPadding: const EdgeInsets.all(14),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: k.line),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: k.line),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: k.brand, width: 1.5),
                 ),
               ),
@@ -530,7 +530,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                       height: 80,
                       margin: const EdgeInsets.only(right: 10),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: k.line),
                         image: DecorationImage(
                           image: MemoryImage(att.bytes),
@@ -557,13 +557,13 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                   if (_attachments.length < 5)
                     InkWell(
                       onTap: _pickImages,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
                           color: k.surfaceSunken,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: k.line, style: BorderStyle.solid),
                         ),
                         child: Column(
@@ -586,7 +586,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: k.surfaceSunken,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
@@ -595,7 +595,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                   Expanded(
                     child: Text(
                       'Hệ thống sẽ tự động đính kèm thông tin thiết bị và phiên bản ứng dụng để kỹ thuật viên xử lý nhanh hơn.',
-                      style: TextStyle(fontSize: 11.5, color: k.inkSoft),
+                      style: TextStyle(fontSize: 11, color: k.inkSoft),
                     ),
                   ),
                 ],
@@ -832,7 +832,7 @@ class _ReportHistoryCardState extends State<_ReportHistoryCard> {
                     child: Text(
                       r.title,
                       style: TextStyle(
-                        fontSize: 14.5,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: k.ink,
                       ),
@@ -843,7 +843,7 @@ class _ReportHistoryCardState extends State<_ReportHistoryCard> {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: statusBg,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       statusLabel,

@@ -209,12 +209,12 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   ),
                 ),
               _FieldBlock(
-                emoji: '🍽️',
+                icon: Icons.restaurant_outlined,
                 label: 'Ăn uống',
                 child: _TextArea(controller: eating, readOnly: widget.readOnly),
               ),
               _FieldBlock(
-                emoji: '😴',
+                icon: Icons.bedtime_outlined,
                 label: 'Giấc ngủ',
                 child: Column(
                   children: [
@@ -239,14 +239,14 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                 ),
               ),
               _FieldBlock(
-                emoji: '🏥',
+                icon: Icons.health_and_safety_outlined,
                 label: 'Sức khỏe',
                 child: _TextArea(controller: health, readOnly: widget.readOnly),
               ),
-              _FieldBlock(emoji: '🎭', label: 'Tâm trạng', child: _TextArea(controller: mood, readOnly: widget.readOnly)),
-              _FieldBlock(emoji: '🎨', label: 'Hoạt động', child: _TextArea(controller: activity, readOnly: widget.readOnly)),
+              _FieldBlock(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', child: _TextArea(controller: mood, readOnly: widget.readOnly)),
+              _FieldBlock(icon: Icons.palette_outlined, label: 'Hoạt động', child: _TextArea(controller: activity, readOnly: widget.readOnly)),
               _FieldBlock(
-                emoji: '📝',
+                icon: Icons.edit_note,
                 label: 'Ghi chú của cô',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -449,8 +449,8 @@ class _ReportMeta {
 String _todayLong(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
 class _FieldBlock extends StatelessWidget {
-  const _FieldBlock({required this.emoji, required this.label, required this.child});
-  final String emoji;
+  const _FieldBlock({required this.icon, required this.label, required this.child});
+  final IconData icon;
   final String label;
   final Widget child;
 
@@ -468,7 +468,7 @@ class _FieldBlock extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(emoji),
+              Icon(icon, size: 16, color: context.k.brand),
               const SizedBox(width: 8),
               Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ],

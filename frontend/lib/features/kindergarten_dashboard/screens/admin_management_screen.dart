@@ -681,7 +681,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: context.k.surface,
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: context.k.line.withAlpha(120)),
                                 ),
                                 child: Row(
@@ -843,7 +843,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: context.k.surface,
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: context.k.line.withAlpha(120)),
                                 ),
                                 child: Row(
@@ -1041,7 +1041,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
                                   color: !isCustomTime ? context.k.brand : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
@@ -1062,7 +1062,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
                                   color: isCustomTime ? context.k.brand : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
@@ -1117,7 +1117,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                 child: Text(
                                   customStartTime,
                                   style: TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     color: context.k.brand,
                                   ),
@@ -1144,7 +1144,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                 child: Text(
                                   customEndTime,
                                   style: TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     color: context.k.brand,
                                   ),
@@ -1156,7 +1156,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '💡 Chạm vào từng ô để mở đồng hồ chọn giờ chính xác.',
+                        'Chạm vào từng ô để mở đồng hồ chọn giờ chính xác.',
                         style: TextStyle(fontSize: 12, color: context.k.inkSoft, fontStyle: FontStyle.italic),
                       ),
                     ],
@@ -1560,7 +1560,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                 fontWeight: _selectedDayOfWeek == dayEntry.$1
                                     ? FontWeight.w700
                                     : FontWeight.w500,
-                                fontSize: 12.5,
+                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -1707,7 +1707,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
               style: TextStyle(
                 color: context.k.ink,
                 fontWeight: FontWeight.w700,
-                fontSize: 15,
+                fontSize: 16,
               ),
             ),
           ),
@@ -1722,7 +1722,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                   item.title,
                   style: TextStyle(
                     color: context.k.ink,
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1731,7 +1731,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                   item.subtitle,
                   style: TextStyle(
                     color: context.k.inkSoft,
-                    fontSize: 12.5,
+                    fontSize: 12,
                   ),
                 ),
                 if (item.phone != null) ...[

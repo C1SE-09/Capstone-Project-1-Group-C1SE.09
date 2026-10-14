@@ -102,12 +102,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
             if (widget.onSelectClass != null)
               InkWell(
                 onTap: widget.onSelectClass,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(99),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: context.k.brandTint,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(99),
                     border: Border.all(color: context.k.brand.withValues(alpha: 0.3)),
                   ),
                   child: Row(
@@ -156,7 +156,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        Text('Hôm nay', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.k.ink)),
+        Text('Hôm nay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink)),
         const SizedBox(height: 10),
         KCard(
           child: Column(
@@ -290,11 +290,11 @@ class _ClassListScreenState extends State<ClassListScreen> {
                     OutlinedButton.icon(
                       onPressed: widget.onSelectClass,
                       icon: Icon(Icons.swap_horiz_rounded, size: 16, color: context.k.brand),
-                      label: Text('Đổi lớp', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: context.k.brand)),
+                      label: Text('Đổi lớp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand)),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: context.k.brand, width: 1.2),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
                       ),
                     ),
                 ],
@@ -598,7 +598,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(teacher.fullName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    Text(teacher.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                     Text('Giáo viên · $className', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
                   ],
                 ),
@@ -757,11 +757,11 @@ class _ThemeSelector extends StatelessWidget {
                       label: labelText,
                       child: InkWell(
                         onTap: () => ThemeController.instance.set(value),
-                        borderRadius: BorderRadius.circular(7),
+                        borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 9),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(7),
+                            borderRadius: BorderRadius.circular(8),
                             color: mode == value ? context.k.surface : Colors.transparent,
                             border: Border.all(color: mode == value ? context.k.brand.withValues(alpha: .4) : Colors.transparent),
                           ),

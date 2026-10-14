@@ -290,7 +290,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
                             color: context.k.brand.withValues(alpha: 0.3),
@@ -552,15 +552,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             filled: true,
             fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -575,7 +575,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             child: _isLoading
@@ -665,15 +665,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             filled: true,
             fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -727,7 +727,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             child: _isLoading
@@ -814,15 +814,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             filled: true,
             fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -858,15 +858,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             filled: true,
             fillColor: context.k.surfaceSunken,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.line),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -883,7 +883,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             child: _isLoading

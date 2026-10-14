@@ -364,7 +364,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(8)),
                     child: Icon(_iconForSubject(item.subject?.name), size: 20, color: color),
                   ),
                   const SizedBox(width: 12),
@@ -638,14 +638,14 @@ class _ViewToggle extends StatelessWidget {
   Widget _option(BuildContext context, {required String label, required bool selected, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(7),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         constraints: const BoxConstraints(minHeight: 40),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? context.k.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(8),
           boxShadow: selected ? [BoxShadow(color: Colors.black.withValues(alpha: .06), blurRadius: 2, offset: const Offset(0, 1))] : null,
         ),
         child: Text(
@@ -1135,7 +1135,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
           border: Border.all(color: context.k.line),
         ),
         child: Text('Chưa có môn học nào. Vui lòng tạo môn học trước.',
-            style: TextStyle(fontSize: 12.5, color: context.k.inkSoft)),
+            style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
       );
     }
 
@@ -1231,7 +1231,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
           border: Border.all(color: context.k.line),
         ),
         child: Text('Chưa có khung giờ nào. Vui lòng tạo khung giờ trước.',
-            style: TextStyle(fontSize: 12.5, color: context.k.inkSoft)),
+            style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
       );
     }
 
@@ -1290,7 +1290,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
                               Text(
                                 slot.name,
                                 style: TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 12,
                                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                                   color: isSelected ? context.k.brand : context.k.ink,
                                 ),
@@ -1305,7 +1305,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
                           Text(
                             '${slot.startTime} – ${slot.endTime}',
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                               color: isSelected ? context.k.brand : context.k.inkSoft,
                             ),

@@ -58,7 +58,7 @@ abstract final class KSpace {
 
 abstract final class KRadii {
   static const card = 12.0;
-  static const control = 9.0;
+  static const control = 8.0;
 }
 
 /// Theme-aware design tokens. Widgets read these via `context.k` so light and
@@ -235,6 +235,12 @@ extension KThemeContext on BuildContext {
   KPalette get k => Theme.of(this).extension<KPalette>() ?? KPalette.light;
 }
 
+ButtonStyle _buttonShape() => ButtonStyle(
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: const BorderRadius.all(Radius.circular(KRadii.control))),
+      ),
+    );
+
 ThemeData kinderTheme() {
   final scheme = ColorScheme.fromSeed(
     seedColor: KColors.brand,
@@ -283,6 +289,11 @@ ThemeData _buildTheme({required ColorScheme scheme, required KPalette palette}) 
       ),
     ),
     dividerTheme: DividerThemeData(color: palette.line, thickness: 1, space: 1),
+    // House button language: rounded-rect at KRadii.control (chips stay stadium pills).
+    filledButtonTheme: FilledButtonThemeData(style: _buttonShape()),
+    outlinedButtonTheme: OutlinedButtonThemeData(style: _buttonShape()),
+    textButtonTheme: TextButtonThemeData(style: _buttonShape()),
+    elevatedButtonTheme: ElevatedButtonThemeData(style: _buttonShape()),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: palette.surface,
