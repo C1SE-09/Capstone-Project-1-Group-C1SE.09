@@ -262,7 +262,7 @@ class ProgressRing extends StatelessWidget {
               backgroundColor: context.k.surfaceSunken,
             ),
           ),
-          Text('${(progress * 100).round()}%', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          Text('${(progress * 100).round()}%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ],
       ),
     );

@@ -128,7 +128,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: KColors.brandTint,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
                               Icons.lock_reset_rounded,
@@ -463,7 +463,7 @@ class __ChangePasswordFormSheetState
               child: Text(
                 _errorMessage!,
                 style: const TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 12,
                   color: KColors.bad,
                   fontWeight: FontWeight.w500,
                 ),

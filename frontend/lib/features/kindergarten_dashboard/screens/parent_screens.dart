@@ -318,7 +318,7 @@ class _ParentHomeState extends State<_ParentHome> {
                     children: [
                       Text(
                         'Báo cáo hôm nay của ${widget.child.name} đã sẵn sàng',
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                       Text(
                         '${overview.teacherName} đã gửi báo cáo hoạt động ngày $date.',
@@ -398,7 +398,7 @@ class _ParentHomeState extends State<_ParentHome> {
         ),
         Padding(
           padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo hôm nay', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.k.ink)),
+          child: Text('Báo cáo hôm nay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink)),
         ),
         KCard(
           onTap: hasTodayReport ? () {
@@ -435,7 +435,7 @@ class _ParentHomeState extends State<_ParentHome> {
         ),
         Padding(
           padding: EdgeInsets.only(top: 24, bottom: 10),
-          child: Text('Báo cáo gần đây', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.k.ink)),
+          child: Text('Báo cáo gần đây', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink)),
         ),
         if (widget.data.reports.isEmpty)
           const KCard(padding: EdgeInsets.all(16), child: Text('Chưa có báo cáo gần đây.'))
@@ -584,12 +584,12 @@ class _ParentReportState extends State<_ParentReport> {
           ),
           const SizedBox(height: 16),
           // Structured report fields (always display all core sections)
-          _ReportField(emoji: '🍽️', label: 'Ăn uống', value: eating),
-          _ReportField(emoji: '😴', label: 'Giấc ngủ', value: sleeping),
-          _ReportField(emoji: '🎨', label: 'Hoạt động', value: activities),
-          _ReportField(emoji: '🎭', label: 'Tâm trạng', value: mood),
-          if (health != null) _ReportField(emoji: '🏥', label: 'Sức khỏe', value: health),
-          if (note != null) _ReportField(emoji: '📝', label: 'Ghi chú của cô', value: note),
+          _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
+          _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
+          _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
+          _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
+          if (health != null) _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
+          if (note != null) _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
         ],
       ),
     );
@@ -598,8 +598,8 @@ class _ParentReportState extends State<_ParentReport> {
 
 /// A single labelled field card in the parent report view.
 class _ReportField extends StatelessWidget {
-  const _ReportField({required this.emoji, required this.label, required this.value});
-  final String emoji;
+  const _ReportField({required this.icon, required this.label, required this.value});
+  final IconData icon;
   final String label;
   final String value;
 
@@ -618,7 +618,7 @@ class _ReportField extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(emoji),
+              Icon(icon, size: 16, color: context.k.brand),
               const SizedBox(width: 6),
               Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
             ],

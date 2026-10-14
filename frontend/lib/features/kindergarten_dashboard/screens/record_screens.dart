@@ -143,10 +143,10 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                           children: [
                             Text('Cả ${data.className}',
                                 style: TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.w600)),
+                                    fontSize: 16, fontWeight: FontWeight.w600)),
                             Text('Ghi một lần, tạo báo cáo cho tất cả trẻ.',
                                 style: TextStyle(
-                                    fontSize: 12.5, color: context.k.inkSoft)),
+                                    fontSize: 12, color: context.k.inkSoft)),
                           ],
                         ),
                       ),
@@ -312,9 +312,9 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
           onCompleted: () {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã tạo và gửi báo cáo thành công!'),
-                backgroundColor: Color(0xFF2E7D32),
+              SnackBar(
+                content: const Text('Đã tạo và gửi báo cáo thành công!'),
+                backgroundColor: context.k.brand,
               ),
             );
           },
@@ -680,13 +680,13 @@ class _RecordingScreenState extends State<RecordingScreen>
                         Navigator.of(context).pop();
                         appRouter.go('/class-select');
                       },
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(99),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: context.k.brandTint,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(99),
                           border: Border.all(
                               color: context.k.brand.withValues(alpha: 0.3)),
                         ),
@@ -740,7 +740,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                             height: 72,
                             decoration: BoxDecoration(
                               color: context.k.brandTint,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                             child: Icon(Icons.audio_file_rounded,
                                 size: 40, color: context.k.brand),
@@ -1244,10 +1244,10 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             builder: (_) => AlertDialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
-              title: const Row(
+              title: Row(
                 children: [
                   Icon(Icons.warning_amber_rounded,
-                      color: Color(0xFFED6C02), size: 26),
+                      color: context.k.warn, size: 26),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -1265,8 +1265,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                 FilledButton.icon(
                   icon: const Icon(Icons.mic_none_rounded, size: 18),
                   label: const Text('Ghi âm lại'),
-                  style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFED6C02)),
                   onPressed: () {
                     Navigator.pop(context); // đóng dialog
                     widget.onBack(); // về màn hình ghi âm
@@ -1303,12 +1301,12 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           builder: (_) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Color(0xFFED6C02)),
+                Icon(Icons.warning_amber_rounded, color: context.k.warn),
                 SizedBox(width: 8),
                 Text('Nội dung không liên quan',
-                    style: TextStyle(fontSize: 17)),
+                    style: TextStyle(fontSize: 18)),
               ],
             ),
             content: const Text(
@@ -1325,8 +1323,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                   Navigator.pop(context);
                   widget.onDone(currentRecord, extraction);
                 },
-                style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFED6C02)),
                 child: const Text('Vẫn tiếp tục'),
               ),
             ],
@@ -1359,10 +1355,10 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.error_outline_rounded,
-                color: Color(0xFFD32F2F), size: 26),
+                color: context.k.bad, size: 26),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -1582,7 +1578,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                 style: Theme.of(context)
                     .textTheme
                     .titleLarge
-                    ?.copyWith(fontSize: 19, fontWeight: FontWeight.w700)),
+                    ?.copyWith(fontSize: 20, fontWeight: FontWeight.w700)),
             Text('Hệ thống đang xử lý file ghi âm của bạn.',
                 style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 24),
@@ -2448,7 +2444,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             children: [
               Text(
                 'Toàn bộ nội dung giọng nói từ file ghi âm đã được AI chuyển thành văn bản và phân tích:',
-                style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
+                style: TextStyle(fontSize: 12, color: context.k.inkSoft),
               ),
               const SizedBox(height: 12),
               Container(
@@ -2456,13 +2452,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: context.k.surfaceSunken,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: context.k.line),
                 ),
                 child: SelectableText(
                   text,
                   style: TextStyle(
-                      fontSize: 13.5, height: 1.6, color: context.k.ink),
+                      fontSize: 13, height: 1.6, color: context.k.ink),
                 ),
               ),
             ],
@@ -2757,7 +2753,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         label: Text(
                           'Duyệt tất cả',
                           style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               color: context.k.brand,
                               fontWeight: FontWeight.w600),
                         ),
@@ -2777,7 +2773,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         label: Text(
                           'Bỏ duyệt tất cả',
                           style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               color: context.k.warn,
                               fontWeight: FontWeight.w600),
                         ),
@@ -2798,7 +2794,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Đọc lại theo đúng thứ tự cô đã kể.',
-                  style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
+                  style: TextStyle(fontSize: 12, color: context.k.inkSoft),
                 ),
                 const SizedBox(height: 16),
                 if (widget.recordedBytes != null &&
@@ -2897,16 +2893,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
               Text(
                 'Sẽ gửi từ 1 lần nói này:',
                 style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: context.k.inkSoft),
               ),
               const SizedBox(height: 7),
-              _SummaryRow('📄', approvedCount, 'phiếu liên lạc cho phụ huynh'),
+              _SummaryRow(Icons.description_outlined, approvedCount, 'phiếu liên lạc cho phụ huynh'),
               if (healthCount > 0)
-                _SummaryRow('🏥', healthCount, 'ghi nhận vào sổ sức khỏe'),
+                _SummaryRow(Icons.health_and_safety_outlined, healthCount, 'ghi nhận vào sổ sức khỏe'),
               if (discardedCount > 0)
-                _SummaryRow('🗑️', discardedCount, 'đã được loại bỏ'),
+                _SummaryRow(Icons.delete_outline, discardedCount, 'đã được loại bỏ'),
               if (unmatchedActiveCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -2917,7 +2913,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     child: Text(
                       'Còn $unmatchedActiveCount đoạn chưa xử lý. Gán cho một bé, cả lớp hoặc bỏ qua để xác nhận.',
                       style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: context.k.warn),
                     ),
@@ -2939,7 +2935,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           ? 'Chưa có mục nào được duyệt. Bấm "Duyệt" hoặc "Loại bỏ" từng mục để tiếp tục.'
                           : 'Còn $pendingCount mục chưa xử lý. Vui lòng duyệt hoặc loại bỏ tất cả các mục để có thể gửi.',
                       style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: approvedCount == 0
                               ? context.k.brand
@@ -3064,14 +3060,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
             children: [
               Text(
                 'Bạn có thể chỉnh sửa lại nội dung văn bản dưới đây rồi bấm "Phân tích lại" để AI trích xuất lại thông tin:',
-                style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
+                style: TextStyle(fontSize: 12, color: context.k.inkSoft),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: textCtrl,
                 maxLines: 6,
                 minLines: 3,
-                style: const TextStyle(fontSize: 13.5, height: 1.5),
+                style: const TextStyle(fontSize: 13, height: 1.5),
                 decoration: InputDecoration(
                   hintText: 'Nhập nội dung văn bản...',
                   filled: true,
@@ -3177,9 +3173,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã phân tích lại thành công!'),
-            backgroundColor: Color(0xFF2E7D32),
+          SnackBar(
+            content: const Text('Đã phân tích lại thành công!'),
+            backgroundColor: context.k.brand,
           ),
         );
       } catch (e) {
@@ -3281,7 +3277,7 @@ class _AudioPlayerCardState extends State<_AudioPlayerCard> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: context.k.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.k.brand.withValues(alpha: 0.28)),
         boxShadow: [
           BoxShadow(
@@ -3315,7 +3311,7 @@ class _AudioPlayerCardState extends State<_AudioPlayerCard> {
                     Text(
                       'Nghe lại bản ghi âm',
                       style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: context.k.ink),
                     ),
@@ -3323,7 +3319,7 @@ class _AudioPlayerCardState extends State<_AudioPlayerCard> {
                     Text(
                       'Chạm để nghe lại giọng nói cô vừa ghi âm',
                       style:
-                          TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                          TextStyle(fontSize: 11, color: context.k.inkSoft),
                     ),
                   ],
                 ),
@@ -3390,13 +3386,13 @@ class _AudioPlayerCardState extends State<_AudioPlayerCard> {
                 Text(
                   _formatDuration(_position),
                   style:
-                      TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                      TextStyle(fontSize: 11, color: context.k.inkSoft),
                 ),
                 const Spacer(),
                 Text(
                   _formatDuration(_duration),
                   style:
-                      TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                      TextStyle(fontSize: 11, color: context.k.inkSoft),
                 ),
               ],
             ),
@@ -3479,7 +3475,7 @@ class _AnalyzedTextCardState extends State<_AnalyzedTextCard> {
                         Text(
                           'Xem lại text đã phân tích',
                           style: TextStyle(
-                              fontSize: 13.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: context.k.ink),
                         ),
@@ -3489,7 +3485,7 @@ class _AnalyzedTextCardState extends State<_AnalyzedTextCard> {
                               ? 'Chạm để thu gọn'
                               : 'Chạm để xem lại toàn bộ text đã ghi âm',
                           style: TextStyle(
-                              fontSize: 11.5, color: context.k.inkSoft),
+                              fontSize: 11, color: context.k.inkSoft),
                         ),
                       ],
                     ),
@@ -3694,7 +3690,7 @@ class _ObservationTile extends StatelessWidget {
                 children: [
                   Text('Lời cô nói, chỉ cô thấy',
                       style:
-                          TextStyle(fontSize: 10.5, color: context.k.inkFaint)),
+                          TextStyle(fontSize: 10, color: context.k.inkFaint)),
                   SizedBox(height: 3),
                   Text(
                     card.snippet.isNotEmpty
@@ -3708,17 +3704,17 @@ class _ObservationTile extends StatelessWidget {
           ],
           SizedBox(height: 10),
           if (card.eating.isNotEmpty)
-            _buildReportLine(context, '🍽️', 'Bữa ăn', card.eating),
+            _buildReportLine(context, 'Bữa ăn', card.eating),
           if (card.sleep.isNotEmpty)
-            _buildReportLine(context, '😴', 'Giấc ngủ', card.sleep),
+            _buildReportLine(context, 'Giấc ngủ', card.sleep),
           if (card.activities.isNotEmpty)
-            _buildReportLine(context, '🎨', 'Hoạt động', card.activities),
+            _buildReportLine(context, 'Hoạt động', card.activities),
           if (card.mood.isNotEmpty)
-            _buildReportLine(context, '🎭', 'Tâm trạng', card.mood),
+            _buildReportLine(context, 'Tâm trạng', card.mood),
           if (card.health.isNotEmpty)
-            _buildReportLine(context, '🏥', 'Sức khỏe', card.health),
+            _buildReportLine(context, 'Sức khỏe', card.health),
           if (card.note.trim().isNotEmpty)
-            _buildReportLine(context, '📝', 'Ghi chú', card.note.trim()),
+            _buildReportLine(context, 'Ghi chú', card.note.trim()),
           if (card.eating.isEmpty &&
               card.sleep.isEmpty &&
               card.activities.isEmpty &&
@@ -3883,8 +3879,7 @@ class _ObservationTile extends StatelessWidget {
     );
   }
 
-  Widget _buildReportLine(
-      BuildContext context, String emoji, String label, String text) {
+  Widget _buildReportLine(BuildContext context, String label, String text) {
     if (text.isEmpty) return SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.only(bottom: 5),
@@ -3892,7 +3887,7 @@ class _ObservationTile extends StatelessWidget {
         TextSpan(
           children: [
             TextSpan(
-              text: '$emoji $label: ',
+              text: '$label: ',
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -3937,9 +3932,9 @@ class _SurfaceBox extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow(this.emoji, this.count, this.label);
+  const _SummaryRow(this.icon, this.count, this.label);
 
-  final String emoji;
+  final IconData icon;
   final int count;
   final String label;
 
@@ -3951,7 +3946,7 @@ class _SummaryRow extends StatelessWidget {
         children: [
           SizedBox(
               width: 24,
-              child: Text(emoji, style: const TextStyle(fontSize: 15))),
+              child: Icon(icon, size: 16, color: context.k.brand)),
           SizedBox(
             width: 24,
             child: Text(
@@ -3966,7 +3961,7 @@ class _SummaryRow extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(label,
-                style: TextStyle(fontSize: 12.5, color: context.k.ink)),
+                style: TextStyle(fontSize: 12, color: context.k.ink)),
           ),
         ],
       ),
@@ -4007,7 +4002,7 @@ class _AssignSheetState extends State<_AssignSheet> {
           children: [
             Text('Gán cho một bé',
                 style: TextStyle(
-                    fontSize: 17,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: context.k.ink)),
             const SizedBox(height: 2),
@@ -4026,7 +4021,7 @@ class _AssignSheetState extends State<_AssignSheet> {
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
             const SizedBox(height: 10),
@@ -4038,12 +4033,12 @@ class _AssignSheetState extends State<_AssignSheet> {
                   leading: Avatar(name: list[i].name, size: 34),
                   title: Text(list[i].name,
                       style: const TextStyle(
-                          fontSize: 13.5, fontWeight: FontWeight.w600)),
+                          fontSize: 13, fontWeight: FontWeight.w600)),
                   subtitle: list[i].nickname != null &&
                           list[i].nickname!.isNotEmpty
                       ? Text('Tên gọi ở lớp: ${list[i].nickname}',
                           style: TextStyle(
-                              fontSize: 11.5, color: context.k.inkSoft))
+                              fontSize: 11, color: context.k.inkSoft))
                       : null,
                   trailing: const Icon(Icons.chevron_right_rounded, size: 18),
                   onTap: () => Navigator.pop(context, list[i]),
@@ -4178,7 +4173,7 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
             'Đã gửi thành công.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: context.k.ink),
           ),
@@ -4186,17 +4181,17 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
           Text(
             'Không phải nhập lại ở đâu cả. Báo cáo đã được gửi tới phụ huynh.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
+            style: TextStyle(fontSize: 12, color: context.k.inkSoft),
           ),
           const SizedBox(height: 24),
           _SurfaceBox(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _SummaryRow('📄', widget.parentReportsCount,
+                _SummaryRow(Icons.description_outlined, widget.parentReportsCount,
                     'phiếu liên lạc cho phụ huynh'),
                 const SizedBox(height: 6),
-                _SummaryRow('🏥', widget.healthRecordsCount,
+                _SummaryRow(Icons.health_and_safety_outlined, widget.healthRecordsCount,
                     'ghi nhận vào sổ sức khỏe'),
               ],
             ),
@@ -4205,7 +4200,7 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
           _SurfaceBox(
             child: Text(
               '${widget.parentReportsCount} phụ huynh nhận phiếu. Sổ sức khỏe có ${widget.healthRecordsCount} dòng mới. Tất cả đến từ ghi âm lúc ${widget.recordingTime}.',
-              style: TextStyle(fontSize: 12.5, color: context.k.inkSoft),
+              style: TextStyle(fontSize: 12, color: context.k.inkSoft),
             ),
           ),
           // ── Audio player ──────────────────────────────────────────────────
@@ -4214,7 +4209,7 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
             Container(
               decoration: BoxDecoration(
                 color: context.k.surface,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
                 border:
                     Border.all(color: context.k.brand.withValues(alpha: 0.25)),
                 boxShadow: [
@@ -4236,7 +4231,7 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
                         height: 36,
                         decoration: BoxDecoration(
                           color: context.k.brandTint,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(Icons.headphones_rounded,
                             color: context.k.brand, size: 20),
@@ -4249,14 +4244,14 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
                             Text(
                               'Nghe lại bản ghi âm',
                               style: TextStyle(
-                                  fontSize: 13.5,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: context.k.ink),
                             ),
                             Text(
                               'Bản ghi âm đã được gửi đi',
                               style: TextStyle(
-                                  fontSize: 11.5, color: context.k.inkSoft),
+                                  fontSize: 11, color: context.k.inkSoft),
                             ),
                           ],
                         ),
@@ -4299,13 +4294,13 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
                       Text(
                         _formatDuration(_position),
                         style:
-                            TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                            TextStyle(fontSize: 11, color: context.k.inkSoft),
                       ),
                       const Spacer(),
                       Text(
                         _formatDuration(_duration),
                         style:
-                            TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                            TextStyle(fontSize: 11, color: context.k.inkSoft),
                       ),
                     ],
                   ),
@@ -4416,13 +4411,13 @@ class _CounterPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(99),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         'Đã duyệt $approved/$total',
         style: TextStyle(
-          fontSize: 11.5,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
         ),
@@ -4538,7 +4533,7 @@ class _EditObservationSheet extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isUnmatched ? context.k.warnTint : context.k.brandTint,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.edit_note_rounded,
@@ -4588,7 +4583,7 @@ class _EditObservationSheet extends StatelessWidget {
                   if (isUnmatched) ...[
                     _buildField(
                       context,
-                      emoji: '💬',
+                      icon: Icons.chat_bubble_outline,
                       label: 'Nội dung đoạn nói',
                       controller: snippetCtrl,
                       maxLines: 3,
@@ -4597,14 +4592,14 @@ class _EditObservationSheet extends StatelessWidget {
                   ],
                   _buildField(
                     context,
-                    emoji: '🍽️',
+                    icon: Icons.restaurant_outlined,
                     label: 'Bữa ăn',
                     controller: eatingCtrl,
                   ),
                   const SizedBox(height: 12),
                   _buildField(
                     context,
-                    emoji: '😴',
+                    icon: Icons.bedtime_outlined,
                     label: 'Giấc ngủ',
                     controller: sleepCtrl,
                     keyboardType: TextInputType.number,
@@ -4614,28 +4609,28 @@ class _EditObservationSheet extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildField(
                     context,
-                    emoji: '🎨',
+                    icon: Icons.palette_outlined,
                     label: 'Hoạt động',
                     controller: activitiesCtrl,
                   ),
                   const SizedBox(height: 12),
                   _buildField(
                     context,
-                    emoji: '🎭',
+                    icon: Icons.sentiment_satisfied_outlined,
                     label: 'Tâm trạng',
                     controller: moodCtrl,
                   ),
                   const SizedBox(height: 12),
                   _buildField(
                     context,
-                    emoji: '🏥',
+                    icon: Icons.health_and_safety_outlined,
                     label: 'Sức khỏe',
                     controller: healthCtrl,
                   ),
                   const SizedBox(height: 12),
                   _buildField(
                     context,
-                    emoji: '📝',
+                    icon: Icons.edit_note,
                     label: 'Ghi chú cho phụ huynh',
                     controller: noteCtrl,
                     maxLines: 4,
@@ -4681,7 +4676,7 @@ class _EditObservationSheet extends StatelessWidget {
 
   Widget _buildField(
     BuildContext context, {
-    required String emoji,
+    required IconData icon,
     required String label,
     required TextEditingController controller,
     int maxLines = 1,
@@ -4695,12 +4690,12 @@ class _EditObservationSheet extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 14)),
+            Icon(icon, size: 15, color: context.k.brand),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: context.k.ink),
             ),
@@ -4723,12 +4718,12 @@ class _EditObservationSheet extends StatelessWidget {
                     child: Text(
                       '$currentLength/$maxLength ký tự',
                       style:
-                          TextStyle(fontSize: 11.5, color: context.k.inkSoft),
+                          TextStyle(fontSize: 11, color: context.k.inkSoft),
                     ),
                   );
                 }
               : null,
-          style: TextStyle(fontSize: 13.5, color: context.k.ink),
+          style: TextStyle(fontSize: 13, color: context.k.ink),
           decoration: InputDecoration(
             suffixText: suffixText,
             suffixStyle: TextStyle(

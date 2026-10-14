@@ -175,20 +175,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.shade50,
+                              color: context.k.badTint,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade200),
+                              border: Border.all(color: context.k.bad.withValues(alpha: .35)),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.error_outline, size: 20, color: Colors.red.shade700),
+                                Icon(Icons.error_outline, size: 20, color: context.k.bad),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.red.shade800,
+                                      color: context.k.ink,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -216,15 +216,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             filled: true,
                             fillColor: context.k.surfaceSunken,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: context.k.line),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: context.k.line),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: context.k.brand, width: 1.5),
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -259,15 +259,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             filled: true,
                             fillColor: context.k.surfaceSunken,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: context.k.line),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: context.k.line),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: context.k.brand, width: 1.5),
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -315,10 +315,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               textStyle: const TextStyle(
-                                fontSize: 15,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                               ),

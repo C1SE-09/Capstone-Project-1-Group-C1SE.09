@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 1. DESIGN SYSTEM COLORS (100% FIDELITY FROM admin_UI/app_theme.dart)
 // ═════════════════════════════════════════════════════════════════════════════
 
 abstract final class AppColors {
-  static const brand = Color(0xFF1F7A68);
-  static const brandStrong = Color(0xFF176454);
-  static const brandTint = Color(0xFFE7F4F0);
-  static const warning = Color(0xFFD99A2B);
-  static const warningTint = Color(0xFFFFF4D8);
-  static const danger = Color(0xFFC94F56);
-  static const dangerTint = Color(0xFFFFECEC);
-  static const success = Color(0xFF2D8A60);
-  static const successTint = Color(0xFFE8F6EE);
-  static const info = Color(0xFF4578B5);
+  // Bí danh của bảng màu app (KColors) — một nguồn duy nhất cho giá trị màu.
+  // shortcut: alias tĩnh chỉ dùng theme sáng, đổi call site sang context.k khi màn admin cần dark-mode.
+  static const brand = KColors.brand;
+  static const brandStrong = KColors.brandStrong;
+  static const brandTint = KColors.brandTint;
+  static const warning = KColors.warn;
+  static const warningTint = KColors.warnTint;
+  static const danger = KColors.bad;
+  static const dangerTint = KColors.badTint;
+  static const success = KColors.ok;
+  static const successTint = KColors.okTint;
+  static const info = KColors.info;
 }
 
 const dayLabels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
@@ -357,7 +360,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 height: 38,
                 decoration: BoxDecoration(
                   color: AppColors.brand,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.local_florist, color: Colors.white, size: 22),
               ),
@@ -531,7 +534,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: _isDarkMode ? Colors.white.withAlpha(15) : Colors.black.withAlpha(10),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(99),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -688,7 +691,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.danger.withAlpha(30),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.danger),
             ),
             child: Row(
@@ -789,7 +792,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
                       color: color.withAlpha(33),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(icon, color: color, size: 20),
                   ),
@@ -801,7 +804,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   Text(
                     value,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -856,7 +859,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 children: [
                                   Text(
                                     item.className,
-                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                                   ),
                                   Text(
                                     item.gradeLabel.isNotEmpty ? item.gradeLabel : 'Khối mầm non',
@@ -1123,7 +1126,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final isDark = _isDarkMode;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(12),
       onTap: () {
         setState(() {
           _category = category;
@@ -1140,7 +1143,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           color: selected
               ? (isDark ? AppColors.brand.withAlpha(50) : AppColors.brandTint)
               : (isDark ? Colors.white.withAlpha(10) : Colors.black.withAlpha(8)),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? AppColors.brand : theme.dividerColor,
             width: selected ? 1.8 : 1,
@@ -1179,7 +1182,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   color: selected
                       ? AppColors.brand.withAlpha(30)
                       : theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '$count',
@@ -1406,7 +1409,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ? AppColors.warning.withAlpha(33)
                   : AppColors.warningTint,
               border: Border.all(color: AppColors.warning),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1440,7 +1443,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               padding: const EdgeInsets.only(bottom: 10),
               child: Card(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
                     width: conflict ? 2 : 1,
                     color: conflict
@@ -1458,7 +1461,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           color: conflict
                               ? AppColors.danger
                               : Theme.of(context).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '${item.startTime}\n${item.endTime}',
