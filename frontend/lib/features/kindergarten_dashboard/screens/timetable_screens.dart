@@ -1351,7 +1351,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
 
 /* ======================= Helpers ======================= */
 
-String? _hexColor(String? hex) {
+Color? _hexColor(String? hex) {
   if (hex == null || hex.isEmpty) return null;
   final value = hex.replaceFirst('#', '');
   final parsed = int.tryParse(value, radix: 16);
