@@ -7,6 +7,7 @@ Tests cho API phụ huynh self-service:
 """
 
 import uuid
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -14,8 +15,8 @@ from app.api.dashboard import router as dashboard_router
 from app.api.parent import router as parent_router
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.child import Parent
-from app.models.user import User, UserRole
+from app.models.child import Child, Parent
+from app.models.user import Class_, Teacher, User, UserRole
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -37,6 +38,36 @@ def _make_parent(parent_id: uuid.UUID, phone: str = "0912000001") -> Parent:
     # Gán instance attr để test chạy được trước khi model có cột relationship
     parent.relationship_ = "Bố"
     return parent
+
+
+def _make_child(parent_id: uuid.UUID) -> Child:
+    child = Child(
+        child_id=uuid.uuid4(),
+        parent_id=parent_id,
+        class_id=uuid.uuid4(),
+        full_name="Trần Gia Bảo",
+        nickname="Bảo",
+        gender="male",
+    )
+    child.medical_allergies = "Đậu phộng"
+    return child
+
+
+def _make_class(class_id: uuid.UUID) -> Class_:
+    class_ = Class_(class_id=class_id, name="Mầm A")
+    class_.room_number = "Phòng 1"
+    return class_
+
+
+def _make_teacher(class_id: uuid.UUID) -> Teacher:
+    teacher = Teacher(
+        teacher_id=uuid.uuid4(),
+        class_id=class_id,
+        full_name="Cô Nguyễn Thị Mai",
+        email="co.mai@kinderlog.vn",
+    )
+    teacher.phone = "0987654321"
+    return teacher
 
 
 @pytest.fixture()
@@ -84,6 +115,44 @@ class TestGetParent:
         resp = client.get(f"/api/parent/{PARENT_A}")
         assert resp.status_code == 200, resp.text
         assert resp.json().get("relationship") == "Bố"
+
+    def test_get_parent_returns_created_at(self, client, mock_db):
+        """Màn Tài khoản tính 'N ngày cùng con' từ mốc này."""
+        parent = _make_parent(PARENT_A)
+        parent.created_at = datetime(2026, 6, 8, 9, 30, tzinfo=timezone.utc)
+        mock_db.query.return_value.filter.return_value.first.return_value = parent
+        resp = client.get(f"/api/parent/{PARENT_A}")
+        assert resp.status_code == 200, resp.text
+        assert str(resp.json().get("created_at", "")).startswith("2026-06-08")
+
+
+class TestGetParentPrimaryChild:
+    """GET /api/parent/{id}/child — bổ sung liên hệ GVCN + phòng cho màn parent."""
+
+    def _wire(self, mock_db, parent, child, class_, teacher):
+        mock_db.query.return_value.filter.return_value.first.side_effect = [
+            parent,
+            class_,
+            teacher,
+        ]
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = [child]
+
+    def test_child_payload_includes_teacher_contact_and_room(self, client, mock_db):
+        parent = _make_parent(PARENT_A)
+        child = _make_child(PARENT_A)
+        class_ = _make_class(child.class_id)
+        teacher = _make_teacher(class_.class_id)
+        self._wire(mock_db, parent, child, class_, teacher)
+
+        resp = client.get(f"/api/parent/{PARENT_A}/child")
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["teacher_id"] == str(teacher.teacher_id)
+        assert body["teacher_phone"] == "0987654321"
+        assert body["room_number"] == "Phòng 1"
+        # Giữ nguyên phần frontend đang dùng
+        assert body["class_name"] == "Mầm A"
+        assert body["teacher_name"] == "Cô Nguyễn Thị Mai"
 
 
 class TestUpdateParentPhone:

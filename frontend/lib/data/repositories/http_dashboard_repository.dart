@@ -146,7 +146,15 @@ class HttpDashboardRepository implements DashboardRepository {
       child: Child.fromJson(_asMap(data['child'])),
       className: data['class_name'] as String? ?? '',
       teacherName: data['teacher_name'] as String? ?? '',
+      teacherId: data['teacher_id'] as String?,
+      teacherPhone: data['teacher_phone'] as String?,
+      roomNumber: data['room_number'] as String?,
     );
+  }
+
+  @override
+  Future<void> updateMyPhone(String parentId, String phone) async {
+    await _put('/api/parent/$parentId', data: {'phone': phone});
   }
 
   @override
@@ -299,6 +307,21 @@ class HttpDashboardRepository implements DashboardRepository {
     } on DioException catch (error) {
       throw ClassDataException(
         error.message ?? 'Không thể gửi dữ liệu.',
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> _put(
+    String path, {
+    dynamic data,
+  }) async {
+    try {
+      final response = await _dio.put(path, data: data);
+      return _asMap(response.data);
+    } on DioException catch (error) {
+      throw ClassDataException(
+        error.message ?? 'Không thể lưu dữ liệu.',
         statusCode: error.response?.statusCode,
       );
     }

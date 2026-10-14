@@ -452,6 +452,7 @@ def get_parent(
         "avatar_url": parent.avatar_url,
         "relationship": parent.relationship_,
         "is_verified": parent.is_verified,
+        "created_at": parent.created_at.isoformat() if parent.created_at else None,
     }
 
 
@@ -487,19 +488,29 @@ def get_parent_primary_child(
     child = children[0]
     class_name = ""
     teacher_name = ""
+    teacher_id = None
+    teacher_phone = None
+    room_number = None
     if child.class_id:
         class_ = db.query(Class_).filter(Class_.class_id == child.class_id).first()
         if class_:
             class_name = class_.name
+            room_number = class_.room_number
             teacher = (
                 db.query(Teacher).filter(Teacher.class_id == class_.class_id).first()
             )
-            teacher_name = teacher.full_name if teacher else ""
+            if teacher:
+                teacher_name = teacher.full_name
+                teacher_id = str(teacher.teacher_id)
+                teacher_phone = teacher.phone
 
     return {
         "child": _child_dict(child),
         "class_name": class_name,
         "teacher_name": teacher_name,
+        "teacher_id": teacher_id,
+        "teacher_phone": teacher_phone,
+        "room_number": room_number,
     }
 
 
