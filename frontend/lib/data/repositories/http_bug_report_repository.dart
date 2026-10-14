@@ -82,6 +82,35 @@ class HttpBugReportRepository implements BugReportRepository {
   }
 
   // ══════════════════════════════════════════════════════════
+  // 1b. LIST MY REPORTS (teacher/parent)
+  // ══════════════════════════════════════════════════════════
+
+  @override
+  Future<BugReportListResponse> listMyReports({
+    int page = 1,
+    int pageSize = 20,
+    String? status,
+  }) async {
+    try {
+      final query = <String, String>{
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      };
+      if (status != null && status.isNotEmpty) {
+        query['status'] = status;
+      }
+      final response = await _dio.get(
+        '/api/bug-reports/me',
+        queryParameters: query,
+        options: _authOptions,
+      );
+      return BugReportListResponse.fromJson(_asMap(response.data));
+    } on DioException catch (error) {
+      throw _toException(error, fallback: 'Không thể tải danh sách báo cáo của bạn.');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
   // 2. LIST ALL REPORTS (admin)
   // ══════════════════════════════════════════════════════════
 

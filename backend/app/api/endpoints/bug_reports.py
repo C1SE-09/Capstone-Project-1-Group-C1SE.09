@@ -209,6 +209,52 @@ async def create_bug_report(
 
 
 # ===========================================================================
+# 1.5) GET /api/bug-reports/me  (user list own reports)
+# ===========================================================================
+
+
+@router.get(
+    "/me",
+    response_model=BugReportListResponse,
+    summary="[User] List my bug reports",
+    description="Danh sách các bug reports do chính người dùng hiện tại (giáo viên, phụ huynh) gửi.",
+)
+def user_list_my_reports(
+    status_filter: Annotated[
+        str | None,
+        Query(
+            alias="status",
+            description="open | in_progress | resolved | closed | wont_fix",
+        ),
+    ] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    current_user: User = Depends(require_any_role("teacher", "parent", "admin")),
+    db: Session = Depends(get_db),
+) -> BugReportListResponse:
+    filters: dict[str, Any] = {"user_id": current_user.user_id}
+    if status_filter:
+        filters["status"] = status_filter
+    items, total = list_reports(
+        db=db,
+        filters=filters,
+        page=page,
+        page_size=page_size,
+        order_by="created_at_desc",
+    )
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    return BugReportListResponse(
+        items=[BugReportOut(**bug_report_to_out(r)) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        has_next=page < total_pages,
+        has_prev=page > 1,
+    )
+
+
+# ===========================================================================
 # 2) GET /api/bug-reports  (admin list all)
 # ===========================================================================
 
