@@ -30,6 +30,8 @@ def _make_report():
     report.child_id = uuid.uuid4()
     report.teacher_id = uuid.uuid4()
     report.report_date = date(2026, 10, 8)
+    report.status = "draft"
+    report.published_at = None
     child = MagicMock()
     child.parent_id = uuid.uuid4()
     child.full_name = "Lê Ngọc Ánh"
@@ -83,9 +85,10 @@ def test_sends_to_all_household_tokens(monkeypatch):
 
     assert result == {"sent": 2, "removed": 0}
     assert [call["token"] for call in calls] == ["tok-1", "tok-2"]
-    assert "Lê Ngọc Ánh" in calls[0]["title"]
-    assert "Cô Nguyễn Thị Mai" in calls[0]["body"]
+    assert calls[0]["title"] == "KinderLog"
+    assert "Báo cáo hàng ngày của Lê Ngọc Ánh đã sẵn sàng" in calls[0]["body"]
     assert calls[0]["data"]["report_id"] == str(REPORT_ID)
+    assert calls[0]["data"]["type"] == "report_sent"
     db.commit.assert_called()
 
 
@@ -206,16 +209,16 @@ def test_queue_report_notification_counts_and_queues(monkeypatch):
     monkeypatch.setattr(
         teacher_module.send_report_notifications,
         "delay",
-        lambda report_id: queued.append(report_id),
+        lambda report_id, **kwargs: queued.append((report_id, kwargs.get("is_update", False))),
     )
     monkeypatch.setattr(
         teacher_module, "parent_device_tokens", lambda db, parent_id: [1, 2]
     )
 
-    count = teacher_module._queue_report_notification(db, report, report.child)
+    count = teacher_module._queue_report_notification(db, report, report.child, is_update=True)
 
     assert count == 2
-    assert queued == [str(REPORT_ID)]
+    assert queued == [(str(REPORT_ID), True)]
 
 
 def test_publish_report_queues_notification(monkeypatch):
@@ -229,7 +232,7 @@ def test_publish_report_queues_notification(monkeypatch):
     monkeypatch.setattr(
         teacher_module,
         "_queue_report_notification",
-        lambda db, r, child: queued.append(r.daily_report_id) or 5,
+        lambda db, r, child, **kwargs: queued.append((r.daily_report_id, kwargs.get("is_update", False))) or 5,
     )
 
     result = teacher_module.publish_report(
@@ -239,4 +242,26 @@ def test_publish_report_queues_notification(monkeypatch):
     )
 
     assert result["status"] == DailyReportStatus.PUBLISHED.value
-    assert queued == [REPORT_ID]
+    assert queued == [(REPORT_ID, False)]
+
+
+def test_updated_report_notification_content(monkeypatch):
+    """Khi is_update=True, thông báo phải hiển thị thông tin cập nhật."""
+    report = _make_report()
+    tokens = [_make_token("tok-1")]
+    db = _make_db(report=report, teacher=None, tokens=tokens)
+
+    calls = []
+
+    def fake_send(**kwargs):
+        calls.append(kwargs)
+        return "message-id"
+
+    monkeypatch.setattr(notifications_task, "send_push_notification", fake_send)
+
+    result = notifications_task._deliver_report_notification(db, str(REPORT_ID), is_update=True)
+
+    assert result == {"sent": 1, "removed": 0}
+    assert calls[0]["title"] == "KinderLog"
+    assert "Báo cáo ngày 08/10 của Lê Ngọc Ánh đã được cập nhật" in calls[0]["body"]
+    assert calls[0]["data"]["type"] == "report_updated"
