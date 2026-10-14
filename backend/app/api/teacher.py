@@ -882,8 +882,8 @@ def _queue_report_notification(db, report, child, is_update: bool = False) -> in
     """
     targeted_devices = 0
     if child is not None and child.parent_id is not None:
-        targeted_devices = len(parent_device_tokens(db, child.parent_id), is_update=is_update)
-    send_report_notifications.delay(str(report.daily_report_id))
+        targeted_devices = len(parent_device_tokens(db, child.parent_id))
+    send_report_notifications.delay(str(report.daily_report_id), is_update=is_update)
     return targeted_devices
 
 
@@ -1354,7 +1354,7 @@ def _send_one_report(
     # Provider lỗi != revert lần gửi này.
     targeted_devices = 0
     try:
-        targeted_devices = _queue_report_notification(db, report, child)
+        targeted_devices = _queue_report_notification(db, report, child, is_update=is_update)
     except Exception:
         logger.exception(
             "[Send] Notification failed for report_id=%s - report stays '%s'",
