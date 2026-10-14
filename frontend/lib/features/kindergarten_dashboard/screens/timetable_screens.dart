@@ -393,7 +393,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 const SizedBox(height: 6),
                 Text(item.content!.trim(), style: TextStyle(fontSize: 13, color: sheetCtx.k.inkSoft)),
               ],
-              if (!widget.isReadOnly) ...[
+              // Phụ huynh chỉ được xem: không hiện "Chỉnh sửa" và "Xóa".
+              if (widget.isReadOnly) ...[
+                const SizedBox(height: 16),
+                KButton(
+                  label: 'Đóng',
+                  secondary: true,
+                  onPressed: () => Navigator.pop(sheetCtx),
+                ),
+              ] else ...[
                 const SizedBox(height: 16),
                 KButton(
                   label: 'Chỉnh sửa',
@@ -413,13 +421,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   style: TextButton.styleFrom(minimumSize: const Size.fromHeight(44)),
                   icon: Icon(Icons.delete_outline, size: 18, color: sheetCtx.k.bad),
                   label: Text('Xóa', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sheetCtx.k.bad)),
-                ),
-              ] else ...[
-                const SizedBox(height: 16),
-                KButton(
-                  label: 'Đóng',
-                  secondary: true,
-                  onPressed: () => Navigator.pop(sheetCtx),
                 ),
               ],
             ],
@@ -481,6 +482,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   void _openEditor(_TimetableData data, [ClassSchedule? existing]) {
+    // Chặn phòng thủ: phụ huynh (read-only) không bao giờ mở được editor,
+    // kể cả nếu sau này có thêm lối vào mới quên kiểm tra cờ.
     if (widget.isReadOnly) return;
     showKSheet(
       context,
@@ -1346,36 +1349,37 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
       );
 }
 
-
 /* ======================= Helpers ======================= */
 
-Color? _hexColor(String? value) {
-  if (value == null || value.trim().isEmpty) return null;
-  var hex = value.trim().replaceFirst('#', '');
-  if (hex.length == 6) hex = 'FF$hex';
-  if (hex.length != 8) return null;
-  final parsed = int.tryParse(hex, radix: 16);
-  return parsed == null ? null : Color(parsed);
+String? _hexColor(String? hex) {
+  if (hex == null || hex.isEmpty) return null;
+  final value = hex.replaceFirst('#', '');
+  final parsed = int.tryParse(value, radix: 16);
+  if (parsed == null) return null;
+  return Color(0xFF000000 | parsed);
 }
 
-IconData _iconForSubject(String? name) {
-  final n = (name ?? '').toLowerCase();
-  bool has(List<String> keys) => keys.any(n.contains);
-  if (has(['thể dục', 'vận động', 'thể chất'])) return Icons.directions_run_outlined;
-  if (has(['vẽ', 'mỹ thuật', 'tạo hình'])) return Icons.palette_outlined;
-  if (has(['nhạc', 'hát'])) return Icons.music_note_outlined;
-  if (has(['toán'])) return Icons.calculate_outlined;
-  if (has(['chữ', 'đọc', 'kể chuyện', 'văn'])) return Icons.menu_book_outlined;
-  if (has(['ăn'])) return Icons.restaurant_outlined;
-  if (has(['ngủ'])) return Icons.bedtime_outlined;
-  if (has(['chơi', 'góc', 'lắp ghép'])) return Icons.extension_outlined;
-  if (has(['sinh hoạt', 'sự kiện', 'tham quan', 'lễ'])) return Icons.celebration_outlined;
-  return Icons.event_outlined;
+IconData _iconForSubject(String? subject) {
+  switch (subject) {
+    case 'Toán':
+      return Icons.calculate_outlined;
+    case 'Văn':
+      return Icons.menu_book_outlined;
+    case 'Ngoại ngữ':
+      return Icons.language_outlined;
+    case 'Âm nhạc':
+      return Icons.music_note_outlined;
+    case 'Mỹ thuật':
+      return Icons.palette_outlined;
+    case 'Thể dục':
+      return Icons.sports_soccer_outlined;
+    default:
+      return Icons.event_outlined;
+  }
 }
 
-int? _toMin(String value) {
-  if (value.trim().isEmpty) return null;
-  final parts = value.split(':');
+int? _toMin(String time) {
+  final parts = time.split(':');
   if (parts.length < 2) return null;
   final h = int.tryParse(parts[0]);
   final m = int.tryParse(parts[1]);
