@@ -55,7 +55,28 @@ def send_push_notification(
     title: str,
     body: str,
     data: dict[str, str] | None = None,
+    channel_id: str = "kinderlog_reports",
 ) -> str:
+    android_config = messaging.AndroidConfig(
+        priority="high",
+        notification=messaging.AndroidNotification(
+            title=title,
+            body=body,
+            channel_id=channel_id,
+            sound="default",
+            default_sound=True,
+            default_vibrate_timings=True,
+            visibility="public",
+        ),
+    )
+
+    apns_config = messaging.APNSConfig(
+        headers={"apns-priority": "10"},
+        payload=messaging.APNSPayload(
+            aps=messaging.Aps(sound="default", badge=1)
+        ),
+    )
+    
     message = messaging.Message(
         notification=messaging.Notification(
             title=title,
@@ -63,6 +84,8 @@ def send_push_notification(
         ),
         data=data or {},
         token=token,
+        android=android_config,
+        apns=apns_config,
     )
 
     return messaging.send(

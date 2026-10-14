@@ -13,7 +13,6 @@ import uuid
 
 from app.core.database import SessionLocal
 from app.models.report import DailyReport
-from app.models.user import Teacher
 from app.services.notification_service import (
     is_invalid_token,
     parent_device_tokens,
@@ -24,7 +23,7 @@ from app.tasks.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 
-def _deliver_report_notification(db, report_id: str) -> dict:
+def _deliver_report_notification(db, report_id: str, is_update: bool = False) -> dict:
     """Gửi push tới toàn bộ thiết bị phụ huynh của trẻ; trả về thống kê.
 
     Tách khỏi task để unit-test được với session giả (xem tests/test_notifications.py).
@@ -49,25 +48,24 @@ def _deliver_report_notification(db, report_id: str) -> dict:
         logger.info("[Notify] Trẻ chưa liên kết phụ huynh (report_id=%s)", report_id)
         return {"sent": 0, "removed": 0, "reason": "no_parent"}
 
-    child_name = child.nickname or child.full_name
-    teacher = (
-        db.query(Teacher)
-        .filter(Teacher.teacher_id == report.teacher_id)
-        .first()
-    )
+    child_name = child.full_name.strip() if child.full_name else (child.nickname or "bé")
+
     tokens = parent_device_tokens(db, child.parent_id)
     if not tokens:
         logger.info("[Notify] Phụ huynh chưa đăng ký thiết bị (bé %s)", child_name)
         return {"sent": 0, "removed": 0, "reason": "no_device_tokens"}
 
-    teacher_name = teacher.full_name if teacher else "Giáo viên"
-    title = f"Báo cáo mới cho bé {child_name}"
-    body = (
-        f"{teacher_name} đã gửi báo cáo hoạt động ngày "
-        f"{report.report_date.strftime('%d/%m')}."
-    )
+    title = "KinderLog"
+    if is_update:
+        report_date = report.report_date.strftime("%d/%m") if report.report_date else ""
+        body = f"Báo cáo ngày {report_date} của {child_name} đã được cập nhật"
+        action_type = "report_updated"
+    else:
+        body = f"Báo cáo hàng ngày của {child_name} đã sẵn sàng"
+        action_type = "report_sent"
+
     data = {
-        "type": "report_sent",
+        "type": action_type,
         "report_id": str(report.daily_report_id),
         "child_id": str(report.child_id),
     }
@@ -113,11 +111,11 @@ def _deliver_report_notification(db, report_id: str) -> dict:
     max_retries=3,
     default_retry_delay=30,
 )
-def send_report_notifications(self, report_id: str) -> dict:
+def send_report_notifications(self, report_id: str, is_update: bool = False) -> dict:
     """Celery entry: mở session rồi gọi phần xử lý thuần (dễ test)."""
     db = SessionLocal()
     try:
-        return _deliver_report_notification(db, report_id)
+        return _deliver_report_notification(db, report_id, is_update=is_update)
     except Exception as error:
         db.rollback()
         logger.exception(

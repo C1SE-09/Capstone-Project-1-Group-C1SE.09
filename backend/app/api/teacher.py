@@ -874,7 +874,7 @@ def get_report_detail(
     )
 
 
-def _queue_report_notification(db, report, child) -> int:
+def _queue_report_notification(db, report, child, is_update: bool = False) -> int:
     """Đếm device token của phụ huynh (đồng bộ) rồi đẩy job gửi push vào Celery.
 
     Dùng chung cho cả /send và /publish để mọi cách gửi báo cáo đều phát thông
@@ -883,7 +883,7 @@ def _queue_report_notification(db, report, child) -> int:
     targeted_devices = 0
     if child is not None and child.parent_id is not None:
         targeted_devices = len(parent_device_tokens(db, child.parent_id))
-    send_report_notifications.delay(str(report.daily_report_id))
+    send_report_notifications.delay(str(report.daily_report_id), is_update=is_update)
     return targeted_devices
 
 
@@ -892,6 +892,7 @@ def publish_report(
     report_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    is_update: bool = False,
 ):
     """Chuyển trạng thái báo cáo từ DRAFT → PUBLISHED và ghi nhận published_at."""
     report = (
@@ -906,6 +907,8 @@ def publish_report(
         if teacher_obj:
             report.teacher_id = teacher_id
 
+    is_update = bool(report.status == DailyReportStatus.PUBLISHED or report.published_at is not None)
+
     report.status = DailyReportStatus.PUBLISHED
     report.published_at = datetime.now(UTC).date()
     db.commit()
@@ -914,7 +917,7 @@ def publish_report(
     # Thông báo SAU commit — app gọi endpoint này khi cô bấm "Gửi báo cáo",
     # nên đây là luồng push chính cho gửi từng trẻ.
     try:
-        _queue_report_notification(db, report, report.child)
+        _queue_report_notification(db, report, report.child, is_update=is_update)
     except Exception:
         logger.exception(
             "[Publish] Notification failed for report_id=%s - report stays '%s'",
@@ -1261,6 +1264,7 @@ def _send_one_report(
     teacher_id: uuid.UUID | None,
     db: Session,
     allow_resend: bool = True,
+    is_update: bool = False
 ) -> SendReportResponse:
     """Gửi 1 báo cáo. Dùng chung cho endpoint
     lẻ + hàng loạt = luôn chung 1 quy tắc."""
@@ -1329,13 +1333,16 @@ def _send_one_report(
     child = report.child
     linked_parents = 1 if (child and child.parent_id) else 0
 
+    was_already_sent = bool(report.status == SENT_STATUS or report.sent_at is not None)
+    is_update = was_already_sent
+
     # 7. Đổi trạng thái, save thời điểm gửi, commit TRƯỚC khi tb..
     report.status = SENT_STATUS
     report.sent_at = datetime.now(UTC)
     report.published_at = report.sent_at.date()  # sync w frontend
     db.commit()
     db.refresh(report)
-
+    
     logger.info(
         "[Send] report_id=%s teacher_id=%s sent_at=%s",
         report.daily_report_id,
@@ -1347,7 +1354,7 @@ def _send_one_report(
     # Provider lỗi != revert lần gửi này.
     targeted_devices = 0
     try:
-        targeted_devices = _queue_report_notification(db, report, child)
+        targeted_devices = _queue_report_notification(db, report, child, is_update=is_update)
     except Exception:
         logger.exception(
             "[Send] Notification failed for report_id=%s - report stays '%s'",
