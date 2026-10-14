@@ -2,11 +2,12 @@
 // =========================================================
 // Cấu hình URL backend dùng chung cho tất cả repository.
 //
-// - Flutter Web: sử dụng localhost (same machine as browser).
-// - Android emulator: 10.0.2.2 là địa chỉ loopback tới máy host.
-// - Thiết bị vật lý / tình huống khác: đổi kFoundBaseUrl cho phù hợp.
-
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+// - Ưu tiên cao nhất: --dart-define=API_BASE_URL=... (dùng khi deploy production,
+//   backend không còn nằm trên PC dev nữa).
+// - Dev (mọi nền tảng: web, desktop, Android emulator, Android thiết bị thật):
+//   localhost — với Android, traffic đi qua `adb reverse tcp:8000 tcp:8000`
+//   bắc từ điện thoại/emulator về PC. Task "adb reverse" trong .vscode tự chạy
+//   khi mở project nên không cần cấu hình IP, không phụ thuộc Wi-Fi.
 
 /// Base URL của FastAPI backend.
 String get kApiBaseUrl {
@@ -14,14 +15,7 @@ String get kApiBaseUrl {
   if (envUrl.isNotEmpty) {
     return envUrl;
   }
-  if (kIsWeb) {
-    return 'http://localhost:8000';
-  }
-  if (defaultTargetPlatform == TargetPlatform.android) {
-    // Android emulator loopback
-    return 'http://10.0.2.2:8000';
-  }
-  // Windows, macOS, Linux desktop, iOS simulator
+  // Dev: backend luôn chạy trên máy dev — Android đi qua adb reverse (xem chú thích đầu file).
   return 'http://localhost:8000';
 }
 
