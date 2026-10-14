@@ -882,8 +882,8 @@ def _queue_report_notification(db, report, child, is_update: bool = False) -> in
     """
     targeted_devices = 0
     if child is not None and child.parent_id is not None:
-        targeted_devices = len(parent_device_tokens(db, child.parent_id))
-    send_report_notifications.delay(str(report.daily_report_id), is_update=is_update)
+        targeted_devices = len(parent_device_tokens(db, child.parent_id), is_update=is_update)
+    send_report_notifications.delay(str(report.daily_report_id))
     return targeted_devices
 
 
@@ -892,6 +892,7 @@ def publish_report(
     report_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    is_update: bool = False,
 ):
     """Chuyển trạng thái báo cáo từ DRAFT → PUBLISHED và ghi nhận published_at."""
     report = (
@@ -1333,7 +1334,7 @@ def _send_one_report(
     linked_parents = 1 if (child and child.parent_id) else 0
 
     was_already_sent = bool(report.status == SENT_STATUS or report.sent_at is not None)
-    is_update = is_update or was_already_sent
+    is_update = was_already_sent
 
     # 7. Đổi trạng thái, save thời điểm gửi, commit TRƯỚC khi tb..
     report.status = SENT_STATUS
@@ -1341,7 +1342,7 @@ def _send_one_report(
     report.published_at = report.sent_at.date()  # sync w frontend
     db.commit()
     db.refresh(report)
-
+    
     logger.info(
         "[Send] report_id=%s teacher_id=%s sent_at=%s",
         report.daily_report_id,
@@ -1353,7 +1354,7 @@ def _send_one_report(
     # Provider lỗi != revert lần gửi này.
     targeted_devices = 0
     try:
-        targeted_devices = _queue_report_notification(db, report, child, is_update=is_update)
+        targeted_devices = _queue_report_notification(db, report, child)
     except Exception:
         logger.exception(
             "[Send] Notification failed for report_id=%s - report stays '%s'",
