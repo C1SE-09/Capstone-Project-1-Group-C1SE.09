@@ -1,5 +1,6 @@
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,6 +9,8 @@ import 'package:flutter/material.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeController.instance.load();
+  // Nạp phiên đã lưu để mở lại app là vào thẳng, không qua màn đăng nhập (AC1).
+  await SessionManagementService.instance.loadPersistedSession();
   // Khởi tạo Firebase cho push notification. Bọc try/catch để app vẫn chạy
   // khi chưa có google-services.json hoặc trên nền tảng không hỗ trợ.
   try {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/admin_dashboard_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
@@ -10,11 +11,26 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_s
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> _rootNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'root');
+
+/// Màn hình mở đầu khi app khởi động (AC1): máy còn phiên thì vào thẳng đúng
+/// màn theo vai trò, không thì về đăng nhập.
+String initialRouteFor(AppSession? session) {
+  if (session == null) return '/login';
+  if (session.role == 'teacher') return '/class-select';
+  if (session.role == 'parent') return '/parent';
+  if (session.role == 'admin') return '/admin';
+  return '/login';
+}
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/login',
+  // Đọc phiên đã nạp từ main() — top-level final nên chỉ chạy lần đầu appRouter
+  // được đọc, tức sau khi loadPersistedSession() xong.
+  initialLocation: initialRouteFor(
+    SessionManagementService.instance.currentSession,
+  ),
   routes: [
     GoRoute(path: '/', redirect: (context, state) => '/login'),
     GoRoute(path: '/login', builder: (context, state) => const _LoginRoute()),
@@ -31,12 +47,25 @@ final GoRouter appRouter = GoRouter(
         username: AuthRepository.currentUser?.username,
       ),
     ),
-    GoRoute(path: '/class-select', builder: (context, state) => Scaffold(body: SafeArea(child: ClassSelectScreen(onPick: (classId) => appRouter.go(Uri(path: '/teacher', queryParameters: {'classId': classId}).toString()))))),
-    GoRoute(path: '/teacher', builder: (context, state) => TeacherShell(onLogout: _goLogin, classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001')),
+    GoRoute(
+        path: '/class-select',
+        builder: (context, state) => Scaffold(
+            body: SafeArea(
+                child: ClassSelectScreen(
+                    onPick: (classId) => appRouter.go(Uri(
+                        path: '/teacher',
+                        queryParameters: {'classId': classId}).toString()))))),
+    GoRoute(
+        path: '/teacher',
+        builder: (context, state) => TeacherShell(
+            onLogout: _goLogin,
+            classId: state.uri.queryParameters['classId'] ??
+                'aaaaaaaa-0000-0000-0000-000000000001')),
     GoRoute(
       path: '/timetable',
       builder: (context, state) => TimetableScreen(
-        classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001',
+        classId: state.uri.queryParameters['classId'] ??
+            'aaaaaaaa-0000-0000-0000-000000000001',
         className: state.uri.queryParameters['className'] ?? 'Lớp học',
         isReadOnly: state.uri.queryParameters['isReadOnly'] == 'true',
       ),
@@ -48,7 +77,10 @@ final GoRouter appRouter = GoRouter(
         initialOpenReport: state.uri.queryParameters['report'] == 'today',
       ),
     ),
-    GoRoute(path: '/change-password', builder: (context, state) => ChangePasswordScreen(onBack: () => appRouter.pop())),
+    GoRoute(
+        path: '/change-password',
+        builder: (context, state) =>
+            ChangePasswordScreen(onBack: () => appRouter.pop())),
 
     // ══════════════════════════════════════════════════════════
     // Bug Report feature (TASK: F-05)
@@ -86,7 +118,9 @@ final GoRouter appRouter = GoRouter(
 Future<void> _goLogin() async {
   // Xoá device token TRƯỚC khi logout để request còn JWT hợp lệ.
   await PushNotificationService.instance.deleteCurrentDevice();
-  AuthRepository().logout();
+  // Logout trước khi xoá phiên local: request logout cần token để server revoke.
+  await AuthRepository().logout();
+  await SessionManagementService.instance.clearSession();
   appRouter.go('/login');
 }
 

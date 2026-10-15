@@ -24,6 +24,7 @@ import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
 import 'package:dio/dio.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 
 class HttpDashboardRepository implements DashboardRepository {
   HttpDashboardRepository({
@@ -50,7 +51,11 @@ class HttpDashboardRepository implements DashboardRepository {
                     ? {'Authorization': 'Bearer ${AuthRepository.currentUser!.token}'}
                     : null,
               ),
-            );
+            ) {
+    _dio.interceptors.add(
+      SessionManagementService.instance.createDioInterceptor(_dio),
+    );
+  }
 
   final ClassDataRepository _classData;
   final Dio _dio;

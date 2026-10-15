@@ -9,6 +9,7 @@
 
 import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 
 class AdminClassDto {
   final String id;
@@ -231,7 +232,11 @@ class HttpAdminRepository {
                 connectTimeout: const Duration(seconds: 15),
                 receiveTimeout: const Duration(seconds: 15),
               ),
-            );
+            ) {
+    _dio.interceptors.add(
+      SessionManagementService.instance.createDioInterceptor(_dio),
+    );
+  }
 
   final Dio _dio;
 
