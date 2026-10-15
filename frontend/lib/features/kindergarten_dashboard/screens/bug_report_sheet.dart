@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 
 import 'package:adark_frontend/core/utils/device_info_helper.dart';
 import 'package:adark_frontend/data/repositories/http_bug_report_repository.dart';
-import 'package:adark_frontend/domain/entities/bug_report/bug_report.dart';
 import 'package:adark_frontend/domain/entities/bug_report/enums.dart';
 import 'package:adark_frontend/domain/repositories/bug_report_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -38,8 +36,6 @@ class BugReportBottomSheet extends StatefulWidget {
 }
 
 class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
-  int _selectedTab = 0; // 0: Gửi báo cáo, 1: Lịch sử báo cáo
-
   // Form controllers & state
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
@@ -50,17 +46,6 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
   bool _isSubmitting = false;
   String? _formError;
 
-  // History state
-  bool _isLoadingHistory = false;
-  List<BugReport> _myReports = [];
-  String? _historyError;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMyReports();
-  }
-
   @override
   void dispose() {
     _titleController.dispose();
@@ -68,29 +53,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
     super.dispose();
   }
 
-  Future<void> _loadMyReports() async {
-    setState(() {
-      _isLoadingHistory = true;
-      _historyError = null;
-    });
 
-    try {
-      final res = await widget.repository.listMyReports(page: 1, pageSize: 50);
-      if (mounted) {
-        setState(() {
-          _myReports = res.items;
-          _isLoadingHistory = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingHistory = false;
-          _historyError = 'Không thể tải lịch sử báo lỗi. Vui lòng thử lại.';
-        });
-      }
-    }
-  }
 
   Future<void> _pickImages() async {
     if (_attachments.length >= 5) {
@@ -183,12 +146,10 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
       _descriptionController.clear();
       _attachments.clear();
 
-      // Reload history & switch to tab history
-      _loadMyReports();
-      setState(() {
-        _isSubmitting = false;
-        _selectedTab = 1;
-      });
+      setState(() => _isSubmitting = false);
+      if (mounted) {
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -275,46 +236,12 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
             ),
             const SizedBox(height: 14),
 
-            // Tabs Selector
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: k.surfaceSunken,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _TabButton(
-                        label: 'Gửi báo cáo',
-                        icon: Icons.edit_note_rounded,
-                        isSelected: _selectedTab == 0,
-                        onTap: () => setState(() => _selectedTab = 0),
-                      ),
-                    ),
-                    Expanded(
-                      child: _TabButton(
-                        label: _myReports.isEmpty ? 'Lịch sử' : 'Lịch sử (${_myReports.length})',
-                        icon: Icons.history_rounded,
-                        isSelected: _selectedTab == 1,
-                        onTap: () => setState(() => _selectedTab = 1),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
             const SizedBox(height: 12),
             Divider(height: 1, color: k.line),
 
             // Body
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _selectedTab == 0 ? _buildFormTab() : _buildHistoryTab(),
-              ),
+              child: _buildFormTab(),
             ),
           ],
         ),
@@ -543,89 +470,6 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // TAB 2: LỊCH SỬ BÁO CÁO CỦA TÔI
-  // ═══════════════════════════════════════════════════════════════════════
-
-  Widget _buildHistoryTab() {
-    final k = context.k;
-
-    if (_isLoadingHistory) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(strokeWidth: 2.5, color: k.brand),
-            const SizedBox(height: 12),
-            Text('Đang tải lịch sử...', style: TextStyle(fontSize: 13, color: k.inkSoft)),
-          ],
-        ),
-      );
-    }
-
-    if (_historyError != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.warning_amber_rounded, size: 36, color: k.warn),
-            const SizedBox(height: 8),
-            Text(_historyError!, style: TextStyle(fontSize: 13, color: k.inkSoft)),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: _loadMyReports,
-              child: const Text('Thử lại'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_myReports.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: k.surfaceSunken, shape: BoxShape.circle),
-                child: Icon(Icons.playlist_add_check_rounded, size: 36, color: k.inkFaint),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Chưa có báo cáo nào',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: k.ink),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Các sự cố bạn báo cáo sẽ được hiển thị tại đây kèm trạng thái cập nhật từ ban quản trị.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: k.inkSoft),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadMyReports,
-      color: k.brand,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        itemCount: _myReports.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, idx) {
-          final report = _myReports[idx];
-          return _ReportHistoryCard(report: report);
-        },
-      ),
-    );
-  }
-
   Widget _buildFieldLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -635,194 +479,6 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: context.k.ink,
-        ),
-      ),
-    );
-  }
-
-
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SUB-WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? k.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? k.brand : k.inkSoft,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? k.brand : k.inkSoft,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReportHistoryCard extends StatefulWidget {
-  const _ReportHistoryCard({required this.report});
-
-  final BugReport report;
-
-  @override
-  State<_ReportHistoryCard> createState() => _ReportHistoryCardState();
-}
-
-class _ReportHistoryCardState extends State<_ReportHistoryCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    final r = widget.report;
-    final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(r.createdAt.toLocal());
-
-    final (statusLabel, statusColor, statusBg) = switch (r.status) {
-      BugStatus.open => ('Mới gửi', k.info, k.infoTint),
-      BugStatus.inProgress => ('Đang xử lý', k.warn, k.warnTint),
-      BugStatus.resolved => ('Đã sửa', k.ok, k.okTint),
-      BugStatus.closed => ('Đã đóng', k.inkSoft, k.surfaceSunken),
-      BugStatus.wontFix => ('Không sửa', k.bad, k.badTint),
-    };
-
-    return Container(
-      decoration: BoxDecoration(
-        color: k.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: k.line),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => setState(() => _isExpanded = !_isExpanded),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      r.title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: k.ink,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: statusBg,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      statusLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: statusColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Text(
-                    r.category.label,
-                    style: TextStyle(fontSize: 12, color: k.inkSoft, fontWeight: FontWeight.w500),
-                  ),
-                  Text(' • ', style: TextStyle(color: k.inkFaint)),
-                  Text(
-                    'Mức độ: ${r.severity.label}',
-                    style: TextStyle(fontSize: 12, color: k.inkSoft),
-                  ),
-                  if (r.attachmentCount > 0) ...[
-                    Text(' • ', style: TextStyle(color: k.inkFaint)),
-                    Icon(Icons.attach_file, size: 14, color: k.inkSoft),
-                    Text('${r.attachmentCount}', style: TextStyle(fontSize: 12, color: k.inkSoft)),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                dateStr,
-                style: TextStyle(fontSize: 11, color: k.inkFaint),
-              ),
-              if (_isExpanded) ...[
-                const SizedBox(height: 10),
-                Divider(height: 1, color: k.line),
-                const SizedBox(height: 10),
-                Text(
-                  'Chi tiết sự cố:',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: k.ink),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  r.description,
-                  style: TextStyle(fontSize: 13, color: k.inkSoft, height: 1.4),
-                ),
-                if (r.teacher != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Giáo viên phụ trách: ${r.teacher!.fullName}',
-                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: k.brand),
-                  ),
-                ],
-              ],
-            ],
-          ),
         ),
       ),
     );

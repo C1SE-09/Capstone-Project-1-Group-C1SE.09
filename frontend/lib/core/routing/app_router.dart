@@ -32,7 +32,7 @@ final GoRouter appRouter = GoRouter(
       ),
     ),
     GoRoute(path: '/class-select', builder: (context, state) => Scaffold(body: SafeArea(child: ClassSelectScreen(onPick: (classId) => appRouter.go(Uri(path: '/teacher', queryParameters: {'classId': classId}).toString()))))),
-    GoRoute(path: '/teacher', builder: (context, state) => TeacherShell(onLogout: _goLogin, classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001')),
+    GoRoute(path: '/teacher', builder: (context, state) => TeacherShell(onLogout: _goLogin, classId: state.uri.queryParameters['classId'])),
     GoRoute(
       path: '/timetable',
       builder: (context, state) => TimetableScreen(
@@ -104,7 +104,7 @@ class _LoginRoute extends StatelessWidget {
               appRouter.go('/parent');
               break;
             case UserRole.teacher:
-              appRouter.go('/class-select');
+              appRouter.go('/teacher');
               break;
           }
         },

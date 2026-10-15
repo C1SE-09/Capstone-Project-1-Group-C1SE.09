@@ -608,12 +608,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
 /* ======================= Widgets ======================= */
 
-class _TimetableData {
-  const _TimetableData({required this.items, required this.slots, required this.subjects});
+class TimetableData {
+  const TimetableData({required this.items, required this.slots, required this.subjects});
   final List<ClassSchedule> items;
   final List<TimeSlot> slots;
   final List<Subject> subjects;
 }
+
+typedef _TimetableData = TimetableData;
+
 
 class _ViewToggle extends StatelessWidget {
   const _ViewToggle({required this.weekMode, required this.onChanged});
@@ -907,26 +910,33 @@ class _ScheduleRow extends StatelessWidget {
 }
 
 
-class _ScheduleEditorSheet extends StatefulWidget {
-  const _ScheduleEditorSheet({
+class ScheduleEditorSheet extends StatefulWidget {
+  const ScheduleEditorSheet({
+    super.key,
     required this.data,
     required this.classId,
     required this.repository,
     required this.onSaved,
     this.existing,
+    this.classes,
+    this.onClassChanged,
   });
 
-  final _TimetableData data;
+  final TimetableData data;
   final String classId;
   final ScheduleRepository repository;
   final void Function(String message, int savedDay) onSaved;
   final ClassSchedule? existing;
+  final List<Map<String, String>>? classes;
+  final ValueChanged<String>? onClassChanged;
 
   @override
-  State<_ScheduleEditorSheet> createState() => _ScheduleEditorSheetState();
+  State<ScheduleEditorSheet> createState() => _ScheduleEditorSheetState();
 }
 
-class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
+typedef _ScheduleEditorSheet = ScheduleEditorSheet;
+
+class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _roomController;
   late final ScrollController _subjectScrollController = ScrollController();
@@ -934,6 +944,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
   Subject? _subject;
   TimeSlot? _slot;
   late int _day;
+  late String _selectedClassId;
   bool _saving = false;
   String? _error;
   String? _nameError;
@@ -942,6 +953,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
   void initState() {
     super.initState();
     final existing = widget.existing;
+    _selectedClassId = widget.classId;
     _nameController = TextEditingController(text: existing?.activityName ?? '');
     _roomController = TextEditingController(text: existing?.roomName ?? '');
     _subject = existing != null
@@ -1000,7 +1012,7 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
       final existing = widget.existing;
       if (existing == null) {
         await widget.repository.createSchedule(
-          classId: widget.classId,
+          classId: _selectedClassId.isNotEmpty ? _selectedClassId : widget.classId,
           subjectId: _subject!.subjectId,
           slotId: _slot!.slotId,
           dayOfWeek: _day + 2,
@@ -1043,6 +1055,26 @@ class _ScheduleEditorSheetState extends State<_ScheduleEditorSheet> {
         children: [
           Text(widget.existing == null ? 'Thêm hoạt động' : 'Chỉnh sửa hoạt động', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
+          if (widget.classes != null && widget.classes!.isNotEmpty) ...[
+            _fieldLabel(context, 'Lớp học'),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedClassId.isNotEmpty && widget.classes!.any((c) => c['id'] == _selectedClassId)
+                  ? _selectedClassId
+                  : widget.classes!.first['id'],
+              decoration: _inputDecoration(context, hint: 'Chọn lớp học'),
+              items: widget.classes!.map((c) => DropdownMenuItem(
+                value: c['id'],
+                child: Text(c['name'] ?? ''),
+              )).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _selectedClassId = val);
+                  widget.onClassChanged?.call(val);
+                }
+              },
+            ),
+            const SizedBox(height: 14),
+          ],
           _fieldLabel(context, 'Hoạt động'),
           TextField(
             controller: _nameController,
