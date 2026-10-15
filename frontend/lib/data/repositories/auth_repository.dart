@@ -11,6 +11,7 @@ class AuthUser {
     this.tokenType = 'bearer',
     required this.role,
     this.userId,
+    this.username,
     this.teacherId,
     this.parentId,
   });
@@ -19,15 +20,17 @@ class AuthUser {
   final String tokenType;
   final String role; // 'teacher' | 'parent' | 'admin'
   final String? userId;
+  final String? username;
   final String? teacherId;
   final String? parentId;
 
-  factory AuthUser.fromJson(Map<String, dynamic> json) {
+  factory AuthUser.fromJson(Map<String, dynamic> json, {String? fallbackUsername}) {
     return AuthUser(
       token: json['access_token'] as String? ?? '',
       tokenType: json['token_type'] as String? ?? 'bearer',
       role: json['role'] as String? ?? 'teacher',
       userId: json['user_id'] as String?,
+      username: (json['username'] as String?) ?? fallbackUsername,
       teacherId: json['teacher_id'] as String?,
       parentId: json['parent_id'] as String?,
     );
@@ -76,9 +79,9 @@ class AuthRepository {
       final data = response.data;
       final AuthUser user;
       if (data is Map<String, dynamic>) {
-        user = AuthUser.fromJson(data);
+        user = AuthUser.fromJson(data, fallbackUsername: username.trim());
       } else if (data is Map) {
-        user = AuthUser.fromJson(Map<String, dynamic>.from(data));
+        user = AuthUser.fromJson(Map<String, dynamic>.from(data), fallbackUsername: username.trim());
       } else {
         throw const AuthException('Dữ liệu phản hồi không hợp lệ.');
       }

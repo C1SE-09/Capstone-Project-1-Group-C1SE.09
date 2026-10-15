@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
@@ -49,6 +50,7 @@ class AdminDashboardScreen extends StatefulWidget {
     this.initialTab = AdminTab.overview,
     this.initialCategory = AdminCategory.teachers,
     this.schoolName = 'Trường Mầm Non Hướng Dương',
+    this.username,
   });
 
   final VoidCallback onLogout;
@@ -56,6 +58,7 @@ class AdminDashboardScreen extends StatefulWidget {
   final AdminTab initialTab;
   final AdminCategory initialCategory;
   final String schoolName;
+  final String? username;
 
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
@@ -332,8 +335,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // ═════════════════════════════════════════════════════════════════════════════
 
   Widget _mobileHeader() {
-    final now = DateTime.now();
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final hasSearch = _query.isNotEmpty;
 
     return Container(
@@ -400,42 +401,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Hàng 3: Hiển thị tên trường học (cố định theo Admin từng trường, không thể đổi)
-            InputDecorator(
-              decoration: const InputDecoration(
-                isDense: true,
-                prefixIcon: Icon(Icons.school_outlined, size: 20),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              child: Text(
-                widget.schoolName,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Hàng 4: Chuông thông báo + Nút Thêm mới (Đã bỏ hoàn toàn nút Quay lại)
+            // Hàng 3: Nút Thêm mới + Nút Làm mới dữ liệu
             Row(
               children: [
-                Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                  ),
-                  child: IconButton(
-                    tooltip: 'Thông báo',
-                    onPressed: () => _notify('Hệ thống hoạt động bình thường, không có cảnh báo mới'),
-                    icon: const Badge(
-                      smallSize: 7,
-                      child: Icon(Icons.notifications_none, size: 20),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
                 Expanded(
                   child: SizedBox(
                     height: 44,
@@ -455,45 +423,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Hàng 5: Pill badge trạng thái đồng bộ dữ liệu
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+                const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  height: 44,
+                  width: 44,
                   decoration: BoxDecoration(
-                    color: _isDarkMode ? Colors.white.withAlpha(15) : Colors.black.withAlpha(10),
-                    borderRadius: BorderRadius.circular(99),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.circle, size: 8, color: AppColors.success),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Dữ liệu vừa cập nhật lúc $timeStr',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: IconButton(
+                    tooltip: 'Làm mới dữ liệu',
+                    onPressed: () {
+                      _loadCategoryData();
+                      _notify('Đã đồng bộ dữ liệu mới nhất từ máy chủ');
+                    },
+                    icon: const Icon(Icons.refresh, size: 20),
                   ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  iconSize: 18,
-                  tooltip: 'Làm mới dữ liệu',
-                  onPressed: () {
-                    _loadCategoryData();
-                    _notify('Đã đồng bộ dữ liệu mới nhất từ máy chủ');
-                  },
-                  icon: const Icon(Icons.refresh),
                 ),
               ],
             ),
@@ -1640,6 +1586,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // ═════════════════════════════════════════════════════════════════════════════
 
   Widget _account() {
+    final currentUsername = (widget.username != null && widget.username!.trim().isNotEmpty)
+        ? widget.username!.trim()
+        : (AuthRepository.currentUser?.username?.trim().isNotEmpty == true
+            ? AuthRepository.currentUser!.username!.trim()
+            : 'admin');
+
+    final initials = currentUsername.length >= 2
+        ? currentUsername.substring(0, 2).toUpperCase()
+        : (currentUsername.isNotEmpty ? currentUsername.substring(0, 1).toUpperCase() : 'A');
+
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
@@ -1656,14 +1612,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
-                    const CircleAvatar(radius: 32, child: Text('AQ')),
+                    CircleAvatar(
+                      radius: 32,
+                      backgroundColor: AppColors.brand,
+                      foregroundColor: Colors.white,
+                      child: Text(
+                        initials,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Admin Quản trị',
+                            currentUsername,
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           Text(
@@ -1688,7 +1652,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  _infoRow('Tên đăng nhập', 'quantri'),
+                  _infoRow('Tên đăng nhập', currentUsername),
                   _infoRow('Email liên hệ', 'admin@kinderlog.edu.vn'),
                   _infoRow('Số điện thoại', '0988 888 999'),
                   _infoRow('Quyền hạn', 'School Admin'),
