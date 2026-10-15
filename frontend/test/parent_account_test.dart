@@ -23,6 +23,7 @@ class _MockParentRepo extends HttpDashboardRepository {
     this.phoneFailure,
     this.reportsRead = false,
     this.sameReportForTodayAndRecent = false,
+    this.allergies = 'Đậu phộng',
   });
 
   /// Nếu khác null, updateMyPhone ném lỗi với status này.
@@ -33,6 +34,9 @@ class _MockParentRepo extends HttpDashboardRepository {
 
   /// True → báo cáo hôm nay cũng nằm trong danh sách gần đây (như API thật trả).
   final bool sameReportForTodayAndRecent;
+
+  /// Dị ứng của bé — seed ghi 'Không có' thay vì để trống.
+  final String? allergies;
 
   int updateCalls = 0;
   String? lastPhone;
@@ -56,7 +60,7 @@ class _MockParentRepo extends HttpDashboardRepository {
         fullName: 'Trần Bảo Bảo',
         nickname: 'Bảo',
         dateOfBirth: DateTime(2023, 3, 12),
-        medicalAllergies: 'Đậu phộng',
+        medicalAllergies: allergies,
       ),
       className: 'Mầm A',
       teacherName: 'Cô Nguyễn Thị Mai',
@@ -240,6 +244,38 @@ void main() {
       reason: 'còn báo cáo chưa đọc thì tab phải có badge',
     );
   });
+
+  testWidgets(
+    'seed ghi "Không có" → không hiện banner Tổng quan, không hiện hàng Dị ứng',
+    (tester) async {
+      await _pump(
+        tester,
+        _MockParentRepo(allergies: 'Không có'),
+        openAccount: false,
+      );
+      expect(find.text('Lưu ý sức khỏe'), findsNothing);
+
+      await _pump(tester, _MockParentRepo(allergies: 'Không có'));
+      expect(find.text('Dị ứng'), findsNothing);
+      expect(find.text('Không có'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'bỏ tiền tố "Dị ứng" — không thành "Dị ứng Dị ứng đậu phộng"',
+    (tester) async {
+      await _pump(
+        tester,
+        _MockParentRepo(allergies: 'Dị ứng đậu phộng'),
+        openAccount: false,
+      );
+
+      expect(
+        find.text('Bé bị dị ứng đậu phộng — nhà trường đã nắm thông tin'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('badge tắt khi mọi báo cáo đã đọc', (tester) async {
     await _pump(tester, _MockParentRepo(reportsRead: true), openAccount: false);
