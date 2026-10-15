@@ -5,9 +5,12 @@
 // - Ưu tiên cao nhất: --dart-define=API_BASE_URL=... (dùng khi deploy production,
 //   backend không còn nằm trên PC dev nữa).
 // - Dev (mọi nền tảng: web, desktop, Android emulator, Android thiết bị thật):
-//   localhost — với Android, traffic đi qua `adb reverse tcp:8000 tcp:8000`
-//   bắc từ điện thoại/emulator về PC. Task "adb reverse" trong .vscode tự chạy
-//   khi mở project nên không cần cấu hình IP, không phụ thuộc Wi-Fi.
+//   localhost — riêng Android phải tự bắc cầu: `.vscode/` bị gitignore nên KHÔNG
+//   có task nào chạy hộ, và cầu mất mỗi lần rút/cắm lại máy:
+//     adb reverse tcp:8000 tcp:8000
+//   (adb không có trong PATH: %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe)
+//   Không bắc cầu được (máy khác mạng Wi-Fi) → truyền IP LAN của PC:
+//     flutter run --dart-define=API_BASE_URL=http://<IP-LAN-PC>:8000
 
 /// Base URL của FastAPI backend.
 String get kApiBaseUrl {
