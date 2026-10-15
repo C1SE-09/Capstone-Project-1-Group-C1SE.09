@@ -12,15 +12,18 @@ class FakeAuthRepository extends AuthRepository {
   bool changePasswordCalled = false;
   String? lastCurrentPassword;
   String? lastNewPassword;
+  bool? lastLogoutOtherDevices;
 
   @override
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
+    bool logoutOtherDevices = true,
   }) async {
     changePasswordCalled = true;
     lastCurrentPassword = currentPassword;
     lastNewPassword = newPassword;
+    lastLogoutOtherDevices = logoutOtherDevices;
 
     if (shouldFail) {
       throw AuthException(errorMessage ?? 'Mật khẩu hiện tại không chính xác.');
@@ -112,6 +115,56 @@ void main() {
     expect(fakeAuthRepo.changePasswordCalled, isTrue);
     expect(fakeAuthRepo.lastCurrentPassword, 'oldpass123');
     expect(fakeAuthRepo.lastNewPassword, 'newpass456');
+    expect(
+      fakeAuthRepo.lastLogoutOtherDevices,
+      isTrue,
+      reason: 'mặc định phải đăng xuất các thiết bị khác (AC5)',
+    );
     expect(find.text('Đổi mật khẩu thành công!'), findsOneWidget);
+  });
+
+  testWidgets('Bỏ chọn "Đăng xuất các thiết bị khác" thì gửi cờ false',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showChangePasswordBottomSheet(
+                context,
+                authRepository: fakeAuthRepo,
+              ),
+              child: const Text('mở đổi mật khẩu'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('mở đổi mật khẩu'));
+    await tester.pumpAndSettle();
+
+    final checkbox = find.byType(CheckboxListTile);
+    expect(checkbox, findsOneWidget);
+    expect(
+      tester.widget<CheckboxListTile>(checkbox).value,
+      isTrue,
+      reason: 'mở form ra là mặc định bật',
+    );
+
+    await tester.tap(checkbox);
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'oldpass123');
+    await tester.enterText(fields.at(1), 'newpass456');
+    await tester.enterText(fields.at(2), 'newpass456');
+
+    final submitBtn = find.widgetWithText(KButton, 'Lưu thay đổi');
+    await tester.ensureVisible(submitBtn);
+    await tester.tap(submitBtn);
+    await tester.pumpAndSettle();
+
+    expect(fakeAuthRepo.lastLogoutOtherDevices, isFalse);
   });
 }

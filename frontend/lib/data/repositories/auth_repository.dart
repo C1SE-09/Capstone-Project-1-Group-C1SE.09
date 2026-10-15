@@ -276,6 +276,7 @@ class AuthRepository {
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
+    bool logoutOtherDevices = true,
   }) async {
     final token = currentUser?.token;
     if (token == null || token.isEmpty) {
@@ -289,6 +290,7 @@ class AuthRepository {
         data: {
           'current_password': currentPassword,
           'new_password': newPassword,
+          'logout_other_devices': logoutOtherDevices,
         },
         options: Options(
           headers: {

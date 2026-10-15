@@ -34,6 +34,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   bool _obscureConfirm = true;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _logoutOtherDevices = true;
 
   @override
   void dispose() {
@@ -69,6 +70,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       await _authRepository.changePassword(
         currentPassword: currentPass,
         newPassword: newPass,
+        logoutOtherDevices: _logoutOtherDevices,
       );
 
       if (!mounted) return;
@@ -316,6 +318,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
                 const SizedBox(height: 28),
 
+                CheckboxListTile(
+                  value: _logoutOtherDevices,
+                  onChanged: (value) =>
+                      setState(() => _logoutOtherDevices = value ?? true),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text(
+                    'Đăng xuất các thiết bị khác',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  subtitle: const Text(
+                    'Các máy khác sẽ phải đăng nhập lại.',
+                    style: TextStyle(fontSize: 11, color: KColors.inkFaint),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
                 // Nút Đổi mật khẩu
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -370,6 +390,7 @@ class __ChangePasswordFormSheetState
   bool _obscureConfirm = true;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _logoutOtherDevices = true;
 
   @override
   void dispose() {
@@ -405,6 +426,7 @@ class __ChangePasswordFormSheetState
       await _authRepository.changePassword(
         currentPassword: currentPass,
         newPassword: newPass,
+        logoutOtherDevices: _logoutOtherDevices,
       );
 
       if (!mounted) return;
@@ -532,7 +554,24 @@ class __ChangePasswordFormSheetState
               ),
             ),
           ),
-          const SizedBox(height: 20),
+
+          CheckboxListTile(
+            value: _logoutOtherDevices,
+            onChanged: (value) =>
+                setState(() => _logoutOtherDevices = value ?? true),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text(
+              'Đăng xuất các thiết bị khác',
+              style: TextStyle(fontSize: 13),
+            ),
+            subtitle: const Text(
+              'Các máy khác sẽ phải đăng nhập lại.',
+              style: TextStyle(fontSize: 11, color: KColors.inkFaint),
+            ),
+          ),
+          const SizedBox(height: 8),
 
           _isLoading
               ? const Center(child: CircularProgressIndicator())

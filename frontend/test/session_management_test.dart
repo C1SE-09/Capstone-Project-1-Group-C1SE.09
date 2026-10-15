@@ -234,4 +234,41 @@ void main() {
       );
     });
   });
+
+  group('AC5 — đổi mật khẩu đá thiết bị khác', () {
+    test('gửi cờ logout_other_devices đúng lựa chọn của người dùng', () async {
+      AuthRepository.currentUser = const AuthUser(
+        token: 'access-1',
+        role: 'parent',
+      );
+      addTearDown(() => AuthRepository.currentUser = null);
+
+      final adapter = _FakeAdapter((_) async => _json({'message': 'ok'}));
+      final dio = Dio(BaseOptions(baseUrl: 'http://test.local'))
+        ..httpClientAdapter = adapter;
+      final auth = AuthRepository(dio: dio);
+
+      await auth.changePassword(
+        currentPassword: 'cu123456',
+        newPassword: 'moi123456',
+        logoutOtherDevices: false,
+      );
+      await auth.changePassword(
+        currentPassword: 'cu123456',
+        newPassword: 'moi123456',
+      );
+
+      final bodies = adapter.requests.map((r) => r.data as Map).toList();
+      expect(
+        bodies[0]['logout_other_devices'],
+        isFalse,
+        reason: 'bỏ chọn mà vẫn gửi true thì máy khác vẫn bị đá oan',
+      );
+      expect(
+        bodies[1]['logout_other_devices'],
+        isTrue,
+        reason: 'không truyền gì thì mặc định phải bật (AC5)',
+      );
+    });
+  });
 }
