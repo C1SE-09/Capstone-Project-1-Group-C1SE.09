@@ -196,5 +196,42 @@ void main() {
         );
       }
     });
+
+    test('phiên hết hạn hẳn thì gọi callback đưa về màn đăng nhập', () async {
+      var navigated = false;
+      SessionManagementService.onSessionExpiredGlobally = () {
+        navigated = true;
+      };
+      addTearDown(
+        () => SessionManagementService.onSessionExpiredGlobally = null,
+      );
+
+      // setUp đã xoá phiên nên refresh chắc chắn thất bại.
+      final adapter = _FakeAdapter(
+        (_) async => ResponseBody.fromString(
+          '{}',
+          401,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        ),
+      );
+      final dio = Dio(BaseOptions(baseUrl: 'http://test.local'))
+        ..httpClientAdapter = adapter;
+      dio.interceptors.add(
+        SessionManagementService.instance.createDioInterceptor(dio),
+      );
+
+      await expectLater(
+        dio.get('/api/parent/profile'),
+        throwsA(isA<DioException>()),
+      );
+
+      expect(
+        navigated,
+        isTrue,
+        reason: 'không điều hướng thì người dùng kẹt ở màn hình lỗi',
+      );
+    });
   });
 }

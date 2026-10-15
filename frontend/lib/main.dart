@@ -11,6 +11,9 @@ Future<void> main() async {
   await ThemeController.instance.load();
   // Nạp phiên đã lưu để mở lại app là vào thẳng, không qua màn đăng nhập (AC1).
   await SessionManagementService.instance.loadPersistedSession();
+  // Phiên hết hạn hẳn (server từ chối refresh) -> về màn đăng nhập, thay vì để
+  // màn hình hiện lỗi mà người dùng không biết phải làm gì.
+  SessionManagementService.onSessionExpiredGlobally = () => appRouter.go('/login');
   // Khởi tạo Firebase cho push notification. Bọc try/catch để app vẫn chạy
   // khi chưa có google-services.json hoặc trên nền tảng không hỗ trợ.
   try {
