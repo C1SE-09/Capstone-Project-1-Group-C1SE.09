@@ -12,11 +12,19 @@ import 'package:adark_frontend/domain/entities/report/report_status.dart' as dom
 
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_account.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:dio/dio.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+
+class NoChildAssignedException implements Exception {
+  final String message;
+  NoChildAssignedException([this.message = 'Chưa có bé được đăng ký']);
+  @override
+  String toString() => message;
+}
 
 class ParentFlow extends StatefulWidget {
   const ParentFlow({super.key, this.repository, this.onLogout, this.initialOpenReport = false});
@@ -55,18 +63,32 @@ class _ParentFlowState extends State<ParentFlow> {
   // Loads parent-linked child and report history from existing endpoints.
   Future<_ParentData> _load() async {
     final parent = await repository.getCurrentParent();
-    final overview = await repository.getPrimaryChildOverview(parent.parentId);
-    final reports = await repository.getRecentReports(
-      overview.child.childId,
-      includeDraft: false,
-    );
-    final today = DateTime.now();
-    final todayReport = await repository.getTodayReport(
-      overview.child.childId,
-      today,
-      includeDraft: false,
-    );
-    return _ParentData(parent, overview, reports, todayReport);
+    try {
+      final overview = await repository.getPrimaryChildOverview(parent.parentId);
+      final reports = await repository.getRecentReports(
+        overview.child.childId,
+        includeDraft: false,
+      );
+      final today = DateTime.now();
+      final todayReport = await repository.getTodayReport(
+        overview.child.childId,
+        today,
+        includeDraft: false,
+      );
+      return _ParentData(parent, overview, reports, todayReport);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404 ||
+          (e.response?.data is Map && e.response?.data['detail'] == 'Child not found')) {
+        throw NoChildAssignedException();
+      }
+      rethrow;
+    } catch (e) {
+      final str = e.toString().toLowerCase();
+      if (str.contains('404') || str.contains('child not found')) {
+        throw NoChildAssignedException();
+      }
+      rethrow;
+    }
   }
 
   void _openReport(_ParentData data, DailyReport report) {
@@ -126,8 +148,32 @@ class _ParentFlowState extends State<ParentFlow> {
               body: const Center(child: CircularProgressIndicator()),
             );
           }
+          if (snapshot.hasError) {
+            final error = snapshot.error;
+            final isNoChild = error is NoChildAssignedException ||
+                error.toString().toLowerCase().contains('child not found') ||
+                error.toString().toLowerCase().contains('404');
+            if (isNoChild) {
+              return NoAssignmentScreen(
+                title: 'Chưa có bé được đăng ký',
+                message: 'Tài khoản phụ huynh của bạn hiện chưa được liên kết với hồ sơ bé nào.\nVui lòng liên hệ nhà trường để được cập nhật thông tin bé.',
+                icon: Icons.child_care_outlined,
+                onBack: () {
+                  if (widget.onLogout != null) {
+                    widget.onLogout!();
+                  } else {
+                    Navigator.of(context).maybePop();
+                  }
+                },
+              );
+            }
+            return Scaffold(
+              backgroundColor: context.k.canvas,
+              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+            );
+          }
           final data = snapshot.data;
-          if (snapshot.hasError || data == null) {
+          if (data == null) {
             return Scaffold(
               backgroundColor: context.k.canvas,
               body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
@@ -306,11 +352,6 @@ class _ParentOverview extends StatelessWidget {
               onPressed: () => _showNotifications(context),
               tooltip: 'Thông báo',
               icon: Icon(Icons.notifications_outlined, color: context.k.inkSoft),
-            ),
-            IconButton(
-              onPressed: () => showBugReportBottomSheet(context),
-              tooltip: 'Báo cáo lỗi',
-              icon: Icon(Icons.bug_report_outlined, color: context.k.inkSoft),
             ),
           ],
         ),

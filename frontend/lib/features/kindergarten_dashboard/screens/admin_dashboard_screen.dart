@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
+import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
+import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
+import 'package:adark_frontend/domain/entities/timetable/subject.dart';
+import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 1. DESIGN SYSTEM COLORS (100% FIDELITY FROM admin_UI/app_theme.dart)
@@ -118,7 +126,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     await Future.wait([
       _loadDropdownResources(),
       _loadOverviewData(),
-      _loadCategoryData(silent: true),
+      _loadAllFeatureData(silent: true),
     ]);
     if (mounted) setState(() => _isLoading = false);
   }
@@ -154,8 +162,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = 'Không thể tải thống kê tổng quan: $e');
+        setState(() => _errorMessage = getFriendlyErrorMessage(e, fallback: 'Không thể tải thống kê tổng quan. Vui lòng thử lại sau.'));
       }
+    }
+  }
+
+  Future<void> _loadAllFeatureData({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
+    try {
+      final dayOfWeek = _selectedDay + 2;
+      final results = await Future.wait([
+        _repo.getTeachers(),
+        _repo.getChildren(),
+        _repo.getParents(),
+        _repo.getSchedules(dayOfWeek: dayOfWeek),
+        _repo.getClasses(),
+        _repo.getTimeSlots(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _teachers = results[0] as List<AdminTeacherDto>;
+          _students = results[1] as List<AdminChildDto>;
+          _parents = results[2] as List<AdminParentDto>;
+          _schedules = results[3] as List<AdminScheduleDto>;
+          _classes = results[4] as List<AdminClassDto>;
+          _timeSlots = results[5] as List<AdminTimeSlotDto>;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _notify(
+          'Không thể tải dữ liệu chức năng: ${getFriendlyErrorMessage(e)}',
+          isError: true,
+        );
+      }
+    } finally {
+      if (!silent && mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -183,7 +225,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _notify('Lỗi tải dữ liệu ${_categoryLabel(_category)}: $e');
+        _notify(
+          'Không thể tải dữ liệu ${_categoryLabel(_category).toLowerCase()}: ${getFriendlyErrorMessage(e)}',
+          isError: true,
+        );
       }
     } finally {
       if (!silent && mounted) setState(() => _isLoading = false);
@@ -241,11 +286,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return h * 60 + m;
   }
 
-  void _notify(String message) {
+  void _notify(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: isError ? AppColors.danger : AppColors.brand,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          duration: Duration(seconds: isError ? 4 : 2),
+        ),
+      );
   }
 
   // ═════════════════════════════════════════════════════════════════════════════
@@ -297,7 +365,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             if (_tab == AdminTab.overview) {
               _loadOverviewData();
             } else if (_tab == AdminTab.features) {
-              _loadCategoryData();
+              _loadAllFeatureData();
             }
           },
           destinations: [
@@ -413,7 +481,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                       ),
-                      onPressed: () => _showEditor(_category),
+                      onPressed: () => _category == AdminCategory.schedules
+                          ? _openScheduleEditorSheet()
+                          : _showEditor(_category),
                       icon: const Icon(Icons.add, size: 18),
                       label: Text(
                         _addLabel,
@@ -435,7 +505,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: IconButton(
                     tooltip: 'Làm mới dữ liệu',
                     onPressed: () {
-                      _loadCategoryData();
+                      _loadAllFeatureData();
                       _notify('Đã đồng bộ dữ liệu mới nhất từ máy chủ');
                     },
                     icon: const Icon(Icons.refresh, size: 20),
@@ -1069,24 +1139,62 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
 
   Widget _trendCard() {
+    final totalSent = _trends.fold<int>(0, (sum, t) => sum + t.sentReports);
+    final totalDraft = _trends.fold<int>(0, (sum, t) => sum + t.draftReports);
+    final totalReports = totalSent + totalDraft;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Xu hướng báo cáo 7 ngày gần nhất',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Xu hướng báo cáo 7 ngày gần nhất',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Tổng: $totalReports báo cáo',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Số báo cáo được tạo và gửi đến phụ huynh (Xanh: đã gửi, Vàng: bản nháp)',
-              style: TextStyle(fontSize: 12),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                    Text('Đã gửi ($totalSent)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brand)),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.warning, shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                    Text('Bản nháp ($totalDraft)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warning)),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 180,
+              height: 220,
               width: double.infinity,
               child: CustomPaint(
                 painter: _TrendPainter(
@@ -1320,7 +1428,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'Email: ${v.email.isNotEmpty ? v.email : "Chưa cập nhật"}',
           ],
           v.childrenSummary.isNotEmpty
-              ? [v.childrenSummary]
+              ? [v.childrenSummary.replaceFirst('BN: ', 'Bé: ')]
               : <String>[],
         ),
       _ => ('', '', <String>[], <String>[]),
@@ -1564,7 +1672,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         padding: EdgeInsets.zero,
                         iconSize: 20,
                         onSelected: (action) => action == 'edit'
-                            ? _showEditor(AdminCategory.schedules, item: item)
+                            ? _openScheduleEditorSheet(item: item)
                             : _confirmDelete(item),
                         itemBuilder: (_) => const [
                           PopupMenuItem(value: 'edit', child: Text('Sửa')),
@@ -1656,7 +1764,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _infoRow('Email liên hệ', 'admin@kinderlog.edu.vn'),
                   _infoRow('Số điện thoại', '0988 888 999'),
                   _infoRow('Quyền hạn', 'School Admin'),
-                  _infoRow('Trạng thái bảo mật', 'Xác thực chuẩn JWT', valueColor: AppColors.success),
                 ],
               ),
             ),
@@ -1752,13 +1859,123 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return '${parts[parts.length - 2][0]}${parts.last[0]}'.toUpperCase();
   }
 
+  Future<void> _openScheduleEditorSheet({AdminScheduleDto? item}) async {
+    try {
+      final scheduleRepo = HttpScheduleRepository();
+      String currentClassId = item?.classId ?? (_classes.isNotEmpty ? _classes.first.id : '');
+      if (currentClassId.isEmpty && _classes.isNotEmpty) {
+        currentClassId = _classes.first.id;
+      }
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final results = await Future.wait([
+        scheduleRepo.getTimeSlots(),
+        scheduleRepo.getSubjects(),
+        currentClassId.isNotEmpty ? scheduleRepo.getClassSchedule(currentClassId) : Future.value(<ClassSchedule>[]),
+      ]);
+
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+
+      final slots = results[0] as List<TimeSlot>;
+      final subjects = results[1] as List<Subject>;
+      final scheduleItems = results[2] as List<ClassSchedule>;
+
+      ClassSchedule? existingSchedule;
+      if (item != null) {
+        for (final s in scheduleItems) {
+          if (s.scheduleId == item.id) {
+            existingSchedule = s;
+            break;
+          }
+        }
+        if (existingSchedule == null) {
+          Subject? matchedSubject;
+          for (final s in subjects) {
+            if (s.name.toLowerCase() == item.activityName.toLowerCase()) {
+              matchedSubject = s;
+              break;
+            }
+          }
+          TimeSlot? matchedSlot;
+          for (final sl in slots) {
+            if (sl.startTime == item.startTime && sl.endTime == item.endTime) {
+              matchedSlot = sl;
+              break;
+            }
+          }
+          existingSchedule = ClassSchedule(
+            scheduleId: item.id,
+            classId: item.classId ?? currentClassId,
+            subjectId: matchedSubject?.subjectId ?? (subjects.isNotEmpty ? subjects.first.subjectId : ''),
+            slotId: matchedSlot?.slotId ?? (slots.isNotEmpty ? slots.first.slotId : ''),
+            dayOfWeek: item.dayOfWeek ?? 2,
+            activityName: item.activityName,
+            roomName: item.roomName,
+            subject: matchedSubject,
+            timeSlot: matchedSlot,
+          );
+        }
+      }
+
+      final timetableData = TimetableData(
+        items: scheduleItems,
+        slots: slots,
+        subjects: subjects,
+      );
+
+      final classOptions = _classes.map((c) => {'id': c.id, 'name': c.name}).toList();
+
+      if (!mounted) return;
+
+      showKSheet(
+        context,
+        ScheduleEditorSheet(
+          data: timetableData,
+          classId: currentClassId,
+          classes: classOptions,
+          repository: scheduleRepo,
+          existing: existingSchedule,
+          onSaved: (message, savedDay) {
+            Navigator.pop(context);
+            _notify(message);
+            setState(() {
+              _selectedDay = (savedDay >= 0 && savedDay <= 4) ? savedDay : 0;
+            });
+            _loadCategoryData();
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+        _notify('Không thể mở chỉnh sửa thời khóa biểu: ${getFriendlyErrorMessage(e)}', isError: true);
+      }
+    }
+  }
+
   // ═════════════════════════════════════════════════════════════════════════════
   // 8. DIALOG THÊM / SỬA (GẮN 100% API REPOSITORY CHO CẢ 4 DANH MỤC)
   // ═════════════════════════════════════════════════════════════════════════════
 
   Future<void> _showEditor(AdminCategory category, {Object? item}) async {
+    if (category == AdminCategory.schedules) {
+      return _openScheduleEditorSheet(item: item as AdminScheduleDto?);
+    }
     final isEdit = item != null;
     final form = GlobalKey<FormState>();
+
+    if (category == AdminCategory.parents && _students.isEmpty) {
+      try {
+        _students = await _repo.getChildren();
+      } catch (_) {}
+    }
 
     // Controllers
     final nameCtrl = TextEditingController(
@@ -1805,6 +2022,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       },
     );
     final passwordCtrl = TextEditingController();
+    bool obscurePassword = true;
 
     int schedDay = _selectedDay;
     String? selectedClassId;
@@ -1821,6 +2039,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (category == AdminCategory.teachers && item is AdminTeacherDto) {
       teacherClassIds = List<String>.from(item.classIds);
     }
+
+    String? selectedChildId;
+    if (category == AdminCategory.parents && item is AdminParentDto) {
+      selectedChildId = item.childId ?? (item.childIds.isNotEmpty ? item.childIds.first : null);
+    }
+
+    String? dialogError;
+    bool isSaving = false;
+
+    if (!mounted) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1840,6 +2068,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (dialogError != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          margin: const EdgeInsets.only(bottom: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  dialogError!,
+                                  style: const TextStyle(
+                                    color: AppColors.danger,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       if (category == AdminCategory.schedules) ...[
                         DropdownButtonFormField<int>(
                           initialValue: schedDay,
@@ -1905,7 +2162,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ] else if (category == AdminCategory.students) ...[
                         TextFormField(
                           controller: nameCtrl,
-                          decoration: const InputDecoration(labelText: 'Họ và tên học sinh'),
+                          decoration: const InputDecoration(labelText: 'Họ và tên học sinh *'),
                           validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập họ tên' : null,
                         ),
                         const SizedBox(height: 12),
@@ -1938,14 +2195,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         TextFormField(
                           controller: usernameCtrl,
                           decoration: const InputDecoration(labelText: 'Tài khoản đăng nhập *'),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tài khoản' : null,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Vui lòng nhập tài khoản';
+                            if (v.trim().length < 3) return 'Tài khoản tối thiểu 3 ký tự';
+                            if (v.trim().contains(' ')) return 'Tài khoản không được chứa khoảng trắng';
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: passwordCtrl,
-                          obscureText: true,
+                          obscureText: obscurePassword,
                           decoration: InputDecoration(
                             labelText: isEdit ? 'Mật khẩu (để trống nếu không đổi)' : 'Mật khẩu *',
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                            ),
                           ),
                           validator: (v) {
                             if (!isEdit && (v == null || v.trim().isEmpty)) {
@@ -1960,26 +2229,55 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: secondCtrl,
-                          decoration: const InputDecoration(labelText: 'Số điện thoại'),
+                          keyboardType: TextInputType.phone,
+                          maxLength: 10,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          decoration: const InputDecoration(
+                            labelText: 'Số điện thoại *',
+                            counterText: '',
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Vui lòng nhập số điện thoại';
+                            if (!RegExp(r'^0\d{9}$').hasMatch(v.trim())) {
+                              return 'Số điện thoại phải gồm đúng 10 chữ số (bắt đầu bằng 0)';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: thirdCtrl,
-                          decoration: const InputDecoration(labelText: 'Email liên hệ'),
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(labelText: 'Email liên hệ *'),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Vui lòng nhập email liên hệ';
+                            final gmailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$', caseSensitive: false);
+                            if (!gmailRegex.hasMatch(v.trim())) return 'Email phải có định dạng @gmail.com';
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          initialValue: teacherClassIds.isNotEmpty ? teacherClassIds.first : (_classes.isNotEmpty ? _classes.first.id : null),
+                        DropdownButtonFormField<String?>(
+                          initialValue: teacherClassIds.isNotEmpty ? teacherClassIds.first : null,
                           decoration: const InputDecoration(labelText: 'Lớp phụ trách chính'),
-                          items: _classes
-                              .map((c) => DropdownMenuItem(value: c.id, child: Text('${c.name} (${c.gradeLabel})')))
-                              .toList(),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Không'),
+                            ),
+                            ..._classes.map((c) => DropdownMenuItem<String?>(
+                              value: c.id,
+                              child: Text('${c.name} (${c.gradeLabel})'),
+                            )),
+                          ],
                           onChanged: (v) {
-                            if (v != null) {
-                              setDialogState(() {
+                            setDialogState(() {
+                              if (v == null || v.isEmpty) {
+                                teacherClassIds = [];
+                              } else {
                                 teacherClassIds = [v];
-                              });
-                            }
+                              }
+                            });
                           },
                         ),
                       ] else if (category == AdminCategory.parents) ...[
@@ -1992,14 +2290,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         TextFormField(
                           controller: usernameCtrl,
                           decoration: const InputDecoration(labelText: 'Tài khoản đăng nhập *'),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tài khoản' : null,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Vui lòng nhập tài khoản';
+                            if (v.trim().length < 3) return 'Tài khoản tối thiểu 3 ký tự';
+                            if (v.trim().contains(' ')) return 'Tài khoản không được chứa khoảng trắng';
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: passwordCtrl,
-                          obscureText: true,
+                          obscureText: obscurePassword,
                           decoration: InputDecoration(
                             labelText: isEdit ? 'Mật khẩu (để trống nếu không đổi)' : 'Mật khẩu *',
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                            ),
                           ),
                           validator: (v) {
                             if (!isEdit && (v == null || v.trim().isEmpty)) {
@@ -2014,17 +2324,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: secondCtrl,
-                          decoration: const InputDecoration(labelText: 'Số điện thoại'),
+                          keyboardType: TextInputType.phone,
+                          maxLength: 10,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          decoration: const InputDecoration(
+                            labelText: 'Số điện thoại *',
+                            counterText: '',
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Vui lòng nhập số điện thoại';
+                            if (!RegExp(r'^0\d{9}$').hasMatch(v.trim())) {
+                              return 'Số điện thoại phải gồm đúng 10 chữ số (bắt đầu bằng 0)';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: thirdCtrl,
-                          decoration: const InputDecoration(labelText: 'Email liên hệ'),
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(labelText: 'Email liên hệ (nếu có)'),
+                          validator: (v) {
+                            if (v != null && v.trim().isNotEmpty) {
+                              final gmailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$', caseSensitive: false);
+                              if (!gmailRegex.hasMatch(v.trim())) return 'Email phải có định dạng @gmail.com';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
-                        TextFormField(
-                          controller: fourthCtrl,
-                          decoration: const InputDecoration(labelText: 'Học sinh liên kết (con)'),
+                        DropdownButtonFormField<String?>(
+                          initialValue: selectedChildId,
+                          decoration: const InputDecoration(
+                            labelText: 'Học sinh liên kết (con)',
+                            hintText: 'Chọn học sinh trong danh sách',
+                          ),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Chưa liên kết / Không'),
+                            ),
+                            ..._students.map((c) => DropdownMenuItem<String?>(
+                              value: c.id,
+                              child: Text('Bé ${c.fullName} (${c.className.isNotEmpty ? c.className : "Chưa có lớp"})'),
+                            )),
+                          ],
+                          onChanged: (v) => setDialogState(() => selectedChildId = v),
                         ),
                       ],
                     ],
@@ -2034,17 +2379,80 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
+                onPressed: isSaving ? null : () => Navigator.pop(ctx, false),
                 child: const Text('Hủy bỏ'),
               ),
               FilledButton.icon(
-                onPressed: () {
-                  if (form.currentState!.validate()) {
-                    Navigator.pop(ctx, true);
-                  }
-                },
-                icon: const Icon(Icons.check),
-                label: const Text('Lưu dữ liệu'),
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        if (!form.currentState!.validate()) return;
+
+                        // Kiểm tra tài khoản và email đã tồn tại hay chưa
+                        if (category == AdminCategory.teachers || category == AdminCategory.parents) {
+                          setDialogState(() {
+                            isSaving = true;
+                            dialogError = null;
+                          });
+
+                          final username = usernameCtrl.text.trim();
+                          final email = thirdCtrl.text.trim();
+                          final phone = secondCtrl.text.trim();
+                          final type = category == AdminCategory.teachers ? 'teacher' : 'parent';
+                          final excludeId = isEdit
+                              ? (item is AdminTeacherDto ? item.id : (item is AdminParentDto ? item.id : null))
+                              : null;
+
+                          try {
+                            final check = await _repo.checkAvailability(
+                              type: type,
+                              username: username.isNotEmpty ? username : null,
+                              email: email.isNotEmpty ? email : null,
+                              phone: phone.isNotEmpty ? phone : null,
+                              excludeId: excludeId,
+                            );
+
+                            if (check['username_exists'] == true) {
+                              setDialogState(() {
+                                isSaving = false;
+                                dialogError = 'Tài khoản đăng nhập "$username" đã tồn tại trên hệ thống. Vui lòng chọn tài khoản khác.';
+                              });
+                              return;
+                            }
+
+                            if (check['email_exists'] == true) {
+                              setDialogState(() {
+                                isSaving = false;
+                                dialogError = 'Địa chỉ email "$email" đã được sử dụng. Vui lòng nhập email khác.';
+                              });
+                              return;
+                            }
+
+                            if (check['phone_exists'] == true) {
+                              setDialogState(() {
+                                isSaving = false;
+                                dialogError = 'Số điện thoại "$phone" đã được đăng ký. Vui lòng kiểm tra lại.';
+                              });
+                              return;
+                            }
+                          } catch (_) {
+                            // Bỏ qua lỗi kết nối check nhanh, tiếp tục luồng submit
+                          }
+
+                          setDialogState(() => isSaving = false);
+                        }
+
+                        if (!dialogCtx.mounted) return;
+                        Navigator.pop(ctx, true);
+                      },
+                icon: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check),
+                label: Text(isSaving ? 'Đang kiểm tra...' : 'Lưu dữ liệu'),
               ),
             ],
           );
@@ -2067,8 +2475,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               email: thirdCtrl.text.trim(),
               username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
               password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
-              classId: teacherClassIds.isNotEmpty ? teacherClassIds.first : old.classId,
-              classIds: teacherClassIds.isNotEmpty ? teacherClassIds : old.classIds,
+              classId: teacherClassIds.isNotEmpty ? teacherClassIds.first : null,
+              classIds: teacherClassIds,
             );
             break;
           case AdminCategory.students:
@@ -2090,6 +2498,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : null,
               username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
               password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
+              childId: selectedChildId,
+              childIds: selectedChildId != null ? [selectedChildId!] : [],
             );
             break;
           case AdminCategory.schedules:
@@ -2109,10 +2519,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         // CREATE API
         switch (category) {
           case AdminCategory.teachers:
+            final emailVal = thirdCtrl.text.trim();
+            final phoneVal = secondCtrl.text.trim().isNotEmpty
+                ? secondCtrl.text.trim()
+                : '09${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
             await _repo.createTeacher(
               fullName: nameCtrl.text.trim(),
-              phone: secondCtrl.text.trim().isNotEmpty ? secondCtrl.text.trim() : '0900000000',
-              email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : 'teacher@kinderlog.edu.vn',
+              phone: phoneVal,
+              email: emailVal.isNotEmpty ? emailVal : '${usernameCtrl.text.trim()}@kinderlog.edu.vn',
               username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
               password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
               classId: teacherClassIds.isNotEmpty ? teacherClassIds.first : null,
@@ -2128,12 +2542,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             );
             break;
           case AdminCategory.parents:
+            final phoneVal = secondCtrl.text.trim().isNotEmpty
+                ? secondCtrl.text.trim()
+                : '09${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
             await _repo.createParent(
               fullName: nameCtrl.text.trim(),
-              phone: secondCtrl.text.trim().isNotEmpty ? secondCtrl.text.trim() : '0910000000',
+              phone: phoneVal,
               email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : null,
               username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
               password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
+              childId: selectedChildId,
+              childIds: selectedChildId != null ? [selectedChildId!] : [],
             );
             break;
           case AdminCategory.schedules:
@@ -2151,7 +2570,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _loadCategoryData();
       _loadOverviewData();
     } catch (e) {
-      _notify('Thao tác thất bại: $e');
+      _notify(getFriendlyErrorMessage(e), isError: true);
     }
   }
 
@@ -2211,7 +2630,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _loadCategoryData();
       _loadOverviewData();
     } catch (e) {
-      _notify('Lỗi khi xóa: $e');
+      _notify('Không thể xóa dữ liệu: ${getFriendlyErrorMessage(e)}', isError: true);
     }
   }
 
@@ -2314,47 +2733,164 @@ class _TrendPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    const bottomPadding = 30.0;
+    const topPadding = 24.0;
+    const horizontalPadding = 24.0;
+    final chartHeight = size.height - bottomPadding - topPadding;
+    final chartWidth = size.width - horizontalPadding * 2;
+
     final grid = Paint()
       ..color = dark ? Colors.white12 : const Color(0xFFE3E9E6)
       ..strokeWidth = 1;
-    for (var i = 1; i <= 4; i++) {
-      final y = size.height * i / 5;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+
+    for (var i = 0; i <= 4; i++) {
+      final y = topPadding + chartHeight * i / 4;
+      canvas.drawLine(Offset(horizontalPadding, y), Offset(size.width - horizontalPadding, y), grid);
     }
 
+    final int count = trends.isNotEmpty ? trends.length : 7;
     final sentData = trends.isNotEmpty
         ? trends.map((t) => t.sentReports.toDouble()).toList()
-        : <double>[238.0, 252.0, 244.0, 268.0, 276.0, 271.0, 285.0];
+        : <double>[12.0, 18.0, 15.0, 22.0, 20.0, 25.0, 28.0];
 
     final draftData = trends.isNotEmpty
         ? trends.map((t) => t.draftReports.toDouble()).toList()
-        : <double>[71.0, 64.0, 69.0, 58.0, 52.0, 61.0, 57.0];
+        : <double>[3.0, 2.0, 4.0, 1.0, 3.0, 2.0, 2.0];
 
     final maxVal = [
       ...sentData,
       ...draftData,
-      100.0,
+      5.0,
     ].reduce((a, b) => a > b ? a : b);
 
-    _line(canvas, size, sentData, AppColors.brand, 0, maxVal * 1.15);
-    _line(canvas, size, draftData, AppColors.warning, 0, maxVal * 1.15);
+    // Vẽ đường đã gửi (xanh) và bản nháp (vàng)
+    _drawTrendLine(
+      canvas: canvas,
+      data: sentData,
+      color: AppColors.brand,
+      min: 0,
+      max: maxVal * 1.25,
+      chartHeight: chartHeight,
+      chartWidth: chartWidth,
+      topPadding: topPadding,
+      horizontalPadding: horizontalPadding,
+      isSent: true,
+    );
+
+    _drawTrendLine(
+      canvas: canvas,
+      data: draftData,
+      color: AppColors.warning,
+      min: 0,
+      max: maxVal * 1.25,
+      chartHeight: chartHeight,
+      chartWidth: chartWidth,
+      topPadding: topPadding,
+      horizontalPadding: horizontalPadding,
+      isSent: false,
+    );
+
+    // Vẽ nhãn ngày ở trục X
+    final textStyle = TextStyle(
+      color: dark ? Colors.white70 : const Color(0xFF6B7280),
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+    );
+
+    for (var i = 0; i < count; i++) {
+      final x = count > 1
+          ? horizontalPadding + i * chartWidth / (count - 1)
+          : horizontalPadding + chartWidth / 2;
+
+      String dateLabel;
+      if (trends.isNotEmpty && i < trends.length) {
+        final raw = trends[i].reportDate;
+        final parts = raw.split('-');
+        if (parts.length >= 3) {
+          dateLabel = '${parts[2]}/${parts[1]}';
+        } else {
+          dateLabel = raw;
+        }
+      } else {
+        final d = DateTime.now().subtract(Duration(days: count - 1 - i));
+        dateLabel = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+      }
+
+      final textSpan = TextSpan(text: dateLabel, style: textStyle);
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, size.height - bottomPadding + 8),
+      );
+    }
   }
 
-  void _line(Canvas canvas, Size size, List<double> data, Color color, double min, double max) {
+  void _drawTrendLine({
+    required Canvas canvas,
+    required List<double> data,
+    required Color color,
+    required double min,
+    required double max,
+    required double chartHeight,
+    required double chartWidth,
+    required double topPadding,
+    required double horizontalPadding,
+    required bool isSent,
+  }) {
     if (data.isEmpty) return;
     final path = Path();
     final dot = Paint()..color = color;
+    final range = max - min == 0 ? 1.0 : (max - min);
+
     for (var i = 0; i < data.length; i++) {
-      final x = data.length > 1 ? i * size.width / (data.length - 1) : size.width / 2;
-      final y = size.height - ((data[i] - min) / (max - min == 0 ? 1 : (max - min))) * size.height;
-      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
-      canvas.drawCircle(Offset(x, y), 4, dot);
+      final x = data.length > 1
+          ? horizontalPadding + i * chartWidth / (data.length - 1)
+          : horizontalPadding + chartWidth / 2;
+      final y = topPadding + chartHeight - ((data[i] - min) / range) * chartHeight;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+
+      // Vẽ điểm tròn 2 lớp
+      canvas.drawCircle(Offset(x, y), 4.5, dot);
+      canvas.drawCircle(
+        Offset(x, y),
+        2,
+        Paint()..color = Colors.white,
+      );
+
+      // Vẽ nhãn số lượng đã báo cáo ở từng điểm
+      final valInt = data[i].toInt();
+      final labelSpan = TextSpan(
+        text: '$valInt',
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+      final labelPainter = TextPainter(
+        text: labelSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Nếu là sent: vẽ phía trên; nếu là draft: vẽ phía dưới
+      final labelY = isSent ? y - 16 : y + 6;
+      labelPainter.paint(canvas, Offset(x - labelPainter.width / 2, labelY));
     }
+
     canvas.drawPath(
       path,
       Paint()
         ..color = color
-        ..strokeWidth = 3
+        ..strokeWidth = 2.5
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,

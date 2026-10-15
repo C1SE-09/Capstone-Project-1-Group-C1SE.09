@@ -7,9 +7,15 @@
 // - Học sinh (Children): có Dropdown chọn Lớp từ DB, ghi chú mặc định để trống
 // - Lịch sinh hoạt (Schedules): có thanh chọn Thứ 2 -> Thứ 6
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
+import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
+import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
+import 'package:adark_frontend/domain/entities/timetable/subject.dart';
+import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
@@ -175,7 +181,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             id: p.id,
             category: AdminCategory.parents,
             title: p.fullName,
-            subtitle: p.childrenSummary,
+            subtitle: p.childrenSummary.replaceFirst('BN: ', 'Bé: '),
             phone: p.phone,
             email: p.email.isNotEmpty ? p.email : null,
             childId: p.childId,
@@ -540,7 +546,114 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     );
   }
 
+  Future<void> _openScheduleEditorSheet({AdminItem? item}) async {
+    try {
+      final scheduleRepo = HttpScheduleRepository();
+      String currentClassId = item?.classId ?? (_classes.isNotEmpty ? _classes.first.id : '');
+      if (currentClassId.isEmpty && _classes.isNotEmpty) {
+        currentClassId = _classes.first.id;
+      }
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final results = await Future.wait([
+        scheduleRepo.getTimeSlots(),
+        scheduleRepo.getSubjects(),
+        currentClassId.isNotEmpty ? scheduleRepo.getClassSchedule(currentClassId) : Future.value(<ClassSchedule>[]),
+      ]);
+
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+
+      final slots = results[0] as List<TimeSlot>;
+      final subjects = results[1] as List<Subject>;
+      final scheduleItems = results[2] as List<ClassSchedule>;
+
+      ClassSchedule? existingSchedule;
+      if (item != null) {
+        for (final s in scheduleItems) {
+          if (s.scheduleId == item.id) {
+            existingSchedule = s;
+            break;
+          }
+        }
+        if (existingSchedule == null) {
+          Subject? matchedSubject;
+          for (final s in subjects) {
+            if (s.name.toLowerCase() == item.title.toLowerCase()) {
+              matchedSubject = s;
+              break;
+            }
+          }
+          TimeSlot? matchedSlot;
+          for (final sl in slots) {
+            if (sl.startTime == item.startTime && sl.endTime == item.endTime) {
+              matchedSlot = sl;
+              break;
+            }
+          }
+          existingSchedule = ClassSchedule(
+            scheduleId: item.id,
+            classId: item.classId ?? currentClassId,
+            subjectId: matchedSubject?.subjectId ?? (subjects.isNotEmpty ? subjects.first.subjectId : ''),
+            slotId: matchedSlot?.slotId ?? (slots.isNotEmpty ? slots.first.slotId : ''),
+            dayOfWeek: _selectedDayOfWeek,
+            activityName: item.title,
+            roomName: item.location,
+            subject: matchedSubject,
+            timeSlot: matchedSlot,
+          );
+        }
+      }
+
+      final timetableData = TimetableData(
+        items: scheduleItems,
+        slots: slots,
+        subjects: subjects,
+      );
+
+      final classOptions = _classes.map((c) => {'id': c.id, 'name': c.name}).toList();
+
+      if (!mounted) return;
+
+      showKSheet(
+        context,
+        ScheduleEditorSheet(
+          data: timetableData,
+          classId: currentClassId,
+          classes: classOptions,
+          repository: scheduleRepo,
+          existing: existingSchedule,
+          onSaved: (message, savedDay) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message), backgroundColor: context.k.brand),
+            );
+            setState(() {
+              _selectedDayOfWeek = savedDay + 2;
+            });
+            _loadData();
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+        _showErrorPopup(context, title: 'Thông báo lỗi', message: 'Không thể mở chỉnh sửa thời khóa biểu: ${getFriendlyErrorMessage(e)}');
+      }
+    }
+  }
+
   void _showItemFormDialog({AdminItem? item}) {
+    if (_selectedCategory == AdminCategory.schedules) {
+      _openScheduleEditorSheet(item: item);
+      return;
+    }
     final isEdit = item != null;
     final titleController = TextEditingController(text: item?.title ?? '');
     final subtitleController = TextEditingController(
@@ -784,13 +897,15 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                     TextField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(labelText: 'Số điện thoại'),
+                      maxLength: 10,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(labelText: 'Số điện thoại *', counterText: ''),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'Email'),
+                      decoration: const InputDecoration(labelText: 'Email liên hệ * (Gmail)'),
                     ),
                   ]
 
@@ -959,13 +1074,15 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                     TextField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(labelText: 'Số điện thoại'),
+                      maxLength: 10,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(labelText: 'Số điện thoại *', counterText: ''),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'Email (tùy chọn)'),
+                      decoration: const InputDecoration(labelText: 'Email (tùy chọn, định dạng Gmail)'),
                     ),
                   ]
 
@@ -1270,6 +1387,46 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                   }
                 }
 
+                if (_selectedCategory == AdminCategory.teachers) {
+                  final phoneVal = phoneController.text.trim();
+                  if (phoneVal.isEmpty || !RegExp(r'^0\d{9}$').hasMatch(phoneVal)) {
+                    _showErrorPopup(
+                      ctx,
+                      title: 'Số điện thoại không hợp lệ',
+                      message: 'Số điện thoại phải gồm đúng 10 chữ số (bắt đầu bằng số 0).',
+                    );
+                    return;
+                  }
+                  final emailVal = emailController.text.trim();
+                  if (emailVal.isEmpty || !RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$', caseSensitive: false).hasMatch(emailVal)) {
+                    _showErrorPopup(
+                      ctx,
+                      title: 'Email không hợp lệ',
+                      message: 'Email phải có định dạng @gmail.com (ví dụ: gv@gmail.com).',
+                    );
+                    return;
+                  }
+                } else if (_selectedCategory == AdminCategory.parents) {
+                  final phoneVal = phoneController.text.trim();
+                  if (phoneVal.isEmpty || !RegExp(r'^0\d{9}$').hasMatch(phoneVal)) {
+                    _showErrorPopup(
+                      ctx,
+                      title: 'Số điện thoại không hợp lệ',
+                      message: 'Số điện thoại phải gồm đúng 10 chữ số (bắt đầu bằng số 0).',
+                    );
+                    return;
+                  }
+                  final emailVal = emailController.text.trim();
+                  if (emailVal.isNotEmpty && !RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$', caseSensitive: false).hasMatch(emailVal)) {
+                    _showErrorPopup(
+                      ctx,
+                      title: 'Email không hợp lệ',
+                      message: 'Email phải có định dạng @gmail.com (ví dụ: ph@gmail.com).',
+                    );
+                    return;
+                  }
+                }
+
                 Navigator.of(ctx).pop();
 
                 try {
@@ -1369,11 +1526,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                   _loadData();
                 } catch (e) {
                   if (!mounted) return;
-                  String errMsg = 'Lỗi: $e';
-                  if (e is DioException && e.response?.data is Map) {
-                    final detail = e.response?.data['detail'];
-                    if (detail != null) errMsg = detail.toString();
-                  }
+                  final errMsg = getFriendlyErrorMessage(e);
                   _showErrorPopup(context, title: 'Thông báo lỗi', message: errMsg);
                 }
               },

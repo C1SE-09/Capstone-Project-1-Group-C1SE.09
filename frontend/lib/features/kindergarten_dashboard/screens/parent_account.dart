@@ -17,6 +17,7 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 
 import '../theme.dart';
 import '../widgets.dart';
+import 'bug_report_sheet.dart';
 import 'change_password_screen.dart';
 
 /// Khoá lưu lựa chọn nhận thông báo đẩy trên máy.
@@ -286,6 +287,14 @@ class _ParentAccountState extends State<ParentAccount> {
                 label: 'Đổi mật khẩu',
                 trailing: Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
                 onTap: () => showChangePasswordBottomSheet(context),
+              ),
+              const Divider(height: 1),
+              _settingsRow(
+                context,
+                icon: Icons.bug_report_outlined,
+                label: 'Báo cáo lỗi & Góp ý',
+                trailing: Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+                onTap: () => showBugReportBottomSheet(context),
               ),
               const Divider(height: 1),
               _settingsRow(

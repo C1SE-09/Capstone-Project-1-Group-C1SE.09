@@ -14,14 +14,15 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_t
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
-import 'package:adark_frontend/core/routing/app_router.dart';
+
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
 
 enum TeacherTab { overview, classList, history, account }
 
 class TeacherShell extends StatefulWidget {
-  const TeacherShell({super.key, required this.onLogout, this.classId = 'aaaaaaaa-0000-0000-0000-000000000001', this.repository, this.classRepository});
+  const TeacherShell({super.key, required this.onLogout, this.classId, this.repository, this.classRepository});
   final VoidCallback onLogout;
-  final String classId;
+  final String? classId;
   final HttpDashboardRepository? repository;
   final HttpClassDataRepository? classRepository;
 
@@ -34,24 +35,90 @@ class _TeacherShellState extends State<TeacherShell> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
   late final HttpClassDataRepository classRepository = widget.classRepository ?? HttpClassDataRepository();
   late Future<String> classNameFuture;
-  @override
-  void initState() { super.initState(); childrenFuture = _loadChildren(); classNameFuture = classRepository.getClassInfo(widget.classId).then((value) => value.name); }
   late Future<List<Child>> childrenFuture;
+  late Future<void> _initFuture;
+  String? _activeClassId;
+  bool _hasNoClass = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeClassId = widget.classId;
+    _initData();
+  }
+
+  void _initData() {
+    _initFuture = _resolveClassId().then((_) {
+      if (_hasNoClass || _activeClassId == null || _activeClassId!.isEmpty) {
+        _hasNoClass = true;
+        return;
+      }
+      childrenFuture = _loadChildren();
+      classNameFuture = _loadClassName();
+    });
+  }
+
+  Future<void> _resolveClassId() async {
+    // Nếu có classId được truyền vào và không phải ID rỗng
+    if (_activeClassId != null &&
+        _activeClassId!.isNotEmpty &&
+        _activeClassId != 'aaaaaaaa-0000-0000-0000-000000000001') {
+      _hasNoClass = false;
+      return;
+    }
+
+    try {
+      final teacherClasses = await repository.getTeacherClasses();
+      if (teacherClasses.isNotEmpty) {
+        _activeClassId = teacherClasses.first.classInfo.classId;
+        _hasNoClass = false;
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      final teacher = await repository.getCurrentTeacher();
+      if (teacher.classId != null && teacher.classId!.isNotEmpty) {
+        _activeClassId = teacher.classId;
+        _hasNoClass = false;
+        return;
+      }
+    } catch (_) {}
+
+    _activeClassId = null;
+    _hasNoClass = true;
+  }
+
+  Future<String> _loadClassName() async {
+    if (_activeClassId == null || _activeClassId!.isEmpty) return 'Lớp học';
+    try {
+      final info = await classRepository.getClassInfo(_activeClassId!);
+      return info.name;
+    } catch (_) {
+      return 'Lớp học';
+    }
+  }
+
   // Loads roster and maps report status with existing adapters.
   Future<List<Child>> _loadChildren() async {
-    final values = await Future.wait([
-      repository.getClassChildren(widget.classId),
-      repository.getClassDashboard(widget.classId, DateTime.now()),
-    ]);
-    final roster = values[0] as List<domain_child.Child>;
-    final dashboard = values[1] as ClassDashboardSummary;
-    final statuses = {for (final item in dashboard.pendingChildren) item.child.childId: item};
-    return roster.map((child) {
-      final item = statuses[child.childId];
-      return item == null
-          ? uiChildFromDomain(child: child, reportStatus: ReportStatus.none, severity: severityFromDescription(null))
-          : uiChildFromDomainWithReport(child: child, reportStatus: item.status, severity: severityFromDescription(null), updatedAt: item.updatedAt);
-    }).toList();
+    if (_activeClassId == null || _activeClassId!.isEmpty) return [];
+    try {
+      final values = await Future.wait([
+        repository.getClassChildren(_activeClassId!),
+        repository.getClassDashboard(_activeClassId!, DateTime.now()),
+      ]);
+      final roster = values[0] as List<domain_child.Child>;
+      final dashboard = values[1] as ClassDashboardSummary;
+      final statuses = {for (final item in dashboard.pendingChildren) item.child.childId: item};
+      return roster.map((child) {
+        final item = statuses[child.childId];
+        return item == null
+            ? uiChildFromDomain(child: child, reportStatus: ReportStatus.none, severity: severityFromDescription(null))
+            : uiChildFromDomainWithReport(child: child, reportStatus: item.status, severity: severityFromDescription(null), updatedAt: item.updatedAt);
+      }).toList();
+    } catch (_) {
+      return [];
+    }
   }
   bool healthOnly = false;
 
@@ -80,7 +147,7 @@ class _TeacherShellState extends State<TeacherShell> {
     final readOnly = {ReportStatus.submitted, ReportStatus.read, ReportStatus.attention}.contains(reportStatus);
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ReportEditorScreen(
-        classId: widget.classId,
+        classId: _activeClassId ?? '',
         repository: repository,
         classRepository: classRepository,
         child: child,
@@ -98,7 +165,7 @@ class _TeacherShellState extends State<TeacherShell> {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => RecordFlowScreen(
         mode: RecordMode.classroom,
-        classId: widget.classId,
+        classId: _activeClassId ?? '',
         className: className,
         repository: repository,
       ),
@@ -108,64 +175,107 @@ class _TeacherShellState extends State<TeacherShell> {
   Future<void> openTimetable(String className) async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TimetableScreen(
-        classId: widget.classId,
+        classId: _activeClassId ?? '',
         className: className,
+        isReadOnly: true,
       ),
     ));
     if (mounted) setState(() {});
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Child>>(future: childrenFuture, builder: (context, snapshot) {
-    if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (snapshot.hasError) return Scaffold(body: Center(child: TextButton(onPressed: () => setState(() => childrenFuture = _loadChildren()), child: const Text('Không tải được danh sách lớp · Thử lại'))));
-    final children = snapshot.data ?? const <Child>[];
-    return FutureBuilder<String>(future: classNameFuture, builder: (context, classSnapshot) {
-    if (classSnapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (classSnapshot.hasError || classSnapshot.data == null) return Scaffold(body: Center(child: TextButton(onPressed: () => setState(() => classNameFuture = classRepository.getClassInfo(widget.classId).then((value) => value.name)), child: const Text('Không tải được thông tin lớp · Thử lại'))));
-    final className = classSnapshot.data!;
-    final page = switch (tab) {
-      TeacherTab.overview => OverviewScreen(
-        classId: widget.classId,
-        repository: repository,
-        onSelectClass: () => appRouter.go('/class-select'),
-        onOpenTimetable: () => openTimetable(className),
-        onOpenReport: (name) => openReport(childByName(name, children)),
-        onHistory: () => setState(() => tab = TeacherTab.history),
-        onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; }),
-      ),
-      TeacherTab.classList => ClassListScreen(
-        initialHealthOnly: healthOnly,
-        children: children,
-        classId: widget.classId,
-        className: className,
-        schoolName: 'Chưa có thông tin trường',
-        onSelectClass: () => appRouter.go('/class-select'),
-        onOpenTimetable: () => openTimetable(className),
-        onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: widget.classId, className: className, repository: repository))),
-        onEdit: openReport,
-      ),
-      TeacherTab.history => HistoryScreen(children: children, onOpenReport: (child, report) => openReport(child, report)),
-      TeacherTab.account => AccountScreen(
-        onLogout: widget.onLogout,
-        onSelectClass: () => appRouter.go('/class-select'),
-        classId: widget.classId,
-        repository: repository,
-      ),
-    };
-    return Scaffold(
-      body: page,
-      bottomNavigationBar: _TeacherNavigation(
-        tab: tab,
-        onTab: (value) => setState(() {
-          if (value != TeacherTab.classList) healthOnly = false;
-          tab = value;
-        }),
-        onRecord: () => openRecord(className),
-      ),
-    );
-    });
-  });
+  Widget build(BuildContext context) => FutureBuilder<void>(
+        future: _initFuture,
+        builder: (context, initSnapshot) {
+          if (initSnapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          if (_hasNoClass || _activeClassId == null || _activeClassId!.isEmpty) {
+            return NoAssignmentScreen(
+              title: 'Chưa có lớp được đăng ký',
+              message: 'Tài khoản giáo viên của bạn hiện chưa được phân công phụ trách lớp học nào.\nVui lòng liên hệ ban quản trị nhà trường để được xếp lớp.',
+              icon: Icons.school_outlined,
+              onBack: widget.onLogout,
+            );
+          }
+          final currentClassId = _activeClassId!;
+          return FutureBuilder<List<Child>>(
+            future: childrenFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              }
+              if (snapshot.hasError) {
+                return Scaffold(
+                  body: Center(
+                    child: TextButton(
+                      onPressed: () => setState(() => childrenFuture = _loadChildren()),
+                      child: const Text('Không tải được danh sách lớp · Thử lại'),
+                    ),
+                  ),
+                );
+              }
+              final children = snapshot.data ?? const <Child>[];
+              return FutureBuilder<String>(
+                future: classNameFuture,
+                builder: (context, classSnapshot) {
+                  if (classSnapshot.connectionState != ConnectionState.done) {
+                    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                  }
+                  if (classSnapshot.hasError || classSnapshot.data == null) {
+                    return Scaffold(
+                      body: Center(
+                        child: TextButton(
+                          onPressed: () => setState(() => _initData()),
+                          child: const Text('Không tải được thông tin lớp · Thử lại'),
+                        ),
+                      ),
+                    );
+                  }
+                  final className = classSnapshot.data!;
+                  final page = switch (tab) {
+                    TeacherTab.overview => OverviewScreen(
+                        classId: currentClassId,
+                        repository: repository,
+                        onOpenTimetable: () => openTimetable(className),
+                        onOpenReport: (name) => openReport(childByName(name, children)),
+                        onHistory: () => setState(() => tab = TeacherTab.history),
+                        onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; }),
+                      ),
+                    TeacherTab.classList => ClassListScreen(
+                        initialHealthOnly: healthOnly,
+                        children: children,
+                        classId: currentClassId,
+                        className: className,
+                        schoolName: 'Chưa có thông tin trường',
+                        onOpenTimetable: () => openTimetable(className),
+                        onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: currentClassId, className: className, repository: repository))),
+                        onEdit: openReport,
+                      ),
+                    TeacherTab.history => HistoryScreen(children: children, onOpenReport: (child, report) => openReport(child, report)),
+                    TeacherTab.account => AccountScreen(
+                        onLogout: widget.onLogout,
+                        classId: currentClassId,
+                        repository: repository,
+                      ),
+                  };
+                  return Scaffold(
+                    body: page,
+                    bottomNavigationBar: _TeacherNavigation(
+                      tab: tab,
+                      onTab: (value) => setState(() {
+                        if (value != TeacherTab.classList) healthOnly = false;
+                        tab = value;
+                      }),
+                      onRecord: () => openRecord(className),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
 }
 
 class _TeacherNavigation extends StatelessWidget {

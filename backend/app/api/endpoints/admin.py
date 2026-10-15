@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from app.core.database import get_db
@@ -11,6 +12,26 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def _validate_phone_10_digits(phone: str | None) -> None:
+    if phone and phone.strip():
+        clean = phone.strip()
+        if not re.match(r"^0\d{9}$", clean):
+            raise HTTPException(
+                status_code=400,
+                detail="Số điện thoại phải gồm đúng 10 chữ số (bắt đầu bằng số 0).",
+            )
+
+
+def _validate_gmail_format(email: str | None) -> None:
+    if email and email.strip():
+        clean = email.strip()
+        if not re.match(r"^[a-zA-Z0-9._%+-]+@gmail\.com$", clean, re.IGNORECASE):
+            raise HTTPException(
+                status_code=400,
+                detail="Email phải đúng định dạng Gmail (@gmail.com).",
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -149,10 +170,23 @@ def list_teachers(db: Session = Depends(get_db)):
 
 @router.post("/teachers", status_code=status.HTTP_201_CREATED)
 def create_teacher(data: TeacherCreate, db: Session = Depends(get_db)):
+    _validate_phone_10_digits(data.phone)
+    _validate_gmail_format(data.email)
+
     if data.username and data.username.strip():
         existing_user = db.query(User).filter(User.username == data.username.strip()).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+            raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
+
+    if data.email and data.email.strip():
+        existing_email = db.query(Teacher).filter(Teacher.email == data.email.strip()).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi giáo viên khác.")
+
+    if data.phone and data.phone.strip():
+        existing_phone = db.query(Teacher).filter(Teacher.phone == data.phone.strip()).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Số điện thoại này đã được đăng ký cho giáo viên khác.")
 
     school = db.query(School).first()
     school_id = school.school_id if school else uuid.uuid4()
@@ -204,11 +238,20 @@ def update_teacher(teacher_id: str, data: TeacherUpdate, db: Session = Depends(g
     if not t:
         raise HTTPException(status_code=404, detail="Không tìm thấy giáo viên")
 
+    _validate_phone_10_digits(data.phone)
+    _validate_gmail_format(data.email)
+
     if data.full_name is not None:
         t.full_name = data.full_name.strip()
-    if data.email is not None:
+    if data.email is not None and data.email.strip():
+        existing_email = db.query(Teacher).filter(Teacher.email == data.email.strip(), Teacher.teacher_id != t.teacher_id).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi giáo viên khác.")
         t.email = data.email.strip()
-    if data.phone is not None:
+    if data.phone is not None and data.phone.strip():
+        existing_phone = db.query(Teacher).filter(Teacher.phone == data.phone.strip(), Teacher.teacher_id != t.teacher_id).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Số điện thoại này đã được đăng ký cho giáo viên khác.")
         t.phone = data.phone.strip()
     if data.status is not None:
         t.status = TeacherStatus(data.status) if data.status in ["active", "inactive", "on_leave"] else t.status
@@ -239,14 +282,14 @@ def update_teacher(teacher_id: str, data: TeacherUpdate, db: Session = Depends(g
             if data.username and data.username.strip() and data.username.strip() != user.username:
                 existing = db.query(User).filter(User.username == data.username.strip(), User.user_id != user.user_id).first()
                 if existing:
-                    raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+                    raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
                 user.username = data.username.strip()
             if data.password and data.password.strip():
                 user.password_hash = hash_password(data.password.strip())
         elif data.username and data.username.strip():
             existing = db.query(User).filter(User.username == data.username.strip()).first()
             if existing:
-                raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+                raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
             pwd = data.password.strip() if data.password and data.password.strip() else "123456"
             new_user = User(
                 user_id=uuid.uuid4(),
@@ -323,7 +366,7 @@ def list_parents(db: Session = Depends(get_db)):
                 "email": p.email or "",
                 "username": user.username if user else None,
                 "status": p.status.value if hasattr(p.status, "value") else str(p.status),
-                "children_summary": f"BN: {child_desc}",
+                "children_summary": f"Bé: {child_desc}",
                 "child_id": child_ids[0] if child_ids else None,
                 "child_ids": child_ids,
                 "children": children_list,
@@ -334,10 +377,23 @@ def list_parents(db: Session = Depends(get_db)):
 
 @router.post("/parents", status_code=status.HTTP_201_CREATED)
 def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
+    _validate_phone_10_digits(data.phone)
+    _validate_gmail_format(data.email)
+
     if data.username and data.username.strip():
         existing_user = db.query(User).filter(User.username == data.username.strip()).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+            raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
+
+    if data.email and data.email.strip():
+        existing_email = db.query(Parent).filter(Parent.email == data.email.strip()).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi phụ huynh khác.")
+
+    if data.phone and data.phone.strip():
+        existing_phone = db.query(Parent).filter(Parent.phone == data.phone.strip()).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Số điện thoại này đã được đăng ký bởi phụ huynh khác.")
 
     parent = Parent(
         parent_id=uuid.uuid4(),
@@ -381,12 +437,24 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
     if not p:
         raise HTTPException(status_code=404, detail="Không tìm thấy phụ huynh")
 
+    _validate_phone_10_digits(data.phone)
+    _validate_gmail_format(data.email)
+
     if data.full_name is not None:
         p.full_name = data.full_name.strip()
-    if data.phone is not None:
+    if data.email is not None and data.email.strip():
+        existing_email = db.query(Parent).filter(Parent.email == data.email.strip(), Parent.parent_id != p.parent_id).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi phụ huynh khác.")
+        p.email = data.email.strip()
+    elif data.email is not None and not data.email.strip():
+        p.email = None
+
+    if data.phone is not None and data.phone.strip():
+        existing_phone = db.query(Parent).filter(Parent.phone == data.phone.strip(), Parent.parent_id != p.parent_id).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Số điện thoại này đã được đăng ký bởi phụ huynh khác.")
         p.phone = data.phone.strip()
-    if data.email is not None:
-        p.email = data.email.strip() if data.email else None
 
     if data.child_ids is not None:
         new_uuids = [uuid.UUID(cid.strip()) for cid in data.child_ids if cid.strip()]
@@ -412,14 +480,14 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
             if data.username and data.username.strip() and data.username.strip() != user.username:
                 existing = db.query(User).filter(User.username == data.username.strip(), User.user_id != user.user_id).first()
                 if existing:
-                    raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+                    raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
                 user.username = data.username.strip()
             if data.password and data.password.strip():
                 user.password_hash = hash_password(data.password.strip())
         elif data.username and data.username.strip():
             existing = db.query(User).filter(User.username == data.username.strip()).first()
             if existing:
-                raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+                raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
             pwd = data.password.strip() if data.password and data.password.strip() else "123456"
             new_user = User(
                 user_id=uuid.uuid4(),
@@ -445,6 +513,69 @@ def delete_parent(parent_id: str, db: Session = Depends(get_db)):
     db.delete(p)
     db.commit()
     return {"message": "Đã xóa phụ huynh thành công"}
+
+
+@router.get("/check-availability")
+def check_availability(
+    type: str,
+    username: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
+    exclude_id: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Kiểm tra tên đăng nhập, email hoặc số điện thoại đã tồn tại trên hệ thống hay chưa."""
+    username_exists = False
+    email_exists = False
+    phone_exists = False
+
+    ex_uuid = None
+    if exclude_id and exclude_id.strip():
+        try:
+            ex_uuid = uuid.UUID(exclude_id.strip())
+        except Exception:
+            ex_uuid = None
+
+    if username and username.strip():
+        q_user = db.query(User).filter(User.username == username.strip())
+        if ex_uuid:
+            if type == "teacher":
+                q_user = q_user.filter(User.teacher_id != ex_uuid)
+            elif type == "parent":
+                q_user = q_user.filter(User.parent_id != ex_uuid)
+        username_exists = q_user.first() is not None
+
+    if email and email.strip():
+        t_email = email.strip()
+        if type == "teacher":
+            q_t = db.query(Teacher).filter(Teacher.email == t_email)
+            if ex_uuid:
+                q_t = q_t.filter(Teacher.teacher_id != ex_uuid)
+            email_exists = q_t.first() is not None
+        elif type == "parent":
+            q_p = db.query(Parent).filter(Parent.email == t_email)
+            if ex_uuid:
+                q_p = q_p.filter(Parent.parent_id != ex_uuid)
+            email_exists = q_p.first() is not None
+
+    if phone and phone.strip():
+        t_phone = phone.strip()
+        if type == "parent":
+            q_p = db.query(Parent).filter(Parent.phone == t_phone)
+            if ex_uuid:
+                q_p = q_p.filter(Parent.parent_id != ex_uuid)
+            phone_exists = q_p.first() is not None
+        elif type == "teacher":
+            q_t = db.query(Teacher).filter(Teacher.phone == t_phone)
+            if ex_uuid:
+                q_t = q_t.filter(Teacher.teacher_id != ex_uuid)
+            phone_exists = q_t.first() is not None
+
+    return {
+        "username_exists": username_exists,
+        "email_exists": email_exists,
+        "phone_exists": phone_exists,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
