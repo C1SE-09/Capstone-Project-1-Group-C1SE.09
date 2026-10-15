@@ -67,6 +67,7 @@ def login(data: login_request, db: Session = Depends(get_db)):
         token_type="bearer",
         role=role,
         user_id=str(user.user_id),
+        username=user.username,
         teacher_id=str(user.teacher_id) if user.teacher_id else None,
         parent_id=str(user.parent_id) if user.parent_id else None,
     )

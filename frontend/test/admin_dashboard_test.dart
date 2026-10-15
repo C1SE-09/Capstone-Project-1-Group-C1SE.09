@@ -205,7 +205,7 @@ void main() {
     expect(loggedOut, isTrue);
   });
 
-  testWidgets('AdminDashboardScreen displays fixed school name in features tab and cannot switch school', (tester) async {
+  testWidgets('AdminDashboardScreen features tab does not show school name or notification button, and shows refresh button', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -229,8 +229,12 @@ void main() {
     await tester.tap(find.text('Chức năng'));
     await tester.pumpAndSettle();
 
-    // Verify school name is displayed
-    expect(find.text('Trường Mầm Non Hướng Dương'), findsOneWidget);
+    // Verify school name is not displayed
+    expect(find.text('Trường Mầm Non Hướng Dương'), findsNothing);
+    // Verify notification button is not displayed
+    expect(find.byIcon(Icons.notifications_none), findsNothing);
+    // Verify refresh button is present
+    expect(find.byIcon(Icons.refresh), findsOneWidget);
     // Verify there is no DropdownButtonFormField for school switching
     expect(find.byType(DropdownButtonFormField<int>), findsNothing);
     // Verify there is NO "Quay lại" button

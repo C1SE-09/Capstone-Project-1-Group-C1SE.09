@@ -26,7 +26,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/admin',
-      builder: (context, state) => AdminDashboardScreen(onLogout: _goLogin),
+      builder: (context, state) => AdminDashboardScreen(
+        onLogout: _goLogin,
+        username: AuthRepository.currentUser?.username,
+      ),
     ),
     GoRoute(path: '/class-select', builder: (context, state) => Scaffold(body: SafeArea(child: ClassSelectScreen(onPick: (classId) => appRouter.go(Uri(path: '/teacher', queryParameters: {'classId': classId}).toString()))))),
     GoRoute(path: '/teacher', builder: (context, state) => TeacherShell(onLogout: _goLogin, classId: state.uri.queryParameters['classId'] ?? 'aaaaaaaa-0000-0000-0000-000000000001')),

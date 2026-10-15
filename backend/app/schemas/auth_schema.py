@@ -14,6 +14,7 @@ class login_response(BaseModel):
     token_type: str
     role: str
     user_id: str | None = None
+    username: str | None = None
     teacher_id: str | None = None
     parent_id: str | None = None
 
