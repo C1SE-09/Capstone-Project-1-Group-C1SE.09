@@ -202,8 +202,17 @@ export default function BugReportsListPage() {
         {/* List */}
         <Card>
           {error ? (
-            <div className="p-8 text-center text-red-600">
-              Lỗi tải dữ liệu. Hãy thử lại sau.
+            <div className="p-8 text-center text-red-600 space-y-2">
+              <p className="font-medium">Lỗi tải dữ liệu. Hãy thử lại sau.</p>
+              <button
+                onClick={() => {
+                  clearToken();
+                  router.replace("/login");
+                }}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition"
+              >
+                Đăng nhập lại
+              </button>
             </div>
           ) : !data ? (
             <Spinner />

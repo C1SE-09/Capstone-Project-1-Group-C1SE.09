@@ -1,9 +1,10 @@
 import uuid
 
 from app.core.database import get_db
+from app.core.security import hash_password
 from app.models.child import Child, ChildStatus, Parent, ParentStatus
 from app.models.schedule import ClassSchedule, Subject, TimeSlot
-from app.models.user import Class_, School, Teacher, TeacherStatus
+from app.models.user import Class_, School, Teacher, TeacherStatus, User, UserRole, UserStatus
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -24,6 +25,8 @@ class TeacherCreate(BaseModel):
     class_id: str | None = None
     class_ids: list[str] | None = None
     status: str = "active"
+    username: str | None = None
+    password: str | None = None
 
 
 class TeacherUpdate(BaseModel):
@@ -33,6 +36,8 @@ class TeacherUpdate(BaseModel):
     class_id: str | None = None
     class_ids: list[str] | None = None
     status: str | None = None
+    username: str | None = None
+    password: str | None = None
 
 
 class ParentCreate(BaseModel):
@@ -42,6 +47,8 @@ class ParentCreate(BaseModel):
     child_id: str | None = None
     child_ids: list[str] | None = None
     status: str = "active"
+    username: str | None = None
+    password: str | None = None
 
 
 class ParentUpdate(BaseModel):
@@ -51,6 +58,8 @@ class ParentUpdate(BaseModel):
     child_id: str | None = None
     child_ids: list[str] | None = None
     status: str | None = None
+    username: str | None = None
+    password: str | None = None
 
 
 class ChildCreate(BaseModel):
@@ -119,12 +128,15 @@ def list_teachers(db: Session = Depends(get_db)):
         class_ids = [c["id"] for c in assigned]
         class_name = ", ".join([c["name"] for c in assigned]) if assigned else "Chưa phân lớp"
 
+        user = db.query(User).filter(User.teacher_id == t.teacher_id).first()
+
         results.append(
             {
                 "id": str(t.teacher_id),
                 "full_name": t.full_name,
                 "email": t.email,
                 "phone": t.phone,
+                "username": user.username if user else None,
                 "class_id": class_ids[0] if class_ids else None,
                 "class_ids": class_ids,
                 "class_name": class_name,
@@ -137,6 +149,11 @@ def list_teachers(db: Session = Depends(get_db)):
 
 @router.post("/teachers", status_code=status.HTTP_201_CREATED)
 def create_teacher(data: TeacherCreate, db: Session = Depends(get_db)):
+    if data.username and data.username.strip():
+        existing_user = db.query(User).filter(User.username == data.username.strip()).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+
     school = db.query(School).first()
     school_id = school.school_id if school else uuid.uuid4()
 
@@ -162,6 +179,19 @@ def create_teacher(data: TeacherCreate, db: Session = Depends(get_db)):
             text("INSERT INTO teacher_class (teacher_id, class_id) VALUES (:tid, :cid) ON CONFLICT DO NOTHING"),
             {"tid": teacher.teacher_id, "cid": cid}
         )
+
+    if data.username and data.username.strip():
+        pwd = data.password.strip() if data.password and data.password.strip() else "123456"
+        user = User(
+            user_id=uuid.uuid4(),
+            username=data.username.strip(),
+            password_hash=hash_password(pwd),
+            role=UserRole.TEACHER,
+            teacher_id=teacher.teacher_id,
+            status=UserStatus.ACTIVE,
+            is_verified=True,
+        )
+        db.add(user)
 
     db.commit()
     db.refresh(teacher)
@@ -201,6 +231,33 @@ def update_teacher(teacher_id: str, data: TeacherUpdate, db: Session = Depends(g
                 text("INSERT INTO teacher_class (teacher_id, class_id) VALUES (:tid, :cid) ON CONFLICT DO NOTHING"),
                 {"tid": t.teacher_id, "cid": cid}
             )
+
+    # Cập nhật thông tin tài khoản đăng nhập & mật khẩu nếu có
+    if data.username is not None or data.password is not None:
+        user = db.query(User).filter(User.teacher_id == t.teacher_id).first()
+        if user:
+            if data.username and data.username.strip() and data.username.strip() != user.username:
+                existing = db.query(User).filter(User.username == data.username.strip(), User.user_id != user.user_id).first()
+                if existing:
+                    raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+                user.username = data.username.strip()
+            if data.password and data.password.strip():
+                user.password_hash = hash_password(data.password.strip())
+        elif data.username and data.username.strip():
+            existing = db.query(User).filter(User.username == data.username.strip()).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+            pwd = data.password.strip() if data.password and data.password.strip() else "123456"
+            new_user = User(
+                user_id=uuid.uuid4(),
+                username=data.username.strip(),
+                password_hash=hash_password(pwd),
+                role=UserRole.TEACHER,
+                teacher_id=t.teacher_id,
+                status=UserStatus.ACTIVE,
+                is_verified=True,
+            )
+            db.add(new_user)
 
     db.commit()
     return {"message": "Cập nhật giáo viên thành công"}
@@ -256,12 +313,15 @@ def list_parents(db: Session = Depends(get_db)):
             children_list.append({"id": str(c.child_id), "name": c.full_name, "class_name": c_class})
 
         child_desc = ", ".join(children_info) if children_info else "Chưa liên kết học sinh"
+        user = db.query(User).filter(User.parent_id == p.parent_id).first()
+
         results.append(
             {
                 "id": str(p.parent_id),
                 "full_name": p.full_name,
                 "phone": p.phone,
                 "email": p.email or "",
+                "username": user.username if user else None,
                 "status": p.status.value if hasattr(p.status, "value") else str(p.status),
                 "children_summary": f"BN: {child_desc}",
                 "child_id": child_ids[0] if child_ids else None,
@@ -274,6 +334,11 @@ def list_parents(db: Session = Depends(get_db)):
 
 @router.post("/parents", status_code=status.HTTP_201_CREATED)
 def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
+    if data.username and data.username.strip():
+        existing_user = db.query(User).filter(User.username == data.username.strip()).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+
     parent = Parent(
         parent_id=uuid.uuid4(),
         full_name=data.full_name.strip(),
@@ -291,6 +356,19 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
             child = db.query(Child).filter(Child.child_id == uuid.UUID(cid.strip())).first()
             if child:
                 child.parent_id = parent.parent_id
+
+    if data.username and data.username.strip():
+        pwd = data.password.strip() if data.password and data.password.strip() else "123456"
+        user = User(
+            user_id=uuid.uuid4(),
+            username=data.username.strip(),
+            password_hash=hash_password(pwd),
+            role=UserRole.PARENT,
+            parent_id=parent.parent_id,
+            status=UserStatus.ACTIVE,
+            is_verified=True,
+        )
+        db.add(user)
 
     db.commit()
     db.refresh(parent)
@@ -326,6 +404,33 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
             child = db.query(Child).filter(Child.child_id == uuid.UUID(data.child_id.strip())).first()
             if child:
                 child.parent_id = p.parent_id
+
+    # Cập nhật thông tin tài khoản đăng nhập & mật khẩu nếu có
+    if data.username is not None or data.password is not None:
+        user = db.query(User).filter(User.parent_id == p.parent_id).first()
+        if user:
+            if data.username and data.username.strip() and data.username.strip() != user.username:
+                existing = db.query(User).filter(User.username == data.username.strip(), User.user_id != user.user_id).first()
+                if existing:
+                    raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+                user.username = data.username.strip()
+            if data.password and data.password.strip():
+                user.password_hash = hash_password(data.password.strip())
+        elif data.username and data.username.strip():
+            existing = db.query(User).filter(User.username == data.username.strip()).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+            pwd = data.password.strip() if data.password and data.password.strip() else "123456"
+            new_user = User(
+                user_id=uuid.uuid4(),
+                username=data.username.strip(),
+                password_hash=hash_password(pwd),
+                role=UserRole.PARENT,
+                parent_id=p.parent_id,
+                status=UserStatus.ACTIVE,
+                is_verified=True,
+            )
+            db.add(new_user)
 
     db.commit()
     return {"message": "Cập nhật phụ huynh thành công"}

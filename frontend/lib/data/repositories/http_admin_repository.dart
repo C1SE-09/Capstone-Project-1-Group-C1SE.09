@@ -36,6 +36,7 @@ class AdminTeacherDto {
   final String fullName;
   final String email;
   final String phone;
+  final String? username;
   final String? classId;
   final List<String> classIds;
   final String className;
@@ -46,6 +47,7 @@ class AdminTeacherDto {
     required this.fullName,
     required this.email,
     required this.phone,
+    this.username,
     this.classId,
     required this.classIds,
     required this.className,
@@ -63,6 +65,7 @@ class AdminTeacherDto {
       fullName: json['full_name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
+      username: json['username'] as String?,
       classId: json['class_id'] as String?,
       classIds: classIds,
       className: json['class_name'] as String? ?? 'Chưa phân lớp',
@@ -76,6 +79,7 @@ class AdminParentDto {
   final String fullName;
   final String phone;
   final String email;
+  final String? username;
   final String status;
   final String childrenSummary;
   final String? childId;
@@ -86,6 +90,7 @@ class AdminParentDto {
     required this.fullName,
     required this.phone,
     required this.email,
+    this.username,
     required this.status,
     required this.childrenSummary,
     this.childId,
@@ -103,6 +108,7 @@ class AdminParentDto {
       fullName: json['full_name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       email: json['email'] as String? ?? '',
+      username: json['username'] as String?,
       status: json['status'] as String? ?? 'active',
       childrenSummary: json['children_summary'] as String? ?? '',
       childId: json['child_id'] as String?,
@@ -247,6 +253,8 @@ class HttpAdminRepository {
     required String fullName,
     required String email,
     required String phone,
+    String? username,
+    String? password,
     String? classId,
     List<String>? classIds,
   }) async {
@@ -254,6 +262,8 @@ class HttpAdminRepository {
       'full_name': fullName,
       'email': email,
       'phone': phone,
+      'username': username,
+      'password': password,
       'class_id': classId,
       'class_ids': classIds,
     });
@@ -264,6 +274,8 @@ class HttpAdminRepository {
     required String fullName,
     required String email,
     required String phone,
+    String? username,
+    String? password,
     String? classId,
     List<String>? classIds,
   }) async {
@@ -271,6 +283,8 @@ class HttpAdminRepository {
       'full_name': fullName,
       'email': email,
       'phone': phone,
+      'username': username,
+      'password': password,
       'class_id': classId,
       'class_ids': classIds,
     });
@@ -291,6 +305,8 @@ class HttpAdminRepository {
     required String fullName,
     required String phone,
     String? email,
+    String? username,
+    String? password,
     String? childId,
     List<String>? childIds,
   }) async {
@@ -298,6 +314,8 @@ class HttpAdminRepository {
       'full_name': fullName,
       'phone': phone,
       'email': email,
+      'username': username,
+      'password': password,
       'child_id': childId,
       'child_ids': childIds,
     });
@@ -308,6 +326,8 @@ class HttpAdminRepository {
     required String fullName,
     required String phone,
     String? email,
+    String? username,
+    String? password,
     String? childId,
     List<String>? childIds,
   }) async {
@@ -315,6 +335,8 @@ class HttpAdminRepository {
       'full_name': fullName,
       'phone': phone,
       'email': email,
+      'username': username,
+      'password': password,
       'child_id': childId,
       'child_ids': childIds,
     });

@@ -44,7 +44,21 @@ export default function DashboardPage() {
     return (
       <AdminLayout currentPage="dashboard">
         {error ? (
-          <div className="text-red-600 p-4">Lỗi tải dữ liệu. Hãy thử lại.</div>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 max-w-md">
+            <p className="font-semibold text-sm">Lỗi tải dữ liệu</p>
+            <p className="text-xs mt-1 text-red-600">
+              {error?.detail || "Phiên làm việc có thể đã hết hạn hoặc không kết nối được máy chủ."}
+            </p>
+            <button
+              onClick={() => {
+                clearToken();
+                router.replace("/login");
+              }}
+              className="mt-3 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition"
+            >
+              Đăng nhập lại
+            </button>
+          </div>
         ) : (
           <Spinner />
         )}

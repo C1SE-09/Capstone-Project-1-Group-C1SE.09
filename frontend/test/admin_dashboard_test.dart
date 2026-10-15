@@ -129,15 +129,19 @@ void main() {
     expect(find.text('KinderLog'), findsWidgets);
     expect(find.text('Tổng quan hệ thống'), findsOneWidget);
 
-    // Verify 4 KPI Metric Cards
+    // Verify 3 KPI Metric Cards (Đã loại bỏ card ghi âm giọng nói)
     expect(find.text('Tổng số học sinh'), findsOneWidget);
     expect(find.text('342 bé'), findsOneWidget);
     expect(find.text('Tiến độ báo cáo ngày'), findsOneWidget);
     expect(find.text('83.3%'), findsOneWidget);
-    expect(find.text('Bản ghi âm giọng nói'), findsOneWidget);
-    expect(find.text('148 file hôm nay'), findsOneWidget);
     expect(find.text('Nhân sự & Phụ huynh'), findsOneWidget);
-    expect(find.text('24 giáo viên'), findsOneWidget);
+    expect(find.text('Giáo viên'), findsOneWidget);
+    expect(find.text('Phụ huynh'), findsOneWidget);
+
+    // Verify removed components
+    expect(find.text('Bản ghi âm giọng nói'), findsNothing);
+    expect(find.text('Hàng đợi xử lý giọng nói STT'), findsNothing);
+    expect(find.text('Tình trạng hạ tầng máy chủ'), findsNothing);
 
     // Verify Table & Classes
     expect(find.text('Tiến độ báo cáo theo lớp học trong ngày'), findsOneWidget);
@@ -145,18 +149,12 @@ void main() {
     expect(find.text('Chồi 1'), findsOneWidget);
     expect(find.text('Lá 1'), findsOneWidget);
 
-    // Verify Right Widgets
-    expect(find.text('Hàng đợi xử lý giọng nói STT'), findsOneWidget);
-    expect(find.text('Tình trạng hạ tầng máy chủ'), findsOneWidget);
-    expect(find.text('Cơ sở dữ liệu'), findsOneWidget);
-
     // Verify 7-day Trend Chart Card
     expect(find.text('Xu hướng báo cáo 7 ngày gần nhất'), findsOneWidget);
-    // Legend is embedded in the chart caption
     expect(find.textContaining('Xanh: đã gửi, Vàng: bản nháp'), findsOneWidget);
   });
 
-  testWidgets('AdminDashboardScreen search filters the class list', (tester) async {
+  testWidgets('AdminDashboardScreen overview tab does not have search field, features tab has search field', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -164,22 +162,18 @@ void main() {
     await tester.pumpWidget(buildTestWidget(onLogout: () {}));
     await tester.pumpAndSettle();
 
-    // Prior to search: all classes visible
-    expect(find.text('Mầm 1'), findsOneWidget);
-    expect(find.text('Chồi 1'), findsOneWidget);
+    // In Overview Tab: search field is NOT present
+    expect(find.byType(TextField), findsNothing);
 
-    // Enter search query
-    final searchField = find.byType(TextField);
-    expect(searchField, findsOneWidget);
-    await tester.enterText(searchField, 'Chồi');
+    // Navigate to Features Tab: search field is present
+    await tester.tap(find.text('Chức năng'));
     await tester.pumpAndSettle();
 
-    // Filtered result
-    expect(find.text('Chồi 1'), findsOneWidget);
-    expect(find.text('Mầm 1'), findsNothing);
+    final searchField = find.byType(TextField);
+    expect(searchField, findsOneWidget);
   });
 
-  testWidgets('AdminDashboardScreen logout button invokes onLogout callback', (tester) async {
+  testWidgets('AdminDashboardScreen logout button in account tab invokes onLogout callback', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -190,9 +184,17 @@ void main() {
     }));
     await tester.pumpAndSettle();
 
-    // Find and tap the logout button
-    final logoutButton = find.text('Đăng xuất');
+    // Navigate to Account Tab
+    await tester.tap(find.text('Tài khoản'));
+    await tester.pumpAndSettle();
+
+    // Verify mobile header is NOT visible in account tab
+    expect(find.byType(TextField), findsNothing);
+
+    // Find and tap the logout button in Account tab
+    final logoutButton = find.text('Đăng xuất tài khoản quản trị');
     expect(logoutButton, findsOneWidget);
+    await tester.ensureVisible(logoutButton);
     await tester.tap(logoutButton);
     await tester.pumpAndSettle();
 
@@ -202,4 +204,130 @@ void main() {
 
     expect(loggedOut, isTrue);
   });
+
+  testWidgets('AdminDashboardScreen displays fixed school name in features tab and cannot switch school', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: kinderTheme(),
+        home: AdminDashboardScreen(
+          onLogout: () {},
+          repository: _FakeAdminRepository(),
+          schoolName: 'Trường Mầm Non Hướng Dương',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // In Overview Tab: school name control is NOT present
+    expect(find.text('Trường Mầm Non Hướng Dương'), findsNothing);
+
+    // Navigate to Features Tab
+    await tester.tap(find.text('Chức năng'));
+    await tester.pumpAndSettle();
+
+    // Verify school name is displayed
+    expect(find.text('Trường Mầm Non Hướng Dương'), findsOneWidget);
+    // Verify there is no DropdownButtonFormField for school switching
+    expect(find.byType(DropdownButtonFormField<int>), findsNothing);
+    // Verify there is NO "Quay lại" button
+    expect(find.text('Quay lại'), findsNothing);
+  });
+
+  testWidgets('AdminDashboardScreen account tab has bug report option', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestWidget(onLogout: () {}));
+    await tester.pumpAndSettle();
+
+    // Navigate to Account Tab
+    await tester.tap(find.text('Tài khoản'));
+    await tester.pumpAndSettle();
+
+    // Verify bug report item exists
+    expect(find.text('Báo cáo lỗi & Góp ý'), findsOneWidget);
+    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+  });
+
+  testWidgets('AdminDashboardScreen account tab displays School Admin role', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestWidget(onLogout: () {}));
+    await tester.pumpAndSettle();
+
+    // Navigate to Account Tab
+    await tester.tap(find.text('Tài khoản'));
+    await tester.pumpAndSettle();
+
+    // Verify role is School Admin
+    expect(find.text('School Admin'), findsOneWidget);
+    expect(find.text('Toàn quyền Super Admin'), findsNothing);
+  });
+
+  testWidgets('AdminDashboardScreen add teacher dialog has username and password fields', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestWidget(onLogout: () {}));
+    await tester.pumpAndSettle();
+
+    // Navigate to Features Tab
+    await tester.tap(find.text('Chức năng'));
+    await tester.pumpAndSettle();
+
+    // Tap Add Teacher button in header
+    final addBtn = find.text('Thêm giáo viên');
+    expect(addBtn, findsOneWidget);
+    await tester.tap(addBtn);
+    await tester.pumpAndSettle();
+
+    // Verify dialog fields
+    expect(find.text('Tài khoản đăng nhập *'), findsOneWidget);
+    expect(find.text('Mật khẩu *'), findsOneWidget);
+
+    // Cancel dialog
+    await tester.tap(find.text('Hủy bỏ'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('AdminDashboardScreen add parent dialog has username and password fields', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestWidget(onLogout: () {}));
+    await tester.pumpAndSettle();
+
+    // Navigate to Features Tab
+    await tester.tap(find.text('Chức năng'));
+    await tester.pumpAndSettle();
+
+    // Switch to Parents category
+    await tester.tap(find.text('Phụ huynh'));
+    await tester.pumpAndSettle();
+
+    // Tap Add Parent button in header
+    final addBtn = find.text('Thêm phụ huynh');
+    expect(addBtn, findsOneWidget);
+    await tester.tap(addBtn);
+    await tester.pumpAndSettle();
+
+    // Verify dialog fields
+    expect(find.text('Tài khoản đăng nhập *'), findsOneWidget);
+    expect(find.text('Mật khẩu *'), findsOneWidget);
+
+    // Cancel dialog
+    await tester.tap(find.text('Hủy bỏ'));
+    await tester.pumpAndSettle();
+  });
 }
+
+
