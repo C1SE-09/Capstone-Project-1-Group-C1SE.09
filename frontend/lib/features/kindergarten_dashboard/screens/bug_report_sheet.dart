@@ -45,8 +45,6 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  BugCategory _selectedCategory = BugCategory.ui;
-  BugSeverity _selectedSeverity = BugSeverity.medium;
   final List<BugReportAttachmentDraft> _attachments = [];
 
   bool _isSubmitting = false;
@@ -159,8 +157,8 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
       final payload = BugReportCreatePayload(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        category: _selectedCategory,
-        severity: _selectedSeverity,
+        category: BugCategory.other,
+        severity: BugSeverity.medium,
         appVersion: info.appVersion,
         buildNumber: info.buildNumber,
         osVersion: info.osVersion,
@@ -184,8 +182,6 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
       _titleController.clear();
       _descriptionController.clear();
       _attachments.clear();
-      _selectedCategory = BugCategory.ui;
-      _selectedSeverity = BugSeverity.medium;
 
       // Reload history & switch to tab history
       _loadMyReports();
@@ -402,75 +398,6 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Phân loại (Category)
-            _buildFieldLabel('Phân loại vấn đề'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: BugCategory.values.map((cat) {
-                final isSelected = _selectedCategory == cat;
-                return ChoiceChip(
-                  label: Text(cat.label),
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? k.brandStrong : k.inkSoft,
-                  ),
-                  selected: isSelected,
-                  selectedColor: k.brandTint,
-                  backgroundColor: k.surfaceSunken,
-                  side: BorderSide(
-                    color: isSelected ? k.brand : k.line,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  onSelected: (val) {
-                    if (val) setState(() => _selectedCategory = cat);
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-
-            // Mức độ nghiêm trọng (Severity)
-            _buildFieldLabel('Mức độ ảnh hưởng'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: BugSeverity.values.map((sev) {
-                final isSelected = _selectedSeverity == sev;
-                final (color, bg) = _severityColors(sev, k);
-                return ChoiceChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(sev.label),
-                    ],
-                  ),
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? color : k.inkSoft,
-                  ),
-                  selected: isSelected,
-                  selectedColor: bg,
-                  backgroundColor: k.surfaceSunken,
-                  side: BorderSide(
-                    color: isSelected ? color : k.line,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  onSelected: (val) {
-                    if (val) setState(() => _selectedSeverity = sev);
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
 
             // Mô tả chi tiết
             _buildFieldLabel('Mô tả chi tiết *'),
@@ -713,14 +640,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
     );
   }
 
-  (Color, Color) _severityColors(BugSeverity sev, KPalette k) {
-    return switch (sev) {
-      BugSeverity.low => (k.inkSoft, k.surfaceSunken),
-      BugSeverity.medium => (k.info, k.infoTint),
-      BugSeverity.high => (k.warn, k.warnTint),
-      BugSeverity.critical => (k.bad, k.badTint),
-    };
-  }
+
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

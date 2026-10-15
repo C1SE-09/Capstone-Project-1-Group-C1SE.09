@@ -113,6 +113,12 @@ export async function apiFetch<T = any>(
         /* ignore */
       }
     }
+    if (res.status === 401) {
+      clearToken();
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
     throw new ApiError(res.status, detail);
   }
 

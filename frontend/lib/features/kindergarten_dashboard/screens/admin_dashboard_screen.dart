@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
@@ -47,12 +48,14 @@ class AdminDashboardScreen extends StatefulWidget {
     this.repository,
     this.initialTab = AdminTab.overview,
     this.initialCategory = AdminCategory.teachers,
+    this.schoolName = 'Trường Mầm Non Hướng Dương',
   });
 
   final VoidCallback onLogout;
   final HttpAdminRepository? repository;
   final AdminTab initialTab;
   final AdminCategory initialCategory;
+  final String schoolName;
 
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
@@ -67,11 +70,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _query = '';
   final _searchController = TextEditingController();
 
-  int _schoolIndex = 0;
-  static const _schools = [
-    'Trường Mầm Non Hướng Dương',
-    'Trường Mầm Non Ánh Sao',
-  ];
+
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -79,9 +78,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Overview data from API
   AdminOverviewStatsDto? _stats;
   List<AdminClassProgressDto> _classesProgress = [];
-  AdminVoiceStatsDto? _voiceStats;
   List<AdminReportTrendDto> _trends = [];
-  AdminSystemHealthDto? _health;
 
   // Management CRUD data from API
   List<AdminTeacherDto> _teachers = [];
@@ -143,17 +140,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final results = await Future.wait([
         _repo.getDashboardOverviewStats(),
         _repo.getDashboardClassesProgress(),
-        _repo.getDashboardVoiceStats(),
         _repo.getDashboardReportTrends(days: 7),
-        _repo.getDashboardSystemHealth(),
       ]);
       if (mounted) {
         setState(() {
           _stats = results[0] as AdminOverviewStatsDto;
           _classesProgress = results[1] as List<AdminClassProgressDto>;
-          _voiceStats = results[2] as AdminVoiceStatsDto;
-          _trends = results[3] as List<AdminReportTrendDto>;
-          _health = results[4] as AdminSystemHealthDto;
+          _trends = results[2] as List<AdminReportTrendDto>;
         });
       }
     } catch (e) {
@@ -352,8 +345,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Hàng 1: Brand Logo + Tên KinderLog
+          // Hàng 1: Brand Logo + Tên KinderLog (luôn hiển thị, căn giữa)
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 width: 38,
@@ -376,195 +370,134 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
 
-          // Hàng 2: Search bar full-width độc lập
-          TextField(
-            controller: _searchController,
-            onChanged: (val) => setState(() => _query = val),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              hintText: _searchHint,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: hasSearch
-                  ? IconButton(
-                      iconSize: 18,
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _query = '';
-                          _searchController.clear();
-                        });
-                      },
-                    )
-                  : null,
+          // Cụm điều khiển công cụ: CHỈ HIỂN THỊ Ở TAB CHỨC NĂNG
+          if (_tab == AdminTab.features) ...[
+            const SizedBox(height: 12),
+
+            // Hàng 2: Search bar full-width độc lập
+            TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _query = val),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                hintText: _searchHint,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: hasSearch
+                    ? IconButton(
+                        iconSize: 18,
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          setState(() {
+                            _query = '';
+                            _searchController.clear();
+                          });
+                        },
+                      )
+                    : null,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
 
-          // Hàng 3: Chọn cơ sở trường học + Nút vuông Dark mode
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _schoolIndex,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    prefixIcon: Icon(Icons.school_outlined, size: 20),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  items: List.generate(
-                    _schools.length,
-                    (idx) => DropdownMenuItem(
-                      value: idx,
-                      child: Text(
-                        _schools[idx],
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _schoolIndex = val);
-                      _notify('Đã chuyển sang ${_schools[val]}');
-                    }
-                  },
-                ),
+            // Hàng 3: Hiển thị tên trường học (cố định theo Admin từng trường, không thể đổi)
+            InputDecorator(
+              decoration: const InputDecoration(
+                isDense: true,
+                prefixIcon: Icon(Icons.school_outlined, size: 20),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
-              const SizedBox(width: 10),
-              Container(
-                height: 48,
-                width: 48,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                ),
-                child: IconButton(
-                  tooltip: _isDarkMode ? 'Giao diện sáng' : 'Giao diện tối',
-                  onPressed: () {
-                    final newMode = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
-                    ThemeController.instance.set(newMode);
-                    setState(() {});
-                  },
-                  icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode, size: 20),
-                ),
+              child: Text(
+                widget.schoolName,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
+            ),
+            const SizedBox(height: 10),
 
-          // Hàng 4: Chuông thông báo + Nút + Thêm tài khoản mới + Nút Quay lại
-          Row(
-            children: [
-              Container(
-                height: 44,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                ),
-                child: IconButton(
-                  tooltip: 'Thông báo',
-                  onPressed: () => _notify('Hệ thống hoạt động bình thường, không có cảnh báo mới'),
-                  icon: const Badge(
-                    smallSize: 7,
-                    child: Icon(Icons.notifications_none, size: 20),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SizedBox(
+            // Hàng 4: Chuông thông báo + Nút Thêm mới (Đã bỏ hoàn toàn nút Quay lại)
+            Row(
+              children: [
+                Container(
                   height: 44,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.brand,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: IconButton(
+                    tooltip: 'Thông báo',
+                    onPressed: () => _notify('Hệ thống hoạt động bình thường, không có cảnh báo mới'),
+                    icon: const Badge(
+                      smallSize: 7,
+                      child: Icon(Icons.notifications_none, size: 20),
                     ),
-                    onPressed: () => _showEditor(_category),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(
-                      _tab == AdminTab.features ? _addLabel : 'Thêm tài khoản mới',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 44,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                  ),
-                  onPressed: () {
-                    if (_tab != AdminTab.overview) {
-                      setState(() {
-                        _tab = AdminTab.overview;
-                        _query = '';
-                        _searchController.clear();
-                      });
-                    } else {
-                      _confirmLogout();
-                    }
-                  },
-                  child: Text(
-                    _tab == AdminTab.overview ? 'Đăng xuất' : 'Quay lại',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Hàng 5: Pill badge trạng thái đồng bộ dữ liệu
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _isDarkMode ? Colors.white.withAlpha(15) : Colors.black.withAlpha(10),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.circle, size: 8, color: AppColors.success),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Dữ liệu vừa cập nhật lúc $timeStr',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.brand,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                      ),
+                      onPressed: () => _showEditor(_category),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(
+                        _addLabel,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                iconSize: 18,
-                tooltip: 'Làm mới dữ liệu',
-                onPressed: () {
-                  _loadOverviewData();
-                  _loadCategoryData();
-                  _notify('Đã đồng bộ dữ liệu mới nhất từ máy chủ');
-                },
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Hàng 5: Pill badge trạng thái đồng bộ dữ liệu
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _isDarkMode ? Colors.white.withAlpha(15) : Colors.black.withAlpha(10),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.circle, size: 8, color: AppColors.success),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Dữ liệu vừa cập nhật lúc $timeStr',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  tooltip: 'Làm mới dữ liệu',
+                  onPressed: () {
+                    _loadCategoryData();
+                    _notify('Đã đồng bộ dữ liệu mới nhất từ máy chủ');
+                  },
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -673,12 +606,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     final totalChildren = _stats?.totalChildren ?? 0;
     final totalClasses = _stats?.totalClasses ?? 0;
-    final totalSchools = _stats?.totalSchools ?? 2;
     final completionRate = _stats?.todayCompletionRate ?? 0.0;
     final sentCount = _stats?.todaySentReportsCount ?? 0;
     final draftCount = _stats?.todayDraftReportsCount ?? 0;
-    final todayVoice = _stats?.todayVoiceRecords ?? 0;
-    final totalVoice = _stats?.totalVoiceRecords ?? 0;
     final teachersCount = _stats?.totalTeachers ?? _teachers.length;
     final parentsCount = _stats?.totalParents ?? _parents.length;
 
@@ -707,121 +637,382 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           'Theo dõi hoạt động trường học, tiến độ báo cáo và tài nguyên hệ thống theo thời gian thực.',
         ),
         const SizedBox(height: 18),
-        // Lưới 2 cột Metric Cards chuẩn Mobile Figma (Hình 2)
+        // Lưới 3 Metric Cards trực quan (đã loại bỏ ghi âm giọng nói)
         LayoutBuilder(builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 600 ? 2 : 1;
+          final isWide = constraints.maxWidth >= 600;
           const gap = 12.0;
-          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-          return Wrap(
-            spacing: gap,
-            runSpacing: gap,
+
+          return Column(
             children: [
-              _metric(
-                width,
-                Icons.groups_outlined,
-                'Tổng số học sinh',
-                '$totalChildren bé',
-                '$totalClasses lớp học · $totalSchools cơ sở',
-                AppColors.brand,
+              // 1. Thẻ KPI Nổi bật: Tiến độ báo cáo hôm nay (kèm Progress bar + Đã gửi/Nháp)
+              _reportProgressMetricCard(
+                completionRate: completionRate,
+                sentCount: sentCount,
+                draftCount: draftCount,
               ),
-              _metric(
-                width,
-                Icons.check_circle_outline,
-                'Tiến độ báo cáo ngày',
-                '${completionRate.toStringAsFixed(1)}%',
-                '$sentCount đã gửi · $draftCount bản nháp',
-                AppColors.success,
-              ),
-              _metric(
-                width,
-                Icons.mic_none,
-                'Bản ghi âm giọng nói',
-                '$todayVoice file hôm nay',
-                'Tổng cộng: $totalVoice file',
-                AppColors.warning,
-              ),
-              _metric(
-                width,
-                Icons.people_outline,
-                'Nhân sự & Phụ huynh',
-                '$teachersCount giáo viên',
-                '$parentsCount phụ huynh đang hoạt động',
-                AppColors.info,
-              ),
+              const SizedBox(height: gap),
+              // 2. Hai thẻ con: Tổng số học sinh & Nhân sự - Phụ huynh
+              isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _studentsMetricCard(
+                            totalChildren: totalChildren,
+                            totalClasses: totalClasses,
+                          ),
+                        ),
+                        const SizedBox(width: gap),
+                        Expanded(
+                          child: _peopleMetricCard(
+                            teachersCount: teachersCount,
+                            parentsCount: parentsCount,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        _studentsMetricCard(
+                          totalChildren: totalChildren,
+                          totalClasses: totalClasses,
+                        ),
+                        const SizedBox(height: gap),
+                        _peopleMetricCard(
+                          teachersCount: teachersCount,
+                          parentsCount: parentsCount,
+                        ),
+                      ],
+                    ),
             ],
           );
         }),
         const SizedBox(height: 18),
         _progressCard(classes),
         const SizedBox(height: 16),
-        _voiceCard(),
-        const SizedBox(height: 16),
-        _healthCard(),
-        const SizedBox(height: 16),
         _trendCard(),
       ],
     );
   }
 
-  Widget _metric(
-    double width,
-    IconData icon,
-    String label,
-    String value,
-    String detail,
-    Color color,
-  ) {
-    return SizedBox(
-      width: width,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
+  Widget _reportProgressMetricCard({
+    required double completionRate,
+    required int sentCount,
+    required int draftCount,
+  }) {
+    final rateColor = completionRate >= 0.8
+        ? AppColors.success
+        : completionRate >= 0.5
+            ? AppColors.warning
+            : AppColors.danger;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: rateColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: color.withAlpha(33),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, color: color, size: 20),
+                  child: Icon(Icons.assignment_turned_in_rounded, color: rateColor, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Tiến độ báo cáo ngày',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                      Text(
+                        'Theo dõi tỷ lệ hoàn thành sổ liên lạc hôm nay',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+                Text(
+                  '${completionRate.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                    color: rateColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: (completionRate / 100).clamp(0.0, 1.0),
+                minHeight: 8,
+                backgroundColor: rateColor.withValues(alpha: 0.15),
+                color: rateColor,
               ),
-              const SizedBox(height: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.send_rounded, size: 14, color: AppColors.success),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$sentCount đã gửi',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 3),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.edit_note_rounded, size: 16, color: AppColors.warning),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$draftCount bản nháp',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _studentsMetricCard({
+    required int totalChildren,
+    required int totalClasses,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Tổng số học sinh',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: AppColors.brand.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.groups_rounded, color: AppColors.brand, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '$totalChildren bé',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.meeting_room_outlined, size: 14, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 5),
                   Text(
-                    detail,
+                    '$totalClasses lớp học đang hoạt động',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _peopleMetricCard({
+    required int teachersCount,
+    required int parentsCount,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Nhân sự & Phụ huynh',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.people_alt_rounded, color: AppColors.info, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.brand.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.school_rounded, size: 14, color: AppColors.brand),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$teachersCount',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                            ),
+                            Text(
+                              'Giáo viên',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: 30,
+                  width: 1,
+                  color: Theme.of(context).dividerColor,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.family_restroom_rounded, size: 14, color: AppColors.info),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$parentsCount',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                            ),
+                            Text(
+                              'Phụ huynh',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _progressCard(List<AdminClassProgressDto> classes) {
     return Card(
@@ -930,94 +1121,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _voiceCard() {
-    final v = _voiceStats;
-    final completed = v?.completedRecords ?? 0;
-    final pending = v?.pendingRecords ?? 0;
-    final failed = v?.failedRecords ?? 0;
-    final durationMin = ((v?.totalDurationSeconds ?? 0) / 60).round();
-
-    return _statusCard(
-      title: 'Hàng đợi xử lý giọng nói STT',
-      subtitle: '$durationMin phút ghi âm',
-      icon: Icons.mic_none,
-      color: AppColors.warning,
-      rows: [
-        ('Hoàn thành', '$completed file', AppColors.success),
-        ('Đang xử lý', '$pending file', AppColors.warning),
-        ('Lỗi xử lý', '$failed file', AppColors.danger),
-      ],
-    );
-  }
-
-  Widget _healthCard() {
-    final h = _health;
-    return _statusCard(
-      title: 'Tình trạng hạ tầng máy chủ',
-      subtitle: h?.serverTime ?? 'Thời gian thực',
-      icon: Icons.check_circle_outline,
-      color: AppColors.success,
-      rows: [
-        ('Cơ sở dữ liệu', h?.databaseStatus == 'healthy' ? 'Đang kết nối' : 'Cảnh báo', AppColors.success),
-        ('Redis Queue', h?.redisStatus == 'healthy' ? 'Hoạt động tốt' : 'Gián đoạn', AppColors.success),
-        ('FastAPI Backend', h?.apiStatus == 'healthy' ? 'Ổn định' : 'Kiểm tra', AppColors.success),
-      ],
-    );
-  }
-
-  Widget _statusCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required List<(String, String, Color)> rows,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 3),
-                      Text(subtitle, style: const TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                ),
-                Icon(icon, color: color),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...rows.map(
-              (row) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.circle, size: 8, color: row.$3),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(row.$1, style: const TextStyle(fontSize: 12))),
-                    Text(
-                      row.$2,
-                      style: TextStyle(
-                        color: row.$3,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _trendCard() {
     return Card(
@@ -1564,13 +1667,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           Text(
-                            'Quản trị viên hệ thống (Super Admin)',
+                            'Quản trị viên trường',
                             style: TextStyle(color: Theme.of(context).colorScheme.primary),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Trường Mầm Non Hướng Dương & Ánh Sao',
-                            style: TextStyle(fontSize: 12),
+                          Text(
+                            widget.schoolName,
+                            style: const TextStyle(fontSize: 12),
                           ),
                         ],
                       ),
@@ -1588,7 +1691,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _infoRow('Tên đăng nhập', 'quantri'),
                   _infoRow('Email liên hệ', 'admin@kinderlog.edu.vn'),
                   _infoRow('Số điện thoại', '0988 888 999'),
-                  _infoRow('Quyền hạn', 'Toàn quyền Super Admin'),
+                  _infoRow('Quyền hạn', 'School Admin'),
                   _infoRow('Trạng thái bảo mật', 'Xác thực chuẩn JWT', valueColor: AppColors.success),
                 ],
               ),
@@ -1604,6 +1707,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     title: const Text('Đổi mật khẩu tài khoản'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _changePassword,
+                  ),
+                  Divider(height: 1, color: Theme.of(context).dividerColor),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Báo cáo lỗi & Góp ý'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => showBugReportBottomSheet(context),
                   ),
                   Divider(height: 1, color: Theme.of(context).dividerColor),
                   SwitchListTile(
@@ -1723,6 +1833,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _ => '',
       },
     );
+    final usernameCtrl = TextEditingController(
+      text: switch (item) {
+        AdminTeacherDto v => v.username ?? '',
+        AdminParentDto v => v.username ?? '',
+        _ => '',
+      },
+    );
+    final passwordCtrl = TextEditingController();
 
     int schedDay = _selectedDay;
     String? selectedClassId;
@@ -1849,8 +1967,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ] else if (category == AdminCategory.teachers) ...[
                         TextFormField(
                           controller: nameCtrl,
-                          decoration: const InputDecoration(labelText: 'Họ và tên giáo viên'),
+                          decoration: const InputDecoration(labelText: 'Họ và tên giáo viên *'),
                           validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập họ tên' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: usernameCtrl,
+                          decoration: const InputDecoration(labelText: 'Tài khoản đăng nhập *'),
+                          validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tài khoản' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: passwordCtrl,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: isEdit ? 'Mật khẩu (để trống nếu không đổi)' : 'Mật khẩu *',
+                          ),
+                          validator: (v) {
+                            if (!isEdit && (v == null || v.trim().isEmpty)) {
+                              return 'Vui lòng nhập mật khẩu';
+                            }
+                            if (v != null && v.isNotEmpty && v.length < 6) {
+                              return 'Mật khẩu tối thiểu 6 ký tự';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -1880,8 +2021,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ] else if (category == AdminCategory.parents) ...[
                         TextFormField(
                           controller: nameCtrl,
-                          decoration: const InputDecoration(labelText: 'Họ và tên phụ huynh'),
+                          decoration: const InputDecoration(labelText: 'Họ và tên phụ huynh *'),
                           validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập họ tên' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: usernameCtrl,
+                          decoration: const InputDecoration(labelText: 'Tài khoản đăng nhập *'),
+                          validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tài khoản' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: passwordCtrl,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: isEdit ? 'Mật khẩu (để trống nếu không đổi)' : 'Mật khẩu *',
+                          ),
+                          validator: (v) {
+                            if (!isEdit && (v == null || v.trim().isEmpty)) {
+                              return 'Vui lòng nhập mật khẩu';
+                            }
+                            if (v != null && v.isNotEmpty && v.length < 6) {
+                              return 'Mật khẩu tối thiểu 6 ký tự';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -1937,6 +2101,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               phone: secondCtrl.text.trim(),
               email: thirdCtrl.text.trim(),
+              username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
+              password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
               classId: teacherClassIds.isNotEmpty ? teacherClassIds.first : old.classId,
               classIds: teacherClassIds.isNotEmpty ? teacherClassIds : old.classIds,
             );
@@ -1958,6 +2124,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               phone: secondCtrl.text.trim(),
               email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : null,
+              username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
+              password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
             );
             break;
           case AdminCategory.schedules:
@@ -1981,6 +2149,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               phone: secondCtrl.text.trim().isNotEmpty ? secondCtrl.text.trim() : '0900000000',
               email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : 'teacher@kinderlog.edu.vn',
+              username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
+              password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
               classId: teacherClassIds.isNotEmpty ? teacherClassIds.first : null,
               classIds: teacherClassIds,
             );
@@ -1998,6 +2168,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               phone: secondCtrl.text.trim().isNotEmpty ? secondCtrl.text.trim() : '0910000000',
               email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : null,
+              username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
+              password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
             );
             break;
           case AdminCategory.schedules:
