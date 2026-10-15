@@ -276,7 +276,7 @@ class _ParentOverview extends StatelessWidget {
     final child = overview.child;
     final date = kDateLabel(DateTime.now());
     final hasTodayReport = data.today != null;
-    final allergy = child.medicalAllergies?.trim();
+    final allergy = child.allergy; // đã bỏ "Không có" + tiền tố "Dị ứng"
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),

@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -152,6 +153,44 @@ void main() {
         throwsA(
           isA<ClassDataException>().having((e) => e.statusCode, 'statusCode', 409),
         ),
+      );
+    });
+  });
+
+  group('Child.allergy — seed ghi "Không có" thay vì để trống', () {
+    Child childWith(String? raw) => Child(
+      childId: '1',
+      fullName: 'Bé',
+      dateOfBirth: DateTime(2024, 1, 1),
+      medicalAllergies: raw,
+    );
+
+    test('"không có" / rỗng / null → null (không hiện banner)', () {
+      expect(childWith('Không có').allergy, isNull);
+      expect(childWith('  không có  ').allergy, isNull);
+      expect(childWith('không').allergy, isNull);
+      expect(childWith('NONE').allergy, isNull);
+      expect(childWith('   ').allergy, isNull);
+      expect(childWith('').allergy, isNull);
+      expect(childWith(null).allergy, isNull);
+    });
+
+    test('giữ nguyên bản ghi thật, kể cả bắt đầu bằng "không"', () {
+      expect(
+        childWith('Không dung nạp lactose').allergy,
+        equals('Không dung nạp lactose'),
+      );
+      expect(
+        childWith('Viêm mũi dị ứng thời tiết').allergy,
+        equals('Viêm mũi dị ứng thời tiết'),
+      );
+    });
+
+    test('bỏ tiền tố "Dị ứng" để không thành "Dị ứng Dị ứng đậu phộng"', () {
+      expect(childWith('Dị ứng đậu phộng').allergy, equals('đậu phộng'));
+      expect(
+        childWith('Dị ứng tôm cua, hải sản').allergy,
+        equals('tôm cua, hải sản'),
       );
     });
   });

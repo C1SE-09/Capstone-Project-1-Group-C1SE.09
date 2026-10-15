@@ -31,6 +31,23 @@ class Child extends BaseEntity {
   String get displayName =>
       (nickname?.isNotEmpty ?? false) ? nickname! : fullName;
 
+  /// Chuỗi seed/kế thừa ghi "Không có" thay vì để trống khi bé không bị dị ứng.
+  static const _noAllergy = {'', 'không', 'không có', 'none'};
+
+  /// Dị ứng cần lưu ý (null nếu chưa ghi nhận) — trả null cho "Không có" để
+  /// UI không hiện banner/sheet vô nghĩa. Bỏ tiền tố "Dị ứng" trùng label.
+  static const _allergyPrefixes = ['dị ứng:', 'dị ứng'];
+
+  String? get allergy {
+    final raw = medicalAllergies?.trim();
+    if (raw == null || _noAllergy.contains(raw.toLowerCase())) return null;
+    final lower = raw.toLowerCase();
+    for (final prefix in _allergyPrefixes) {
+      if (lower.startsWith(prefix)) return raw.substring(prefix.length).trim();
+    }
+    return raw;
+  }
+
   factory Child.fromJson(Map<String, dynamic> json) {
     return Child(
       childId: json['child_id'] as String,

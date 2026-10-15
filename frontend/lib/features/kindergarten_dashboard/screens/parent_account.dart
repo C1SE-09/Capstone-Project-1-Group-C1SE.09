@@ -264,10 +264,10 @@ class _ParentAccountState extends State<ParentAccount> {
                 KInfoRow(label: 'Biệt danh', value: child.nickname!.trim()),
               KInfoRow(label: 'Lớp', value: widget.overview.className),
               KInfoRow(label: 'Giáo viên chủ nhiệm', value: widget.overview.teacherName),
-              if ((child.medicalAllergies ?? '').trim().isNotEmpty)
+              if (child.allergy != null)
                 KInfoRow(
                   label: 'Dị ứng',
-                  value: child.medicalAllergies!.trim(),
+                  value: child.allergy!,
                   danger: true,
                   icon: Icons.warning_amber_rounded,
                 ),
@@ -491,7 +491,7 @@ class _ParentChildSheetBody extends StatelessWidget {
     final child = overview.child;
     final dob = child.dateOfBirth;
     final phone = overview.teacherPhone?.trim();
-    final allergy = child.medicalAllergies?.trim();
+    final allergy = child.allergy; // đã bỏ "Không có" + tiền tố "Dị ứng"
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
