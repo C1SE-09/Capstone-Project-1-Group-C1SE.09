@@ -13,6 +13,7 @@ import 'package:adark_frontend/domain/entities/bug_report/bug_report_list_respon
 import 'package:adark_frontend/domain/repositories/bug_report_repository.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart' show MediaType;
+import 'package:adark_frontend/core/services/session_management_service.dart';
 
 class HttpBugReportRepository implements BugReportRepository {
   HttpBugReportRepository({Dio? dio, String? baseUrl})
@@ -23,7 +24,11 @@ class HttpBugReportRepository implements BugReportRepository {
                 connectTimeout: const Duration(seconds: 30),
                 receiveTimeout: const Duration(seconds: 30),
               ),
-            );
+            ) {
+    _dio.interceptors.add(
+      SessionManagementService.instance.createDioInterceptor(_dio),
+    );
+  }
 
   final Dio _dio;
 

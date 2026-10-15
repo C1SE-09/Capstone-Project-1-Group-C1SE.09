@@ -418,6 +418,10 @@ class SessionManagementService {
   // 3. DIO INTERCEPTOR CHUẨN ĐỂ TÍCH HỢP VÀO CODEBASE CỦA BẠN
   // ──────────────────────────────────────────────────────────────────────────
 
+  /// Gọi khi phiên hết hạn hẳn (server từ chối cả refresh token). Đặt một lần ở
+  /// main.dart, vì interceptor nằm ở tầng dữ liệu nên không tự điều hướng được.
+  static void Function()? onSessionExpiredGlobally;
+
   /// Tạo Dio Interceptor giúp tự động gắn Access Token và Silent Refresh khi 401
   QueuedInterceptor createDioInterceptor(
     Dio dio, {
@@ -453,7 +457,7 @@ class SessionManagementService {
             return handler.reject(err);
           } on SessionExpiredException {
             // Phiên hết hạn -> gọi callback để UI điều hướng về login
-            onSessionExpired?.call();
+            (onSessionExpired ?? onSessionExpiredGlobally)?.call();
             return handler.reject(err);
           } catch (_) {
             return handler.reject(err);

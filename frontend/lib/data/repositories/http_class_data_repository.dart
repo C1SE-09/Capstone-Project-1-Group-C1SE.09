@@ -2,6 +2,7 @@ import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
 import 'package:dio/dio.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 
 abstract class ClassDataRepository {
   Future<ClassInfo> getClassInfo(String classId);
@@ -22,7 +23,11 @@ class HttpClassDataRepository implements ClassDataRepository {
           baseUrl: baseUrl ?? kApiBaseUrl,
           connectTimeout: const Duration(seconds: 30),
           receiveTimeout: const Duration(seconds: 30),
-        ));
+        )) {
+    _dio.interceptors.add(
+      SessionManagementService.instance.createDioInterceptor(_dio),
+    );
+  }
 
   final Dio _dio;
 

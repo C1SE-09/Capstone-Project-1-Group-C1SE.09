@@ -71,7 +71,10 @@ def create_session(user_id: str, role: str, device_id: str, device_name: str) ->
     device_id_clean = (device_id or "default_device").strip()
     device_name_clean = (device_name or "Thiết bị không rõ").strip()
     user_sessions_key = f"{KEY_USER_SESSIONS_PREFIX}{user_id_str}"
-    now_ts = int(time.time())
+    # Mili-giây chứ không phải giây: score theo giây bị hoà khi nhiều máy đăng nhập
+    # trong cùng một giây, Redis bèn xếp theo session_id (UUID ngẫu nhiên) nên đá
+    # nhầm máy khoẻ thay vì máy cũ nhất.
+    now_ts = int(time.time() * 1000)
 
     # 1. Nếu thiết bị này đã có session cũ -> xóa trước khi cấp mới
     existing_sessions = client.zrange(user_sessions_key, 0, -1)
@@ -130,7 +133,7 @@ def refresh_session(session_id: str, refresh_token: str) -> dict[str, Any]:
     user_id = data["user_id"]
     role = data["role"]
     new_refresh = secrets.token_urlsafe(48)
-    now_ts = int(time.time())
+    now_ts = int(time.time() * 1000)
 
     # Gia hạn thêm 30 ngày (Sliding Window)
     client.hset(

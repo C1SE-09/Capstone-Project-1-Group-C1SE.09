@@ -15,6 +15,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 
 // ---------------------------------------------------------------------------
 // Entity: VoiceRecord
@@ -310,7 +311,11 @@ class TeacherRepository implements TeacherRepositoryBase {
                 connectTimeout: const Duration(seconds: 60),
                 receiveTimeout: const Duration(minutes: 5),
               ),
-            );
+            ) {
+    _dio.interceptors.add(
+      SessionManagementService.instance.createDioInterceptor(_dio),
+    );
+  }
 
   final Dio _dio;
 

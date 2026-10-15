@@ -19,6 +19,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: kinderlog_redis
+    # --appendonly yes + volume: phiên đăng nhập (session:*) sống qua `docker compose
+    # down`, không thì mọi máy bị đăng xuất sau mỗi lần restart stack.
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -92,3 +97,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  redis_data:
