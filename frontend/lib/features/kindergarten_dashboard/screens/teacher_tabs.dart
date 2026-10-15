@@ -98,30 +98,24 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 ],
               ),
             ),
-            if (widget.onSelectClass != null)
-              InkWell(
-                onTap: widget.onSelectClass,
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: context.k.brandTint,
-                    borderRadius: BorderRadius.circular(99),
-                    border: Border.all(color: context.k.brand.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.school_outlined, size: 15, color: context.k.brand),
-                      const SizedBox(width: 5),
-                      Text(
-                        data.dashboard.classInfo.name.isNotEmpty ? data.dashboard.classInfo.name : 'Đổi lớp',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.swap_horiz_rounded, size: 15, color: context.k.brand),
-                    ],
-                  ),
+            if (data.dashboard.classInfo.name.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: context.k.brandTint,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: context.k.brand.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.school_outlined, size: 15, color: context.k.brand),
+                    const SizedBox(width: 5),
+                    Text(
+                      data.dashboard.classInfo.name,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -285,17 +279,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
                       ],
                     ),
                   ),
-                  if (widget.onSelectClass != null)
-                    OutlinedButton.icon(
-                      onPressed: widget.onSelectClass,
-                      icon: Icon(Icons.swap_horiz_rounded, size: 16, color: context.k.brand),
-                      label: Text('Đổi lớp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand)),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: context.k.brand, width: 1.2),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
-                      ),
-                    ),
+
                 ],
               ),
               const SizedBox(height: 14),
@@ -615,8 +599,6 @@ class _AccountScreenState extends State<AccountScreen> {
                 icon: Icons.school_outlined,
                 label: 'Lớp phụ trách',
                 value: className,
-                chevron: widget.onSelectClass != null,
-                onTap: widget.onSelectClass,
               ),
               const Divider(),
               _AccountRow(icon: Icons.groups_outlined, label: 'Số trẻ', value: '${data.childCount} trẻ'),
@@ -627,10 +609,7 @@ class _AccountScreenState extends State<AccountScreen> {
         KCard(
           child: Column(
             children: [
-              if (widget.onSelectClass != null) ...[
-                _AccountRow(icon: Icons.swap_horiz_rounded, label: 'Quay lại chọn lớp khác', chevron: true, onTap: widget.onSelectClass),
-                const Divider(),
-              ],
+
               _AccountRow(
                 icon: Icons.lock_outline_rounded,
                 label: 'Đổi mật khẩu',

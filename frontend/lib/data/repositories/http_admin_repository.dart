@@ -186,6 +186,7 @@ class AdminTimeSlotDto {
 
 class AdminScheduleDto {
   final String id;
+  final String? classId;
   final String activityName;
   final String content;
   final String roomName;
@@ -198,6 +199,7 @@ class AdminScheduleDto {
 
   AdminScheduleDto({
     required this.id,
+    this.classId,
     required this.activityName,
     required this.content,
     required this.roomName,
@@ -211,6 +213,7 @@ class AdminScheduleDto {
 
   factory AdminScheduleDto.fromJson(Map<String, dynamic> json) => AdminScheduleDto(
         id: json['id'] as String? ?? '',
+        classId: json['class_id'] as String?,
         activityName: json['activity_name'] as String? ?? '',
         content: json['content'] as String? ?? '',
         roomName: json['room_name'] as String? ?? 'Phòng học',
@@ -245,6 +248,23 @@ class HttpAdminRepository {
     final response = await _dio.get('/api/admin/classes');
     final list = response.data as List? ?? [];
     return list.map((e) => AdminClassDto.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+  }
+
+  Future<Map<String, dynamic>> checkAvailability({
+    required String type,
+    String? username,
+    String? email,
+    String? phone,
+    String? excludeId,
+  }) async {
+    final response = await _dio.get('/api/admin/check-availability', queryParameters: {
+      'type': type,
+      if (username != null && username.isNotEmpty) 'username': username,
+      if (email != null && email.isNotEmpty) 'email': email,
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (excludeId != null && excludeId.isNotEmpty) 'exclude_id': excludeId,
+    });
+    return Map<String, dynamic>.from(response.data as Map);
   }
 
   // 1. Teachers

@@ -19,7 +19,6 @@ import 'package:cross_file/cross_file.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
@@ -674,37 +673,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                       ],
                     ),
                   ),
-                  if (classroom)
-                    InkWell(
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        appRouter.go('/class-select');
-                      },
-                      borderRadius: BorderRadius.circular(99),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: context.k.brandTint,
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(
-                              color: context.k.brand.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.swap_horiz_rounded,
-                                size: 15, color: context.k.brand),
-                            SizedBox(width: 4),
-                            Text('Đổi lớp',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: context.k.brand)),
-                          ],
-                        ),
-                      ),
-                    ),
+
                 ],
               ),
             ),
@@ -4355,15 +4324,7 @@ class _DoneScreenViewState extends State<_DoneScreenView> {
             ),
             child: const Text('Về tổng quan lớp'),
           ),
-          const SizedBox(height: 10),
-          TextButton.icon(
-            onPressed: () {
-              widget.onBack();
-              appRouter.go('/class-select');
-            },
-            icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-            label: const Text('Quay lại để chọn lớp khác'),
-          ),
+
         ],
       ),
     );

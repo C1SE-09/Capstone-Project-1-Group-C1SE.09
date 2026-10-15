@@ -138,7 +138,7 @@ class _LoginRoute extends StatelessWidget {
               appRouter.go('/parent');
               break;
             case UserRole.teacher:
-              appRouter.go('/class-select');
+              appRouter.go('/teacher');
               break;
           }
         },

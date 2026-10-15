@@ -33,17 +33,17 @@ subject_router = APIRouter(prefix="/subjects", tags=["subjects"])
 def check_can_edit_schedule(
     current_user: User | None = Depends(get_optional_current_user),
 ) -> User | None:
-    """Kiểm tra quyền chỉnh sửa lịch: Phụ huynh không được phép chỉnh sửa."""
+    """Kiểm tra quyền chỉnh sửa thời khóa biểu: Chỉ Quản trị viên (Admin) mới có quyền chỉnh sửa. Giáo viên và phụ huynh chỉ được xem."""
     if current_user:
         role_val = (
             current_user.role.value
             if hasattr(current_user.role, "value")
             else str(current_user.role)
         )
-        if role_val == UserRole.PARENT.value:
+        if role_val != UserRole.ADMIN.value:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Phụ huynh không có quyền chỉnh sửa thời khóa biểu",
+                detail="Giáo viên không có quyền chỉnh sửa thời khóa biểu. Chỉ Quản trị viên mới được phép thao tác.",
             )
     return current_user
 
