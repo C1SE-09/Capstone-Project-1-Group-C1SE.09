@@ -12,7 +12,9 @@ import logging
 import uuid
 
 from app.core.database import SessionLocal
+from app.models.device_token import DeviceToken
 from app.models.report import DailyReport
+from app.models.user import User
 from app.services.notification_service import (
     is_invalid_token,
     parent_device_tokens,
@@ -44,13 +46,36 @@ def _deliver_report_notification(db, report_id: str, is_update: bool = False) ->
         return {"sent": 0, "removed": 0, "reason": "report_not_found"}
 
     child = report.child
-    if child is None or child.parent_id is None:
+    if child is None:
+        logger.info("[Notify] Báo cáo không có thông tin trẻ (report_id=%s)", report_id)
+        return {"sent": 0, "removed": 0, "reason": "no_child"}
+
+    # N-N: Thu thập toàn bộ parent_id từ parent_links và parent_id trực tiếp
+    parent_ids: list[uuid.UUID] = []
+    p_links = getattr(child, "parent_links", None)
+    if isinstance(p_links, list) and p_links:
+        parent_ids = [link.parent_id for link in p_links if getattr(link, "parent_id", None)]
+    direct_pid = getattr(child, "parent_id", None)
+    if direct_pid and isinstance(direct_pid, uuid.UUID) and direct_pid not in parent_ids:
+        parent_ids.append(direct_pid)
+    elif direct_pid and not parent_ids and not isinstance(direct_pid, uuid.UUID):
+        parent_ids.append(direct_pid)
+
+    if not parent_ids:
         logger.info("[Notify] Trẻ chưa liên kết phụ huynh (report_id=%s)", report_id)
         return {"sent": 0, "removed": 0, "reason": "no_parent"}
 
     child_name = child.full_name.strip() if child.full_name else (child.nickname or "bé")
 
-    tokens = parent_device_tokens(db, child.parent_id)
+    if len(parent_ids) == 1:
+        tokens = parent_device_tokens(db, parent_ids[0])
+    else:
+        tokens = (
+            db.query(DeviceToken)
+            .join(User, DeviceToken.user_id == User.user_id)
+            .filter(User.parent_id.in_(parent_ids))
+            .all()
+        )
     if not tokens:
         logger.info("[Notify] Phụ huynh chưa đăng ký thiết bị (bé %s)", child_name)
         return {"sent": 0, "removed": 0, "reason": "no_device_tokens"}

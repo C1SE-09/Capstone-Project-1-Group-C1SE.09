@@ -236,6 +236,190 @@ Future<String?> showChildSearchPicker(
   );
 }
 
+Future<List<String>?> showParentSearchMultiPicker(
+  BuildContext context,
+  List<AdminParentDto> parents, {
+  List<String> currentSelectedIds = const [],
+  String title = 'Chọn phụ huynh liên kết (N - N)',
+}) {
+  final selectedIds = Set<String>.from(currentSelectedIds);
+  return showModalBottomSheet<List<String>>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      String query = '';
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final q = query.toLowerCase().trim();
+          final filtered = parents.where((p) {
+            if (q.isEmpty) return true;
+            final matchName = p.fullName.toLowerCase().contains(q);
+            final matchPhone = p.phone.toLowerCase().contains(q);
+            final matchEmail = p.email.toLowerCase().contains(q);
+            final matchUser = (p.username ?? '').toLowerCase().contains(q);
+            return matchName || matchPhone || matchEmail || matchUser;
+          }).toList();
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                            ),
+                            Text(
+                              'Đã chọn ${selectedIds.length} phụ huynh · Tìm theo tên, SĐT (${filtered.length}/${parents.length})',
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, selectedIds.toList()),
+                        child: const Text('Xong', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: TextField(
+                    autofocus: false,
+                    onChanged: (val) => setModalState(() => query = val),
+                    decoration: InputDecoration(
+                      hintText: 'Nhập tên phụ huynh hoặc số điện thoại...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: query.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () => setModalState(() => query = ''),
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    children: [
+                      if (filtered.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Center(
+                            child: Text(
+                              'Không tìm thấy phụ huynh phù hợp với "$query"',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          ),
+                        )
+                      else
+                        ...filtered.map((p) {
+                          final isSelected = selectedIds.contains(p.id);
+                          final role = p.relationship != null && p.relationship!.isNotEmpty
+                              ? ' (${p.relationship})'
+                              : '';
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: ListTile(
+                              tileColor: isSelected
+                                  ? AppColors.brand.withAlpha(25)
+                                  : Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: isSelected ? AppColors.brand : Theme.of(context).dividerColor,
+                                ),
+                              ),
+                              leading: CircleAvatar(
+                                backgroundColor: isSelected
+                                    ? AppColors.brand
+                                    : Theme.of(context).colorScheme.surfaceContainerHighest,
+                                child: Icon(
+                                  Icons.person,
+                                  color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              title: Text(
+                                '${p.fullName}$role',
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                              ),
+                              subtitle: Text(
+                                [
+                                  if (p.phone.isNotEmpty) 'SĐT: ${p.phone}',
+                                  if (p.childrenSummary.isNotEmpty) 'Con: ${p.childrenSummary}',
+                                ].join(' · '),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              trailing: Checkbox(
+                                value: isSelected,
+                                activeColor: AppColors.brand,
+                                onChanged: (val) {
+                                  setModalState(() {
+                                    if (val == true) {
+                                      selectedIds.add(p.id);
+                                    } else {
+                                      selectedIds.remove(p.id);
+                                    }
+                                  });
+                                },
+                              ),
+                              onTap: () {
+                                setModalState(() {
+                                  if (isSelected) {
+                                    selectedIds.remove(p.id);
+                                  } else {
+                                    selectedIds.add(p.id);
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late final HttpAdminRepository _repo = widget.repository ?? HttpAdminRepository();
 
@@ -1561,13 +1745,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           .toList(),
       AdminCategory.students => _students
           .where((v) =>
-              '${v.fullName} ${v.className} ${v.nickname} ${v.note} ${v.parentPhone}'
+              '${v.fullName} ${v.className} ${v.nickname} ${v.note} ${v.parentPhone} ${v.parentsSummary}'
                   .toLowerCase()
                   .contains(q))
           .toList(),
       AdminCategory.parents => _parents
           .where((v) =>
-              '${v.fullName} ${v.phone} ${v.email} ${v.childrenSummary}'
+              '${v.fullName} ${v.phone} ${v.email} ${v.relationship ?? ""} ${v.childrenSummary}'
                   .toLowerCase()
                   .contains(q))
           .toList(),
@@ -1610,13 +1794,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           v.nickname.isNotEmpty ? 'Bé ${v.nickname}' : 'Học sinh',
           [
             'Lớp: ${v.className}',
+            'Phụ huynh: ${v.parentsSummary.isNotEmpty ? v.parentsSummary : (v.parentName ?? "Chưa liên kết")}',
             'Y tế: ${v.note.isNotEmpty ? v.note : "Bình thường, không dị ứng"}',
           ],
           <String>[],
         ),
       AdminParentDto v => (
           v.fullName,
-          'Phụ huynh học sinh',
+          v.relationship != null && v.relationship!.isNotEmpty
+              ? 'Phụ huynh (${v.relationship})'
+              : 'Phụ huynh học sinh',
           [
             'SĐT: ${v.phone}',
             'Email: ${v.email.isNotEmpty ? v.email : "Chưa cập nhật"}',
@@ -1944,9 +2131,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     int schedDay = _selectedDay;
     String? selectedClassId;
+    List<String> studentParentIds = [];
     if (category == AdminCategory.students) {
       if (item is AdminChildDto) {
         selectedClassId = item.classId;
+        studentParentIds = List<String>.from(item.parentIds);
+        if (studentParentIds.isEmpty && item.parentId != null) {
+          studentParentIds.add(item.parentId!);
+        }
       }
       if (selectedClassId == null && _classes.isNotEmpty) {
         selectedClassId = _classes.first.id;
@@ -1959,8 +2151,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
 
     String? selectedChildId;
-    if (category == AdminCategory.parents && item is AdminParentDto) {
-      selectedChildId = item.childId ?? (item.childIds.isNotEmpty ? item.childIds.first : null);
+    String? parentRelationship;
+    if (category == AdminCategory.parents) {
+      if (item is AdminParentDto) {
+        selectedChildId = item.childId ?? (item.childIds.isNotEmpty ? item.childIds.first : null);
+        parentRelationship = item.relationship ?? 'Bố';
+      } else {
+        parentRelationship = 'Bố';
+      }
     }
 
     String? dialogError;
@@ -2096,6 +2294,55 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               .map((c) => DropdownMenuItem(value: c.id, child: Text('${c.name} (${c.gradeLabel})')))
                               .toList(),
                           onChanged: (v) => setDialogState(() => selectedClassId = v),
+                        ),
+                        const SizedBox(height: 12),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showParentSearchMultiPicker(
+                              context,
+                              _parents,
+                              currentSelectedIds: studentParentIds,
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                studentParentIds = picked;
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Phụ huynh liên kết (có thể chọn nhiều)',
+                              hintText: 'Bấm để tìm và chọn phụ huynh...',
+                              suffixIcon: Icon(Icons.people_outline, size: 20),
+                            ),
+                            child: studentParentIds.isNotEmpty
+                                ? Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: studentParentIds.map((pid) {
+                                      final matches = _parents.where((p) => p.id == pid).toList();
+                                      final pName = matches.isNotEmpty ? matches.first.fullName : 'Phụ huynh';
+                                      return Chip(
+                                        label: Text(pName, style: const TextStyle(fontSize: 12)),
+                                        visualDensity: VisualDensity.compact,
+                                        deleteIcon: const Icon(Icons.close, size: 14),
+                                        onDeleted: () {
+                                          setDialogState(() {
+                                            studentParentIds.remove(pid);
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  )
+                                : Text(
+                                    'Chưa chọn phụ huynh / Bấm để liên kết',
+                                    style: TextStyle(
+                                      color: Theme.of(context).hintColor,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -2271,6 +2518,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           },
                         ),
                         const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          initialValue: parentRelationship ?? 'Bố',
+                          decoration: const InputDecoration(labelText: 'Vai trò / Mối quan hệ với bé'),
+                          items: const [
+                            DropdownMenuItem(value: 'Bố', child: Text('Bố (Cha)')),
+                            DropdownMenuItem(value: 'Mẹ', child: Text('Mẹ')),
+                            DropdownMenuItem(value: 'Ông', child: Text('Ông')),
+                            DropdownMenuItem(value: 'Bà', child: Text('Bà')),
+                            DropdownMenuItem(value: 'Người giám hộ', child: Text('Người giám hộ')),
+                          ],
+                          onChanged: (v) => setDialogState(() => parentRelationship = v),
+                        ),
+                        const SizedBox(height: 12),
                         InkWell(
                           onTap: () async {
                             final picked = await showChildSearchPicker(
@@ -2435,6 +2695,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               nickname: secondCtrl.text.trim().isNotEmpty ? secondCtrl.text.trim() : null,
               classId: selectedClassId,
+              parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
+              parentIds: studentParentIds,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );
             break;
@@ -2445,6 +2707,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               phone: secondCtrl.text.trim(),
               email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : null,
+              relationship: parentRelationship,
               username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
               password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
               childId: selectedChildId,
@@ -2487,6 +2750,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               nickname: secondCtrl.text.trim().isNotEmpty ? secondCtrl.text.trim() : null,
               classId: selectedClassId,
+              parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
+              parentIds: studentParentIds,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );
             break;
@@ -2498,6 +2763,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fullName: nameCtrl.text.trim(),
               phone: phoneVal,
               email: thirdCtrl.text.trim().isNotEmpty ? thirdCtrl.text.trim() : null,
+              relationship: parentRelationship ?? 'Phụ huynh',
               username: usernameCtrl.text.trim().isNotEmpty ? usernameCtrl.text.trim() : null,
               password: passwordCtrl.text.trim().isNotEmpty ? passwordCtrl.text.trim() : null,
               childId: selectedChildId,

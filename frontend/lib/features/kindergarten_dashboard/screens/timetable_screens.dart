@@ -338,7 +338,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               mainContent
             else
               Expanded(child: mainContent),
-            if (!widget.isReadOnly)
+            if (!widget.isReadOnly && !wide)
               widget.embedded
                   ? Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -750,10 +750,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 widget.isReadOnly ? 'Lớp chưa có hoạt động nào trong tuần.' : 'Thêm hoạt động để lên lịch cho cả lớp.',
                 style: TextStyle(fontSize: 13, color: context.k.inkSoft),
               ),
-              if (!widget.isReadOnly) ...[
-                const SizedBox(height: 20),
-                KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
-              ],
             ],
           ),
         ),

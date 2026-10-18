@@ -113,3 +113,31 @@ def parent_device_tokens(db: Session, parent_id: uuid.UUID) -> list[DeviceToken]
         .filter(User.parent_id == parent_id)
         .all()
     )
+
+
+def child_parents_device_tokens(db: Session, child_id: uuid.UUID) -> list[DeviceToken]:
+    """Toàn bộ device token của tất cả phụ huynh được liên kết với trẻ (hỗ trợ quan hệ N-N)."""
+    from app.models.child import Child, ParentChild
+
+    parent_ids = [
+        pid
+        for (pid,) in db.query(ParentChild.parent_id)
+        .filter(ParentChild.child_id == child_id)
+        .all()
+    ]
+    direct_parent_id = (
+        db.query(Child.parent_id).filter(Child.child_id == child_id).scalar()
+    )
+    if direct_parent_id and direct_parent_id not in parent_ids:
+        parent_ids.append(direct_parent_id)
+
+    if not parent_ids:
+        return []
+
+    return (
+        db.query(DeviceToken)
+        .join(User, DeviceToken.user_id == User.user_id)
+        .filter(User.parent_id.in_(parent_ids))
+        .all()
+    )
+

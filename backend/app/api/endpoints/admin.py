@@ -1,9 +1,10 @@
 import re
 import uuid
+from datetime import date
 
 from app.core.database import get_db
 from app.core.security import hash_password
-from app.models.child import Child, ChildStatus, Parent, ParentStatus
+from app.models.child import Child, ChildStatus, Parent, ParentChild, ParentStatus
 from app.models.schedule import ClassSchedule, Subject, TimeSlot
 from app.models.user import Class_, School, Teacher, TeacherStatus, User, UserRole, UserStatus
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -65,6 +66,7 @@ class ParentCreate(BaseModel):
     full_name: str
     phone: str
     email: str | None = None
+    relationship: str | None = None
     child_id: str | None = None
     child_ids: list[str] | None = None
     status: str = "active"
@@ -76,6 +78,7 @@ class ParentUpdate(BaseModel):
     full_name: str | None = None
     phone: str | None = None
     email: str | None = None
+    relationship: str | None = None
     child_id: str | None = None
     child_ids: list[str] | None = None
     status: str | None = None
@@ -83,11 +86,20 @@ class ParentUpdate(BaseModel):
     password: str | None = None
 
 
+class ChildParentItem(BaseModel):
+    parent_id: str
+    relationship: str | None = None
+    is_primary: bool = False
+    can_pickup: bool = True
+
+
 class ChildCreate(BaseModel):
     full_name: str
     nickname: str | None = None
     class_id: str | None = None
     parent_id: str | None = None
+    parent_ids: list[str] | None = None
+    parent_items: list[ChildParentItem] | None = None
     medical_allergies: str | None = None
     date_of_birth: str | None = None
     gender: str | None = "male"
@@ -99,7 +111,11 @@ class ChildUpdate(BaseModel):
     nickname: str | None = None
     class_id: str | None = None
     parent_id: str | None = None
+    parent_ids: list[str] | None = None
+    parent_items: list[ChildParentItem] | None = None
     medical_allergies: str | None = None
+    date_of_birth: str | None = None
+    gender: str | None = None
     status: str | None = None
 
 
@@ -364,6 +380,7 @@ def list_parents(db: Session = Depends(get_db)):
                 "full_name": p.full_name,
                 "phone": p.phone,
                 "email": p.email or "",
+                "relationship": p.relationship_ or "",
                 "username": user.username if user else None,
                 "status": p.status.value if hasattr(p.status, "value") else str(p.status),
                 "children_summary": f"Bé: {child_desc}",
@@ -400,6 +417,7 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
         full_name=data.full_name.strip(),
         phone=data.phone.strip(),
         email=data.email.strip() if data.email else None,
+        relationship_=data.relationship.strip() if data.relationship and data.relationship.strip() else None,
         status=ParentStatus.ACTIVE,
         is_verified=True,
     )
@@ -407,11 +425,22 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
     db.flush()
 
     c_ids = data.child_ids or ([data.child_id] if data.child_id else [])
-    for cid in c_ids:
+    for idx, cid in enumerate(c_ids):
         if cid and cid.strip():
             child = db.query(Child).filter(Child.child_id == uuid.UUID(cid.strip())).first()
             if child:
-                child.parent_id = parent.parent_id
+                # Tạo bản ghi liên kết N-N trong parent_child
+                link = ParentChild(
+                    id=uuid.uuid4(),
+                    parent_id=parent.parent_id,
+                    child_id=child.child_id,
+                    relationship_=parent.relationship_ or "Phụ huynh",
+                    is_primary=(idx == 0 and child.parent_id is None),
+                    can_pickup=True,
+                )
+                db.add(link)
+                if child.parent_id is None:
+                    child.parent_id = parent.parent_id
 
     if data.username and data.username.strip():
         pwd = data.password.strip() if data.password and data.password.strip() else "123456"
@@ -442,6 +471,8 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
 
     if data.full_name is not None:
         p.full_name = data.full_name.strip()
+    if data.relationship is not None:
+        p.relationship_ = data.relationship.strip() if data.relationship.strip() else None
     if data.email is not None and data.email.strip():
         existing_email = db.query(Parent).filter(Parent.email == data.email.strip(), Parent.parent_id != p.parent_id).first()
         if existing_email:
@@ -456,22 +487,38 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
             raise HTTPException(status_code=400, detail="Số điện thoại này đã được đăng ký bởi phụ huynh khác.")
         p.phone = data.phone.strip()
 
-    if data.child_ids is not None:
-        new_uuids = [uuid.UUID(cid.strip()) for cid in data.child_ids if cid.strip()]
-        # Unlink children not in the new list
-        for ch in p.children:
-            if ch.child_id not in new_uuids:
-                ch.parent_id = None
-        # Link children in the new list
+    c_ids_input = data.child_ids if data.child_ids is not None else ([data.child_id] if data.child_id is not None else None)
+    if c_ids_input is not None:
+        new_uuids = [uuid.UUID(cid.strip()) for cid in c_ids_input if cid and cid.strip()]
+        # Đồng bộ bảng trung gian parent_child
+        old_links = db.query(ParentChild).filter(ParentChild.parent_id == p.parent_id).all()
+        for link in old_links:
+            if link.child_id not in new_uuids:
+                ch = db.query(Child).filter(Child.child_id == link.child_id).first()
+                if ch and ch.parent_id == p.parent_id:
+                    other_link = db.query(ParentChild).filter(
+                        ParentChild.child_id == ch.child_id,
+                        ParentChild.parent_id != p.parent_id,
+                    ).first()
+                    ch.parent_id = other_link.parent_id if other_link else None
+                db.delete(link)
+
+        existing_cids = {link.child_id for link in old_links if link.child_id in new_uuids}
         for uid in new_uuids:
-            child = db.query(Child).filter(Child.child_id == uid).first()
-            if child:
-                child.parent_id = p.parent_id
-    elif data.child_id is not None:
-        if data.child_id.strip():
-            child = db.query(Child).filter(Child.child_id == uuid.UUID(data.child_id.strip())).first()
-            if child:
-                child.parent_id = p.parent_id
+            if uid not in existing_cids:
+                child = db.query(Child).filter(Child.child_id == uid).first()
+                if child:
+                    new_link = ParentChild(
+                        id=uuid.uuid4(),
+                        parent_id=p.parent_id,
+                        child_id=child.child_id,
+                        relationship_=p.relationship_ or "Phụ huynh",
+                        is_primary=(child.parent_id is None),
+                        can_pickup=True,
+                    )
+                    db.add(new_link)
+                    if child.parent_id is None:
+                        child.parent_id = p.parent_id
 
     # Cập nhật thông tin tài khoản đăng nhập & mật khẩu nếu có
     if data.username is not None or data.password is not None:
@@ -509,6 +556,17 @@ def delete_parent(parent_id: str, db: Session = Depends(get_db)):
     p = db.query(Parent).filter(Parent.parent_id == uuid.UUID(parent_id)).first()
     if not p:
         raise HTTPException(status_code=404, detail="Không tìm thấy phụ huynh")
+
+    # Xử lý cập nhật child.parent_id cho các con nếu đang trỏ tới p
+    links = db.query(ParentChild).filter(ParentChild.parent_id == p.parent_id).all()
+    for link in links:
+        ch = db.query(Child).filter(Child.child_id == link.child_id).first()
+        if ch and ch.parent_id == p.parent_id:
+            other = db.query(ParentChild).filter(
+                ParentChild.child_id == ch.child_id,
+                ParentChild.parent_id != p.parent_id,
+            ).first()
+            ch.parent_id = other.parent_id if other else None
 
     db.delete(p)
     db.commit()
@@ -593,6 +651,49 @@ def list_children(db: Session = Depends(get_db)):
         if note_str.strip().lower() in ["không có", "không", "none"]:
             note_str = ""
 
+        # N-N parents list
+        parents_data = []
+        for link in c.parent_links:
+            if link.parent:
+                parents_data.append(
+                    {
+                        "id": str(link.parent_id),
+                        "name": link.parent.full_name,
+                        "phone": link.parent.phone,
+                        "email": link.parent.email or "",
+                        "relationship": link.relationship_ or link.parent.relationship_ or "Phụ huynh",
+                        "is_primary": link.is_primary,
+                        "can_pickup": link.can_pickup,
+                    }
+                )
+
+        if not parents_data and c.parent:
+            parents_data.append(
+                {
+                    "id": str(c.parent.parent_id),
+                    "name": c.parent.full_name,
+                    "phone": c.parent.phone,
+                    "email": c.parent.email or "",
+                    "relationship": c.parent.relationship_ or "Phụ huynh",
+                    "is_primary": True,
+                    "can_pickup": True,
+                }
+            )
+
+        primary_p = next(
+            (p for p in parents_data if p["is_primary"]),
+            (parents_data[0] if parents_data else None),
+        )
+        parent_id_val = primary_p["id"] if primary_p else (str(c.parent_id) if c.parent_id else None)
+        parent_name_val = primary_p["name"] if primary_p else (c.parent.full_name if c.parent else None)
+        parent_phone_val = primary_p["phone"] if primary_p else (c.parent.phone if c.parent else None)
+
+        parents_summary = (
+            ", ".join([f"{p['name']} ({p['relationship']})" for p in parents_data if p["name"]])
+            if parents_data
+            else "Chưa liên kết phụ huynh"
+        )
+
         results.append(
             {
                 "id": str(c.child_id),
@@ -600,10 +701,14 @@ def list_children(db: Session = Depends(get_db)):
                 "nickname": c.nickname or "",
                 "class_name": class_name,
                 "class_id": str(c.class_id) if c.class_id else None,
-                "parent_name": c.parent.full_name if c.parent else None,
-                "parent_id": str(c.parent_id) if c.parent_id else None,
-                "parent_phone": c.parent.phone if c.parent else None,
+                "parent_name": parent_name_val,
+                "parent_id": parent_id_val,
+                "parent_phone": parent_phone_val,
+                "parents": parents_data,
+                "parent_ids": [p["id"] for p in parents_data],
+                "parents_summary": parents_summary,
                 "date_of_birth": str(c.date_of_birth) if c.date_of_birth else None,
+                "gender": c.gender or "male",
                 "note": note_str.strip(),
                 "status": c.status.value if hasattr(c.status, "value") else str(c.status),
             }
@@ -618,8 +723,27 @@ def create_child(data: ChildCreate, db: Session = Depends(get_db)):
         first_class = db.query(Class_).first()
         class_uuid = first_class.class_id if first_class else None
 
-    parent_uuid = uuid.UUID(data.parent_id) if data.parent_id and data.parent_id.strip() else None
     note_val = data.medical_allergies.strip() if data.medical_allergies and data.medical_allergies.strip() else None
+
+    # Xác định danh sách phụ huynh và phụ huynh chính
+    parent_uuid = uuid.UUID(data.parent_id) if data.parent_id and data.parent_id.strip() else None
+    p_ids: list[str] = []
+    if data.parent_items:
+        p_ids = [item.parent_id for item in data.parent_items if item.parent_id.strip()]
+    elif data.parent_ids:
+        p_ids = [pid for pid in data.parent_ids if pid and pid.strip()]
+    elif data.parent_id and data.parent_id.strip():
+        p_ids = [data.parent_id.strip()]
+
+    if not parent_uuid and p_ids:
+        parent_uuid = uuid.UUID(p_ids[0])
+
+    parsed_dob = None
+    if data.date_of_birth and data.date_of_birth.strip():
+        try:
+            parsed_dob = date.fromisoformat(data.date_of_birth.strip())
+        except Exception:
+            pass
 
     child = Child(
         child_id=uuid.uuid4(),
@@ -628,9 +752,41 @@ def create_child(data: ChildCreate, db: Session = Depends(get_db)):
         class_id=class_uuid,
         parent_id=parent_uuid,
         medical_allergies=note_val,
+        date_of_birth=parsed_dob,
+        gender=data.gender.strip() if data.gender else "male",
         status=ChildStatus.ENROLLED,
     )
     db.add(child)
+    db.flush()
+
+    # Lưu liên kết N-N vào parent_child
+    if data.parent_items:
+        for item in data.parent_items:
+            p_uid = uuid.UUID(item.parent_id.strip())
+            p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
+            link = ParentChild(
+                id=uuid.uuid4(),
+                parent_id=p_uid,
+                child_id=child.child_id,
+                relationship_=item.relationship or (p_obj.relationship_ if p_obj else "Phụ huynh"),
+                is_primary=item.is_primary,
+                can_pickup=item.can_pickup,
+            )
+            db.add(link)
+    elif p_ids:
+        for idx, pid in enumerate(p_ids):
+            p_uid = uuid.UUID(pid.strip())
+            p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
+            link = ParentChild(
+                id=uuid.uuid4(),
+                parent_id=p_uid,
+                child_id=child.child_id,
+                relationship_=p_obj.relationship_ if p_obj else "Phụ huynh",
+                is_primary=(idx == 0),
+                can_pickup=True,
+            )
+            db.add(link)
+
     db.commit()
     db.refresh(child)
     return {"message": "Tạo học sinh thành công", "id": str(child.child_id)}
@@ -648,10 +804,79 @@ def update_child(child_id: str, data: ChildUpdate, db: Session = Depends(get_db)
         c.nickname = data.nickname.strip() if data.nickname else None
     if data.class_id is not None:
         c.class_id = uuid.UUID(data.class_id.strip()) if data.class_id.strip() else None
-    if data.parent_id is not None:
-        c.parent_id = uuid.UUID(data.parent_id.strip()) if data.parent_id.strip() else None
     if data.medical_allergies is not None:
         c.medical_allergies = data.medical_allergies.strip() if data.medical_allergies.strip() else None
+    if data.date_of_birth is not None:
+        if data.date_of_birth.strip():
+            try:
+                c.date_of_birth = date.fromisoformat(data.date_of_birth.strip())
+            except Exception:
+                pass
+        else:
+            c.date_of_birth = None
+    if data.gender is not None:
+        c.gender = data.gender.strip() if data.gender.strip() else c.gender
+
+    # Đồng bộ liên kết N-N trong parent_child
+    if data.parent_items is not None:
+        db.query(ParentChild).filter(ParentChild.child_id == c.child_id).delete(synchronize_session=False)
+        primary_id = None
+        for item in data.parent_items:
+            p_uid = uuid.UUID(item.parent_id.strip())
+            if item.is_primary or primary_id is None:
+                primary_id = p_uid
+            p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
+            link = ParentChild(
+                id=uuid.uuid4(),
+                parent_id=p_uid,
+                child_id=c.child_id,
+                relationship_=item.relationship or (p_obj.relationship_ if p_obj else "Phụ huynh"),
+                is_primary=item.is_primary,
+                can_pickup=item.can_pickup,
+            )
+            db.add(link)
+        c.parent_id = primary_id
+    elif data.parent_ids is not None:
+        new_uuids = [uuid.UUID(pid.strip()) for pid in data.parent_ids if pid and pid.strip()]
+        db.query(ParentChild).filter(
+            ParentChild.child_id == c.child_id,
+            ~ParentChild.parent_id.in_(new_uuids),
+        ).delete(synchronize_session=False)
+
+        existing_links = db.query(ParentChild).filter(ParentChild.child_id == c.child_id).all()
+        existing_pids = {link.parent_id for link in existing_links}
+        for idx, p_uid in enumerate(new_uuids):
+            if p_uid not in existing_pids:
+                p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
+                link = ParentChild(
+                    id=uuid.uuid4(),
+                    parent_id=p_uid,
+                    child_id=c.child_id,
+                    relationship_=p_obj.relationship_ if p_obj else "Phụ huynh",
+                    is_primary=(idx == 0 and not existing_pids),
+                    can_pickup=True,
+                )
+                db.add(link)
+        c.parent_id = new_uuids[0] if new_uuids else None
+    elif data.parent_id is not None:
+        p_uid = uuid.UUID(data.parent_id.strip()) if data.parent_id.strip() else None
+        c.parent_id = p_uid
+        if p_uid:
+            existing = db.query(ParentChild).filter(
+                ParentChild.child_id == c.child_id,
+                ParentChild.parent_id == p_uid,
+            ).first()
+            if not existing:
+                p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
+                link = ParentChild(
+                    id=uuid.uuid4(),
+                    parent_id=p_uid,
+                    child_id=c.child_id,
+                    relationship_=p_obj.relationship_ if p_obj else "Phụ huynh",
+                    is_primary=True,
+                    can_pickup=True,
+                )
+                db.add(link)
 
     db.commit()
     return {"message": "Cập nhật học sinh thành công"}
@@ -706,7 +931,7 @@ def list_schedules(day_of_week: int | None = 2, db: Session = Depends(get_db)):
                 "id": str(s.schedule_id),
                 "activity_name": s.activity_name,
                 "content": s.content or "",
-                "room_name": s.room_name or "Phòng Mầm A",
+                "room_name": s.room_name or (s.class_.name if s.class_ else "Lớp Mầm A"),
                 "time_range": slot_name,
                 "slot_id": str(s.slot_id) if s.slot_id else None,
                 "start_time": start_time,

@@ -28,6 +28,7 @@ from app.models.child import (
     Child,
     ChildStatus,
     Parent,
+    ParentChild,
     ParentStatus,
 )
 from app.models.device_token import DeviceToken
@@ -81,6 +82,7 @@ __all__ = [
     "DailyReportType",
     "DeviceToken",
     "Parent",
+    "ParentChild",
     "ParentStatus",
     "School",
     "SchoolStatus",
