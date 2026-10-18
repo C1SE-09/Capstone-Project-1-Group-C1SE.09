@@ -620,8 +620,8 @@ class _AccountScreenState extends State<AccountScreen> {
               const ThemeSelector(),
               const Divider(),
               _AccountRow(
-                icon: Icons.bug_report_outlined,
-                label: 'Báo cáo lỗi & Góp ý',
+                icon: Icons.rate_review_outlined,
+                label: 'Góp ý & Cải thiện ứng dụng',
                 chevron: true,
                 onTap: () => showBugReportBottomSheet(context),
               ),

@@ -15,8 +15,9 @@ from app.core.security import (
     revoke_session,
     verify_password,
 )
+from app.models.admin_user import AdminUser
 from app.models.child import Parent
-from app.models.user import Teacher, User
+from app.models.user import Teacher, User, UserRole
 from app.schemas.auth_schema import (
     change_password_request,
     forgot_password_request,
@@ -43,9 +44,60 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def find_user_by_identifier(identifier: str, db: Session) -> User | None:
+    """Tìm User theo username hoặc email (Gmail) của Teacher, Parent, AdminUser."""
+    input_val = identifier.strip()
+    if not input_val:
+        return None
+
+    # 1. Nếu có '@' (định dạng email / Gmail)
+    if "@" in input_val:
+        teacher = db.query(Teacher).filter(Teacher.email.ilike(input_val)).first()
+        if teacher:
+            user = db.query(User).filter(User.teacher_id == teacher.teacher_id).first()
+            if user:
+                return user
+
+        parent = db.query(Parent).filter(Parent.email.ilike(input_val)).first()
+        if parent:
+            user = db.query(User).filter(User.parent_id == parent.parent_id).first()
+            if user:
+                return user
+
+        user = db.query(User).filter(User.username.ilike(input_val)).first()
+        if user:
+            return user
+
+        admin_u = db.query(AdminUser).filter(AdminUser.email.ilike(input_val)).first()
+        if admin_u:
+            user = db.query(User).filter(User.role == UserRole.ADMIN).first()
+            if user:
+                return user
+    else:
+        # 2. Tìm theo username trực tiếp
+        user = db.query(User).filter(User.username.ilike(input_val)).first()
+        if user:
+            return user
+
+        # 3. Fallback: tìm theo số điện thoại (nếu có)
+        teacher = db.query(Teacher).filter(Teacher.phone == input_val).first()
+        if teacher:
+            user = db.query(User).filter(User.teacher_id == teacher.teacher_id).first()
+            if user:
+                return user
+
+        parent = db.query(Parent).filter(Parent.phone == input_val).first()
+        if parent:
+            user = db.query(User).filter(User.parent_id == parent.parent_id).first()
+            if user:
+                return user
+
+    return None
+
+
 @router.post("/login", response_model=login_response)
 def login(data: login_request, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == data.username).first()
+    user = find_user_by_identifier(data.username, db)
     if user is None or not verify_password(data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

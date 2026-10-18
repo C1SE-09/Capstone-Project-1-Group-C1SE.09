@@ -8,6 +8,7 @@
 // - Sheets: hành động (Sửa/Xóa), biểu mẫu thêm/sửa, xác nhận xóa (danger).
 // - Xung đột: trùng khung giờ trong cùng ngày → cảnh báo mềm, không chặn.
 
+import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/timetable/subject.dart';
@@ -19,6 +20,52 @@ import 'package:flutter/material.dart';
 const _dayShort = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const _dayLong = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 
+/// Kiểm tra xem một tiết học có khớp với từ khóa tìm kiếm (bao gồm tên tiết, môn học, phòng, giáo viên và KHUNG GIỜ) hay không.
+bool matchesTimetableQuery(ClassSchedule item, String query) {
+  if (query.trim().isEmpty) return true;
+  final q = query.toLowerCase().trim();
+
+  // 1. Thông tin văn bản
+  if (item.displayName.toLowerCase().contains(q)) return true;
+  if ((item.activityName ?? '').toLowerCase().contains(q)) return true;
+  if ((item.content ?? '').toLowerCase().contains(q)) return true;
+  if ((item.roomName ?? '').toLowerCase().contains(q)) return true;
+  if ((item.teacherName ?? '').toLowerCase().contains(q)) return true;
+  if ((item.subject?.name ?? '').toLowerCase().contains(q)) return true;
+  if ((item.timeSlot?.name ?? '').toLowerCase().contains(q)) return true;
+
+  // 2. Khung giờ (time slot / range)
+  final start = item.startTime.toLowerCase(); // vd "08:00"
+  final end = item.endTime.toLowerCase();     // vd "08:45"
+  final range = '$start - $end';              // vd "08:00 - 08:45"
+
+  if (start.contains(q) || end.contains(q) || range.contains(q)) return true;
+
+  // Chuẩn hóa định dạng thời gian: "8h" / "8h30" / "8:00" / "08:00"
+  final normalizedQ = q.replaceAll('h', ':').replaceAll(' ', '');
+  if (start.contains(normalizedQ) || end.contains(normalizedQ) || range.contains(normalizedQ)) {
+    return true;
+  }
+
+  // Khớp bỏ số 0 ở đầu: "08:00" -> "8:00"
+  final startNoZero = start.startsWith('0') ? start.substring(1) : start;
+  final endNoZero = end.startsWith('0') ? end.substring(1) : end;
+  if (startNoZero.contains(q) || endNoZero.contains(q)) {
+    return true;
+  }
+
+  // Khớp số giờ (vd: "8" hoặc "14")
+  final hourNum = int.tryParse(q.replaceAll(RegExp(r'\D'), ''));
+  if (hourNum != null && hourNum >= 6 && hourNum <= 20) {
+    final startParts = start.split(':');
+    final endParts = end.split(':');
+    if (startParts.isNotEmpty && int.tryParse(startParts.first) == hourNum) return true;
+    if (endParts.isNotEmpty && int.tryParse(endParts.first) == hourNum) return true;
+  }
+
+  return false;
+}
+
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({
     super.key,
@@ -26,12 +73,20 @@ class TimetableScreen extends StatefulWidget {
     required this.className,
     this.repository,
     this.isReadOnly = false,
+    this.embedded = false,
+    this.classList,
+    this.onClassChanged,
+    this.searchQuery,
   });
 
   final String classId;
   final String className;
   final ScheduleRepository? repository;
   final bool isReadOnly;
+  final bool embedded;
+  final List<AdminClassDto>? classList;
+  final ValueChanged<String>? onClassChanged;
+  final String? searchQuery;
 
   @override
   State<TimetableScreen> createState() => _TimetableScreenState();
@@ -40,6 +95,10 @@ class TimetableScreen extends StatefulWidget {
 class _TimetableScreenState extends State<TimetableScreen> {
   late final ScheduleRepository _repo = widget.repository ?? HttpScheduleRepository();
   late Future<_TimetableData> _future;
+  late String _currentClassId = widget.classId;
+  late String _currentClassName = widget.className;
+  final TextEditingController _searchController = TextEditingController();
+  String _internalSearchQuery = '';
   int? _selectedDay;
   bool _weekMode = false;
   bool _conflictsOnly = false;
@@ -47,12 +106,30 @@ class _TimetableScreenState extends State<TimetableScreen> {
   @override
   void initState() {
     super.initState();
+    _currentClassId = widget.classId;
+    _currentClassName = widget.className;
     _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant TimetableScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.classId != widget.classId && widget.classId.isNotEmpty) {
+      _currentClassId = widget.classId;
+      _currentClassName = widget.className;
+      _future = _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<_TimetableData> _load() async {
     final values = await Future.wait([
-      _repo.getClassSchedule(widget.classId),
+      _repo.getClassSchedule(_currentClassId),
       _repo.getTimeSlots(),
       _repo.getSubjects(),
     ]);
@@ -76,33 +153,129 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final content = FutureBuilder<_TimetableData>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.all(40),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Không tải được thời khóa biểu.', style: TextStyle(color: context.k.inkSoft)),
+                const SizedBox(height: 8),
+                TextButton(onPressed: _reload, child: const Text('Thử lại')),
+              ],
+            ),
+          );
+        }
+        return _buildLoaded(context, snapshot.data!);
+      },
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
     return Scaffold(
       backgroundColor: context.k.canvas,
       appBar: KAppBar(
         title: 'Thời khóa biểu',
-        subtitle: widget.className,
+        subtitle: _currentClassName,
         onBack: () => Navigator.pop(context),
       ),
-      body: FutureBuilder<_TimetableData>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || snapshot.data == null) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Không tải được thời khóa biểu.', style: TextStyle(color: context.k.inkSoft)),
-                  const SizedBox(height: 8),
-                  TextButton(onPressed: _reload, child: const Text('Thử lại')),
-                ],
+      body: content,
+    );
+  }
+
+  Widget _buildClassSelectorBar(BuildContext context) {
+    final classes = widget.classList!;
+    final effectiveSelectedId = classes.any((c) => c.id == _currentClassId)
+        ? _currentClassId
+        : (classes.isNotEmpty ? classes.first.id : '');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.k.surfaceSunken,
+        borderRadius: BorderRadius.circular(KRadii.control),
+        border: Border.all(color: context.k.line),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.meeting_room_outlined, size: 20, color: context.k.brand),
+          const SizedBox(width: 8),
+          Text(
+            'Lớp học:',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.k.ink),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: effectiveSelectedId,
+                isDense: true,
+                isExpanded: true,
+                items: classes.map((c) {
+                  return DropdownMenuItem<String>(
+                    value: c.id,
+                    child: Text(
+                      '${c.name} (${c.gradeLabel})',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (newClassId) {
+                  if (newClassId != null && newClassId != _currentClassId) {
+                    final matched = classes.firstWhere(
+                      (c) => c.id == newClassId,
+                      orElse: () => classes.first,
+                    );
+                    setState(() {
+                      _currentClassId = newClassId;
+                      _currentClassName = matched.name;
+                      _future = _load();
+                    });
+                    widget.onClassChanged?.call(newClassId);
+                  }
+                },
               ),
-            );
-          }
-          return _buildLoaded(context, snapshot.data!);
-        },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (val) => setState(() => _internalSearchQuery = val.trim()),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'Tìm tiết học, môn học, khung giờ (vd: 08:00, 8h)...',
+          prefixIcon: const Icon(Icons.search, size: 20),
+          suffixIcon: _internalSearchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _internalSearchQuery = '');
+                  },
+                )
+              : null,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       ),
     );
   }
@@ -111,31 +284,79 @@ class _TimetableScreenState extends State<TimetableScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 900;
-        final items = data.items.where((i) => i.isActive).toList();
+        final effectiveQuery = (widget.searchQuery ?? _internalSearchQuery).trim();
+        final allItems = data.items.where((i) => i.isActive).toList();
+        final items = effectiveQuery.isEmpty
+            ? allItems
+            : allItems.where((i) => matchesTimetableQuery(i, effectiveQuery)).toList();
         final conflicts = _conflictMap(items);
         final days = _activeDays(items);
         final todayIndex = DateTime.now().weekday - 1;
         final selected =
-            (_selectedDay != null && days.contains(_selectedDay)) ? _selectedDay! : (days.contains(todayIndex) ? todayIndex : days.first);
+            (_selectedDay != null && days.contains(_selectedDay)) ? _selectedDay! : (days.contains(todayIndex) ? todayIndex : (days.isNotEmpty ? days.first : 0));
 
-        if (items.isEmpty) {
-          return _emptyState(context, data);
-        }
-        if (wide) {
-          return _buildBoard(context, data, items, conflicts, days, todayIndex);
-        }
-        return Column(
-          children: [
-            Expanded(child: _buildPhone(context, data, items, conflicts, days, selected, todayIndex)),
-            if (!widget.isReadOnly)
-              BottomActionBar(
-                child: KButton(
-                  label: 'Thêm hoạt động',
-                  icon: Icons.add,
-                  large: true,
-                  onPressed: () => _openEditor(data),
-                ),
+        Widget mainContent;
+        if (allItems.isEmpty) {
+          mainContent = _emptyState(context, data);
+        } else if (items.isEmpty) {
+          mainContent = Padding(
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.search_off_rounded, size: 48, color: context.k.inkFaint),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Không tìm thấy hoạt động nào phù hợp',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: context.k.ink),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Thử tìm kiếm với khung giờ khác (vd: 08:00, 8h) hoặc tên môn/phòng.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: context.k.inkSoft),
+                  ),
+                ],
               ),
+            ),
+          );
+        } else if (wide) {
+          mainContent = _buildBoard(context, data, items, conflicts, days, todayIndex);
+        } else {
+          mainContent = _buildPhone(context, data, items, conflicts, days, selected, todayIndex);
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.embedded && widget.classList != null && widget.classList!.isNotEmpty)
+              _buildClassSelectorBar(context),
+            if (widget.searchQuery == null)
+              _buildSearchBar(context),
+            if (widget.embedded)
+              mainContent
+            else
+              Expanded(child: mainContent),
+            if (!widget.isReadOnly)
+              widget.embedded
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: KButton(
+                        label: 'Thêm hoạt động',
+                        icon: Icons.add,
+                        large: true,
+                        onPressed: () => _openEditor(data),
+                      ),
+                    )
+                  : BottomActionBar(
+                      child: KButton(
+                        label: 'Thêm hoạt động',
+                        icon: Icons.add,
+                        large: true,
+                        onPressed: () => _openEditor(data),
+                      ),
+                    ),
           ],
         );
       },
@@ -161,6 +382,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
     return ListView(
       padding: EdgeInsets.zero,
+      shrinkWrap: widget.embedded,
+      physics: widget.embedded ? const NeverScrollableScrollPhysics() : null,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -485,12 +708,17 @@ class _TimetableScreenState extends State<TimetableScreen> {
     // Chặn phòng thủ: phụ huynh (read-only) không bao giờ mở được editor,
     // kể cả nếu sau này có thêm lối vào mới quên kiểm tra cờ.
     if (widget.isReadOnly) return;
+    final classOptions = (widget.classList != null && widget.classList!.isNotEmpty)
+        ? widget.classList!.map((c) => {'id': c.id, 'name': c.name}).toList()
+        : [{'id': _currentClassId, 'name': _currentClassName}];
+
     showKSheet(
       context,
       _ScheduleEditorSheet(
         data: data,
         existing: existing,
-        classId: widget.classId,
+        classId: _currentClassId,
+        classes: classOptions,
         repository: _repo,
         onSaved: (message, savedDay) {
           Navigator.pop(context);

@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (username.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.';
+        _errorMessage = 'Vui lòng nhập đầy đủ tên đăng nhập/Gmail và mật khẩu.';
       });
       return;
     }
@@ -199,9 +199,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 16),
                         ],
 
-                        // Username Field
+                        // Username / Gmail Field
                         Text(
-                          'Tên đăng nhập',
+                          'Tên đăng nhập hoặc Gmail',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
@@ -211,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextField(
                           controller: _usernameController,
                           decoration: InputDecoration(
-                            hintText: 'Nhập tên đăng nhập',
+                            hintText: 'Nhập tên đăng nhập hoặc Gmail',
                             prefixIcon: const Icon(Icons.person_outline, size: 20),
                             filled: true,
                             fillColor: context.k.surfaceSunken,

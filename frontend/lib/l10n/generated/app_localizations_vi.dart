@@ -12,30 +12,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get appTitle => 'KinderLog';
 
   @override
-  String get bugReportTitle => 'Báo cáo lỗi';
+  String get bugReportTitle => 'Góp ý & Cải thiện ứng dụng';
 
   @override
-  String get bugReportNewButton => 'Báo cáo lỗi';
+  String get bugReportNewButton => 'Góp ý cải thiện';
 
   @override
-  String get bugReportAdminListButton => 'Quản lý báo cáo lỗi';
+  String get bugReportAdminListButton => 'Quản lý ý kiến đóng góp';
 
   @override
   String get bugReportFormTitleLabel => 'Tiêu đề';
 
   @override
   String get bugReportFormTitleHint =>
-      'Mô tả ngắn gọn vấn đề (tối đa 200 ký tự)';
+      'Mô tả ngắn gọn góp ý hoặc vấn đề (tối đa 200 ký tự)';
 
   @override
   String get bugReportFormDescriptionLabel => 'Mô tả chi tiết';
 
   @override
   String get bugReportFormDescriptionHint =>
-      'Các bước tái hiện, bạn kỳ vọng gì, thực tế xảy ra gì (tối đa 4000 ký tự)';
+      'Chi tiết ý kiến đóng góp hoặc sự cố gặp phải (tối đa 4000 ký tự)';
 
   @override
-  String get bugReportFormCategoryLabel => 'Loại lỗi';
+  String get bugReportFormCategoryLabel => 'Danh mục';
 
   @override
   String get bugReportFormSeverityLabel => 'Mức độ';
@@ -50,13 +50,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get bugReportFormRemoveAttachment => 'Xóa';
 
   @override
-  String get bugReportFormSubmit => 'Gửi báo cáo';
+  String get bugReportFormSubmit => 'Gửi góp ý';
 
   @override
   String get bugReportFormSubmitting => 'Đang gửi...';
 
   @override
-  String get bugReportFormSuccess => 'Đã gửi báo cáo. Admin sẽ xem xét sớm.';
+  String get bugReportFormSuccess =>
+      'Đã gửi góp ý thành công. Cảm ơn đóng góp của bạn!';
 
   @override
   String get bugReportFormOfflineQueued =>

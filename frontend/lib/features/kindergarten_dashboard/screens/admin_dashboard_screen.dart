@@ -3,15 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
-import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
-import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
-import 'package:adark_frontend/domain/entities/timetable/subject.dart';
-import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 1. DESIGN SYSTEM COLORS (100% FIDELITY FROM admin_UI/app_theme.dart)
@@ -72,12 +67,181 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
+Future<String?> showChildSearchPicker(
+  BuildContext context,
+  List<AdminChildDto> students, {
+  String? currentSelectedId,
+  bool allowNone = true,
+  String title = 'Chọn học sinh liên kết',
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      String query = '';
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final q = query.toLowerCase().trim();
+          final filtered = students.where((c) {
+            if (q.isEmpty) return true;
+            final matchName = c.fullName.toLowerCase().contains(q);
+            final matchNick = c.nickname.toLowerCase().contains(q);
+            final matchClass = c.className.toLowerCase().contains(q);
+            return matchName || matchNick || matchClass;
+          }).toList();
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                            ),
+                            Text(
+                              'Tìm theo họ tên, biệt danh hoặc lớp (${filtered.length}/${students.length})',
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: TextField(
+                    autofocus: false,
+                    onChanged: (val) => setModalState(() => query = val),
+                    decoration: InputDecoration(
+                      hintText: 'Nhập tên bé, biệt danh (vd: Bắp, Miu) hoặc lớp...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: query.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () => setModalState(() => query = ''),
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    children: [
+                      if (allowNone)
+                        ListTile(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          leading: const CircleAvatar(
+                            backgroundColor: Colors.black12,
+                            child: Icon(Icons.person_off_outlined, size: 20),
+                          ),
+                          title: const Text('Chưa liên kết / Không chọn bé'),
+                          trailing: currentSelectedId == null || currentSelectedId.isEmpty
+                              ? const Icon(Icons.check_circle, color: AppColors.brand)
+                              : null,
+                          onTap: () => Navigator.pop(ctx, '__none__'),
+                        ),
+                      if (filtered.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Center(
+                            child: Text(
+                              'Không tìm thấy học sinh phù hợp với "$query"',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          ),
+                        )
+                      else
+                        ...filtered.map((c) {
+                          final isSelected = c.id == currentSelectedId;
+                          final hasNick = c.nickname.isNotEmpty;
+                          final hasClass = c.className.isNotEmpty;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: ListTile(
+                              tileColor: isSelected
+                                  ? AppColors.brand.withAlpha(25)
+                                  : Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: isSelected ? AppColors.brand : Theme.of(context).dividerColor,
+                                ),
+                              ),
+                              leading: CircleAvatar(
+                                backgroundColor: AppColors.brand.withAlpha(30),
+                                child: const Icon(Icons.child_care_rounded, color: AppColors.brand),
+                              ),
+                              title: Text(
+                                c.fullName,
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                              ),
+                              subtitle: Text(
+                                [
+                                  if (hasNick) 'Biệt danh: ${c.nickname}',
+                                  if (hasClass) 'Lớp: ${c.className}',
+                                ].join(' · '),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              trailing: isSelected
+                                  ? const Icon(Icons.check_circle, color: AppColors.brand)
+                                  : const Icon(Icons.arrow_forward_ios, size: 14),
+                              onTap: () => Navigator.pop(ctx, c.id),
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late final HttpAdminRepository _repo = widget.repository ?? HttpAdminRepository();
 
   late AdminTab _tab = widget.initialTab;
   late AdminCategory _category = widget.initialCategory;
-  int _selectedDay = 0; // 0: Thứ 2, 1: Thứ 3, ..., 4: Thứ 6
+  final int _selectedDay = 0; // 0: Thứ 2, 1: Thứ 3, ..., 4: Thứ 6
   String _query = '';
   final _searchController = TextEditingController();
 
@@ -100,6 +264,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Dropdown resource caches from API
   List<AdminClassDto> _classes = [];
   List<AdminTimeSlotDto> _timeSlots = [];
+  String? _selectedClassId;
+  String? _selectedClassName;
 
   bool get _isDarkMode {
     final mode = ThemeController.instance.value;
@@ -187,6 +353,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _schedules = results[3] as List<AdminScheduleDto>;
           _classes = results[4] as List<AdminClassDto>;
           _timeSlots = results[5] as List<AdminTimeSlotDto>;
+          if ((_selectedClassId == null || _selectedClassId!.isEmpty) && _classes.isNotEmpty) {
+            _selectedClassId = _classes.first.id;
+            _selectedClassName = _classes.first.name;
+          }
         });
       }
     } catch (e) {
@@ -218,9 +388,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           if (mounted) setState(() => _parents = res);
           break;
         case AdminCategory.schedules:
-          final dayOfWeek = _selectedDay + 2; // 0 (Thứ 2) -> 2
-          final res = await _repo.getSchedules(dayOfWeek: dayOfWeek);
-          if (mounted) setState(() => _schedules = res);
+          if (_classes.isEmpty) {
+            final cls = await _repo.getClasses();
+            if (mounted) {
+              setState(() {
+                _classes = cls;
+                if ((_selectedClassId == null || _selectedClassId!.isEmpty) && _classes.isNotEmpty) {
+                  _selectedClassId = _classes.first.id;
+                  _selectedClassName = _classes.first.name;
+                }
+              });
+            }
+          }
           break;
       }
     } catch (e) {
@@ -472,28 +651,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             // Hàng 3: Nút Thêm mới + Nút Làm mới dữ liệu
             Row(
               children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 44,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.brand,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                      ),
-                      onPressed: () => _category == AdminCategory.schedules
-                          ? _openScheduleEditorSheet()
-                          : _showEditor(_category),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: Text(
-                        _addLabel,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                if (_category != AdminCategory.schedules) ...[
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.brand,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        onPressed: () => _showEditor(_category),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: Text(
+                          _addLabel,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
                 Container(
                   height: 44,
                   width: 44,
@@ -525,7 +704,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       AdminCategory.teachers => 'Tìm giáo viên, số điện thoại, lớp...',
       AdminCategory.students => 'Tìm học sinh, lớp, dị ứng...',
       AdminCategory.parents => 'Tìm phụ huynh, con liên kết...',
-      AdminCategory.schedules => 'Tìm tiết học, phòng, giáo viên...',
+      AdminCategory.schedules => 'Tìm tiết học, phòng, khung giờ (vd: 08:00, 8h)...',
     };
   }
 
@@ -1263,7 +1442,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }),
         const SizedBox(height: 18),
         if (_category == AdminCategory.schedules)
-          _scheduleList()
+          TimetableScreen(
+            embedded: true,
+            classId: _selectedClassId ?? (_classes.isNotEmpty ? _classes.first.id : ''),
+            className: _selectedClassName ?? (_classes.isNotEmpty ? _classes.first.name : 'Lớp học'),
+            classList: _classes,
+            searchQuery: _query,
+            onClassChanged: (cId) {
+              setState(() {
+                _selectedClassId = cId;
+                final found = _classes.where((c) => c.id == cId);
+                if (found.isNotEmpty) {
+                  _selectedClassName = found.first.name;
+                }
+              });
+            },
+          )
         else
           _peopleGrid(),
       ],
@@ -1516,179 +1710,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _scheduleList() {
-    final conflicts = _conflictsFor(_selectedDay);
-    final conflictIds = {
-      for (final conflict in conflicts)
-        ...[conflict.first.id, conflict.second.id],
-    };
-    final q = _query.toLowerCase().trim();
-    final items = _schedules
-        .where((v) =>
-            v.dayOfWeek == (_selectedDay + 2) &&
-            '${v.activityName} ${v.roomName} ${v.content}'
-                .toLowerCase()
-                .contains(q))
-        .toList();
-
-    return Column(
-      children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: List.generate(dayLabels.length, (day) {
-              final count = _conflictsFor(day).length;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  selected: day == _selectedDay,
-                  onSelected: (_) {
-                    setState(() => _selectedDay = day);
-                    _loadCategoryData();
-                  },
-                  avatar: count == 0
-                      ? null
-                      : Badge(label: Text('$count'), child: const SizedBox()),
-                  label: Text(dayLabels[day]),
-                ),
-              );
-            }),
-          ),
-        ),
-        if (conflicts.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _isDarkMode
-                  ? AppColors.warning.withAlpha(33)
-                  : AppColors.warningTint,
-              border: Border.all(color: AppColors.warning),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: AppColors.warning),
-                    SizedBox(width: 8),
-                    Text(
-                      'Cảnh báo xung đột thời khóa biểu',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ...conflicts.map((c) => Text('• ${c.message}', style: const TextStyle(fontSize: 13))),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        if (items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(44),
-            child: Text('Chưa có tiết học phù hợp.'),
-          )
-        else
-          ...items.map((item) {
-            final conflict = conflictIds.contains(item.id);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    width: conflict ? 2 : 1,
-                    color: conflict
-                        ? AppColors.danger
-                        : Theme.of(context).dividerColor,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: conflict
-                              ? AppColors.danger
-                              : Theme.of(context).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${item.startTime}\n${item.endTime}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: conflict ? Colors.white : null,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    item.activityName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontWeight: FontWeight.w700),
-                                  ),
-                                ),
-                                if (conflict) ...[
-                                  const SizedBox(width: 6),
-                                  const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 18),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              'Phòng: ${item.roomName}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            if (item.content.isNotEmpty)
-                              Text(
-                                item.content,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        padding: EdgeInsets.zero,
-                        iconSize: 20,
-                        onSelected: (action) => action == 'edit'
-                            ? _openScheduleEditorSheet(item: item)
-                            : _confirmDelete(item),
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Sửa')),
-                          PopupMenuItem(value: 'delete', child: Text('Xóa')),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-      ],
-    );
-  }
-
   // ═════════════════════════════════════════════════════════════════════════════
   // 7. TAB 3: ACCOUNT (TÀI KHOẢN ADMIN & CẤU HÌNH BẢO MẬT)
   // ═════════════════════════════════════════════════════════════════════════════
@@ -1781,8 +1802,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   Divider(height: 1, color: Theme.of(context).dividerColor),
                   ListTile(
-                    leading: const Icon(Icons.bug_report_outlined),
-                    title: const Text('Báo cáo lỗi & Góp ý'),
+                    leading: const Icon(Icons.rate_review_outlined),
+                    title: const Text('Góp ý & Cải thiện ứng dụng'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => showBugReportBottomSheet(context),
                   ),
@@ -1859,115 +1880,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return '${parts[parts.length - 2][0]}${parts.last[0]}'.toUpperCase();
   }
 
-  Future<void> _openScheduleEditorSheet({AdminScheduleDto? item}) async {
-    try {
-      final scheduleRepo = HttpScheduleRepository();
-      String currentClassId = item?.classId ?? (_classes.isNotEmpty ? _classes.first.id : '');
-      if (currentClassId.isEmpty && _classes.isNotEmpty) {
-        currentClassId = _classes.first.id;
-      }
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
-
-      final results = await Future.wait([
-        scheduleRepo.getTimeSlots(),
-        scheduleRepo.getSubjects(),
-        currentClassId.isNotEmpty ? scheduleRepo.getClassSchedule(currentClassId) : Future.value(<ClassSchedule>[]),
-      ]);
-
-      if (mounted) Navigator.of(context, rootNavigator: true).pop();
-
-      final slots = results[0] as List<TimeSlot>;
-      final subjects = results[1] as List<Subject>;
-      final scheduleItems = results[2] as List<ClassSchedule>;
-
-      ClassSchedule? existingSchedule;
-      if (item != null) {
-        for (final s in scheduleItems) {
-          if (s.scheduleId == item.id) {
-            existingSchedule = s;
-            break;
-          }
-        }
-        if (existingSchedule == null) {
-          Subject? matchedSubject;
-          for (final s in subjects) {
-            if (s.name.toLowerCase() == item.activityName.toLowerCase()) {
-              matchedSubject = s;
-              break;
-            }
-          }
-          TimeSlot? matchedSlot;
-          for (final sl in slots) {
-            if (sl.startTime == item.startTime && sl.endTime == item.endTime) {
-              matchedSlot = sl;
-              break;
-            }
-          }
-          existingSchedule = ClassSchedule(
-            scheduleId: item.id,
-            classId: item.classId ?? currentClassId,
-            subjectId: matchedSubject?.subjectId ?? (subjects.isNotEmpty ? subjects.first.subjectId : ''),
-            slotId: matchedSlot?.slotId ?? (slots.isNotEmpty ? slots.first.slotId : ''),
-            dayOfWeek: item.dayOfWeek ?? 2,
-            activityName: item.activityName,
-            roomName: item.roomName,
-            subject: matchedSubject,
-            timeSlot: matchedSlot,
-          );
-        }
-      }
-
-      final timetableData = TimetableData(
-        items: scheduleItems,
-        slots: slots,
-        subjects: subjects,
-      );
-
-      final classOptions = _classes.map((c) => {'id': c.id, 'name': c.name}).toList();
-
-      if (!mounted) return;
-
-      showKSheet(
-        context,
-        ScheduleEditorSheet(
-          data: timetableData,
-          classId: currentClassId,
-          classes: classOptions,
-          repository: scheduleRepo,
-          existing: existingSchedule,
-          onSaved: (message, savedDay) {
-            Navigator.pop(context);
-            _notify(message);
-            setState(() {
-              _selectedDay = (savedDay >= 0 && savedDay <= 4) ? savedDay : 0;
-            });
-            _loadCategoryData();
-          },
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (_) {}
-        _notify('Không thể mở chỉnh sửa thời khóa biểu: ${getFriendlyErrorMessage(e)}', isError: true);
-      }
-    }
-  }
-
   // ═════════════════════════════════════════════════════════════════════════════
   // 8. DIALOG THÊM / SỬA (GẮN 100% API REPOSITORY CHO CẢ 4 DANH MỤC)
   // ═════════════════════════════════════════════════════════════════════════════
 
   Future<void> _showEditor(AdminCategory category, {Object? item}) async {
-    if (category == AdminCategory.schedules) {
-      return _openScheduleEditorSheet(item: item as AdminScheduleDto?);
-    }
+    if (category == AdminCategory.schedules) return;
     final isEdit = item != null;
     final form = GlobalKey<FormState>();
 
@@ -2353,23 +2271,54 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           },
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<String?>(
-                          initialValue: selectedChildId,
-                          decoration: const InputDecoration(
-                            labelText: 'Học sinh liên kết (con)',
-                            hintText: 'Chọn học sinh trong danh sách',
-                          ),
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('Chưa liên kết / Không'),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showChildSearchPicker(
+                              context,
+                              _students,
+                              currentSelectedId: selectedChildId,
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                selectedChildId = picked == '__none__' ? null : picked;
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'Học sinh liên kết (con)',
+                              hintText: 'Bấm để tìm theo tên bé, biệt danh hoặc lớp...',
+                              suffixIcon: selectedChildId != null
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, size: 18),
+                                      onPressed: () {
+                                        setDialogState(() {
+                                          selectedChildId = null;
+                                        });
+                                      },
+                                    )
+                                  : const Icon(Icons.search, size: 20),
                             ),
-                            ..._students.map((c) => DropdownMenuItem<String?>(
-                              value: c.id,
-                              child: Text('Bé ${c.fullName} (${c.className.isNotEmpty ? c.className : "Chưa có lớp"})'),
-                            )),
-                          ],
-                          onChanged: (v) => setDialogState(() => selectedChildId = v),
+                            child: Text(
+                              selectedChildId != null
+                                  ? () {
+                                      final found = _students.where((c) => c.id == selectedChildId);
+                                      if (found.isNotEmpty) {
+                                        final c = found.first;
+                                        final nick = c.nickname.isNotEmpty ? ' (${c.nickname})' : '';
+                                        final cls = c.className.isNotEmpty ? ' · ${c.className}' : '';
+                                        return 'Bé ${c.fullName}$nick$cls';
+                                      }
+                                      return 'Học sinh ($selectedChildId)';
+                                    }()
+                                  : 'Chưa liên kết / Bấm để chọn bé',
+                              style: TextStyle(
+                                color: selectedChildId != null ? null : Theme.of(context).hintColor,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ],

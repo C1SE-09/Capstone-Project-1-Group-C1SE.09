@@ -1,3 +1,4 @@
+import logging
 import time
 from contextlib import asynccontextmanager
 
@@ -40,6 +41,9 @@ app = FastAPI(
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @app.middleware("http")
 async def timing_middleware(request: Request, call_next):
     start = time.perf_counter()
@@ -48,7 +52,7 @@ async def timing_middleware(request: Request, call_next):
 
     elapsed = (time.perf_counter() - start) * 1000
 
-    print(f"[API] {request.method} {request.url.path} - {elapsed:.2f} ms")
+    logger.info("[API] %s %s - %.2f ms", request.method, request.url.path, elapsed)
 
     return response
 
