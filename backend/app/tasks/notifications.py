@@ -12,7 +12,9 @@ import logging
 import uuid
 
 from app.core.database import SessionLocal
+from app.models.device_token import DeviceToken
 from app.models.report import DailyReport
+from app.models.user import User
 from app.services.notification_service import (
     is_invalid_token,
     parent_device_tokens,

@@ -4,23 +4,14 @@ import uuid
 from datetime import date
 from unittest.mock import MagicMock
 
-import pytest
 from app.api.endpoints.admin import (
     ChildCreate,
-    ChildParentItem,
-    ChildUpdate,
-    ParentCreate,
-    ParentUpdate,
     create_child,
-    create_parent,
     list_children,
-    list_parents,
-    update_child,
-    update_parent,
 )
-from app.models.child import Child, ChildStatus, Parent, ParentChild, ParentStatus
+from app.models.child import Child, ChildStatus, Parent, ParentChild
 from app.models.device_token import DeviceToken
-from app.models.user import Class_, User
+from app.models.user import Class_
 from app.services.notification_service import child_parents_device_tokens
 
 

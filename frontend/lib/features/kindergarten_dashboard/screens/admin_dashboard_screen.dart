@@ -2519,7 +2519,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: parentRelationship ?? 'Bố',
+                          initialValue: parentRelationship ?? 'Bố',
                           decoration: const InputDecoration(labelText: 'Vai trò / Mối quan hệ với bé'),
                           items: const [
                             DropdownMenuItem(value: 'Bố', child: Text('Bố (Cha)')),
