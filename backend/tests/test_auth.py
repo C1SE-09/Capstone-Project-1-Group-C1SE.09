@@ -5,7 +5,7 @@ Tests for authentication endpoints including POST /api/auth/change-password
 """
 
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from app.api.endpoints.auth import router as auth_router
@@ -98,7 +98,13 @@ class TestChangePasswordUnauthorized:
 class TestLoginWithEmailOrUsername:
     """POST /api/auth/login hỗ trợ username hoặc Gmail"""
 
-    def test_login_with_username_success(self, client, mock_user, mock_db):
+    @patch("app.api.endpoints.auth.create_session")
+    def test_login_with_username_success(self, mock_create_sess, client, mock_user, mock_db):
+        mock_create_sess.return_value = {
+            "access_token": "fake_access_token",
+            "refresh_token": "fake_refresh_token",
+            "session_id": "fake_session_id",
+        }
         mock_db.query.return_value.filter.return_value.first.return_value = mock_user
         payload = {
             "username": "teacher1",
@@ -111,8 +117,15 @@ class TestLoginWithEmailOrUsername:
         data = resp.json()
         assert data["username"] == "teacher1"
         assert data["role"] == "teacher"
+        assert data["access_token"] == "fake_access_token"
 
-    def test_login_with_gmail_success(self, client, mock_user, mock_db):
+    @patch("app.api.endpoints.auth.create_session")
+    def test_login_with_gmail_success(self, mock_create_sess, client, mock_user, mock_db):
+        mock_create_sess.return_value = {
+            "access_token": "fake_access_token",
+            "refresh_token": "fake_refresh_token",
+            "session_id": "fake_session_id",
+        }
         mock_teacher = MagicMock()
         mock_teacher.teacher_id = mock_user.user_id
         # First query for Teacher by email -> mock_teacher, second query for User by teacher_id -> mock_user
@@ -127,4 +140,5 @@ class TestLoginWithEmailOrUsername:
         assert resp.status_code == 200
         data = resp.json()
         assert data["username"] == "teacher1"
+        assert data["access_token"] == "fake_access_token"
 
