@@ -82,6 +82,7 @@ class AdminParentDto {
   final String email;
   final String? username;
   final String status;
+  final String? relationship;
   final String childrenSummary;
   final String? childId;
   final List<String> childIds;
@@ -91,6 +92,7 @@ class AdminParentDto {
     required this.fullName,
     required this.phone,
     required this.email,
+    this.relationship,
     this.username,
     required this.status,
     required this.childrenSummary,
@@ -109,6 +111,7 @@ class AdminParentDto {
       fullName: json['full_name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       email: json['email'] as String? ?? '',
+      relationship: json['relationship'] as String?,
       username: json['username'] as String?,
       status: json['status'] as String? ?? 'active',
       childrenSummary: json['children_summary'] as String? ?? '',
@@ -116,6 +119,44 @@ class AdminParentDto {
       childIds: childIds,
     );
   }
+}
+
+class AdminChildParentDto {
+  final String id;
+  final String name;
+  final String phone;
+  final String email;
+  final String relationship;
+  final bool isPrimary;
+  final bool canPickup;
+
+  AdminChildParentDto({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.email,
+    required this.relationship,
+    this.isPrimary = false,
+    this.canPickup = true,
+  });
+
+  factory AdminChildParentDto.fromJson(Map<String, dynamic> json) =>
+      AdminChildParentDto(
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        phone: json['phone'] as String? ?? '',
+        email: json['email'] as String? ?? '',
+        relationship: json['relationship'] as String? ?? 'Phụ huynh',
+        isPrimary: json['is_primary'] as bool? ?? false,
+        canPickup: json['can_pickup'] as bool? ?? true,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'parent_id': id,
+        'relationship': relationship,
+        'is_primary': isPrimary,
+        'can_pickup': canPickup,
+      };
 }
 
 class AdminChildDto {
@@ -127,7 +168,11 @@ class AdminChildDto {
   final String? parentId;
   final String? parentName;
   final String? parentPhone;
+  final List<AdminChildParentDto> parents;
+  final List<String> parentIds;
+  final String parentsSummary;
   final String? dateOfBirth;
+  final String gender;
   final String note;
   final String status;
 
@@ -140,24 +185,46 @@ class AdminChildDto {
     this.parentId,
     this.parentName,
     this.parentPhone,
+    this.parents = const [],
+    this.parentIds = const [],
+    this.parentsSummary = '',
     this.dateOfBirth,
+    this.gender = 'male',
     required this.note,
     required this.status,
   });
 
-  factory AdminChildDto.fromJson(Map<String, dynamic> json) => AdminChildDto(
-        id: json['id'] as String? ?? '',
-        fullName: json['full_name'] as String? ?? '',
-        nickname: json['nickname'] as String? ?? '',
-        classId: json['class_id'] as String?,
-        className: json['class_name'] as String? ?? 'Chưa xếp lớp',
-        parentId: json['parent_id'] as String?,
-        parentName: json['parent_name'] as String?,
-        parentPhone: json['parent_phone'] as String?,
-        dateOfBirth: json['date_of_birth'] as String?,
-        note: json['note'] as String? ?? '',
-        status: json['status'] as String? ?? 'enrolled',
-      );
+  factory AdminChildDto.fromJson(Map<String, dynamic> json) {
+    final rawParents = json['parents'] as List? ?? [];
+    final parentsList = rawParents
+        .map((e) =>
+            AdminChildParentDto.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+
+    final rawParentIds = json['parent_ids'] as List? ?? [];
+    final parentIdsList = rawParentIds.map((e) => e.toString()).toList();
+    if (parentIdsList.isEmpty && json['parent_id'] != null) {
+      parentIdsList.add(json['parent_id'].toString());
+    }
+
+    return AdminChildDto(
+      id: json['id'] as String? ?? '',
+      fullName: json['full_name'] as String? ?? '',
+      nickname: json['nickname'] as String? ?? '',
+      classId: json['class_id'] as String?,
+      className: json['class_name'] as String? ?? 'Chưa xếp lớp',
+      parentId: json['parent_id'] as String?,
+      parentName: json['parent_name'] as String?,
+      parentPhone: json['parent_phone'] as String?,
+      parents: parentsList,
+      parentIds: parentIdsList,
+      parentsSummary: json['parents_summary'] as String? ?? '',
+      dateOfBirth: json['date_of_birth'] as String?,
+      gender: json['gender'] as String? ?? 'male',
+      note: json['note'] as String? ?? '',
+      status: json['status'] as String? ?? 'enrolled',
+    );
+  }
 }
 
 class AdminTimeSlotDto {
@@ -330,6 +397,7 @@ class HttpAdminRepository {
     required String fullName,
     required String phone,
     String? email,
+    String? relationship,
     String? username,
     String? password,
     String? childId,
@@ -339,6 +407,7 @@ class HttpAdminRepository {
       'full_name': fullName,
       'phone': phone,
       'email': email,
+      'relationship': relationship,
       'username': username,
       'password': password,
       'child_id': childId,
@@ -351,6 +420,7 @@ class HttpAdminRepository {
     required String fullName,
     required String phone,
     String? email,
+    String? relationship,
     String? username,
     String? password,
     String? childId,
@@ -360,6 +430,7 @@ class HttpAdminRepository {
       'full_name': fullName,
       'phone': phone,
       'email': email,
+      'relationship': relationship,
       'username': username,
       'password': password,
       'child_id': childId,
@@ -383,14 +454,22 @@ class HttpAdminRepository {
     String? nickname,
     String? classId,
     String? parentId,
+    List<String>? parentIds,
+    List<Map<String, dynamic>>? parentItems,
     String? note,
+    String? dateOfBirth,
+    String? gender,
   }) async {
     await _dio.post('/api/admin/children', data: {
       'full_name': fullName,
       'nickname': nickname,
       'class_id': classId,
       'parent_id': parentId,
+      'parent_ids': parentIds,
+      'parent_items': parentItems,
       'medical_allergies': note,
+      'date_of_birth': dateOfBirth,
+      'gender': gender,
     });
   }
 
@@ -400,14 +479,22 @@ class HttpAdminRepository {
     String? nickname,
     String? classId,
     String? parentId,
+    List<String>? parentIds,
+    List<Map<String, dynamic>>? parentItems,
     String? note,
+    String? dateOfBirth,
+    String? gender,
   }) async {
     await _dio.put('/api/admin/children/$id', data: {
       'full_name': fullName,
       'nickname': nickname,
       'class_id': classId,
       'parent_id': parentId,
+      'parent_ids': parentIds,
+      'parent_items': parentItems,
       'medical_allergies': note,
+      'date_of_birth': dateOfBirth,
+      'gender': gender,
     });
   }
 

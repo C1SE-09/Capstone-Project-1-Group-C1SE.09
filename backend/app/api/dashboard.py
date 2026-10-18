@@ -472,15 +472,21 @@ def get_parent_primary_child(
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
 
-    children = (
-        db.query(Child)
-        .filter(
-            Child.parent_id == parent_id,
-            Child.status == ChildStatus.ENROLLED,
+    children: list[Child] = []
+    if hasattr(parent, "children") and parent.children:
+        children = [
+            c for c in parent.children if getattr(c, "status", None) == ChildStatus.ENROLLED
+        ]
+    if not children:
+        children = (
+            db.query(Child)
+            .filter(
+                Child.parent_id == parent_id,
+                Child.status == ChildStatus.ENROLLED,
+            )
+            .order_by(Child.full_name)
+            .all()
         )
-        .order_by(Child.full_name)
-        .all()
-    )
 
     if not children:
         raise HTTPException(status_code=404, detail="Child not found")

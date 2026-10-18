@@ -89,7 +89,10 @@ from app.services.draft_report_service import (
 from app.services.extraction_service import (
     extract_multi_person,
 )
-from app.services.notification_service import parent_device_tokens
+from app.services.notification_service import (
+    child_parents_device_tokens,
+    parent_device_tokens,
+)
 from app.services.validation_service import ValidationError, validate_transcript_content
 from app.tasks.notifications import send_report_notifications
 from app.tasks.process_audio import process_audio_task
@@ -881,8 +884,14 @@ def _queue_report_notification(db, report, child, is_update: bool = False) -> in
     báo; lỗi provider không được làm hỏng thao tác gửi báo cáo.
     """
     targeted_devices = 0
-    if child is not None and child.parent_id is not None:
-        targeted_devices = len(parent_device_tokens(db, child.parent_id))
+    if child is not None:
+        p_links = getattr(child, "parent_links", None)
+        if isinstance(p_links, list) and len(p_links) > 0:
+            targeted_devices = len(child_parents_device_tokens(db, child.child_id))
+        elif getattr(child, "parent_id", None):
+            targeted_devices = len(parent_device_tokens(db, child.parent_id))
+        else:
+            targeted_devices = len(child_parents_device_tokens(db, child.child_id))
     send_report_notifications.delay(str(report.daily_report_id), is_update=is_update)
     return targeted_devices
 
@@ -1331,7 +1340,11 @@ def _send_one_report(
         db.refresh(report)
 
     child = report.child
-    linked_parents = 1 if (child and child.parent_id) else 0
+    linked_parents = (
+        len(child.parent_links)
+        if (child and hasattr(child, "parent_links") and child.parent_links)
+        else (1 if (child and child.parent_id) else 0)
+    )
 
     was_already_sent = bool(report.status == SENT_STATUS or report.sent_at is not None)
     is_update = was_already_sent

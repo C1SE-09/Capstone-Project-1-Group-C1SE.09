@@ -94,7 +94,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tuần này chưa có hoạt động nào.'), findsOneWidget);
-    expect(find.text('Thêm hoạt động'), findsWidgets);
+    expect(find.text('Thêm hoạt động'), findsOneWidget);
   });
 
   testWidgets('isReadOnly=true không cho phép phụ huynh thêm/sửa/xóa lịch', (tester) async {
