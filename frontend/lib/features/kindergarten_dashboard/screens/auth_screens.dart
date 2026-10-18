@@ -32,7 +32,59 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _loadingCredentials = true;
+  bool _rememberAccount = false;
   String? _errorMessage;
+  String? _rememberError;
+
+  bool get _busy => _isLoading || _loadingCredentials;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedLogin();
+  }
+
+  Future<void> _loadRememberedLogin() async {
+    try {
+      final saved = await _authRepository.readRememberedLogin();
+      if (!mounted) return;
+      if (saved != null) {
+        _usernameController.text = saved.username;
+        _passwordController.text = saved.password;
+        _rememberAccount = true;
+      }
+    } catch (_) {
+      if (mounted) {
+        _rememberError = 'Không thể đọc thông tin đã nhớ. Bạn vẫn có thể đăng nhập.';
+      }
+    } finally {
+      if (mounted) setState(() => _loadingCredentials = false);
+    }
+  }
+
+  Future<void> _setRememberAccount(bool? value) async {
+    if (_busy) return;
+    final enabled = value ?? false;
+    setState(() {
+      _rememberAccount = enabled;
+      _rememberError = null;
+      _loadingCredentials = !enabled;
+    });
+    if (enabled) return;
+    try {
+      await _authRepository.clearRememberedLogin();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _rememberAccount = true;
+          _rememberError = 'Chưa xóa được thông tin đã nhớ. Vui lòng thử lại.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loadingCredentials = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -42,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    if (_busy) return;
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
@@ -62,6 +115,25 @@ class _LoginScreenState extends State<LoginScreen> {
         username: username,
         password: password,
       );
+      if (!mounted) return;
+      try {
+        if (_rememberAccount) {
+          await _authRepository.saveRememberedLogin(
+            username: username,
+            password: password,
+          );
+        } else {
+          await _authRepository.clearRememberedLogin();
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Đã đăng nhập nhưng chưa lưu được lựa chọn ghi nhớ. '
+                'Hãy thử lại trên thiết bị này; bản web cần HTTPS hoặc localhost.'),
+          ));
+        }
+      }
+      if (!mounted) return;
       final rawRole = user.role.toLowerCase();
       final UserRole role;
       if (rawRole == 'admin') {
@@ -210,6 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: _usernameController,
+                          enabled: !_busy,
                           decoration: InputDecoration(
                             hintText: 'Nhập tên đăng nhập hoặc Gmail',
                             prefixIcon: const Icon(Icons.person_outline, size: 20),
@@ -244,6 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: _passwordController,
+                          enabled: !_busy,
                           obscureText: _obscurePassword,
                           decoration: InputDecoration(
                             hintText: 'Nhập mật khẩu',
@@ -277,11 +351,29 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
 
+                        CheckboxListTile(
+                          value: _rememberAccount,
+                          onChanged: _busy ? null : _setRememberAccount,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: const Text('Nhớ tài khoản', style: TextStyle(fontSize: 14)),
+                          subtitle: const Text(
+                            'Lưu cả mật khẩu. Chỉ dùng trên thiết bị riêng.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        if (_rememberError != null)
+                          Semantics(
+                            liveRegion: true,
+                            child: Text(_rememberError!,
+                                style: TextStyle(fontSize: 12, color: context.k.bad)),
+                          ),
+
                         // Forgot password button
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
+                            onPressed: _busy ? null : () {
                               if (widget.onForgotPassword != null) {
                                 widget.onForgotPassword!();
                               } else {
@@ -309,7 +401,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         SizedBox(
                           height: 48,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
+                            onPressed: _busy ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: context.k.brand,
                               foregroundColor: Colors.white,

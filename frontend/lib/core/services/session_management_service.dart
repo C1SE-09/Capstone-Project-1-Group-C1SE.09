@@ -89,7 +89,6 @@
 //     );
 // ==============================================================================
 
-import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -199,7 +198,8 @@ class SessionManagementService {
   SessionManagementService._internal();
 
   AppSession? _currentSession;
-  Completer<String?>? _refreshCompleter;
+  Future<String>? _refreshFuture;
+  String? _refreshSessionId;
 
   // Khóa lưu trong storage
   static const String _keyAccessToken = 'app_session_access_token';
@@ -210,6 +210,13 @@ class SessionManagementService {
   static const String _keyTeacherId = 'app_session_teacher_id';
   static const String _keyParentId = 'app_session_parent_id';
   static const String _keyDeviceName = 'app_session_device_name';
+  static const String _keyExpiresAt = 'app_session_expires_at';
+
+  bool _canRestoreSession(SharedPreferences prefs) {
+    final expiresAt = prefs.get(_keyExpiresAt);
+    return expiresAt is int &&
+        DateTime.now().millisecondsSinceEpoch < expiresAt;
+  }
 
   /// Lấy session hiện tại trong bộ nhớ RAM
   AppSession? get currentSession => _currentSession;
@@ -228,8 +235,8 @@ class SessionManagementService {
       final prefs = await SharedPreferences.getInstance();
       final refreshToken = prefs.getString(_keyRefreshToken);
 
-      if (refreshToken == null || refreshToken.isEmpty) {
-        _currentSession = null;
+      if (refreshToken == null || refreshToken.isEmpty || !_canRestoreSession(prefs)) {
+        await clearSession();
         return null;
       }
 
@@ -247,6 +254,7 @@ class SessionManagementService {
       return _currentSession;
     } catch (_) {
       // Trường hợp lỗi đọc storage, trả về null nhẹ nhàng, không gây crash
+      _currentSession = null;
       return null;
     }
   }
@@ -261,6 +269,8 @@ class SessionManagementService {
         prefs.setString(_keyRefreshToken, session.refreshToken),
         prefs.setString(_keySessionId, session.sessionId),
         prefs.setString(_keyRole, session.role),
+        prefs.setInt(_keyExpiresAt,
+            DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch),
         if (session.userId != null)
           prefs.setString(_keyUserId, session.userId!)
         else
@@ -283,26 +293,45 @@ class SessionManagementService {
     }
   }
 
+  /// Chỉ kiểm tra lúc mở lại/từ nền về, không ngắt công việc đang ở foreground.
+  Future<bool> expireSessionIfNeeded() async {
+    final session = _currentSession;
+    if (session == null) return false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_currentSession?.sessionId != session.sessionId) return false;
+      if (_canRestoreSession(prefs)) return false;
+    } catch (_) {
+      // Không xác minh được thời hạn thì yêu cầu đăng nhập lại, không giữ phiên vô hạn.
+    }
+    await clearSession();
+    return true;
+  }
+
   /// Cập nhật cặp Access Token & Refresh Token mới (Sau khi Silent Refresh)
   Future<void> updateTokens({
     required String newAccessToken,
     required String newRefreshToken,
   }) async {
-    if (_currentSession == null) return;
+    final session = _currentSession;
+    if (session == null) return;
 
-    _currentSession = _currentSession!.copyWith(
+    _currentSession = session.copyWith(
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     );
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_keyAccessToken, newAccessToken);
-      await prefs.setString(_keyRefreshToken, newRefreshToken);
+      if (_currentSession?.sessionId != session.sessionId) return;
+      await Future.wait([
+        prefs.setString(_keyAccessToken, newAccessToken),
+        prefs.setString(_keyRefreshToken, newRefreshToken),
+      ]);
     } catch (_) {}
   }
 
-  /// Xóa sạch phiên khi người dùng bấm ĐĂNG XUẤT chủ động
+  /// Xóa phiên, giữ định danh thiết bị và thông tin nhớ đăng nhập độc lập.
   Future<void> clearSession() async {
     _currentSession = null;
     try {
@@ -316,6 +345,7 @@ class SessionManagementService {
         prefs.remove(_keyTeacherId),
         prefs.remove(_keyParentId),
         prefs.remove(_keyDeviceName),
+        prefs.remove(_keyExpiresAt),
       ]);
     } catch (_) {}
   }
@@ -332,15 +362,30 @@ class SessionManagementService {
       throw const SessionExpiredException();
     }
 
-    // Nếu đang có một request refresh khác đang chạy, chờ kết quả của nó (tránh gửi nhiều lần)
-    if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
-      final token = await _refreshCompleter!.future;
-      if (token != null) return token;
-      throw const SessionExpiredException();
+    // Chia sẻ cả kết quả lẫn lỗi gốc, không biến lỗi mạng thành hết phiên ở request chờ.
+    final pending = _refreshFuture;
+    if (_refreshSessionId == session.sessionId && pending != null) {
+      final token = await pending;
+      if (_currentSession?.sessionId != session.sessionId) {
+        throw const SessionExpiredException();
+      }
+      return token;
     }
 
-    _refreshCompleter = Completer<String?>();
+    final future = _refreshForSession(dio, session);
+    _refreshFuture = future;
+    _refreshSessionId = session.sessionId;
+    try {
+      return await future;
+    } finally {
+      if (identical(_refreshFuture, future)) {
+        _refreshFuture = null;
+        _refreshSessionId = null;
+      }
+    }
+  }
 
+  Future<String> _refreshForSession(Dio dio, AppSession session) async {
     try {
       // Dùng một instance Dio sạch không gắn Interceptor để tránh vòng lặp vô hạn
       final refreshDio = Dio(
@@ -360,6 +405,10 @@ class SessionManagementService {
         },
       );
 
+      // Phiên có thể đã hết hạn/đổi tài khoản trong lúc chờ HTTP.
+      if (_currentSession?.sessionId != session.sessionId) {
+        throw const SessionExpiredException();
+      }
       final data = response.data;
       if (data is Map && data['access_token'] != null) {
         final newAccessToken = data['access_token'].toString();
@@ -370,15 +419,19 @@ class SessionManagementService {
           newRefreshToken: newRefreshToken,
         );
 
-        _refreshCompleter?.complete(newAccessToken);
+        if (_currentSession?.sessionId != session.sessionId) {
+          throw const SessionExpiredException();
+        }
         return newAccessToken;
       }
 
       throw const SessionExpiredException();
     } on DioException catch (e) {
+      if (_currentSession?.sessionId != session.sessionId) {
+        throw const SessionExpiredException();
+      }
       // 1. Kiểm tra nếu là lỗi mạng / mất kết nối (Offline) -> GIỮ NGUYÊN PHIÊN
       if (_isNetworkError(e)) {
-        _refreshCompleter?.complete(null);
         throw const OfflineException();
       }
 
@@ -386,23 +439,18 @@ class SessionManagementService {
       final status = e.response?.statusCode;
       if (status == 401 || status == 403) {
         await clearSession();
-        _refreshCompleter?.complete(null);
         throw const SessionExpiredException();
       }
 
       // Các lỗi khác -> thông báo chung, không xóa phiên
-      _refreshCompleter?.complete(null);
       throw const UserFacingException(
         'Không thể làm mới phiên làm việc. Vui lòng thử lại sau.',
       );
     } catch (e) {
-      _refreshCompleter?.complete(null);
       if (e is UserFacingException) rethrow;
       throw const UserFacingException(
         'Đã xảy ra sự cố xác thực. Vui lòng đăng nhập lại.',
       );
-    } finally {
-      _refreshCompleter = null;
     }
   }
 
@@ -442,6 +490,7 @@ class SessionManagementService {
             err.requestOptions.path.contains('/auth/refresh');
 
         if (err.response?.statusCode == 401 && !isAuthEndpoint) {
+          final sessionId = _currentSession?.sessionId;
           try {
             // Thử làm mới token ngầm
             final newToken = await refreshAccessToken(dio);
@@ -457,7 +506,9 @@ class SessionManagementService {
             return handler.reject(err);
           } on SessionExpiredException {
             // Phiên hết hạn -> gọi callback để UI điều hướng về login
-            (onSessionExpired ?? onSessionExpiredGlobally)?.call();
+            if (_currentSession == null || _currentSession?.sessionId == sessionId) {
+              (onSessionExpired ?? onSessionExpiredGlobally)?.call();
+            }
             return handler.reject(err);
           } catch (_) {
             return handler.reject(err);

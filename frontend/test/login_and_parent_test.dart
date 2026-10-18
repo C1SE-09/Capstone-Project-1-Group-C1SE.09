@@ -10,6 +10,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class MockParentDashboardRepository extends HttpDashboardRepository {
   @override
@@ -87,6 +88,8 @@ class MockParentDashboardRepository extends HttpDashboardRepository {
 }
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+
   testWidgets('LoginScreen renders card UI with username, password, remember me, and log in button',
       (WidgetTester tester) async {
     await tester.pumpWidget(
@@ -105,12 +108,12 @@ void main() {
     expect(find.text('KinderLog'), findsOneWidget);
 
     // Verify Fields & Controls
-    expect(find.text('Tên đăng nhập'), findsOneWidget);
+    expect(find.text('Tên đăng nhập hoặc Gmail'), findsOneWidget);
     expect(find.text('Mật khẩu'), findsOneWidget);
     expect(find.text('ĐĂNG NHẬP'), findsOneWidget);
 
     // Verify deleted items per user request
-    expect(find.text('Ghi nhớ đăng nhập'), findsNothing);
+    expect(find.text('Nhớ tài khoản'), findsOneWidget);
     expect(find.text('Quên mật khẩu?'), findsOneWidget);
     expect(find.text('Chưa có tài khoản? '), findsNothing);
     expect(find.text('Đăng ký ngay'), findsNothing);
