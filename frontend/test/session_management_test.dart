@@ -3,7 +3,9 @@
 //   AC2: repository tự làm mới phiên ngầm khi gặp 401
 //   AC4/AC6: mỗi máy gửi 1 device_id ổn định để backend đếm đúng số thiết bị
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:adark_frontend/core/routing/app_router.dart';
@@ -42,23 +44,23 @@ class _FakeAdapter implements HttpClientAdapter {
 }
 
 ResponseBody _json(Map<String, dynamic> body) => ResponseBody.fromString(
-  jsonEncode(body),
-  200,
-  headers: {
-    Headers.contentTypeHeader: [Headers.jsonContentType],
-  },
-);
+      jsonEncode(body),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
 
 Map<String, dynamic> _loginBody({String? sessionId}) => {
-  'access_token': 'access-moi',
-  'refresh_token': 'refresh-moi',
-  'session_id': sessionId ?? 'sid-1',
-  'token_type': 'bearer',
-  'role': 'parent',
-  'user_id': 'user-1',
-  'username': 'tuan',
-  'parent_id': 'parent-1',
-};
+      'access_token': 'access-moi',
+      'refresh_token': 'refresh-moi',
+      'session_id': sessionId ?? 'sid-1',
+      'token_type': 'bearer',
+      'role': 'parent',
+      'user_id': 'user-1',
+      'username': 'tuan',
+      'parent_id': 'parent-1',
+    };
 
 void main() {
   setUp(() async {
@@ -68,11 +70,11 @@ void main() {
 
   group('AC1 — mở lại app vào thẳng', () {
     AppSession sessionWithRole(String role) => AppSession(
-      accessToken: 'a',
-      refreshToken: 'r',
-      sessionId: 's',
-      role: role,
-    );
+          accessToken: 'a',
+          refreshToken: 'r',
+          sessionId: 's',
+          role: role,
+        );
 
     test('chưa có phiên thì về màn đăng nhập', () {
       expect(initialRouteFor(null), '/login');
@@ -92,10 +94,12 @@ void main() {
         'app_session_id': 'sid-cu',
         'app_session_role': 'parent',
         'app_session_parent_id': 'parent-1',
+        'app_session_expires_at':
+            DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch,
       });
 
-      final loaded = await SessionManagementService.instance
-          .loadPersistedSession();
+      final loaded =
+          await SessionManagementService.instance.loadPersistedSession();
 
       expect(loaded?.sessionId, 'sid-cu');
       expect(SessionManagementService.instance.isLoggedIn, isTrue);
@@ -110,6 +114,8 @@ void main() {
         'app_session_refresh_token': 'refresh-cu',
         'app_session_session_id': 'sid-cu',
         'app_session_role': 'parent',
+        'app_session_expires_at':
+            DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch,
       });
       await SessionManagementService.instance.loadPersistedSession();
       expect(SessionManagementService.instance.isLoggedIn, isTrue);
@@ -147,7 +153,8 @@ void main() {
       expect(
         deviceIds[1],
         deviceIds.first,
-        reason: 'cùng một máy mà đổi device_id thì backend đếm thành 2 thiết bị',
+        reason:
+            'cùng một máy mà đổi device_id thì backend đếm thành 2 thiết bị',
       );
       expect((adapter.requests.first.data as Map)['device_name'], isNotEmpty);
     });
@@ -159,7 +166,8 @@ void main() {
 
       expect(user.role, 'parent');
       expect(SessionManagementService.instance.isLoggedIn, isTrue);
-      expect(SessionManagementService.instance.currentSession?.sessionId, 'sid-1');
+      expect(
+          SessionManagementService.instance.currentSession?.sessionId, 'sid-1');
       expect(
         SessionManagementService.instance.currentSession?.refreshToken,
         'refresh-moi',
@@ -168,7 +176,232 @@ void main() {
     });
   });
 
+  group('Phiên khôi phục tối đa 1 giờ', () {
+    Map<String, Object> savedSession({int? expiresAt}) => {
+          'app_session_access_token': 'access-cu',
+          'app_session_refresh_token': 'refresh-cu',
+          'app_session_id': 'sid-cu',
+          'app_session_role': 'parent',
+          if (expiresAt != null) 'app_session_expires_at': expiresAt,
+        };
+
+    test('không khôi phục token sau 60 phút', () async {
+      SharedPreferences.setMockInitialValues(savedSession(
+        expiresAt: DateTime.now().millisecondsSinceEpoch,
+      ));
+      expect(await SessionManagementService.instance.loadPersistedSession(),
+          isNull);
+      expect(SessionManagementService.instance.isLoggedIn, isFalse);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('app_session_refresh_token'), isNull);
+    });
+
+    test('phiên cũ không có thời hạn phải đăng nhập lại một lần', () async {
+      SharedPreferences.setMockInitialValues(savedSession());
+      expect(await SessionManagementService.instance.loadPersistedSession(),
+          isNull);
+      expect(SessionManagementService.instance.isLoggedIn, isFalse);
+    });
+
+    test('khôi phục phiên khi còn thời hạn', () async {
+      SharedPreferences.setMockInitialValues(savedSession(
+        expiresAt: DateTime.now()
+            .add(const Duration(minutes: 1))
+            .millisecondsSinceEpoch,
+      ));
+      expect(
+          (await SessionManagementService.instance.loadPersistedSession())
+              ?.sessionId,
+          'sid-cu');
+    });
+
+    test('login đặt hạn 1 giờ và refresh không kéo dài thời hạn đó', () async {
+      final before =
+          DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch;
+      await SessionManagementService.instance.saveSession(const AppSession(
+        accessToken: 'access-moi',
+        refreshToken: 'refresh-moi',
+        sessionId: 'sid-moi',
+        role: 'parent',
+      ));
+      final after =
+          DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch;
+      final prefs = await SharedPreferences.getInstance();
+      final expiresAt = prefs.getInt('app_session_expires_at');
+      expect(expiresAt, isNotNull);
+      expect(expiresAt, inInclusiveRange(before, after));
+      await SessionManagementService.instance.updateTokens(
+        newAccessToken: 'access-refresh',
+        newRefreshToken: 'refresh-refresh',
+      );
+      expect(prefs.getInt('app_session_expires_at'), expiresAt);
+    });
+  });
+
   group('AC2 — repository tự làm mới phiên ngầm', () {
+    test('lỗi refresh tạm thời không làm request cùng phiên điều hướng login',
+        () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final received = Completer<HttpRequest>();
+      server.listen(received.complete);
+      final service = SessionManagementService.instance;
+      await service.saveSession(const AppSession(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        sessionId: 'same-session',
+        role: 'parent',
+      ));
+      var expired = 0;
+      Dio client() {
+        final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:${server.port}'))
+          ..httpClientAdapter =
+              _FakeAdapter((_) async => ResponseBody.fromString('{}', 401));
+        dio.interceptors.add(service.createDioInterceptor(dio,
+            onSessionExpired: () => expired++));
+        return dio;
+      }
+
+      final first = expectLater(
+          client().get('/api/parent/profile'), throwsA(isA<DioException>()));
+      final second = expectLater(
+          client().get('/api/parent/reports'), throwsA(isA<DioException>()));
+      final request = await received.future.timeout(const Duration(seconds: 5));
+      await request.drain<void>();
+      request.response.statusCode = 503;
+      await request.response.close();
+      await Future.wait([first, second]);
+      expect(expired, 0);
+      expect(service.currentSession?.sessionId, 'same-session');
+    });
+
+    test('phiên mới không chờ refresh đang chạy của phiên cũ', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final receivedOld = Completer<HttpRequest>();
+      server.listen((request) async {
+        final body = jsonDecode(await utf8.decoder.bind(request).join()) as Map;
+        if (body['session_id'] == 'old-session') {
+          receivedOld.complete(request);
+        } else {
+          request.response
+            ..headers.contentType = ContentType.json
+            ..write(jsonEncode({
+              'access_token': 'new-refreshed',
+              'refresh_token': 'new-refresh'
+            }));
+          await request.response.close();
+        }
+      });
+      final service = SessionManagementService.instance;
+      final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:${server.port}'));
+      await service.saveSession(const AppSession(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+        sessionId: 'old-session',
+        role: 'parent',
+      ));
+      final oldAssertion = expectLater(service.refreshAccessToken(dio),
+          throwsA(isA<SessionExpiredException>()));
+      final oldRequest =
+          await receivedOld.future.timeout(const Duration(seconds: 5));
+      await service.clearSession();
+      await service.saveSession(const AppSession(
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+        sessionId: 'new-session',
+        role: 'teacher',
+      ));
+      final newAssertion = expectLater(
+          service.refreshAccessToken(dio), completion('new-refreshed'));
+      oldRequest.response.statusCode = 401;
+      await oldRequest.response.close();
+      await oldAssertion;
+      await newAssertion;
+      expect(service.currentSession?.accessToken, 'new-refreshed');
+    });
+
+    test('lỗi refresh cũ không điều hướng phiên mới về login', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final received = Completer<HttpRequest>();
+      server.listen(received.complete);
+      final service = SessionManagementService.instance;
+      await service.saveSession(const AppSession(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+        sessionId: 'old-session',
+        role: 'parent',
+      ));
+      var expired = false;
+      final dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:${server.port}'))
+        ..httpClientAdapter =
+            _FakeAdapter((_) async => ResponseBody.fromString('{}', 401));
+      dio.interceptors.add(service.createDioInterceptor(dio,
+          onSessionExpired: () => expired = true));
+      final assertion = expectLater(
+          dio.get('/api/parent/profile'), throwsA(isA<DioException>()));
+      final request = await received.future.timeout(const Duration(seconds: 5));
+      await request.drain<void>();
+      await service.clearSession();
+      await service.saveSession(const AppSession(
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+        sessionId: 'new-session',
+        role: 'teacher',
+      ));
+      request.response.statusCode = 401;
+      await request.response.close();
+      await assertion;
+      expect(expired, isFalse);
+      expect(service.currentSession?.sessionId, 'new-session');
+    });
+
+    for (final status in [200, 401]) {
+      test('refresh cũ trả $status không ghi đè hoặc xóa phiên đăng nhập mới',
+          () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => server.close(force: true));
+        final received = Completer<HttpRequest>();
+        server.listen(received.complete);
+        final service = SessionManagementService.instance;
+        await service.saveSession(const AppSession(
+          accessToken: 'old-access',
+          refreshToken: 'old-refresh',
+          sessionId: 'old-session',
+          role: 'parent',
+        ));
+        final refresh = service.refreshAccessToken(Dio(BaseOptions(
+          baseUrl: 'http://127.0.0.1:${server.port}',
+        )));
+        final assertion =
+            expectLater(refresh, throwsA(isA<SessionExpiredException>()));
+        final request =
+            await received.future.timeout(const Duration(seconds: 5));
+        await request.drain<void>();
+        await service.clearSession();
+        await service.saveSession(const AppSession(
+          accessToken: 'new-access',
+          refreshToken: 'new-refresh',
+          sessionId: 'new-session',
+          role: 'teacher',
+        ));
+        request.response
+          ..statusCode = status
+          ..headers.contentType = ContentType.json
+          ..write(jsonEncode({
+            'access_token': 'late-access',
+            'refresh_token': 'late-refresh'
+          }));
+        await request.response.close();
+        await assertion;
+        expect(service.currentSession?.sessionId, 'new-session');
+        expect(service.currentSession?.accessToken, 'new-access');
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('app_session_access_token'), 'new-access');
+      });
+    }
+
     test('mọi repository đều gắn interceptor silent refresh', () {
       final opened = <String, Dio>{};
 
@@ -192,7 +425,8 @@ void main() {
         expect(
           entry.value.interceptors.length,
           greaterThanOrEqualTo(1),
-          reason: '${entry.key} chưa gắn interceptor → hết hạn token là 401 giữa chừng',
+          reason:
+              '${entry.key} chưa gắn interceptor → hết hạn token là 401 giữa chừng',
         );
       }
     });

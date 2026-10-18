@@ -2,12 +2,14 @@
 // =========================================================
 // Repository xử lý xác thực đăng nhập qua API POST /api/auth/login
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthUser {
@@ -75,6 +77,48 @@ class AuthRepository {
   final Dio _dio;
 
   static const String _keyDeviceId = 'app_session_device_id';
+  static const String _keyRememberedLogin = 'app_remembered_login';
+  // shortcut: WebCrypto chỉ phục vụ web demo trên HTTPS/localhost; bỏ khi ngừng bản web.
+  static const _rememberedLoginStorage = FlutterSecureStorage();
+
+  Future<({String username, String password})?> readRememberedLogin() async {
+    final raw = await _rememberedLoginStorage.read(key: _keyRememberedLogin);
+    if (raw == null) return null;
+    try {
+      final data = jsonDecode(raw);
+      if (data is Map &&
+          data['username'] is String &&
+          data['password'] is String &&
+          (data['username'] as String).trim().isNotEmpty &&
+          (data['password'] as String).isNotEmpty) {
+        return (
+          username: (data['username'] as String).trim(),
+          password: data['password'] as String,
+        );
+      }
+    } on FormatException {
+      // Bản ghi hỏng không được dùng để điền form.
+    }
+    await clearRememberedLogin();
+    return null;
+  }
+
+  /// Chỉ gọi sau khi server xác thực thành công và người dùng đã chọn ghi nhớ.
+  Future<void> saveRememberedLogin({
+    required String username,
+    required String password,
+  }) async {
+    if (username.trim().isEmpty || password.isEmpty) {
+      throw const AuthException('Thông tin ghi nhớ đăng nhập không hợp lệ.');
+    }
+    await _rememberedLoginStorage.write(
+      key: _keyRememberedLogin,
+      value: jsonEncode({'username': username.trim(), 'password': password}),
+    );
+  }
+
+  Future<void> clearRememberedLogin() =>
+      _rememberedLoginStorage.delete(key: _keyRememberedLogin);
 
   /// Id thiết bị ổn định cho ngưỡng "tối đa 4 thiết bị" của backend: sinh 1 lần
   /// rồi giữ trong máy. Không dùng token FCM vì token đó xoay vòng, một máy sẽ
@@ -127,8 +171,7 @@ class AuthRepository {
         throw const AuthException('Dữ liệu phản hồi không hợp lệ.');
       }
       currentUser = user;
-      // Lưu phiên xuống máy để lần mở app sau vào thẳng (AC1) và để interceptor
-      // có refresh token mà làm mới ngầm (AC2).
+      // Khôi phục phiên trong 1 giờ; refresh token vẫn phục vụ thao tác foreground.
       final raw = data is Map
           ? Map<String, dynamic>.from(data)
           : const <String, dynamic>{};

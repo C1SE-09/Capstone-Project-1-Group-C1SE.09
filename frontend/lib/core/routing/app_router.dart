@@ -26,6 +26,11 @@ String initialRouteFor(AppSession? session) {
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
+  redirect: (context, state) {
+    final isPublicRoute = state.uri.path == '/login' || state.uri.path == '/forgot-password';
+    if (!isPublicRoute && !SessionManagementService.instance.isLoggedIn) return '/login';
+    return null;
+  },
   // Đọc phiên đã nạp từ main() — top-level final nên chỉ chạy lần đầu appRouter
   // được đọc, tức sau khi loadPersistedSession() xong.
   initialLocation: initialRouteFor(

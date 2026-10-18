@@ -62,6 +62,8 @@ dependencies:
 
   # Persist user preferences (theme mode)
   shared_preferences: ^2.3.2
+  # Thông tin đăng nhập đã nhớ phải được mã hóa, không lưu bằng SharedPreferences.
+  flutter_secure_storage: ^10.3.4
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
 
