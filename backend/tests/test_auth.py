@@ -93,3 +93,38 @@ class TestChangePasswordUnauthorized:
         resp = test_client.post("/api/auth/change-password", json=payload)
         assert resp.status_code == 401
         app.dependency_overrides.clear()
+
+
+class TestLoginWithEmailOrUsername:
+    """POST /api/auth/login hỗ trợ username hoặc Gmail"""
+
+    def test_login_with_username_success(self, client, mock_user, mock_db):
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+        payload = {
+            "username": "teacher1",
+            "password": "old_password_123",
+            "device_id": "test_device",
+            "device_name": "Test Device",
+        }
+        resp = client.post("/api/auth/login", json=payload)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["username"] == "teacher1"
+        assert data["role"] == "teacher"
+
+    def test_login_with_gmail_success(self, client, mock_user, mock_db):
+        mock_teacher = MagicMock()
+        mock_teacher.teacher_id = mock_user.user_id
+        # First query for Teacher by email -> mock_teacher, second query for User by teacher_id -> mock_user
+        mock_db.query.return_value.filter.return_value.first.side_effect = [mock_teacher, mock_user]
+        payload = {
+            "username": "teacher1@gmail.com",
+            "password": "old_password_123",
+            "device_id": "test_device",
+            "device_name": "Test Device",
+        }
+        resp = client.post("/api/auth/login", json=payload)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["username"] == "teacher1"
+

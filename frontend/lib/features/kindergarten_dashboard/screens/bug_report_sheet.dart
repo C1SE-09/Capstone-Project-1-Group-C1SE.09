@@ -137,7 +137,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Color(0xFF16665A),
-          content: Text('Báo cáo lỗi đã được gửi thành công! Cảm ơn đóng góp của bạn.'),
+          content: Text('Góp ý của bạn đã được gửi thành công! Cảm ơn bạn đã đóng góp cải thiện ứng dụng.'),
         ),
       );
 
@@ -156,7 +156,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
           _isSubmitting = false;
           _formError = e is BugReportException
               ? e.message
-              : 'Gửi báo cáo thất bại. Vui lòng kiểm tra kết nối mạng và thử lại.';
+              : 'Gửi góp ý thất bại. Vui lòng kiểm tra kết nối mạng và thử lại.';
         });
       }
     }
@@ -204,7 +204,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                       color: k.brandTint,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.bug_report_rounded, color: k.brand, size: 22),
+                    child: Icon(Icons.rate_review_outlined, color: k.brand, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -212,7 +212,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Báo cáo lỗi & Góp ý',
+                          'Góp ý & Cải thiện ứng dụng',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
@@ -220,7 +220,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                           ),
                         ),
                         Text(
-                          'Phản hồi vấn đề kỹ thuật đến đội ngũ phát triển',
+                          'Chia sẻ ý kiến đóng góp hoặc sự cố để KinderLog ngày càng tốt hơn',
                           style: TextStyle(fontSize: 12, color: k.inkSoft),
                         ),
                       ],
@@ -289,12 +289,12 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
               const SizedBox(height: 16),
             ],
 
-            // Tiêu đề lỗi
-            _buildFieldLabel('Tiêu đề sự cố *'),
+            // Tiêu đề góp ý
+            _buildFieldLabel('Tiêu đề góp ý / vấn đề *'),
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
-                hintText: 'Tóm tắt ngắn gọn vấn đề (ví dụ: Không xem được ảnh điểm danh)',
+                hintText: 'Tóm tắt ngắn gọn góp ý hoặc vấn đề (ví dụ: Gợi ý thêm tính năng lưu ảnh...)',
                 hintStyle: TextStyle(color: k.inkFaint, fontSize: 13),
                 filled: true,
                 fillColor: k.surfaceSunken,
@@ -315,7 +315,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
               style: TextStyle(fontSize: 14, color: k.ink),
               validator: (val) {
                 if (val == null || val.trim().isEmpty) {
-                  return 'Vui lòng nhập tiêu đề sự cố';
+                  return 'Vui lòng nhập tiêu đề góp ý hoặc vấn đề';
                 }
                 if (val.trim().length > 200) {
                   return 'Tiêu đề không được vượt quá 200 ký tự';
@@ -332,7 +332,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
               controller: _descriptionController,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: 'Mô tả cụ thể các bước bạn đã làm trước khi lỗi xuất hiện, nội dung lỗi hiển thị...',
+                hintText: 'Mô tả chi tiết ý kiến cải thiện hoặc sự cố gặp phải để đội ngũ hỗ trợ tốt nhất...',
                 hintStyle: TextStyle(color: k.inkFaint, fontSize: 13),
                 filled: true,
                 fillColor: k.surfaceSunken,
@@ -367,7 +367,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildFieldLabel('Ảnh chụp màn hình (tối đa 5 ảnh)'),
+                _buildFieldLabel('Ảnh minh họa (tối đa 5 ảnh)'),
                 Text('${_attachments.length}/5', style: TextStyle(fontSize: 12, color: k.inkSoft)),
               ],
             ),
@@ -448,7 +448,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Hệ thống sẽ tự động đính kèm thông tin thiết bị và phiên bản ứng dụng để kỹ thuật viên xử lý nhanh hơn.',
+                      'Hệ thống sẽ tự động đính kèm thông tin thiết bị và phiên bản ứng dụng để hỗ trợ cải thiện trải nghiệm tốt hơn.',
                       style: TextStyle(fontSize: 11, color: k.inkSoft),
                     ),
                   ),
@@ -459,7 +459,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
             // Submit Button
             KButton(
-              label: _isSubmitting ? 'Đang gửi...' : 'Gửi báo cáo lỗi',
+              label: _isSubmitting ? 'Đang gửi...' : 'Gửi góp ý cải thiện',
               icon: _isSubmitting ? null : Icons.send_rounded,
               large: true,
               onPressed: _isSubmitting ? null : _submitReport,

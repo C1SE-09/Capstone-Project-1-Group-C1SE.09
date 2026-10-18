@@ -291,8 +291,8 @@ class _ParentAccountState extends State<ParentAccount> {
               const Divider(height: 1),
               _settingsRow(
                 context,
-                icon: Icons.bug_report_outlined,
-                label: 'Báo cáo lỗi & Góp ý',
+                icon: Icons.rate_review_outlined,
+                label: 'Góp ý & Cải thiện ứng dụng',
                 trailing: Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
                 onTap: () => showBugReportBottomSheet(context),
               ),

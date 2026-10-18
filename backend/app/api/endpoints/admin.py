@@ -134,7 +134,7 @@ class ScheduleUpdate(BaseModel):
 
 @router.get("/teachers")
 def list_teachers(db: Session = Depends(get_db)):
-    teachers = db.query(Teacher).all()
+    teachers = db.query(Teacher).order_by(Teacher.created_at.desc()).all()
     results = []
     for t in teachers:
         tc_rows = db.execute(
@@ -343,7 +343,7 @@ def list_classes(db: Session = Depends(get_db)):
 
 @router.get("/parents")
 def list_parents(db: Session = Depends(get_db)):
-    parents = db.query(Parent).all()
+    parents = db.query(Parent).order_by(Parent.created_at.desc()).all()
     results = []
     for p in parents:
         children_info = []
