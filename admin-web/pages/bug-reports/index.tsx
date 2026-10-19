@@ -10,7 +10,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
 import { Badge, Card, EmptyState, Spinner } from "@/components/ui";
-import { apiFetch, getToken } from "@/lib/api";
+import { apiFetch, clearToken, getToken } from "@/lib/api";
 import {
   CATEGORY_LABELS,
   ROLE_LABELS,
