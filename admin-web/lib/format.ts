@@ -69,3 +69,16 @@ export function relativeTime(iso: string | null | undefined): string {
   if (diff < 604800) return `${Math.floor(diff / 86400)} ngày trước`;
   return formatDateShort(iso);
 }
+
+/**
+ * Kiểm tra và làm sạch URL ngăn chặn XSS (chặn javascript:, data:, vbscript:).
+ */
+export function sanitizeUrl(url: string | null | undefined): string {
+  if (!url) return "#";
+  const trimmed = url.trim();
+  if (/^(https?:\/\/|\/)/i.test(trimmed) && !/^\s*javascript:/i.test(trimmed)) {
+    return trimmed;
+  }
+  return "#";
+}
+

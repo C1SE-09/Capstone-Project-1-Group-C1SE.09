@@ -78,7 +78,9 @@ export async function apiFetch<T = any>(
   }
 
   // Headers
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    "Bypass-Tunnel-Reminder": "true",
+  };
   if (!isFormData && body) {
     headers["Content-Type"] = "application/json";
   }

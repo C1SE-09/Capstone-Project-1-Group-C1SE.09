@@ -7,7 +7,8 @@
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
-import { clearToken, getStoredAdmin } from "@/lib/api";
+import { clearToken, getStoredAdmin, getToken } from "@/lib/api";
+import { Spinner } from "@/components/ui";
 
 interface Props {
   children: ReactNode;
@@ -19,14 +20,17 @@ export default function AdminLayout({ children, currentPage = "dashboard" }: Pro
   const [adminName, setAdminName] = useState<string>("");
   const [adminEmail, setAdminEmail] = useState<string>("");
   const [showMenu, setShowMenu] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
 
   useEffect(() => {
+    const token = getToken();
     const admin = getStoredAdmin();
-    if (admin) {
+    if (token && admin) {
       setAdminName(admin.full_name);
       setAdminEmail(admin.email);
+      setIsAuthorized(true);
     } else {
-      // Không có thông tin admin → đẩy về login
+      clearToken();
       router.replace("/login");
     }
   }, [router]);
@@ -35,6 +39,14 @@ export default function AdminLayout({ children, currentPage = "dashboard" }: Pro
     clearToken();
     router.replace("/login");
   };
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-50">
