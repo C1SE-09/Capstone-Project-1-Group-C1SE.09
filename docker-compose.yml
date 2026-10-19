@@ -33,8 +33,9 @@ services:
       retries: 5
 
   minio:
-    image: quay.io/minio/minio:latest
+    image: alpine/minio:latest-release
     container_name: kinderlog_minio
+    user: "0:0"
     environment:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
@@ -45,7 +46,7 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || wget -q --spider http://localhost:9000/minio/health/live || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -70,10 +71,7 @@ services:
   worker:
     build: ./backend
     container_name: kinderlog_worker
-    # Cấp toàn bộ GPU cho worker để CTranslate2 chạy CUDA INT8.
-    # Yêu cầu host đã cài NVIDIA Container Toolkit.
-    # Nếu host không có GPU: bỏ dòng `gpus` để worker tự fallback CPU INT8.
-    gpus: all
+    # Host không có GPU NVIDIA: worker chạy CPU hoặc gửi request sang server GPU ngoài.
     env_file: .env
     volumes:
       - ./backend:/app
