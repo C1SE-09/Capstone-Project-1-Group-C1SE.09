@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, Spinner } from "@/components/ui";
-import { apiFetch, getToken } from "@/lib/api";
+import { apiFetch, clearToken, getToken } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
 interface Stats {
