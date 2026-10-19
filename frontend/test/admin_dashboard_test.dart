@@ -151,7 +151,8 @@ void main() {
 
     // Verify 7-day Trend Chart Card
     expect(find.text('Xu hướng báo cáo 7 ngày gần nhất'), findsOneWidget);
-    expect(find.textContaining('Xanh: đã gửi, Vàng: bản nháp'), findsOneWidget);
+    expect(find.textContaining('Đã gửi'), findsWidgets);
+    expect(find.textContaining('Bản nháp'), findsWidgets);
   });
 
   testWidgets('AdminDashboardScreen overview tab does not have search field, features tab has search field', (tester) async {
@@ -254,8 +255,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify bug report item exists
-    expect(find.text('Báo cáo lỗi & Góp ý'), findsOneWidget);
-    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    expect(find.text('Góp ý & Cải thiện ứng dụng'), findsOneWidget);
+    expect(find.byIcon(Icons.rate_review_outlined), findsOneWidget);
   });
 
   testWidgets('AdminDashboardScreen account tab displays School Admin role', (tester) async {

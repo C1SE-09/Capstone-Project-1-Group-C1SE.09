@@ -116,7 +116,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify Title and Description fields exist
-    expect(find.text('Tiêu đề sự cố *'), findsOneWidget);
+    expect(find.text('Tiêu đề góp ý / vấn đề *'), findsOneWidget);
     expect(find.text('Mô tả chi tiết *'), findsOneWidget);
 
     // Verify Category and Severity pickers are NOT present
@@ -131,7 +131,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Submit report
-    final submitButton = find.widgetWithText(FilledButton, 'Gửi báo cáo lỗi');
+    final submitButton = find.text('Gửi góp ý cải thiện');
     expect(submitButton, findsOneWidget);
     await tester.ensureVisible(submitButton);
     await tester.pumpAndSettle();

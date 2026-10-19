@@ -397,27 +397,4 @@ class ValidationError(Exception):
         self.reason = reason
         super().__init__(self.message)
 
-
-# ============================================================================
-# EXAMPLE USAGE
-# ============================================================================
-
-if __name__ == "__main__":
-    # Test cases
-    test_transcripts = [
-        # ✅ Valid transcripts
-        "Hôm nay bé ăn ngon, tự xúc hết bát cơm. Ngủ trưa ngủ một mạch. Khỏe mạnh. Chơi cầu trượt vui vẻ.",
-        "Con chán ăn, ngậm cơm. Trằn trọc khó ngủ. Bị ho nhẹ. Tâm trạng buồn.",
-        
-        # ❌ Invalid transcripts
-        "Trời hôm nay nắng đẹp, nhiệt độ 30 độ C.",
-        "Bài giảng toán hôm nay về phương trình bậc 2.",
-        "Đội bóng đá Việt Nam thắng 3-1.",
-    ]
-    
-    for i, transcript in enumerate(test_transcripts):
-        print(f"\n{'='*60}")
-        print(f"Test {i+1}: {'VALID' if is_transcript_valid(transcript) else 'INVALID'}")
-        print(f"Transcript: {transcript[:80]}...")
-        details = get_validation_details(transcript)
-        print(f"Details: {details}")
+

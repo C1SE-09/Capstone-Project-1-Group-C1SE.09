@@ -82,6 +82,7 @@ from app.schemas.report import (
     VoiceRecordUploadResponse,
 )
 from app.services.draft_report_service import (
+    FIELDS_MAPPING,
     create_child_draft,
     create_classwide_drafts,
     create_unmatched_drafts,
@@ -163,6 +164,38 @@ def _sanitize_stem(name: str) -> str:
     ascii_name = nfkd.encode("ASCII", "ignore").decode("ASCII")
     clean = re.sub(r"[^\w\-.]", "_", ascii_name)
     return clean.strip("._") or "recording"
+
+
+def _build_report_detail_response(
+    report: DailyReport, db: Session
+) -> DailyReportDetailResponse:
+    """Xây dựng DailyReportDetailResponse kèm danh sách ActivityEntry đã sắp xếp."""
+    activities_in_db = (
+        db.query(ActivityEntry)
+        .filter(ActivityEntry.daily_report_id == report.daily_report_id)
+        .order_by(ActivityEntry.entry_order)
+        .all()
+    )
+
+    return DailyReportDetailResponse(
+        daily_report_id=report.daily_report_id,
+        report_id=report.daily_report_id,
+        child_id=report.child_id,
+        teacher_id=report.teacher_id,
+        report_date=report.report_date.isoformat(),
+        status=report.status.value,
+        published_at=report.published_at.isoformat() if report.published_at else None,
+        activities=[
+            ActivityEntryResponse(
+                activity_entry_id=e.activity_entry_id,
+                category=e.category.value,
+                title=e.title,
+                description=e.description,
+                entry_order=e.entry_order,
+            )
+            for e in activities_in_db
+        ],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -671,15 +704,7 @@ def create_report_from_extraction(
         db.flush()
 
     # 4. Map extraction → ActivityEntry
-    mapping = [
-        ("meals", "MEAL", "Bữa ăn"),
-        ("sleeping", "NAP", "Giấc ngủ"),
-        ("health", "HEALTH", "Sức khỏe"),
-        ("activities", "PLAY", "Hoạt động"),
-        ("mood", "BEHAVIOR", "Tâm trạng"),
-    ]
-
-    for order, (key, category_str, title) in enumerate(mapping):
+    for order, (key, category_str, title) in enumerate(FIELDS_MAPPING):
         value = result.get(key)
         description = (
             value.strip()
@@ -802,32 +827,7 @@ def create_manual_report(
     db.commit()
     db.refresh(report)
 
-    activities_in_db = (
-        db.query(ActivityEntry)
-        .filter(ActivityEntry.daily_report_id == report.daily_report_id)
-        .order_by(ActivityEntry.entry_order)
-        .all()
-    )
-
-    return DailyReportDetailResponse(
-        daily_report_id=report.daily_report_id,
-        report_id=report.daily_report_id,
-        child_id=report.child_id,
-        teacher_id=report.teacher_id,
-        report_date=report.report_date.isoformat(),
-        status=report.status.value,
-        published_at=report.published_at.isoformat() if report.published_at else None,
-        activities=[
-            ActivityEntryResponse(
-                activity_entry_id=e.activity_entry_id,
-                category=e.category.value,
-                title=e.title,
-                description=e.description,
-                entry_order=e.entry_order,
-            )
-            for e in activities_in_db
-        ],
-    )
+    return _build_report_detail_response(report, db)
 
 
 @router.get("/reports/{report_id}", summary="Chi tiết báo cáo")
@@ -849,32 +849,7 @@ def get_report_detail(
             status_code=403, detail="Not authorized to access this report"
         )
 
-    activities_in_db = (
-        db.query(ActivityEntry)
-        .filter(ActivityEntry.daily_report_id == report.daily_report_id)
-        .order_by(ActivityEntry.entry_order)
-        .all()
-    )
-
-    return DailyReportDetailResponse(
-        daily_report_id=report.daily_report_id,
-        report_id=report.daily_report_id,
-        child_id=report.child_id,
-        teacher_id=report.teacher_id,
-        report_date=report.report_date.isoformat(),
-        status=report.status.value,
-        published_at=report.published_at.isoformat() if report.published_at else None,
-        activities=[
-            ActivityEntryResponse(
-                activity_entry_id=e.activity_entry_id,
-                category=e.category.value,
-                title=e.title,
-                description=e.description,
-                entry_order=e.entry_order,
-            )
-            for e in activities_in_db
-        ],
-    )
+    return _build_report_detail_response(report, db)
 
 
 def _queue_report_notification(db, report, child, is_update: bool = False) -> int:
