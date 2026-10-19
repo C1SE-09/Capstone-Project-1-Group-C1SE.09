@@ -32,7 +32,7 @@ export default function LoginPage() {
         };
       }>("/api/admin-auth/login", {
         method: "POST",
-        body: { email, password },
+        body: { email: email.trim().toLowerCase(), password },
         auth: false, // không cần token khi login
       });
 

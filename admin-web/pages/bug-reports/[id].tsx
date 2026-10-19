@@ -17,6 +17,7 @@ import {
   SEVERITY_COLORS,
   STATUS_COLORS,
   formatDate,
+  sanitizeUrl,
 } from "@/lib/format";
 
 interface HistoryEntry {
@@ -300,14 +301,16 @@ export default function BugReportDetailPage() {
                   File đính kèm ({report.attachments.length})
                 </h3>
                 <div className="space-y-2">
-                  {report.attachments.map((att) => (
-                    <a
-                      key={att.attachment_id}
-                      href={att.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
+                  {report.attachments.map((att) => {
+                    const safeUrl = sanitizeUrl(att.file_url);
+                    return (
+                      <a
+                        key={att.attachment_id}
+                        href={safeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
                       <span className="text-2xl">
                         {att.mime_type?.startsWith("image/") ? "🖼️" : "📄"}
                       </span>
@@ -322,7 +325,8 @@ export default function BugReportDetailPage() {
                       </div>
                       <span className="text-xs text-brand-600">Mở ↗</span>
                     </a>
-                  ))}
+                  );
+                })}
                 </div>
               </Card>
             )}
