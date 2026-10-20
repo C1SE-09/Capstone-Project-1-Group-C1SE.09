@@ -4,7 +4,8 @@
  * UI components nhỏ dùng chung cho School Admin — y hệt pattern Flutter app.
  */
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { downloadExcelTemplate, parseExcelOrCsv } from "@/lib/excel-helper";
 
 /* ════════ Spinner ════════ */
 export function Spinner({ className = "" }: { className?: string }) {
@@ -340,27 +341,29 @@ export function SearchBar({
   placeholder?: string;
 }) {
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder ?? "Tìm kiếm..."}
-        className="kinput pl-9"
-      />
+    <div className="relative flex items-center">
       <svg
         width="16"
         height="16"
         viewBox="0 0 24 24"
         fill="#605D57"
-        className="absolute left-3 top-1/2 -translate-y-1/2"
+        className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none select-none z-10"
       >
         <path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.51 4.51 0 0 1 9.5 14z" />
       </svg>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? "Tìm kiếm..."}
+        className="kinput !pl-10 !pr-9"
+        style={{ paddingLeft: "2.5rem", paddingRight: "2.25rem" }}
+      />
       {value && (
         <button
+          type="button"
           onClick={() => onChange("")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink w-6 h-6 flex items-center justify-center"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink w-6 h-6 flex items-center justify-center rounded-full hover:bg-black/5 z-10"
         >
           ✕
         </button>
@@ -437,3 +440,342 @@ export function EmptyState({
     </div>
   );
 }
+
+/* ════════ ClassFilterSelect ════════ */
+export function ClassFilterSelect({
+  classes,
+  value,
+  onChange,
+  placeholder = "Tất cả các lớp",
+  className = "",
+}: {
+  classes: { id: string; name: string; room_number?: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`relative flex items-center ${className}`}>
+      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft text-sm pointer-events-none select-none z-10 leading-none">
+        🏫
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="kinput !pl-10 !pr-9 text-sm font-medium appearance-none cursor-pointer bg-white"
+        style={{ paddingLeft: "2.5rem", paddingRight: "2.25rem" }}
+      >
+        <option value="">{placeholder}</option>
+        {classes.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name} {c.room_number ? `(${c.room_number})` : ""}
+          </option>
+        ))}
+      </select>
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          title="Bỏ lọc lớp"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink w-5 h-5 flex items-center justify-center text-xs rounded-full hover:bg-black/5 z-10"
+        >
+          ✕
+        </button>
+      ) : (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-soft text-xs select-none z-10">
+          ▼
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ════════ ImportModal ════════ */
+export interface ImportResult {
+  total: number;
+  success: number;
+  failed: number;
+  errors: string[];
+}
+
+export function ImportModal({
+  open,
+  onClose,
+  title,
+  description,
+  sampleHeaders,
+  sampleRow,
+  templateFilename,
+  onImportRows,
+  onSuccess,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
+  sampleHeaders: string[];
+  sampleRow: string[];
+  templateFilename: string;
+  onImportRows: (rows: string[][]) => Promise<ImportResult>;
+  onSuccess?: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [parsedRows, setParsedRows] = useState<string[][]>([]);
+  const [parsing, setParsing] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Reset state when closing or opening
+  useEffect(() => {
+    if (open) {
+      setFile(null);
+      setParsedRows([]);
+      setParsing(false);
+      setImporting(false);
+      setResult(null);
+      setErrorMsg(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, [open]);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    setFile(selected);
+    setErrorMsg(null);
+    setResult(null);
+    setParsing(true);
+    try {
+      const rows = await parseExcelOrCsv(selected);
+      if (rows.length === 0) {
+        setErrorMsg("Không tìm thấy dòng dữ liệu nào trong file được chọn.");
+        setParsedRows([]);
+      } else {
+        setParsedRows(rows);
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Không thể đọc file. Vui lòng kiểm tra định dạng.");
+      setParsedRows([]);
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  function handleDownloadTemplate() {
+    downloadExcelTemplate(templateFilename, "Mau_Nhap", sampleHeaders, sampleRow);
+  }
+
+  async function handleStartImport() {
+    if (parsedRows.length === 0) return;
+    setImporting(true);
+    setErrorMsg(null);
+    try {
+      const res = await onImportRows(parsedRows);
+      setResult(res);
+      if (res.success > 0 && onSuccess) {
+        onSuccess();
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Đã xảy ra lỗi trong quá trình nhập dữ liệu.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      size="lg"
+      footer={
+        <div className="flex items-center justify-between w-full">
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className="kbtn kbtn-ghost text-xs text-brand flex items-center gap-1.5"
+          >
+            📥 Tải file mẫu (.xlsx)
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={importing}
+              className="kbtn kbtn-secondary"
+            >
+              {result ? "Đóng" : "Hủy"}
+            </button>
+            {!result && (
+              <button
+                type="button"
+                onClick={handleStartImport}
+                disabled={parsedRows.length === 0 || importing || parsing}
+                className="kbtn kbtn-primary flex items-center gap-2"
+              >
+                {importing && (
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
+                {importing
+                  ? "Đang nhập..."
+                  : `Nhập dữ liệu (${parsedRows.length} dòng)`}
+              </button>
+            )}
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {description && (
+          <p className="text-sm text-ink-soft">{description}</p>
+        )}
+
+        {/* Step 1: Template download instruction */}
+        <div className="rounded-card border border-line bg-sunken/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div>
+            <div className="font-bold text-ink mb-0.5">
+              Bước 1: Chuẩn bị file dữ liệu
+            </div>
+            <div className="text-ink-soft">
+              Hỗ trợ định dạng Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) hoặc <strong>.csv</strong>. Bạn có thể tải file mẫu để nhập đúng cấu trúc.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className="kbtn kbtn-secondary text-xs whitespace-nowrap self-start sm:self-auto shrink-0"
+          >
+            📄 Tải file mẫu
+          </button>
+        </div>
+
+        {/* Step 2: Upload dropzone */}
+        <div>
+          <label className="klabel mb-1.5">Bước 2: Chọn file dữ liệu tải lên</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv,.txt"
+            onChange={handleFileChange}
+            className="hidden"
+            id="excel-file-upload-input"
+          />
+          <label
+            htmlFor="excel-file-upload-input"
+            className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
+          >
+            <div className="text-3xl mb-2">📁</div>
+            <div className="text-sm font-semibold text-ink">
+              {file ? file.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
+            </div>
+            <div className="text-xs text-ink-faint mt-1">
+              Hỗ trợ các định dạng .xlsx, .xls, .csv (tối đa 10MB)
+            </div>
+          </label>
+        </div>
+
+        {/* Parsing state */}
+        {parsing && (
+          <div className="flex items-center justify-center py-4 text-xs text-ink-soft gap-2">
+            <span className="inline-block w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+            Đang phân tích file...
+          </div>
+        )}
+
+        {/* Error message */}
+        {errorMsg && (
+          <div className="rounded-control bg-bad/10 border border-bad/30 p-3 text-xs text-bad">
+            ⚠ {errorMsg}
+          </div>
+        )}
+
+        {/* Preview parsed data */}
+        {parsedRows.length > 0 && !result && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-ink">
+              <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
+              <span className="text-ink-soft font-normal">Hiển thị trước tối đa 5 dòng</span>
+            </div>
+            <div className="border border-line rounded-control overflow-x-auto max-h-48">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-sunken font-semibold text-ink border-b border-line sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2 w-10">#</th>
+                    {sampleHeaders.map((h, i) => (
+                      <th key={i} className="px-3 py-2 whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {parsedRows.slice(0, 5).map((row, idx) => (
+                    <tr key={idx} className="hover:bg-sunken/40">
+                      <td className="px-3 py-2 text-ink-faint">{idx + 1}</td>
+                      {sampleHeaders.map((_, colIdx) => (
+                        <td
+                          key={colIdx}
+                          className="px-3 py-2 whitespace-nowrap text-ink-soft"
+                        >
+                          {row[colIdx] || "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Import Results */}
+        {result && (
+          <div className="rounded-card border border-line p-4 space-y-3 bg-sunken/20">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">
+                {result.failed === 0 ? "🎉" : "ℹ"}
+              </span>
+              <span className="font-bold text-sm text-ink">
+                Kết quả nhập dữ liệu
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="card p-2 bg-white">
+                <div className="text-ink-soft">Tổng số dòng</div>
+                <div className="text-base font-bold text-ink mt-0.5">
+                  {result.total}
+                </div>
+              </div>
+              <div className="card p-2 bg-white">
+                <div className="text-ok">Thành công</div>
+                <div className="text-base font-bold text-ok mt-0.5">
+                  {result.success}
+                </div>
+              </div>
+              <div className="card p-2 bg-white">
+                <div className="text-bad">Thất bại</div>
+                <div className="text-base font-bold text-bad mt-0.5">
+                  {result.failed}
+                </div>
+              </div>
+            </div>
+            {result.errors.length > 0 && (
+              <div className="text-xs space-y-1">
+                <div className="font-semibold text-bad">Chi tiết lỗi:</div>
+                <div className="max-h-32 overflow-y-auto bg-bad/5 border border-bad/20 rounded p-2 text-bad space-y-1">
+                  {result.errors.map((err, i) => (
+                    <div key={i}>• {err}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}

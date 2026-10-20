@@ -128,6 +128,7 @@ class TestAdminParentChildEndpoints:
         c.parent_links = [link1, link2]
 
         mock_db.query.return_value.all.return_value = [c]
+        mock_db.query.return_value.order_by.return_value.all.return_value = [c]
 
         results = list_children(mock_db)
         assert len(results) == 1
