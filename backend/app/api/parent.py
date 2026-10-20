@@ -93,7 +93,11 @@ def update_parent_phone(
 
     if data.relationship is not None:
         rel = data.relationship.strip()
-        parent.relationship = rel if rel else None
+        val = rel if rel else None
+        if hasattr(parent, "relationship_"):
+            parent.relationship_ = val
+        else:
+            setattr(parent, "relationship", val)
 
     db.commit()
     db.refresh(parent)
@@ -101,7 +105,9 @@ def update_parent_phone(
         "message": "Cập nhật thông tin phụ huynh thành công",
         "phone": parent.phone,
         "email": parent.email,
-        "relationship": parent.relationship,
+        "relationship": getattr(
+            parent, "relationship_", getattr(parent, "relationship", None)
+        ),
     }
 
 

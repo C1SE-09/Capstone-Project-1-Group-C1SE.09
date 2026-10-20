@@ -315,6 +315,14 @@ class Parent(Base, TimestampMixin):
         comment="Quan hệ mặc định với bé (vd: Bố, Mẹ) do phụ huynh tự khai",
     )
 
+    @property
+    def relationship(self) -> str | None:
+        return self.relationship_
+
+    @relationship.setter
+    def relationship(self, value: str | None) -> None:
+        self.relationship_ = value
+
     # --- Status ---
     status: Mapped[ParentStatus] = mapped_column(
         SAEnum(ParentStatus, name="parent_status_enum", create_type=True),
