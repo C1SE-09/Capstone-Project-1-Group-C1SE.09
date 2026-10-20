@@ -40,46 +40,89 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1) Thử login như School Admin (admin trường)
-      try {
-        const res = await schoolAdminLoginRequest({
-          username: identifier.trim(),
-          password,
-        });
-        setToken(res.access_token, "schoolAdmin");
-        setRefreshToken(res.refresh_token);
-        setStoredSchoolAdmin({
-          user_id: res.user_id,
-          username: res.username,
-          full_name: res.full_name || res.username,
-          role: "admin",
-          school_id: res.school_id ?? null,
-          school_name: res.school_name ?? null,
-        });
-        router.replace("/school-admin");
-        return;
-      } catch (schoolErr) {
-        // 401 = sai tài khoản → dừng, không thử tiếp
-        if (schoolErr instanceof ApiError && schoolErr.status === 401) {
-          throw schoolErr;
-        }
-        // 403 = không phải admin trường → fallback admin app
-        // (lỗi khác → fallback luôn cho an toàn)
-      }
+      const trimmedId = identifier.trim();
+      const isEmail = trimmedId.includes("@");
 
-      // 2) Fallback: login như Admin App (dev team)
-      const res = await adminAppLoginRequest({
-        email: identifier.trim().toLowerCase(),
-        password,
-      });
-      setToken(res.access_token, "adminApp");
-      setStoredAdmin(res.admin);
-      router.replace("/");
+      if (isEmail) {
+        // Ưu tiên 1: Đăng nhập Web Admin (Dev Team / Bug Reports) nếu nhập định dạng email
+        try {
+          const res = await adminAppLoginRequest({
+            email: trimmedId.toLowerCase(),
+            password,
+          });
+          setToken(res.access_token, "adminApp");
+          setStoredAdmin(res.admin);
+          router.replace("/");
+          return;
+        } catch (adminErr) {
+          // Thử tiếp School Admin (phòng trường hợp admin trường dùng email đăng nhập)
+          try {
+            const res = await schoolAdminLoginRequest({
+              username: trimmedId,
+              password,
+            });
+            setToken(res.access_token, "schoolAdmin");
+            setRefreshToken(res.refresh_token);
+            setStoredSchoolAdmin({
+              user_id: res.user_id,
+              username: res.username,
+              full_name: res.full_name || res.username,
+              role: "admin",
+              school_id: res.school_id ?? null,
+              school_name: res.school_name ?? null,
+            });
+            router.replace("/school-admin");
+            return;
+          } catch {
+            throw adminErr;
+          }
+        }
+      } else {
+        // Ưu tiên 2: Đăng nhập School Admin (Quản trị trường) nếu nhập username
+        try {
+          const res = await schoolAdminLoginRequest({
+            username: trimmedId,
+            password,
+          });
+          setToken(res.access_token, "schoolAdmin");
+          setRefreshToken(res.refresh_token);
+          setStoredSchoolAdmin({
+            user_id: res.user_id,
+            username: res.username,
+            full_name: res.full_name || res.username,
+            role: "admin",
+            school_id: res.school_id ?? null,
+            school_name: res.school_name ?? null,
+          });
+          router.replace("/school-admin");
+          return;
+        } catch (schoolErr) {
+          // Fallback thử tiếp Web Admin (nếu username cũng là alias hoặc admin app)
+          try {
+            const res = await adminAppLoginRequest({
+              email: trimmedId.toLowerCase(),
+              password,
+            });
+            setToken(res.access_token, "adminApp");
+            setStoredAdmin(res.admin);
+            router.replace("/");
+            return;
+          } catch {
+            throw schoolErr;
+          }
+        }
+      }
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.detail || "Đăng nhập thất bại.");
+        if (err.status === 401) {
+          setError("Tên đăng nhập hoặc mật khẩu không chính xác.");
+        } else if (err.status === 403) {
+          setError(err.detail || "Tài khoản không có quyền truy cập quản trị.");
+        } else {
+          setError(err.detail || "Đăng nhập thất bại. Vui lòng thử lại sau.");
+        }
       } else {
-        setError("Đăng nhập thất bại. Vui lòng thử lại.");
+        setError("Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại sau.");
       }
     } finally {
       setLoading(false);
