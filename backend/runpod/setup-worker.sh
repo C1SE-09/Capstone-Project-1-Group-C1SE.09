@@ -38,8 +38,13 @@ pip install -q --upgrade pip setuptools wheel
 # Bỏ torch/torchvision/torchaudio: worker STT chỉ cần ctranslate2, không cần
 # PyTorch. Giữ lại sẽ tốn ~5GB và nhiều phút tải không cần thiết.
 log "3/5 Cài thư viện Python (bỏ torch — STT không cần)"
-grep -vE '^(torch|torchvision|torchaudio)[[:space:]]' requirements.txt > requirements-worker.txt
-echo "    Bỏ khỏi requirements:" && grep -E '^(torch|torchvision|torchaudio)' requirements-worker.txt requirements.txt || true
+# Regex cũ '^(torch|...)[[:space:]]' KHÔNG khớp "torch>=2.1.0" (sau "torch" là ">"
+# chứ không phải khoảng trắng) → torch vẫn được cài, ăn ~7GB.
+# Pattern đúng: tên package + ký tự so sánh hoặc khoảng trắng, hoặc hết dòng.
+grep -vE '^(torch|torchvision|torchaudio)([[:space:]]|[<>=!~]|$)' requirements.txt > requirements-worker.txt
+echo "    Đã loại bỏ khỏi requirements:" && grep -E '^(torch|torchvision|torchaudio)([[:space:]]|[<>=!~]|$)' requirements.txt || echo "    (không có gì để bỏ)"
+echo "    Còn lại trong requirements-worker.txt:"
+grep -cE '^[^#[:space:]]' requirements-worker.txt | sed 's/^/      /;s/$/ package/'
 pip install -q -r requirements-worker.txt
 
 # ── 4. Kiểm tra CUDA ────────────────────────────────────────────────────────
