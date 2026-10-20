@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _loadingCredentials = true;
-  bool _rememberAccount = false;
+  bool _rememberAccount = true;
   String? _errorMessage;
   String? _rememberError;
 
@@ -356,9 +356,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onChanged: _busy ? null : _setRememberAccount,
                           contentPadding: EdgeInsets.zero,
                           controlAffinity: ListTileControlAffinity.leading,
-                          title: const Text('Nhớ tài khoản', style: TextStyle(fontSize: 14)),
+                          title: const Text('Lưu mật khẩu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                           subtitle: const Text(
-                            'Lưu cả mật khẩu. Chỉ dùng trên thiết bị riêng.',
+                            'Tự động điền tài khoản & mật khẩu cho lần sau',
                             style: TextStyle(fontSize: 12),
                           ),
                         ),
