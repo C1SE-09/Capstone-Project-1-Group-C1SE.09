@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -109,7 +110,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.';
+        _errorMessage = getFriendlyErrorMessage(
+          e,
+          fallback: 'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.',
+        );
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -145,7 +149,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.';
+        _errorMessage = getFriendlyErrorMessage(
+          e,
+          fallback: 'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.',
+        );
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -170,7 +177,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Không thể gửi lại mã xác thực vào lúc này. Vui lòng thử lại sau ít phút.';
+        _errorMessage = getFriendlyErrorMessage(
+          e,
+          fallback: 'Không thể gửi lại mã xác thực vào lúc này. Vui lòng thử lại sau ít phút.',
+        );
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -247,7 +257,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Đặt lại mật khẩu không thành công. Vui lòng thử lại sau ít phút.';
+        _errorMessage = getFriendlyErrorMessage(
+          e,
+          fallback: 'Đặt lại mật khẩu không thành công. Vui lòng thử lại sau ít phút.',
+        );
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);

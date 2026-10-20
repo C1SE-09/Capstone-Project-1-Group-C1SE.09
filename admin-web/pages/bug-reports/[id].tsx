@@ -12,12 +12,16 @@ import AdminLayout from "@/components/AdminLayout";
 import { Badge, Card, Spinner } from "@/components/ui";
 import { Pill } from "@/components/ui-school";
 import { apiFetch, ApiError, getToken } from "@/lib/api";
+import ImageViewerModal from "@/components/ImageViewerModal";
 import {
   CATEGORY_LABELS,
   ROLE_LABELS,
   SEVERITY_COLORS,
   STATUS_COLORS,
   formatDate,
+  formatFileSize,
+  isImageAttachment,
+  resolveAttachmentUrl,
   sanitizeUrl,
 } from "@/lib/format";
 
@@ -93,6 +97,10 @@ export default function BugReportDetailPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
 
+  // State cho Modal xem ảnh phóng to trực tiếp
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
   useEffect(() => {
     if (!getToken("adminApp")) {
       router.replace("/login");
@@ -156,6 +164,15 @@ export default function BugReportDetailPage() {
       newCategory !== report.category ||
       newSeverity !== report.severity ||
       comment.trim().length > 0);
+
+  const imageAttachments = (report?.attachments || []).filter(isImageAttachment);
+  const otherAttachments = (report?.attachments || []).filter((att) => !isImageAttachment(att));
+
+  const handleOpenImage = (attachmentId: string) => {
+    const idx = imageAttachments.findIndex((img) => img.attachment_id === attachmentId);
+    setActiveImageIndex(idx >= 0 ? idx : 0);
+    setViewerOpen(true);
+  };
 
   if (!tokenReady) return <Spinner />;
 
@@ -305,39 +322,119 @@ export default function BugReportDetailPage() {
             {/* Attachments */}
             {report.attachments && report.attachments.length > 0 && (
               <Card className="p-5">
-                <h3 className="text-sm font-bold text-ink mb-3">
-                  File đính kèm ({report.attachments.length})
-                </h3>
-                <div className="space-y-2">
-                  {report.attachments.map((att) => {
-                    const safeUrl = sanitizeUrl(att.file_url);
-                    return (
-                      <a
-                        key={att.attachment_id}
-                        href={safeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-2.5 border border-line rounded-control hover:bg-sunken"
-                      >
-                        <span className="text-2xl">
-                          {att.mime_type?.startsWith("image/") ? "🖼️" : "📄"}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold text-ink truncate">
-                            {att.file_name}
-                          </div>
-                          <div className="text-xs text-ink-faint">
-                            {att.mime_type}
-                            {att.file_size && ` · ${(att.file_size / 1024).toFixed(1)} KB`}
-                          </div>
-                        </div>
-                        <span className="text-xs font-semibold" style={{ color: "#16665a" }}>
-                          Mở ↗
-                        </span>
-                      </a>
-                    );
-                  })}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                    <span>File đính kèm</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-sunken text-ink-soft">
+                      {report.attachments.length}
+                    </span>
+                  </h3>
+                  {imageAttachments.length > 0 && (
+                    <span className="text-xs text-ink-soft">
+                      Nhấn vào hình để xem trực tiếp
+                    </span>
+                  )}
                 </div>
+
+                {/* Phần 1: Hình ảnh đính kèm (Screenshots) */}
+                {imageAttachments.length > 0 && (
+                  <div className="mb-4">
+                    <div className="text-xs font-semibold text-ink-faint uppercase tracking-wider mb-2">
+                      Hình ảnh chụp màn hình ({imageAttachments.length})
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {imageAttachments.map((att) => {
+                        const imgUrl = resolveAttachmentUrl(att.file_url);
+                        return (
+                          <div
+                            key={att.attachment_id}
+                            onClick={() => handleOpenImage(att.attachment_id)}
+                            className="group relative border border-line rounded-xl overflow-hidden bg-white hover:border-teal-700/50 hover:shadow-md transition-all cursor-pointer flex flex-col"
+                            title="Nhấn để xem hình ảnh trực tiếp"
+                          >
+                            {/* Khung thumbnail hình ảnh */}
+                            <div className="relative aspect-video w-full bg-sunken overflow-hidden flex items-center justify-center">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imgUrl}
+                                alt={att.file_name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                onError={(e) => {
+                                  // Khi không load được thumbnail
+                                  const target = e.target as HTMLElement;
+                                  target.style.display = "none";
+                                  const fallback = target.parentElement?.querySelector(".img-fallback");
+                                  if (fallback) (fallback as HTMLElement).style.display = "flex";
+                                }}
+                              />
+                              <div className="img-fallback hidden flex-col items-center justify-center text-ink-faint p-2 text-center text-xs">
+                                <span className="text-xl mb-1">🖼️</span>
+                                <span className="text-[10px]">Ảnh lỗi</span>
+                              </div>
+
+                              {/* Hover overlay hint */}
+                              <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-medium text-xs">
+                                <span>🔍</span>
+                                <span>Xem ảnh</span>
+                              </div>
+                            </div>
+
+                            {/* Thông tin tên file và dung lượng */}
+                            <div className="p-2.5 flex-1 flex flex-col justify-between">
+                              <div className="text-xs font-semibold text-ink truncate group-hover:text-teal-800 transition-colors">
+                                {att.file_name}
+                              </div>
+                              <div className="text-[11px] text-ink-faint mt-1 flex items-center justify-between">
+                                <span>{formatFileSize(att.file_size)}</span>
+                                <span className="text-teal-700 font-semibold group-hover:underline">
+                                  Phóng to ↗
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Phần 2: Tài liệu & file khác (nếu có) */}
+                {otherAttachments.length > 0 && (
+                  <div>
+                    {imageAttachments.length > 0 && (
+                      <div className="text-xs font-semibold text-ink-faint uppercase tracking-wider mb-2">
+                        Tệp tin khác ({otherAttachments.length})
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {otherAttachments.map((att) => {
+                        const safeUrl = resolveAttachmentUrl(att.file_url) || sanitizeUrl(att.file_url);
+                        return (
+                          <a
+                            key={att.attachment_id}
+                            href={safeUrl}
+                            download={att.file_name}
+                            className="flex items-center gap-3 p-2.5 border border-line rounded-control hover:bg-sunken transition-colors"
+                          >
+                            <span className="text-2xl">📄</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-ink truncate">
+                                {att.file_name}
+                              </div>
+                              <div className="text-xs text-ink-faint">
+                                {att.mime_type}
+                                {att.file_size && ` · ${formatFileSize(att.file_size)}`}
+                              </div>
+                            </div>
+                            <span className="text-xs font-semibold" style={{ color: "#16665a" }}>
+                              Tải về ⬇
+                            </span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </Card>
             )}
 
@@ -489,6 +586,15 @@ export default function BugReportDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox Modal xem ảnh trực tiếp trên màn hình hiện tại */}
+      <ImageViewerModal
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        images={imageAttachments}
+        currentIndex={activeImageIndex}
+        onSelectIndex={setActiveImageIndex}
+      />
     </AdminLayout>
   );
-}
+}

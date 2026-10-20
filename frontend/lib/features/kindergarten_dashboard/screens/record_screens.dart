@@ -21,6 +21,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
@@ -1308,7 +1309,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       widget.onDone(currentRecord, extraction);
     } catch (e) {
       if (!mounted) return;
-      final friendlyMsg = _getFriendlyErrorMessage(e);
+      final friendlyMsg = getFriendlyErrorMessage(e);
       setState(() {
         isProcessing = false;
         errorMessage = friendlyMsg;
@@ -1365,127 +1366,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
     );
   }
 
-  String _getFriendlyErrorMessage(dynamic error) {
-    if (error == null) {
-      return 'Đã có sự cố khi xử lý file âm thanh. Vui lòng thử lại.';
-    }
-
-    String raw = '';
-    int? statusCode;
-    if (error is TeacherRepositoryException) {
-      raw = error.message;
-      statusCode = error.statusCode;
-    } else {
-      raw = error.toString();
-    }
-
-    raw = raw
-        .replaceFirst('TeacherRepositoryException: ', '')
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('Error: ', '')
-        .trim();
-
-    if (statusCode != null) {
-      if (statusCode == 400) {
-        if (raw.toLowerCase().contains('unsupported audio format') ||
-            raw.toLowerCase().contains('format')) {
-          return 'Định dạng file không được hỗ trợ. Vui lòng tải lên file âm thanh định dạng .mp3, .wav, .m4a, .webm.';
-        }
-        return 'Dữ liệu file âm thanh gửi lên không hợp lệ. Vui lòng kiểm tra lại.';
-      }
-      if (statusCode == 404) {
-        return 'Không tìm thấy dữ liệu lớp học hoặc thông tin giáo viên trên hệ thống.';
-      }
-      if (statusCode == 413) {
-        return 'File ghi âm quá lớn (vượt quá 25MB). Vui lòng chọn file dung lượng nhỏ hơn.';
-      }
-      if (statusCode >= 500) {
-        return 'Hệ thống đang bận hoặc gặp sự cố khi xử lý âm thanh. Vui lòng thử lại sau ít phút.';
-      }
-    }
-
-    final lower = raw.toLowerCase();
-
-    if (lower.contains('on web') ||
-        lower.contains('unimplementederror') ||
-        lower.contains('bytes property') ||
-        lower.contains('flutter_file_picker')) {
-      return 'Không thể đọc file trên trình duyệt. Vui lòng chọn lại file âm thanh (.mp3, .wav, .m4a).';
-    }
-
-    if (lower.contains('unsupported audio format') ||
-        lower.contains('định dạng âm thanh không hợp lệ')) {
-      return 'Định dạng file không được hỗ trợ. Vui lòng chọn file âm thanh (.mp3, .wav, .m4a, .webm).';
-    }
-
-    if (lower.contains('quá lớn') ||
-        lower.contains('413') ||
-        lower.contains('too large') ||
-        lower.contains('payload')) {
-      return 'File ghi âm quá lớn (vượt quá 25MB). Vui lòng chọn file dung lượng nhỏ hơn.';
-    }
-
-    if (lower.contains('connection refused') ||
-        lower.contains('socketexception') ||
-        lower.contains('failed host lookup') ||
-        lower.contains('network is unreachable') ||
-        lower.contains('connection error')) {
-      return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng của bạn và thử lại.';
-    }
-
-    if (lower.contains('timeout') || lower.contains('timed out')) {
-      return 'Quá trình tải lên hoặc xử lý file quá thời gian chờ. Vui lòng kiểm tra tốc độ mạng và thử lại.';
-    }
-
-    if (lower.contains('500') ||
-        lower.contains('502') ||
-        lower.contains('503') ||
-        lower.contains('internal server error') ||
-        lower.contains('server error')) {
-      return 'Máy chủ đang gặp sự cố khi xử lý file âm thanh. Vui lòng thử lại sau ít phút.';
-    }
-
-    if (lower.contains('nội dung file âm thanh rỗng') ||
-        lower.contains('không nhận diện được nội dung') ||
-        lower.contains('không thể nhận dạng tiếng nói') ||
-        lower.contains('không nhận dạng được') ||
-        lower.contains('không có âm thanh')) {
-      return 'Không nhận diện được giọng nói từ file ghi âm. Vui lòng nói to, rõ ràng hơn hoặc thử lại.';
-    }
-
-    if (lower.contains('nhận dạng giọng nói thất bại') ||
-        lower.contains('speech-to-text') ||
-        lower.contains('phowhisper')) {
-      return 'Không thể nhận diện giọng nói từ file ghi âm. Vui lòng thử lại hoặc chọn file khác.';
-    }
-
-    if (lower.contains('nosuchmethod') ||
-        lower.contains('typeerror') ||
-        lower.contains('rangeerror') ||
-        lower.contains('dioexception') ||
-        lower.contains('httpexception') ||
-        lower.contains('traceback') ||
-        lower.contains('null check operator') ||
-        lower.contains('null safety') ||
-        lower.contains('assertion failed') ||
-        lower.contains('stack trace')) {
-      return 'Đã xảy ra sự cố kỹ thuật khi xử lý file. Vui lòng thử lại hoặc chọn file khác.';
-    }
-
-    final hasVietnamese = RegExp(
-            r'[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',
-            caseSensitive: false)
-        .hasMatch(raw);
-    if (hasVietnamese &&
-        !raw.contains('{') &&
-        !raw.contains('(') &&
-        !raw.contains('http') &&
-        raw.length < 300) {
-      return raw;
-    }
-
-    return 'Không thể xử lý file âm thanh vào lúc này. Vui lòng thử lại hoặc chọn file khác.';
-  }
 
   String _generateUuid() {
     final rnd = math.Random();

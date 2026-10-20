@@ -296,8 +296,20 @@ def _upload_to_minio(
     # Trả về URL public (dựa trên config của MinIO)
     from app.config import settings
 
+    if settings.minio_public_url:
+        return f"{settings.minio_public_url.rstrip('/')}/{BUG_REPORT_BUCKET}/{object_name}"
+
+    endpoint = settings.minio_endpoint
+    # Nếu endpoint là tên container nội bộ docker "minio:9000" hoặc "minio",
+    # client trình duyệt bên ngoài không phân giải được host name "minio".
+    # Chuyển thành "localhost:..." để truy cập được từ máy host.
+    if endpoint.startswith("minio:"):
+        endpoint = "localhost:" + endpoint.split(":", 1)[1]
+    elif endpoint == "minio":
+        endpoint = "localhost:9000"
+
     protocol = "https" if settings.minio_secure else "http"
-    return f"{protocol}://{settings.minio_endpoint}/{BUG_REPORT_BUCKET}/{object_name}"
+    return f"{protocol}://{endpoint}/{BUG_REPORT_BUCKET}/{object_name}"
 
 
 # ===========================================================================

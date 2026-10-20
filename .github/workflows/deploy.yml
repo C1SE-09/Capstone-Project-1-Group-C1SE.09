@@ -1,0 +1,47 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Backend & Services to Ubuntu VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH and Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            TARGET_BRANCH="${{ github.ref_name }}"
+            echo "🚀 Bắt đầu quá trình Deploy nhánh '$TARGET_BRANCH' trên VPS..."
+            
+            # Điều hướng đến thư mục dự án
+            if [ -d "$HOME/Capstone-Project-1-Group-C1SE.09" ]; then
+              cd "$HOME/Capstone-Project-1-Group-C1SE.09"
+            elif [ -d "/root/Capstone-Project-1-Group-C1SE.09" ]; then
+              cd "/root/Capstone-Project-1-Group-C1SE.09"
+            else
+              echo "❌ Không tìm thấy thư mục dự án trên VPS!"
+              exit 1
+            fi
+
+            echo "📥 Đồng bộ code nhánh '$TARGET_BRANCH' từ GitHub..."
+            git fetch origin "$TARGET_BRANCH"
+            git checkout "$TARGET_BRANCH" 2>/dev/null || git checkout -b "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+
+            echo "📦 Chạy migration cơ sở dữ liệu (nếu có)..."
+            docker compose exec -T api alembic upgrade head || echo "⚠️ Bỏ qua migration hoặc api chưa sẵn sàng"
+
+            echo "🔄 Khởi động lại container API & Celery Worker..."
+            docker compose restart api worker
+
+            echo "✅ Deploy nhánh '$TARGET_BRANCH' hoàn tất thành công!"

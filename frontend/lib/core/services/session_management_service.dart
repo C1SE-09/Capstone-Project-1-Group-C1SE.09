@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/services/crash_logging_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -160,6 +161,9 @@ class SessionManagementService {
         deviceName: prefs.getString(_keyDeviceName),
       );
 
+      // Đồng bộ các crash log còn pending (chạy nền)
+      CrashLoggingService.instance.flushPendingReports();
+
       return _currentSession;
     } catch (_) {
       // Trường hợp lỗi đọc storage, trả về null nhẹ nhàng, không gây crash
@@ -197,6 +201,9 @@ class SessionManagementService {
         else
           prefs.remove(_keyDeviceName),
       ]);
+
+      // Đồng bộ các crash log còn pending sau khi đăng nhập thành công
+      CrashLoggingService.instance.flushPendingReports();
     } catch (_) {
       // Bỏ qua lỗi phụ trợ
     }
