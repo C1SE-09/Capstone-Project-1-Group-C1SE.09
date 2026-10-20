@@ -86,6 +86,7 @@ class AdminParentDto {
   final String childrenSummary;
   final String? childId;
   final List<String> childIds;
+  final List<Map<String, dynamic>> children;
 
   AdminParentDto({
     required this.id,
@@ -98,6 +99,7 @@ class AdminParentDto {
     required this.childrenSummary,
     this.childId,
     required this.childIds,
+    this.children = const [],
   });
 
   factory AdminParentDto.fromJson(Map<String, dynamic> json) {
@@ -106,6 +108,8 @@ class AdminParentDto {
     if (childIds.isEmpty && json['child_id'] != null) {
       childIds.add(json['child_id'].toString());
     }
+    final rawChildren = json['children'] as List? ?? [];
+    final children = rawChildren.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     return AdminParentDto(
       id: json['id'] as String? ?? '',
       fullName: json['full_name'] as String? ?? '',
@@ -117,6 +121,7 @@ class AdminParentDto {
       childrenSummary: json['children_summary'] as String? ?? '',
       childId: json['child_id'] as String?,
       childIds: childIds,
+      children: children,
     );
   }
 }

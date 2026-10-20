@@ -84,6 +84,7 @@ dependencies:
   http_parser: ^4.0.2
   # Lấy trạng thái mạng (wifi/cellular/offline) cho bug report
   connectivity_plus: ^6.0.5
+  excel: ^4.0.6
 
 dev_dependencies:
   flutter_test:

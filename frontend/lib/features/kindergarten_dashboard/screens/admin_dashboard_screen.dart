@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:excel/excel.dart' as xls;
 import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
@@ -451,6 +456,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String? _selectedClassId;
   String? _selectedClassName;
 
+  // Bộ lọc theo lớp cho Giáo viên, Học sinh, Phụ huynh (tương tự như Thời khóa biểu)
+  String? _filterClassId;
+  String? _filterClassName;
+
   bool get _isDarkMode {
     final mode = ThemeController.instance.value;
     if (mode == ThemeMode.system) {
@@ -568,6 +577,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           if (mounted) setState(() => _students = res);
           break;
         case AdminCategory.parents:
+          if (_students.isEmpty) {
+            try {
+              final childrenRes = await _repo.getChildren();
+              if (mounted) setState(() => _students = childrenRes);
+            } catch (_) {}
+          }
           final res = await _repo.getParents();
           if (mounted) setState(() => _parents = res);
           break;
@@ -832,7 +847,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Hàng 3: Nút Thêm mới + Nút Làm mới dữ liệu
+            // Hàng 3: Nút Thêm mới + Import + Export + Nút Làm mới dữ liệu
             Row(
               children: [
                 if (_category != AdminCategory.schedules) ...[
@@ -853,6 +868,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    height: 44,
+                    width: 44,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                    ),
+                    child: IconButton(
+                      tooltip: 'Nhập file (Import)',
+                      onPressed: () => _showImportDialog(_category),
+                      icon: const Icon(Icons.file_upload_outlined, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    height: 44,
+                    width: 44,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                    ),
+                    child: IconButton(
+                      tooltip: 'Xuất file Excel (Export)',
+                      onPressed: () => _exportExcel(_category),
+                      icon: const Icon(Icons.file_download_outlined, size: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1596,21 +1641,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 category: AdminCategory.teachers,
                 icon: Icons.person_add_outlined,
                 label: 'Giáo viên',
-                count: _teachers.length,
+                count: _filteredTeachers.length,
                 width: itemWidth,
               ),
               _categoryButton(
                 category: AdminCategory.students,
                 icon: Icons.school_outlined,
                 label: 'Học sinh',
-                count: _students.length,
+                count: _filteredStudents.length,
                 width: itemWidth,
               ),
               _categoryButton(
                 category: AdminCategory.parents,
                 icon: Icons.groups_outlined,
                 label: 'Phụ huynh',
-                count: _parents.length,
+                count: _filteredParents.length,
                 width: itemWidth,
               ),
               _categoryButton(
@@ -1642,8 +1687,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               });
             },
           )
-        else
+        else ...[
+          _buildClassFilterBar(),
           _peopleGrid(),
+        ],
       ],
     );
   }
@@ -1734,24 +1781,204 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  List<AdminTeacherDto> get _filteredTeachers {
+    if (_filterClassId == null || _filterClassId!.isEmpty) return _teachers;
+    final clsId = _filterClassId!;
+    final clsName = _filterClassName?.toLowerCase().trim();
+    return _teachers.where((v) {
+      return v.classIds.contains(clsId) ||
+          v.classId == clsId ||
+          (clsName != null && v.className.toLowerCase().contains(clsName));
+    }).toList();
+  }
+
+  List<AdminChildDto> get _filteredStudents {
+    if (_filterClassId == null || _filterClassId!.isEmpty) return _students;
+    final clsId = _filterClassId!;
+    final clsName = _filterClassName?.toLowerCase().trim();
+    return _students.where((v) {
+      return v.classId == clsId ||
+          (clsName != null && v.className.toLowerCase().trim() == clsName);
+    }).toList();
+  }
+
+  String _getParentChildrenSummary(AdminParentDto v) {
+    if (v.childrenSummary.isNotEmpty &&
+        !v.childrenSummary.toLowerCase().contains('chưa liên kết')) {
+      return v.childrenSummary.replaceFirst('BN: ', 'Bé: ');
+    }
+
+    if (v.children.isNotEmpty) {
+      final names = v.children.map((c) {
+        final name = c['name']?.toString() ?? '';
+        final cName = c['class_name']?.toString() ?? '';
+        return cName.isNotEmpty ? '$name ($cName)' : name;
+      }).where((s) => s.isNotEmpty).toList();
+      if (names.isNotEmpty) {
+        return 'Bé: ${names.join(", ")}';
+      }
+    }
+
+    final matched = _students.where((c) {
+      if (c.parentId == v.id) return true;
+      if (c.parents.any((cp) => cp.id == v.id)) return true;
+      if (v.childIds.contains(c.id)) return true;
+      return false;
+    }).toList();
+
+    if (matched.isNotEmpty) {
+      final names = matched.map((c) {
+        final cName = c.className.isNotEmpty && c.className != 'Chưa xếp lớp' ? c.className : '';
+        return cName.isNotEmpty ? '${c.fullName} ($cName)' : c.fullName;
+      }).toList();
+      return 'Bé: ${names.join(", ")}';
+    }
+
+    return 'Bé: Chưa liên kết học sinh';
+  }
+
+  List<String> _getParentChildrenChips(AdminParentDto v) {
+    final summary = _getParentChildrenSummary(v);
+    return summary.isNotEmpty ? [summary] : <String>[];
+  }
+
+  List<AdminParentDto> get _filteredParents {
+    if (_filterClassId == null || _filterClassId!.isEmpty) return _parents;
+    final clsId = _filterClassId!;
+    final clsName = _filterClassName?.toLowerCase().trim();
+    final classStudentIds = _students
+        .where((s) => s.classId == clsId || (clsName != null && s.className.toLowerCase().trim() == clsName))
+        .map((s) => s.id)
+        .toSet();
+
+    return _parents.where((p) {
+      return p.children.any((c) => c['class_id'] == clsId || (clsName != null && (c['class_name'] as String?)?.toLowerCase().trim() == clsName)) ||
+          p.childIds.any((cid) => classStudentIds.contains(cid)) ||
+          _students.any((s) => classStudentIds.contains(s.id) && (s.parentId == p.id || s.parents.any((pr) => pr.id == p.id))) ||
+          (clsName != null && _getParentChildrenSummary(p).toLowerCase().contains(clsName));
+    }).toList();
+  }
+
+  Widget _buildClassFilterBar() {
+    final theme = Theme.of(context);
+    final isDark = _isDarkMode;
+    final hasFilter = _filterClassId != null && _filterClassId!.isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withAlpha(12) : AppColors.brandTint.withAlpha(80),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasFilter ? AppColors.brand : theme.dividerColor,
+          width: hasFilter ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.meeting_room_outlined,
+            size: 20,
+            color: hasFilter ? AppColors.brand : theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Lớp học:',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: hasFilter ? AppColors.brand : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: hasFilter ? _filterClassId : '',
+                isDense: true,
+                isExpanded: true,
+                icon: const Icon(Icons.arrow_drop_down, size: 22),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: '',
+                    child: Text(
+                      'Tất cả các lớp (Hiển thị toàn bộ)',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  ..._classes.map((c) {
+                    final grade = c.gradeLabel.isNotEmpty ? ' (${c.gradeLabel})' : '';
+                    return DropdownMenuItem<String>(
+                      value: c.id,
+                      child: Text(
+                        '${c.name}$grade',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }),
+                ],
+                onChanged: (newClassId) {
+                  setState(() {
+                    if (newClassId == null || newClassId.isEmpty) {
+                      _filterClassId = null;
+                      _filterClassName = null;
+                    } else {
+                      _filterClassId = newClassId;
+                      final found = _classes.where((c) => c.id == newClassId);
+                      _filterClassName = found.isNotEmpty ? found.first.name : null;
+                    }
+                  });
+                },
+              ),
+            ),
+          ),
+          if (hasFilter) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Bỏ lọc lớp',
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                setState(() {
+                  _filterClassId = null;
+                  _filterClassName = null;
+                });
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _peopleGrid() {
     final q = _query.trim().toLowerCase();
+    final hasClassFilter = _filterClassId != null && _filterClassId!.isNotEmpty;
+
     final List<Object> items = switch (_category) {
-      AdminCategory.teachers => _teachers
+      AdminCategory.teachers => _filteredTeachers
           .where((v) =>
+              q.isEmpty ||
               '${v.fullName} ${v.phone} ${v.email} ${v.className}'
                   .toLowerCase()
                   .contains(q))
           .toList(),
-      AdminCategory.students => _students
+      AdminCategory.students => _filteredStudents
           .where((v) =>
+              q.isEmpty ||
               '${v.fullName} ${v.className} ${v.nickname} ${v.note} ${v.parentPhone} ${v.parentsSummary}'
                   .toLowerCase()
                   .contains(q))
           .toList(),
-      AdminCategory.parents => _parents
+      AdminCategory.parents => _filteredParents
           .where((v) =>
-              '${v.fullName} ${v.phone} ${v.email} ${v.relationship ?? ""} ${v.childrenSummary}'
+              q.isEmpty ||
+              '${v.fullName} ${v.phone} ${v.email} ${v.relationship ?? ""} ${_getParentChildrenSummary(v)}'
                   .toLowerCase()
                   .contains(q))
           .toList(),
@@ -1759,10 +1986,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     };
 
     if (items.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(40),
-          child: Text('Không tìm thấy dữ liệu phù hợp.'),
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off_rounded, size: 48, color: Theme.of(context).colorScheme.outline),
+              const SizedBox(height: 12),
+              Text(
+                hasClassFilter
+                    ? 'Không tìm thấy ${_categoryLabel(_category)} nào thuộc lớp “$_filterClassName”.'
+                    : 'Không tìm thấy dữ liệu phù hợp.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              if (hasClassFilter) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => setState(() {
+                    _filterClassId = null;
+                    _filterClassName = null;
+                  }),
+                  icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                  label: const Text('Xem tất cả các lớp'),
+                ),
+              ],
+            ],
+          ),
         ),
       );
     }
@@ -1808,9 +2059,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'SĐT: ${v.phone}',
             'Email: ${v.email.isNotEmpty ? v.email : "Chưa cập nhật"}',
           ],
-          v.childrenSummary.isNotEmpty
-              ? [v.childrenSummary.replaceFirst('BN: ', 'Bé: ')]
-              : <String>[],
+          _getParentChildrenChips(v),
         ),
       _ => ('', '', <String>[], <String>[]),
     };
@@ -2114,7 +2363,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       text: switch (item) {
         AdminTeacherDto v => v.className,
         AdminChildDto v => v.note,
-        AdminParentDto v => v.childrenSummary,
+        AdminParentDto v => _getParentChildrenSummary(v),
         AdminScheduleDto v => v.roomName,
         _ => '',
       },
@@ -2155,6 +2404,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (category == AdminCategory.parents) {
       if (item is AdminParentDto) {
         selectedChildId = item.childId ?? (item.childIds.isNotEmpty ? item.childIds.first : null);
+        if (selectedChildId == null) {
+          final matched = _students.where((c) => c.parentId == item.id || c.parents.any((cp) => cp.id == item.id)).toList();
+          if (matched.isNotEmpty) {
+            selectedChildId = matched.first.id;
+          }
+        }
         parentRelationship = item.relationship ?? 'Bố';
       } else {
         parentRelationship = 'Bố';
@@ -2847,6 +3102,750 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (e) {
       _notify('Không thể xóa dữ liệu: ${getFriendlyErrorMessage(e)}', isError: true);
     }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // 9b. XUẤT VÀ NHẬP DỮ LIỆU EXCEL & CSV (IMPORT & EXPORT)
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  List<List<String>> _parseCsv(String content) {
+    var text = content.startsWith('\uFEFF') ? content.substring(1) : content;
+    final rows = <List<String>>[];
+    final current = <String>[];
+    var inQuotes = false;
+    final sb = StringBuffer();
+
+    for (var i = 0; i < text.length; i++) {
+      final c = text[i];
+      if (c == '"') {
+        if (inQuotes && i + 1 < text.length && text[i + 1] == '"') {
+          sb.write('"');
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (c == ',' && !inQuotes) {
+        current.add(sb.toString().trim());
+        sb.clear();
+      } else if ((c == '\n' || c == '\r') && !inQuotes) {
+        if (c == '\r' && i + 1 < text.length && text[i + 1] == '\n') {
+          i++;
+        }
+        current.add(sb.toString().trim());
+        sb.clear();
+        if (current.any((cell) => cell.isNotEmpty)) {
+          rows.add(List<String>.from(current));
+        }
+        current.clear();
+      } else {
+        sb.write(c);
+      }
+    }
+    if (sb.isNotEmpty || current.isNotEmpty) {
+      current.add(sb.toString().trim());
+      if (current.any((cell) => cell.isNotEmpty)) {
+        rows.add(List<String>.from(current));
+      }
+    }
+    return rows;
+  }
+
+  (String label, String fileName, Uint8List bytes, int rowCount, List<String> headers, List<List<String>> rows) _generateExcel(AdminCategory category) {
+    String label = '';
+    String fileName = '';
+    final headers = <String>[];
+    final rows = <List<String>>[];
+
+    switch (category) {
+      case AdminCategory.teachers:
+        label = 'giáo viên';
+        fileName = 'danh_sach_giao_vien.xlsx';
+        headers.addAll(['Họ và tên', 'Số điện thoại', 'Email', 'Tên đăng nhập', 'Lớp phụ trách', 'Trạng thái']);
+        for (final t in _filteredTeachers) {
+          rows.add([
+            t.fullName,
+            t.phone,
+            t.email,
+            t.username ?? '',
+            t.className,
+            t.status == 'active' ? 'Đang hoạt động' : t.status,
+          ]);
+        }
+        break;
+
+      case AdminCategory.students:
+        label = 'học sinh';
+        fileName = 'danh_sach_hoc_sinh.xlsx';
+        headers.addAll(['Họ và tên', 'Biệt danh', 'Lớp học', 'Ngày sinh', 'Giới tính', 'Phụ huynh', 'SĐT Phụ huynh', 'Ghi chú y tế', 'Trạng thái']);
+        for (final s in _filteredStudents) {
+          rows.add([
+            s.fullName,
+            s.nickname,
+            s.className,
+            s.dateOfBirth ?? '',
+            s.gender == 'male' ? 'Nam' : (s.gender == 'female' ? 'Nữ' : s.gender),
+            s.parentsSummary.isNotEmpty ? s.parentsSummary : (s.parentName ?? ''),
+            s.parentPhone ?? '',
+            s.note,
+            s.status,
+          ]);
+        }
+        break;
+
+      case AdminCategory.parents:
+        label = 'phụ huynh';
+        fileName = 'danh_sach_phu_huynh.xlsx';
+        headers.addAll(['Họ và tên', 'Số điện thoại', 'Email', 'Quan hệ', 'Tên đăng nhập', 'Học sinh liên kết', 'Trạng thái']);
+        for (final p in _filteredParents) {
+          rows.add([
+            p.fullName,
+            p.phone,
+            p.email,
+            p.relationship ?? '',
+            p.username ?? '',
+            _getParentChildrenSummary(p),
+            p.status == 'active' ? 'Đang hoạt động' : p.status,
+          ]);
+        }
+        break;
+
+      case AdminCategory.schedules:
+        return ('', '', Uint8List(0), 0, [], []);
+    }
+
+    final excel = xls.Excel.createExcel();
+    final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+    final sheetTitle = 'Danh sách $label';
+    excel.rename(defaultSheet, sheetTitle);
+    final sheet = excel[sheetTitle];
+
+    // Dòng tiêu đề
+    sheet.appendRow(headers.map((h) => xls.TextCellValue(h)).toList());
+
+    // Các dòng dữ liệu
+    for (final row in rows) {
+      sheet.appendRow(row.map((cell) => xls.TextCellValue(cell)).toList());
+    }
+
+    final rawBytes = excel.encode() ?? <int>[];
+    final bytes = Uint8List.fromList(rawBytes);
+
+    return (label, fileName, bytes, rows.length, headers, rows);
+  }
+
+  (String fileName, Uint8List excelBytes, String previewContent) _getTemplate(AdminCategory category) {
+    String fileName = '';
+    final headers = <String>[];
+    final sample = <String>[];
+
+    switch (category) {
+      case AdminCategory.teachers:
+        fileName = 'mau_nhap_giao_vien.xlsx';
+        headers.addAll(['Họ và tên', 'Số điện thoại', 'Email', 'Tên đăng nhập', 'Mật khẩu', 'Lớp']);
+        sample.addAll(['Nguyễn Văn A', '0912345678', 'nguyenvana@gmail.com', 'nguyenvana', '123456', 'Lớp Mầm A']);
+        break;
+      case AdminCategory.students:
+        fileName = 'mau_nhap_hoc_sinh.xlsx';
+        headers.addAll(['Họ và tên', 'Biệt danh', 'Lớp', 'Ngày sinh', 'Giới tính', 'Ghi chú y tế']);
+        sample.addAll(['Nguyễn Minh Khôi', 'Bơ', 'Lớp Mầm A', '2021-05-15', 'nam', 'Không dị ứng']);
+        break;
+      case AdminCategory.parents:
+        fileName = 'mau_nhap_phu_huynh.xlsx';
+        headers.addAll(['Họ và tên', 'Số điện thoại', 'Email', 'Quan hệ', 'Tên đăng nhập', 'Mật khẩu']);
+        sample.addAll(['Trần Thị Lan', '0987654321', 'lan.tran@gmail.com', 'Mẹ', 'lantran', '123456']);
+        break;
+      case AdminCategory.schedules:
+        return ('', Uint8List(0), '');
+    }
+
+    final excel = xls.Excel.createExcel();
+    final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+    excel.rename(defaultSheet, 'Mau_Nhap');
+    final sheet = excel['Mau_Nhap'];
+    sheet.appendRow(headers.map((h) => xls.TextCellValue(h)).toList());
+    sheet.appendRow(sample.map((s) => xls.TextCellValue(s)).toList());
+    final bytes = Uint8List.fromList(excel.encode() ?? <int>[]);
+    final preview = '${headers.join(", ")}\r\n${sample.join(", ")}';
+
+    return (fileName, bytes, preview);
+  }
+
+  Future<void> _exportExcel(AdminCategory category) async {
+    final (label, fileName, bytes, rowCount, headers, rows) = _generateExcel(category);
+    if (label.isEmpty) return;
+
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandTint,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.table_chart_outlined, color: AppColors.brand, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Xuất danh sách $label (Excel)',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                        ),
+                        Text(
+                          'Tệp $fileName · $rowCount dòng dữ liệu',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 150,
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Theme.of(ctx).dividerColor),
+                ),
+                child: rows.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Chưa có dữ liệu để xuất file Excel.',
+                          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant, fontSize: 13),
+                        ),
+                      )
+                    : Scrollbar(
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SingleChildScrollView(
+                            child: DataTable(
+                              headingRowHeight: 32,
+                              dataRowMinHeight: 28,
+                              dataRowMaxHeight: 36,
+                              horizontalMargin: 12,
+                              columnSpacing: 16,
+                              columns: headers
+                                  .map((h) => DataColumn(
+                                        label: Text(
+                                          h,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                        ),
+                                      ))
+                                  .toList(),
+                              rows: rows
+                                  .take(10)
+                                  .map((row) => DataRow(
+                                        cells: row
+                                            .map((cell) => DataCell(
+                                                  Text(cell, style: const TextStyle(fontSize: 12)),
+                                                ))
+                                            .toList(),
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Đóng'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.brand,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        try {
+                          final savedPath = await FilePicker.platform.saveFile(
+                            dialogTitle: 'Lưu tệp Excel danh sách $label',
+                            fileName: fileName,
+                            type: FileType.custom,
+                            allowedExtensions: ['xlsx'],
+                            bytes: bytes,
+                          );
+                          if (savedPath != null) {
+                            if (!kIsWeb) {
+                              final file = File(savedPath);
+                              await file.writeAsBytes(bytes);
+                            }
+                            _notify('Đã xuất file Excel thành công: $fileName');
+                          }
+                        } catch (e) {
+                          _notify('Lỗi lưu file Excel: ${getFriendlyErrorMessage(e)}', isError: true);
+                        }
+                      },
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text('Tải tệp Excel (.xlsx)'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showImportDialog(AdminCategory category) async {
+    final label = _categoryLabel(category);
+    final (templateFileName, templateBytes, templateContent) = _getTemplate(category);
+
+    String? pickedFileName;
+    List<List<String>> parsedRows = [];
+    bool isProcessing = false;
+    String? progressMessage;
+
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).dividerColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.brandTint,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.file_upload_outlined, color: AppColors.brand, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Nhập danh sách $label (Excel / CSV)',
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                              ),
+                              Text(
+                                'Tải lên file định dạng Excel (.xlsx) hoặc CSV có cấu trúc chuẩn',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Hướng dẫn & Tải file mẫu
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Theme.of(context).dividerColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 16, color: AppColors.brand),
+                              SizedBox(width: 6),
+                              Text(
+                                'Cấu trúc các cột mẫu:',
+                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            templateContent.split('\r\n').first,
+                            style: const TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final saved = await FilePicker.platform.saveFile(
+                                    dialogTitle: 'Tải file mẫu $templateFileName',
+                                    fileName: templateFileName,
+                                    type: FileType.custom,
+                                    allowedExtensions: ['xlsx'],
+                                    bytes: templateBytes,
+                                  );
+                                  if (saved != null) {
+                                    if (!kIsWeb) {
+                                      await File(saved).writeAsBytes(templateBytes);
+                                    }
+                                    _notify('Đã tải file mẫu: $templateFileName');
+                                  }
+                                } catch (_) {
+                                  await Clipboard.setData(ClipboardData(text: templateContent));
+                                  _notify('Đã sao chép nội dung cấu trúc mẫu vào bộ nhớ tạm');
+                                }
+                              },
+                              icon: const Icon(Icons.download_rounded, size: 16),
+                              label: const Text('Tải file mẫu (.xlsx)', style: TextStyle(fontSize: 12)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (isProcessing) ...[
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Column(
+                            children: [
+                              const CircularProgressIndicator(),
+                              const SizedBox(height: 14),
+                              Text(
+                                progressMessage ?? 'Đang xử lý nhập dữ liệu...',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      // Nút Chọn tệp Excel / CSV
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(
+                              color: pickedFileName != null ? AppColors.brand : Theme.of(context).dividerColor,
+                            ),
+                          ),
+                          onPressed: () async {
+                            try {
+                              final result = await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['xlsx', 'xls', 'csv', 'txt'],
+                                withData: true,
+                              );
+                              if (result != null && result.files.isNotEmpty) {
+                                final picked = result.files.single;
+                                Uint8List? bytes = picked.bytes;
+                                if (bytes == null && !kIsWeb && picked.path != null && picked.path!.isNotEmpty) {
+                                  bytes = await File(picked.path!).readAsBytes();
+                                }
+                                if (bytes != null) {
+                                  List<List<String>> allRows = [];
+                                  final ext = picked.name.split('.').last.toLowerCase();
+                                  if (ext == 'xlsx' || ext == 'xls') {
+                                    final decoded = xls.Excel.decodeBytes(bytes);
+                                    for (final table in decoded.tables.keys) {
+                                      for (final row in decoded.tables[table]!.rows) {
+                                        final cells = row.map((c) => c?.value?.toString().trim() ?? '').toList();
+                                        if (cells.any((c) => c.isNotEmpty)) {
+                                          allRows.add(cells);
+                                        }
+                                      }
+                                      if (allRows.isNotEmpty) break;
+                                    }
+                                  } else {
+                                    final raw = utf8.decode(bytes, allowMalformed: true);
+                                    allRows = _parseCsv(raw);
+                                  }
+
+                                  // Bỏ dòng tiêu đề nếu có
+                                  final cleanRows = allRows.where((r) {
+                                    if (r.isEmpty) return false;
+                                    final first = r[0].toLowerCase();
+                                    return !(first.contains('họ') || first.contains('fullname') || first.contains('tên'));
+                                  }).toList();
+
+                                  setSheetState(() {
+                                    pickedFileName = picked.name;
+                                    parsedRows = cleanRows;
+                                  });
+                                }
+                              }
+                            } catch (e) {
+                              _notify('Không thể đọc file: ${getFriendlyErrorMessage(e)}', isError: true);
+                            }
+                          },
+                          icon: Icon(
+                            pickedFileName != null ? Icons.check_circle_outline : Icons.upload_file_outlined,
+                            color: pickedFileName != null ? AppColors.brand : null,
+                          ),
+                          label: Text(
+                            pickedFileName != null ? 'Đã chọn: $pickedFileName' : 'Chọn tệp Excel / CSV từ thiết bị',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: pickedFileName != null ? FontWeight.w700 : FontWeight.w500,
+                              color: pickedFileName != null ? AppColors.brand : null,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      if (parsedRows.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Đã tìm thấy ${parsedRows.length} bản ghi:',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                            Text(
+                              'Sẵn sàng nhập',
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 140),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Theme.of(context).dividerColor),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: parsedRows.length,
+                            separatorBuilder: (_, __) => Divider(height: 1, color: Theme.of(context).dividerColor),
+                            itemBuilder: (ctx, i) {
+                              final row = parsedRows[i];
+                              final rowTitle = row.isNotEmpty ? row[0] : 'Dòng ${i + 1}';
+                              final rowSub = row.length > 1 ? row.sublist(1).join(' · ') : '';
+                              return ListTile(
+                                dense: true,
+                                visualDensity: VisualDensity.compact,
+                                leading: CircleAvatar(
+                                  radius: 12,
+                                  child: Text('${i + 1}', style: const TextStyle(fontSize: 10)),
+                                ),
+                                title: Text(rowTitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                subtitle: rowSub.isNotEmpty ? Text(rowSub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)) : null,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.brand,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () async {
+                              setSheetState(() {
+                                isProcessing = true;
+                                progressMessage = 'Đang nhập 0/${parsedRows.length}...';
+                              });
+
+                              int successCount = 0;
+                              int failCount = 0;
+
+                              for (var i = 0; i < parsedRows.length; i++) {
+                                final row = parsedRows[i];
+                                setSheetState(() {
+                                  progressMessage = 'Đang nhập ${i + 1}/${parsedRows.length}: ${row.isNotEmpty ? row[0] : ""}';
+                                });
+
+                                try {
+                                  switch (category) {
+                                    case AdminCategory.teachers:
+                                      final name = row.isNotEmpty ? row[0].trim() : '';
+                                      final phone = row.length > 1 ? row[1].trim() : '';
+                                      final email = row.length > 2 && row[2].trim().isNotEmpty
+                                          ? row[2].trim()
+                                          : '09${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}@kinderlog.edu.vn';
+                                      final username = row.length > 3 && row[3].trim().isNotEmpty ? row[3].trim() : null;
+                                      final pwd = row.length > 4 && row[4].trim().isNotEmpty ? row[4].trim() : '123456';
+                                      final className = row.length > 5 ? row[5].trim().toLowerCase() : '';
+                                      final matchedClass = _classes.where((c) => c.name.toLowerCase() == className || c.id == className).firstOrNull;
+                                      final classId = matchedClass?.id;
+
+                                      if (name.isNotEmpty && phone.isNotEmpty) {
+                                        await _repo.createTeacher(
+                                          fullName: name,
+                                          phone: phone,
+                                          email: email,
+                                          username: username,
+                                          password: pwd,
+                                          classId: classId,
+                                          classIds: classId != null ? [classId] : null,
+                                        );
+                                        successCount++;
+                                      } else {
+                                        failCount++;
+                                      }
+                                      break;
+
+                                    case AdminCategory.students:
+                                      final name = row.isNotEmpty ? row[0].trim() : '';
+                                      final nick = row.length > 1 && row[1].trim().isNotEmpty ? row[1].trim() : null;
+                                      final className = row.length > 2 ? row[2].trim().toLowerCase() : '';
+                                      final matchedClass = _classes.where((c) => c.name.toLowerCase() == className || c.id == className).firstOrNull;
+                                      final classId = matchedClass?.id ?? (_classes.isNotEmpty ? _classes.first.id : null);
+                                      final dob = row.length > 3 && row[3].trim().isNotEmpty ? row[3].trim() : null;
+                                      final genderRaw = row.length > 4 ? row[4].trim().toLowerCase() : '';
+                                      final gender = (genderRaw.contains('nữ') || genderRaw == 'female') ? 'female' : 'male';
+                                      final note = row.length > 5 && row[5].trim().isNotEmpty ? row[5].trim() : null;
+
+                                      if (name.isNotEmpty) {
+                                        await _repo.createChild(
+                                          fullName: name,
+                                          nickname: nick,
+                                          classId: classId,
+                                          dateOfBirth: dob,
+                                          gender: gender,
+                                          note: note,
+                                        );
+                                        successCount++;
+                                      } else {
+                                        failCount++;
+                                      }
+                                      break;
+
+                                    case AdminCategory.parents:
+                                      final name = row.isNotEmpty ? row[0].trim() : '';
+                                      final phone = row.length > 1 ? row[1].trim() : '';
+                                      final email = row.length > 2 && row[2].trim().isNotEmpty ? row[2].trim() : null;
+                                      final rel = row.length > 3 && row[3].trim().isNotEmpty ? row[3].trim() : 'Phụ huynh';
+                                      final username = row.length > 4 && row[4].trim().isNotEmpty ? row[4].trim() : null;
+                                      final pwd = row.length > 5 && row[5].trim().isNotEmpty ? row[5].trim() : '123456';
+
+                                      if (name.isNotEmpty && phone.isNotEmpty) {
+                                        await _repo.createParent(
+                                          fullName: name,
+                                          phone: phone,
+                                          email: email,
+                                          relationship: rel,
+                                          username: username,
+                                          password: pwd,
+                                        );
+                                        successCount++;
+                                      } else {
+                                        failCount++;
+                                      }
+                                      break;
+
+                                    case AdminCategory.schedules:
+                                      break;
+                                  }
+                                } catch (_) {
+                                  failCount++;
+                                }
+                              }
+
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              _loadCategoryData();
+                              _loadOverviewData();
+
+                              final errPart = failCount > 0 ? ' ($failCount lỗi / trùng lặp)' : '';
+                              final summaryMsg = 'Đã nhập thành công $successCount $label!$errPart';
+                              _notify(summaryMsg, isError: successCount == 0 && failCount > 0);
+                            },
+                            icon: const Icon(Icons.check_circle_outline, size: 20),
+                            label: Text(
+                              'Tiến hành nhập ${parsedRows.length} bản ghi',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _confirmLogout() async {

@@ -361,15 +361,51 @@ def list_classes(db: Session = Depends(get_db)):
 def list_parents(db: Session = Depends(get_db)):
     parents = db.query(Parent).order_by(Parent.created_at.desc()).all()
     results = []
+    need_commit = False
     for p in parents:
         children_info = []
         child_ids = []
         children_list = []
+
+        seen_child_ids = set()
+        p_children = []
         for c in p.children:
+            if c.child_id not in seen_child_ids:
+                seen_child_ids.add(c.child_id)
+                p_children.append(c)
+
+        # Fallback: Lấy các học sinh liên kết qua khóa ngoại trực tiếp Child.parent_id (dữ liệu seed / legacy)
+        legacy_children = db.query(Child).filter(Child.parent_id == p.parent_id).all()
+        for c in legacy_children:
+            if c.child_id not in seen_child_ids:
+                seen_child_ids.add(c.child_id)
+                p_children.append(c)
+                # Tự động đồng bộ vào bảng parent_child để các lần truy vấn sau luôn có trong p.children
+                db.execute(
+                    text(
+                        "INSERT INTO parent_child (id, parent_id, child_id, relationship, is_primary, can_pickup, created_at, updated_at) "
+                        "VALUES (:id, :pid, :cid, :rel, true, true, now(), now()) "
+                        "ON CONFLICT (parent_id, child_id) DO NOTHING"
+                    ),
+                    {
+                        "id": uuid.uuid4(),
+                        "pid": p.parent_id,
+                        "cid": c.child_id,
+                        "rel": p.relationship_ or "Phụ huynh",
+                    },
+                )
+                need_commit = True
+
+        for c in p_children:
             c_class = c.class_.name if c.class_ else ""
             children_info.append(f"{c.full_name} ({c_class})" if c_class else c.full_name)
             child_ids.append(str(c.child_id))
-            children_list.append({"id": str(c.child_id), "name": c.full_name, "class_name": c_class})
+            children_list.append({
+                "id": str(c.child_id),
+                "name": c.full_name,
+                "class_name": c_class,
+                "class_id": str(c.class_id) if c.class_id else None,
+            })
 
         child_desc = ", ".join(children_info) if children_info else "Chưa liên kết học sinh"
         user = db.query(User).filter(User.parent_id == p.parent_id).first()
@@ -389,6 +425,8 @@ def list_parents(db: Session = Depends(get_db)):
                 "children": children_list,
             }
         )
+    if need_commit:
+        db.commit()
     return results
 
 
@@ -643,7 +681,7 @@ def check_availability(
 
 @router.get("/children")
 def list_children(db: Session = Depends(get_db)):
-    children = db.query(Child).all()
+    children = db.query(Child).order_by(Child.created_at.desc()).all()
     results = []
     for c in children:
         class_name = c.class_.name if c.class_ else "Chưa xếp lớp"

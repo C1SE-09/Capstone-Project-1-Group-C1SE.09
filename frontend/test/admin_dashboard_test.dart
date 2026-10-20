@@ -236,6 +236,9 @@ void main() {
     expect(find.byIcon(Icons.notifications_none), findsNothing);
     // Verify refresh button is present
     expect(find.byIcon(Icons.refresh), findsOneWidget);
+    // Verify import and export buttons are present next to refresh button
+    expect(find.byIcon(Icons.file_upload_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
     // Verify there is no DropdownButtonFormField for school switching
     expect(find.byType(DropdownButtonFormField<int>), findsNothing);
     // Verify there is NO "Quay lại" button
@@ -332,6 +335,33 @@ void main() {
     // Cancel dialog
     await tester.tap(find.text('Hủy bỏ'));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('AdminDashboardScreen features tab shows class filter bar for teachers, students, and parents', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(buildTestWidget(onLogout: () {}));
+    await tester.pumpAndSettle();
+
+    // Navigate to Features Tab (defaults to Teachers category)
+    await tester.tap(find.text('Chức năng'));
+    await tester.pumpAndSettle();
+
+    // Verify class filter bar is visible on Teachers
+    expect(find.text('Lớp học:'), findsOneWidget);
+    expect(find.byIcon(Icons.meeting_room_outlined), findsOneWidget);
+
+    // Switch to Students category
+    await tester.tap(find.text('Học sinh'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lớp học:'), findsOneWidget);
+
+    // Switch to Parents category
+    await tester.tap(find.text('Phụ huynh'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lớp học:'), findsOneWidget);
   });
 }
 
