@@ -26,6 +26,9 @@ from app.api.teacher import reports_router
 from app.api.teacher import router as teacher_router
 
 
+from app.core.error_handlers import register_error_handlers
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Các logic chạy trước khi server nhận request (ví dụ: mở kết nối DB)
@@ -39,6 +42,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+register_error_handlers(app)
 
 
 logger = logging.getLogger(__name__)

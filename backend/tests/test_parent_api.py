@@ -20,7 +20,10 @@ from app.models.user import Class_, Teacher, User, UserRole
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.error_handlers import register_error_handlers
+
 app = FastAPI()
+register_error_handlers(app)
 app.include_router(dashboard_router)
 app.include_router(parent_router)
 
@@ -169,6 +172,27 @@ class TestUpdateParentPhone:
         assert parent.phone == "0987654321"
         assert mock_db.commit.called
 
+    def test_update_own_profile_with_email_and_relationship_success(self, client, mock_db):
+        parent = _make_parent(PARENT_A)
+        mock_db.query.return_value.filter.return_value.first.side_effect = [
+            parent,  # lookup theo id
+            None,  # kiểm tra SĐT trùng
+            None,  # kiểm tra email trùng
+        ]
+        resp = client.put(
+            f"/api/parent/{PARENT_A}",
+            json={
+                "phone": "0987654321",
+                "email": "tuan.new@gmail.com",
+                "relationship": "Mẹ",
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        assert parent.phone == "0987654321"
+        assert parent.email == "tuan.new@gmail.com"
+        assert parent.relationship == "Mẹ"
+        assert mock_db.commit.called
+
     def test_update_other_parent_forbidden(self, client):
         resp = client.put(f"/api/parent/{PARENT_B}", json={"phone": "0987654321"})
         assert resp.status_code == 403
@@ -176,6 +200,8 @@ class TestUpdateParentPhone:
     def test_update_invalid_phone_rejected(self, client):
         resp = client.put(f"/api/parent/{PARENT_A}", json={"phone": "12345"})
         assert resp.status_code == 422
+        data = resp.json()
+        assert "Số điện thoại" in data["detail"]
 
     def test_update_duplicate_phone_conflict(self, client, mock_db):
         parent = _make_parent(PARENT_A)
@@ -211,3 +237,34 @@ class TestUpdateParentPhone:
         resp = test_client.put(f"/api/parent/{PARENT_A}", json={"phone": "0987654321"})
         assert resp.status_code == 401
         app.dependency_overrides.clear()
+
+    def test_update_child_info_success(self, client, mock_db):
+        child = _make_child(PARENT_A)
+        mock_db.query.return_value.filter.return_value.first.return_value = child
+        payload = {
+            "full_name": "Trần Minh Quân",
+            "nickname": "Quân Quân",
+            "gender": "male",
+            "date_of_birth": "2022-05-10",
+            "medical_allergies": "Không có",
+        }
+        resp = client.put(f"/api/parent/{PARENT_A}/child/{child.child_id}", json=payload)
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["child"]["full_name"] == "Trần Minh Quân"
+        assert data["child"]["nickname"] == "Quân Quân"
+        assert child.full_name == "Trần Minh Quân"
+        assert child.nickname == "Quân Quân"
+        assert mock_db.commit.called
+
+    def test_update_child_info_wrong_parent_forbidden(self, client, mock_db):
+        child = _make_child(PARENT_B)  # Child belongs to Parent B
+        mock_db.query.return_value.filter.return_value.first.return_value = child
+        payload = {"full_name": "Hack Name"}
+        resp = client.put(f"/api/parent/{PARENT_A}/child/{child.child_id}", json=payload)
+        assert resp.status_code == 403
+
+    def test_update_child_info_not_found(self, client, mock_db):
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+        resp = client.put(f"/api/parent/{PARENT_A}/child/{uuid.uuid4()}", json={"full_name": "Test"})
+        assert resp.status_code == 404

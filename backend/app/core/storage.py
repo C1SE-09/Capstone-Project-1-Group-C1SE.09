@@ -28,17 +28,21 @@ def _ensure_bucket_exists(bucket_name: str) -> None:
     """Tạo bucket nếu chưa tồn tại và đặt policy public-read."""
     if not minio_client.bucket_exists(bucket_name):
         minio_client.make_bucket(bucket_name)
-        # Cho phép đọc public (không cần auth để GET file)
-        policy = f"""{{
-            "Version": "2012-10-17",
-            "Statement": [{{
-                "Effect": "Allow",
-                "Principal": {{"AWS": ["*"]}},
-                "Action": ["s3:GetObject"],
-                "Resource": ["arn:aws:s3:::{bucket_name}/*"]
-            }}]
-        }}"""
+
+    # Cho phép đọc public (không cần auth để GET file)
+    policy = f"""{{
+        "Version": "2012-10-17",
+        "Statement": [{{
+            "Effect": "Allow",
+            "Principal": {{"AWS": ["*"]}},
+            "Action": ["s3:GetObject"],
+            "Resource": ["arn:aws:s3:::{bucket_name}/*"]
+        }}]
+    }}"""
+    try:
         minio_client.set_bucket_policy(bucket_name, policy)
+    except Exception:
+        pass
 
 
 def upload_audio_to_minio(

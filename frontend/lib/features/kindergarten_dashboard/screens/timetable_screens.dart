@@ -14,6 +14,7 @@ import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/timetable/subject.dart';
 import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:flutter/material.dart';
 
@@ -700,7 +701,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
       _reload(item.dayIndex);
     } catch (e) {
       if (!mounted) return;
-      _showMessage(e is ScheduleException ? e.message : 'Không thể xóa hoạt động. Vui lòng thử lại.');
+      _showMessage(getFriendlyErrorMessage(e, fallback: 'Không thể xóa hoạt động. Vui lòng thử lại.'));
     }
   }
 
@@ -1257,7 +1258,7 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = e is ScheduleException ? e.message : 'Không thể lưu hoạt động. Vui lòng thử lại.');
+        setState(() => _error = getFriendlyErrorMessage(e, fallback: 'Không thể lưu hoạt động. Vui lòng thử lại.'));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

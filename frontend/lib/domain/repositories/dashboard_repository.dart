@@ -49,6 +49,25 @@ abstract class DashboardRepository {
   /// Phụ huynh tự cập nhật SĐT của mình — PUT /api/parent/{parentId}.
   Future<void> updateMyPhone(String parentId, String phone);
 
+  /// Phụ huynh tự cập nhật thông tin hồ sơ (SĐT, Email, Quan hệ) — PUT /api/parent/{parentId}.
+  Future<void> updateParentProfile(
+    String parentId, {
+    String? phone,
+    String? email,
+    String? relationship,
+  });
+
+  /// Phụ huynh cập nhật thông tin con — PUT /api/parent/{parentId}/child/{childId}.
+  Future<Child> updateChildInfo({
+    required String parentId,
+    required String childId,
+    String? fullName,
+    String? nickname,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? medicalAllergies,
+  });
+
   /// Báo cáo hôm nay của trẻ (null nếu chưa có) — dùng cho banner.
   Future<DailyReport?> getTodayReport(
     String childId,
