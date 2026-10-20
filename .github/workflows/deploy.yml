@@ -23,15 +23,51 @@ jobs:
             TARGET_BRANCH="${{ github.ref_name }}"
             echo "🚀 Bắt đầu quá trình Deploy nhánh '$TARGET_BRANCH' trên VPS..."
             
-            # Điều hướng đến thư mục dự án
-            if [ -d "$HOME/Capstone-Project-1-Group-C1SE.09" ]; then
-              cd "$HOME/Capstone-Project-1-Group-C1SE.09"
-            elif [ -d "/root/Capstone-Project-1-Group-C1SE.09" ]; then
-              cd "/root/Capstone-Project-1-Group-C1SE.09"
-            else
+            # Tự động tìm thư mục dự án trên VPS
+            PROJECT_DIR=""
+            
+            # Cách 1: Tìm qua mount volume của container api đang chạy
+            API_CID=$(docker ps -q --filter "name=api" 2>/dev/null | head -n 1)
+            if [ -n "$API_CID" ]; then
+              MOUNT_SRC=$(docker inspect --format '{{ range .Mounts }}{{ if or (eq .Destination "/app") (eq .Destination "/app/backend") }}{{ .Source }}{{ end }}{{ end }}' "$API_CID" 2>/dev/null || true)
+              if [ -n "$MOUNT_SRC" ]; then
+                if [ -f "$MOUNT_SRC/docker-compose.yml" ]; then
+                  PROJECT_DIR="$MOUNT_SRC"
+                elif [ -f "$(dirname "$MOUNT_SRC")/docker-compose.yml" ]; then
+                  PROJECT_DIR="$(dirname "$MOUNT_SRC")"
+                fi
+              fi
+            fi
+
+            # Cách 2: Kiểm tra các thư mục phổ biến
+            if [ -z "$PROJECT_DIR" ]; then
+              for candidate in \
+                "$HOME/Capstone-Project-1-Group-C1SE.09" \
+                "/root/Capstone-Project-1-Group-C1SE.09" \
+                "$HOME/kinderlog" \
+                "/root/kinderlog" \
+                "/var/www/Capstone-Project-1-Group-C1SE.09"; do
+                if [ -d "$candidate" ]; then
+                  PROJECT_DIR="$candidate"
+                  break
+                fi
+              done
+            fi
+
+            # Cách 3: Dò tìm toàn diện qua docker-compose.yml
+            if [ -z "$PROJECT_DIR" ]; then
+              PROJECT_DIR=$(find /root /home /var/www /opt -maxdepth 4 -name "docker-compose.yml" 2>/dev/null | head -n 1 | xargs -r dirname)
+            fi
+
+            if [ -z "$PROJECT_DIR" ] || [ ! -d "$PROJECT_DIR" ]; then
               echo "❌ Không tìm thấy thư mục dự án trên VPS!"
+              echo "Danh sách thư mục hiện có trong $HOME:"
+              ls -la "$HOME"
               exit 1
             fi
+
+            echo "📁 Tìm thấy thư mục dự án tại: $PROJECT_DIR"
+            cd "$PROJECT_DIR"
 
             echo "📥 Đồng bộ code nhánh '$TARGET_BRANCH' từ GitHub..."
             git fetch origin "$TARGET_BRANCH"
