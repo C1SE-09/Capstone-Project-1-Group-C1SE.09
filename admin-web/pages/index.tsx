@@ -1,8 +1,8 @@
 /**
  * pages/index.tsx
  * ===============
- * Trang chủ - 1 box tổng quan bug report.
- * Click "Xem tất cả" để vào trang quản lý chi tiết.
+ * Trang chủ Web Admin (dev team) — restyle theo theme KinderLog.
+ * Stats bug report được giữ nguyên.
  */
 
 import { useEffect, useState } from "react";
@@ -10,7 +10,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import AdminLayout from "@/components/AdminLayout";
-import { Card, Spinner } from "@/components/ui";
+import { Spinner } from "@/components/ui-school";
 import { apiFetch, clearToken, getToken } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -27,7 +27,12 @@ export default function DashboardPage() {
   const [tokenReady, setTokenReady] = useState(false);
 
   useEffect(() => {
-    if (!getToken()) {
+    // Nếu đang là school-admin mà vào / → đẩy sang /school-admin
+    if (getToken("schoolAdmin")) {
+      router.replace("/school-admin");
+      return;
+    }
+    if (!getToken("adminApp")) {
       router.replace("/login");
     } else {
       setTokenReady(true);
@@ -36,7 +41,7 @@ export default function DashboardPage() {
 
   const { data: stats, error } = useSWR<Stats>(
     tokenReady ? "/api/bug-reports/stats" : null,
-    (url) => apiFetch<Stats>(url),
+    (url) => apiFetch<Stats>(url, { account: "adminApp" }),
     { refreshInterval: 30000 },
   );
 
@@ -44,17 +49,18 @@ export default function DashboardPage() {
     return (
       <AdminLayout currentPage="dashboard">
         {error ? (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 max-w-md">
-            <p className="font-semibold text-sm">Lỗi tải dữ liệu</p>
-            <p className="text-xs mt-1 text-red-600">
-              {error?.detail || "Phiên làm việc có thể đã hết hạn hoặc không kết nối được máy chủ."}
-            </p>
+          <div className="card p-5 max-w-md">
+            <div className="font-bold text-bad mb-1 text-sm">Lỗi tải dữ liệu</div>
+            <div className="text-xs text-ink-soft mb-3">
+              {error?.detail ||
+                "Phiên làm việc có thể đã hết hạn hoặc không kết nối được máy chủ."}
+            </div>
             <button
               onClick={() => {
-                clearToken();
+                clearToken("adminApp");
                 router.replace("/login");
               }}
-              className="mt-3 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition"
+              className="kbtn kbtn-danger"
             >
               Đăng nhập lại
             </button>
@@ -72,69 +78,134 @@ export default function DashboardPage() {
   return (
     <AdminLayout currentPage="dashboard">
       <div className="max-w-3xl space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Trang chủ</h1>
+        <h1 className="text-2xl font-bold text-ink tracking-tight">
+          Trang chủ · Web Admin
+        </h1>
+        <p className="text-sm text-ink-soft">
+          Tổng quan bug reports gửi từ giáo viên &amp; phụ huynh qua ứng dụng
+          mobile.
+        </p>
 
-        <Card className="p-6">
+        <div className="card p-6 mt-3">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">🐛</span>
+              <div
+                className="w-12 h-12 flex items-center justify-center rounded-control text-2xl"
+                style={{ background: "#F6EED9" }}
+              >
+                🐛
+              </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Bug Report</h2>
-                <p className="text-xs text-gray-500">
-                  Tổng quan báo cáo lỗi từ giáo viên &amp; phụ huynh
+                <h2 className="text-lg font-bold text-ink">Bug Report</h2>
+                <p className="text-xs text-ink-soft">
+                  Báo cáo lỗi từ giáo viên &amp; phụ huynh
                 </p>
               </div>
             </div>
             <Link
               href="/bug-reports"
-              className="text-sm text-brand-600 hover:text-brand-700 font-medium whitespace-nowrap"
+              className="text-sm font-semibold hover:underline"
+              style={{ color: "#16665a" }}
             >
               Xem tất cả →
             </Link>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-4">
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                Tổng
-              </div>
-              <div className="mt-1 text-2xl font-bold text-gray-900">
-                {stats.total}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                Đang mở
-              </div>
-              <div className="mt-1 text-2xl font-bold text-amber-600">
-                {openCount}
-              </div>
-              <div className="text-[10px] text-gray-400">
-                {stats.by_status["open"] || 0} mới ·{" "}
-                {stats.by_status["in_progress"] || 0} xử lý
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                Critical
-              </div>
-              <div
-                className={`mt-1 text-2xl font-bold ${
-                  stats.critical_open > 0 ? "text-red-600" : "text-gray-400"
-                }`}
-              >
-                {stats.critical_open}
-              </div>
-              <div className="text-[10px] text-gray-400">chưa xử lý</div>
-            </div>
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <KpiTile
+              label="Tổng số report"
+              value={stats.total}
+              tone="brand"
+              icon="📋"
+            />
+            <KpiTile
+              label="Đang mở"
+              value={openCount}
+              tone="warn"
+              icon="⏳"
+              hint={`${stats.by_status["open"] || 0} mới · ${
+                stats.by_status["in_progress"] || 0
+              } đang xử lý`}
+            />
+            <KpiTile
+              label="Critical chưa xử lý"
+              value={stats.critical_open}
+              tone="bad"
+              icon="🔥"
+              hint={stats.critical_open > 0 ? "Cần ưu tiên" : "Tất cả ổn"}
+            />
           </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400">
-            Mới trong 7 ngày: {stats.new_last_7_days} · Cập nhật:{" "}
-            {formatDate(stats.generated_at)}
+          <div className="mt-4 pt-4 border-t border-line text-xs text-ink-faint flex justify-between flex-wrap gap-2">
+            <span>
+              Mới trong 7 ngày:{" "}
+              <span className="font-bold text-ink">
+                {stats.new_last_7_days}
+              </span>
+            </span>
+            <span>Cập nhật: {formatDate(stats.generated_at)}</span>
           </div>
-        </Card>
+        </div>
+
+        <div className="card p-4 bg-warn-tint border-warn/30">
+          <div className="text-sm">
+            <span className="font-bold" style={{ color: "#8A5E12" }}>
+              💡 Ghi chú:
+            </span>{" "}
+            <span className="text-ink-soft">
+              Tài khoản này (<b>Web Admin</b>) là tài khoản riêng cho dev team quản
+              lý bug reports. Admin trường (quản lý giáo viên / học sinh / phụ
+              huynh) đăng nhập tại cùng trang này nhưng sẽ được tự động điều
+              hướng vào khu vực riêng.
+            </span>
+          </div>
+        </div>
       </div>
     </AdminLayout>
+  );
+}
+
+function KpiTile({
+  label,
+  value,
+  tone,
+  icon,
+  hint,
+}: {
+  label: string;
+  value: number;
+  tone: "brand" | "warn" | "bad";
+  icon: string;
+  hint?: string;
+}) {
+  const map = {
+    brand: { bg: "#E6EFEC", fg: "#16665a" },
+    warn: { bg: "#F6EED9", fg: "#B0791B" },
+    bad: { bg: "#F6E6E1", fg: "#BB4A34" },
+  };
+  const c = map[tone];
+  return (
+    <div
+      className="rounded-control p-4 border"
+      style={{ background: c.bg, borderColor: c.fg }}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span
+          className="text-[11px] font-bold uppercase tracking-wider"
+          style={{ color: c.fg }}
+        >
+          {label}
+        </span>
+        <span className="text-lg opacity-60">{icon}</span>
+      </div>
+      <div className="text-3xl font-extrabold" style={{ color: c.fg }}>
+        {value}
+      </div>
+      {hint && (
+        <div className="text-[11px] mt-1" style={{ color: c.fg, opacity: 0.85 }}>
+          {hint}
+        </div>
+      )}
+    </div>
   );
 }
