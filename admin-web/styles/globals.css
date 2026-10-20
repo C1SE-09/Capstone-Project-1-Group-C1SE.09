@@ -43,98 +43,100 @@ body {
 }
 
 /* ─── Helpers ──────────────────────────────────────────────── */
-.card {
-  background-color: #ffffff;
-  border: 1px solid #e7e3da;
-  border-radius: 12px;
-}
+@layer components {
+  .card {
+    background-color: #ffffff;
+    border: 1px solid #e7e3da;
+    border-radius: 12px;
+  }
 
-.kbtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 16px;
-  font-weight: 600;
-  font-size: 13px;
-  border-radius: 8px;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
+  .kbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
 
-.kbtn-primary {
-  background-color: #16665a;
-  color: #fff;
-}
-.kbtn-primary:hover:not(:disabled) {
-  background-color: #114f46;
-}
-.kbtn-primary:disabled {
-  background-color: #a3c2b3;
-  cursor: not-allowed;
-}
+  .kbtn-primary {
+    background-color: #16665a;
+    color: #fff;
+  }
+  .kbtn-primary:hover:not(:disabled) {
+    background-color: #114f46;
+  }
+  .kbtn-primary:disabled {
+    background-color: #a3c2b3;
+    cursor: not-allowed;
+  }
 
-.kbtn-secondary {
-  background-color: #ffffff;
-  color: #2a2926;
-  border: 1px solid #d9d4c9;
-}
-.kbtn-secondary:hover:not(:disabled) {
-  background-color: #efece5;
-}
+  .kbtn-secondary {
+    background-color: #ffffff;
+    color: #2a2926;
+    border: 1px solid #d9d4c9;
+  }
+  .kbtn-secondary:hover:not(:disabled) {
+    background-color: #efece5;
+  }
 
-.kbtn-danger {
-  background-color: #bb4a34;
-  color: #fff;
-}
-.kbtn-danger:hover:not(:disabled) {
-  background-color: #a13d29;
-}
+  .kbtn-danger {
+    background-color: #bb4a34;
+    color: #fff;
+  }
+  .kbtn-danger:hover:not(:disabled) {
+    background-color: #a13d29;
+  }
 
-.kbtn-ghost {
-  background-color: transparent;
-  color: #605d57;
-}
-.kbtn-ghost:hover:not(:disabled) {
-  background-color: #efece5;
-}
+  .kbtn-ghost {
+    background-color: transparent;
+    color: #605d57;
+  }
+  .kbtn-ghost:hover:not(:disabled) {
+    background-color: #efece5;
+  }
 
-.kinput {
-  width: 100%;
-  padding: 9px 12px;
-  font-size: 13px;
-  background-color: #ffffff;
-  border: 1px solid #d9d4c9;
-  border-radius: 8px;
-  color: #2a2926;
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.kinput:focus {
-  border-color: #16665a;
-  box-shadow: 0 0 0 3px rgba(22, 102, 90, 0.12);
-}
-.kinput:disabled {
-  background-color: #efece5;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
+  .kinput {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 13px;
+    background-color: #ffffff;
+    border: 1px solid #d9d4c9;
+    border-radius: 8px;
+    color: #2a2926;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .kinput:focus {
+    border-color: #16665a;
+    box-shadow: 0 0 0 3px rgba(22, 102, 90, 0.12);
+  }
+  .kinput:disabled {
+    background-color: #efece5;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
 
-.klabel {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #2a2926;
-  margin-bottom: 6px;
-}
+  .klabel {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2a2926;
+    margin-bottom: 6px;
+  }
 
-.ktag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+  .ktag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
 }
 
 /* ─── Line clamp ───────────────────────────────────────────── */

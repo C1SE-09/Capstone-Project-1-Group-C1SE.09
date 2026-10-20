@@ -61,6 +61,8 @@ export default function SchoolAdminSchedulesPage() {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(0); // index 0..4
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [conflictCycleIndex, setConflictCycleIndex] = useState(0);
   const [query, setQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
@@ -81,49 +83,132 @@ export default function SchoolAdminSchedulesPage() {
     });
   }, []);
 
-  const dayOfWeek = selectedDay + 2; // backend expects 2..6 (Mon..Fri)
+  const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c.name])), [classes]);
 
-  const { data: schedules, mutate } = useSWR<Schedule[]>(
-    ready && selectedClassId ? ["schedules", dayOfWeek] : null,
-    () => getSchedules(dayOfWeek),
+  // Tải tất cả lịch trong trường để kiểm tra xung đột phòng và trùng lịch tuần
+  const { data: allSchedules, mutate: mutateAll } = useSWR<Schedule[]>(
+    ready ? "all-schedules" : null,
+    () => getSchedules(),
     { refreshInterval: 30000 },
   );
+
+  const dayOfWeek = selectedDay + 2; // backend expects 2..6 (Mon..Fri)
+
+  const { data: directDaySchedules, mutate: mutateDay } = useSWR<Schedule[]>(
+    ready && selectedClassId ? ["schedules", selectedClassId, dayOfWeek] : null,
+    () => getSchedules(selectedClassId, dayOfWeek),
+    { refreshInterval: 30000 },
+  );
+
+  const schedules = useMemo(() => {
+    if (directDaySchedules) return directDaySchedules;
+    if (!allSchedules || !selectedClassId) return undefined;
+    return allSchedules.filter(
+      (s) => s.class_id === selectedClassId && s.day_of_week === dayOfWeek,
+    );
+  }, [directDaySchedules, allSchedules, selectedClassId, dayOfWeek]);
 
   const { data: timeSlots } = useSWR<TimeSlot[]>(
     ready ? "time-slots" : null,
     () => getTimeSlots(),
   );
 
-  // Tính xung đột cùng phòng + khung giờ đè
-  const conflicts = useMemo(() => {
-    const list = schedules ?? [];
-    const seen = new Set<string>();
-    const result: Schedule[] = [];
-    for (let i = 0; i < list.length; i++) {
-      for (let j = i + 1; j < list.length; j++) {
-        const a = list[i];
-        const b = list[j];
-        if (!a.room_name.trim() || !b.room_name.trim()) continue;
-        if (a.room_name.trim().toLowerCase() !== b.room_name.trim().toLowerCase()) continue;
-        if (!a.start_time || !b.start_time || !a.end_time || !b.end_time) continue;
-        const aS = toMin(a.start_time);
-        const aE = toMin(a.end_time);
+  // Xác định lý do xung đột cho từng tiết của lớp đang chọn
+  const conflictReasons = useMemo(() => {
+    const reasons = new Map<string, string>();
+    if (!allSchedules || !selectedClassId) return reasons;
+
+    const classScheds = allSchedules.filter((s) => s.class_id === selectedClassId);
+
+    for (const a of classScheds) {
+      if (!a.start_time || !a.end_time) continue;
+      const aS = toMin(a.start_time);
+      const aE = toMin(a.end_time);
+
+      for (const b of allSchedules) {
+        if (b.id === a.id || b.day_of_week !== a.day_of_week) continue;
+        if (!b.start_time || !b.end_time) continue;
         const bS = toMin(b.start_time);
         const bE = toMin(b.end_time);
+
+        // Trùng giờ
         if (aS < bE && aE > bS) {
-          if (!seen.has(a.id)) {
-            result.push(a);
-            seen.add(a.id);
-          }
-          if (!seen.has(b.id)) {
-            result.push(b);
-            seen.add(b.id);
+          const sameClass = b.class_id === a.class_id;
+          const sameRoom = Boolean(
+            a.room_name &&
+            b.room_name &&
+            a.room_name.trim().toLowerCase() === b.room_name.trim().toLowerCase(),
+          );
+
+          if (sameClass) {
+            reasons.set(
+              a.id,
+              `Trùng khung giờ với "${b.activity_name}" (${b.start_time} - ${b.end_time})`,
+            );
+            break;
+          } else if (sameRoom) {
+            const otherClassName = (b.class_id && classMap.get(b.class_id)) || "lớp khác";
+            reasons.set(
+              a.id,
+              `Trùng phòng "${a.room_name}" với ${otherClassName} ("${b.activity_name}")`,
+            );
+            break;
           }
         }
       }
     }
-    return result;
-  }, [schedules]);
+    return reasons;
+  }, [allSchedules, selectedClassId, classMap]);
+
+  // Xung đột trong ngày đang chọn
+  const conflicts = useMemo(() => {
+    return (schedules ?? []).filter((s) => conflictReasons.has(s.id));
+  }, [schedules, conflictReasons]);
+
+  // Toàn bộ các tiết bị xung đột trong tuần của lớp này, sắp xếp theo gần hôm nay nhất
+  const weeklyConflicts = useMemo(() => {
+    if (!allSchedules || !selectedClassId) return [];
+    const jsDay = new Date().getDay(); // 0: CN, 1: T2, ..., 6: T7
+    const todayIndex = jsDay >= 1 && jsDay <= 5 ? jsDay - 1 : 0;
+
+    const list = allSchedules.filter(
+      (s) => s.class_id === selectedClassId && conflictReasons.has(s.id),
+    );
+
+    return list.slice().sort((a, b) => {
+      const dayA = a.day_of_week - 2;
+      const dayB = b.day_of_week - 2;
+      const distA = (dayA - todayIndex + 5) % 5;
+      const distB = (dayB - todayIndex + 5) % 5;
+      if (distA !== distB) return distA - distB;
+      return toMin(a.start_time || "") - toMin(b.start_time || "");
+    });
+  }, [allSchedules, selectedClassId, conflictReasons]);
+
+  const nearestConflict = weeklyConflicts[0] || null;
+
+  function jumpToConflict(targetSchedule?: Schedule) {
+    if (weeklyConflicts.length === 0) return;
+    const target = targetSchedule || weeklyConflicts[conflictCycleIndex % weeklyConflicts.length];
+    if (!target) return;
+
+    const targetDayIndex = target.day_of_week - 2;
+    setSelectedDay(targetDayIndex);
+    setQuery("");
+    setHighlightedId(target.id);
+    setConflictCycleIndex((prev) => (prev + 1) % weeklyConflicts.length);
+
+    setTimeout(() => {
+      const el = document.getElementById(`schedule-${target.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 150);
+
+    setTimeout(() => {
+      setHighlightedId((curr) => (curr === target.id ? null : curr));
+    }, 4500);
+  }
 
   const filteredSchedules = useMemo(() => {
     const list = (schedules ?? []).slice().sort((a, b) =>
@@ -172,6 +257,7 @@ export default function SchoolAdminSchedulesPage() {
     setSaving(true);
     try {
       const payload: SchedulePayload = {
+        class_id: selectedClassId,
         activity_name: form.activity_name.trim(),
         content: form.content.trim() || null,
         room_name: form.room_name.trim() || "Phòng học",
@@ -188,7 +274,8 @@ export default function SchoolAdminSchedulesPage() {
         setToast({ msg: "Đã thêm hoạt động", tone: "ok" });
       }
       setDrawerOpen(false);
-      mutate();
+      mutateDay();
+      mutateAll();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể lưu hoạt động", tone: "bad" });
     } finally {
@@ -200,7 +287,8 @@ export default function SchoolAdminSchedulesPage() {
     try {
       await deleteSchedule(s.id);
       setToast({ msg: "Đã xóa hoạt động", tone: "ok" });
-      mutate();
+      mutateDay();
+      mutateAll();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
     }
@@ -232,6 +320,74 @@ export default function SchoolAdminSchedulesPage() {
         Lên lịch hoạt động cho từng lớp theo tuần. Hệ thống tự động phát hiện xung
         đột phòng/khung giờ.
       </p>
+
+      {/* Cảnh báo xung đột NẰM TRÊN PHẦN CHỌN LỚP */}
+      {selectedClassId && allSchedules && (
+        weeklyConflicts.length > 0 ? (
+          <div
+            onClick={() => jumpToConflict()}
+            role="button"
+            tabIndex={0}
+            className="card p-3.5 mb-4 flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-md border select-none group"
+            style={{
+              background: "#FBF6ED",
+              borderColor: "#D9A54C",
+            }}
+            title="Nhấn để nhảy tới tiết bị xung đột"
+          >
+            <div className="flex items-start gap-3 min-w-0">
+              <span className="text-2xl shrink-0 mt-0.5 animate-pulse">⚠️</span>
+              <div className="min-w-0">
+                <div className="font-bold text-sm text-[#8A5E12] flex items-center gap-2 flex-wrap">
+                  <span>Phát hiện {weeklyConflicts.length} tiết học bị xung đột trong tuần</span>
+                  {weeklyConflicts.length > 1 && (
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#8A5E12]/15 text-[#8A5E12]">
+                      Nhấn lần {(conflictCycleIndex % weeklyConflicts.length) + 1}/{weeklyConflicts.length}
+                    </span>
+                  )}
+                </div>
+                {nearestConflict && (
+                  <div className="text-xs text-[#605D57] mt-1 line-clamp-1">
+                    <strong className="text-[#8A5E12]">Gần hiện tại nhất:</strong>{" "}
+                    <span className="font-semibold text-ink">
+                      {(() => {
+                        const nearestDayIndex = nearestConflict.day_of_week - 2;
+                        const jsDay = new Date().getDay();
+                        const todayIndex = jsDay >= 1 && jsDay <= 5 ? jsDay - 1 : 0;
+                        if (nearestDayIndex === todayIndex) return `Hôm nay (${DAY_LABELS[nearestDayIndex]})`;
+                        if (nearestDayIndex === (todayIndex + 1) % 5) return `Ngày mai (${DAY_LABELS[nearestDayIndex]})`;
+                        return DAY_LABELS[nearestDayIndex];
+                      })()}
+                    </span>{" "}
+                    ({nearestConflict.start_time} - {nearestConflict.end_time}):{" "}
+                    <span className="font-medium text-ink">{nearestConflict.activity_name}</span>
+                    {conflictReasons.get(nearestConflict.id) && (
+                      <span className="text-[#8A5E12] ml-1">
+                        · {conflictReasons.get(nearestConflict.id)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-bold text-white shrink-0 shadow-sm transition group-hover:scale-105"
+              style={{ background: "#B0791B" }}
+            >
+              <span>Sửa tiết xung đột</span>
+              <span className="text-sm transition group-hover:translate-x-0.5">→</span>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="card px-3.5 py-2.5 mb-4 flex items-center gap-2 text-xs font-medium"
+            style={{ background: "#EDF5F2", color: "#16665A", borderColor: "#C4DCD3" }}
+          >
+            <span className="text-base">✅</span>
+            <span>Không phát hiện xung đột phòng hoặc khung giờ trong tuần cho lớp này.</span>
+          </div>
+        )
+      )}
 
       {/* Class selector */}
       {classes.length > 0 && (
@@ -322,17 +478,24 @@ export default function SchoolAdminSchedulesPage() {
         ) : (
           <ul>
             {filteredSchedules.map((s, idx) => {
-              const hasConflict = conflicts.some((c) => c.id === s.id);
+              const hasConflict = conflictReasons.has(s.id);
+              const reason = conflictReasons.get(s.id);
+              const isHighlighted = highlightedId === s.id;
               return (
                 <li
                   key={s.id}
-                  className={`flex items-start gap-3 px-4 py-3 ${idx > 0 ? "border-t border-line" : ""}`}
+                  id={`schedule-${s.id}`}
+                  className={`flex items-start gap-3 px-4 py-3 transition-all duration-300 ${idx > 0 ? "border-t border-line" : ""
+                    } ${isHighlighted
+                      ? "bg-[#FFF9EE] ring-2 ring-[#B0791B] ring-offset-2 z-10 relative rounded-control shadow-sm"
+                      : ""
+                    }`}
                 >
                   <div
                     className="flex flex-col items-center justify-center rounded-control px-2.5 py-1 min-w-[80px]"
-                    style={{ background: "#E6EFEC" }}
+                    style={{ background: isHighlighted ? "#FCEBCB" : "#E6EFEC" }}
                   >
-                    <div className="font-bold text-sm" style={{ color: "#16665a" }}>
+                    <div className="font-bold text-sm" style={{ color: isHighlighted ? "#8A5E12" : "#16665a" }}>
                       {s.start_time || "--:--"}
                     </div>
                     <div className="text-[10px]" style={{ color: "#605D57" }}>
@@ -345,11 +508,22 @@ export default function SchoolAdminSchedulesPage() {
                       {hasConflict && (
                         <Pill tone="warn">⚠️ Xung đột</Pill>
                       )}
+                      {isHighlighted && (
+                        <span className="text-[11px] px-2 py-0.5 rounded font-bold bg-[#B0791B] text-white animate-pulse">
+                          Đang xem xung đột
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-ink-soft mt-0.5">
                       {s.time_range && `Khung giờ: ${s.time_range}`}
                       {s.room_name && ` · Phòng: ${s.room_name}`}
                     </div>
+                    {hasConflict && reason && (
+                      <div className="mt-1.5 text-xs text-[#8A5E12] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FBF6ED] border border-[#E2BF81] inline-block">
+                        <span>⚠️</span>
+                        <span>{reason}</span>
+                      </div>
+                    )}
                     {s.content && (
                       <div className="text-xs text-ink-soft mt-1 line-clamp-2">
                         {s.content}
@@ -411,11 +585,10 @@ export default function SchoolAdminSchedulesPage() {
                 key={label}
                 type="button"
                 onClick={() => setForm({ ...form, day_of_week: idx + 2 })}
-                className={`px-3 py-1.5 rounded-control text-xs font-semibold border ${
-                  form.day_of_week === idx + 2
-                    ? "text-white border-transparent"
-                    : "bg-white text-ink border-line-strong"
-                }`}
+                className={`px-3 py-1.5 rounded-control text-xs font-semibold border ${form.day_of_week === idx + 2
+                  ? "text-white border-transparent"
+                  : "bg-white text-ink border-line-strong"
+                  }`}
                 style={form.day_of_week === idx + 2 ? { background: "#16665a" } : {}}
               >
                 {label}
@@ -431,11 +604,10 @@ export default function SchoolAdminSchedulesPage() {
                   key={slot.id}
                   type="button"
                   onClick={() => pickSlot(slot)}
-                  className={`px-2.5 py-1.5 rounded-control text-xs font-semibold border ${
-                    form.slot_id === slot.id
-                      ? "text-white border-transparent"
-                      : "bg-white text-ink border-line-strong"
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-control text-xs font-semibold border ${form.slot_id === slot.id
+                    ? "text-white border-transparent"
+                    : "bg-white text-ink border-line-strong"
+                    }`}
                   style={form.slot_id === slot.id ? { background: "#16665a" } : {}}
                 >
                   {slot.name}
