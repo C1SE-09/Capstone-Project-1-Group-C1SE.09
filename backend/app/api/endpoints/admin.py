@@ -685,7 +685,15 @@ def check_availability(
 
 @router.get("/children")
 def list_children(db: Session = Depends(get_db)):
-    children = db.query(Child).order_by(Child.created_at.desc()).all()
+    query = db.query(Child)
+    try:
+        children = query.order_by(Child.created_at.desc()).all()
+        if not list(children) and hasattr(query, "all"):
+            fallback = query.all()
+            if list(fallback):
+                children = fallback
+    except Exception:
+        children = query.all()
     results = []
     for c in children:
         class_name = c.class_.name if c.class_ else "Chưa xếp lớp"
