@@ -1809,7 +1809,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'Email: ${v.email.isNotEmpty ? v.email : "Chưa cập nhật"}',
           ],
           v.childrenSummary.isNotEmpty
-              ? [v.childrenSummary.replaceFirst('BN: ', 'Bé: ')]
+              ? [
+                  v.childrenSummary
+                      .replaceFirst('Bé: Chưa liên kết học sinh', 'Chưa liên kết học sinh')
+                      .replaceFirst('Bé: Chưa liên kết', 'Chưa liên kết')
+                      .replaceFirst('BN: ', 'Bé: ')
+                ]
               : <String>[],
         ),
       _ => ('', '', <String>[], <String>[]),

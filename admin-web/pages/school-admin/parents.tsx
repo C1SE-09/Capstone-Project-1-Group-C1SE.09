@@ -15,16 +15,22 @@ import {
   Spinner,
   ConfirmDialog,
   Toast,
+  ClassFilterSelect,
+  ImportModal,
+  ImportResult,
 } from "@/components/ui-school";
 import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { exportToExcel } from "@/lib/excel-helper";
 import {
   Child,
   ChildPayload,
   Parent,
   ParentPayload,
+  SchoolClass,
   createParent,
   deleteParent,
   getChildren,
+  getClasses,
   getParents,
   updateParent,
 } from "@/lib/admin-api";
@@ -51,16 +57,81 @@ const EMPTY: FormState = {
   status: "active",
 };
 
+function getParentChildrenSummary(p: Parent, allChildren: Child[] = []): string {
+  if (p.children && p.children.length > 0) {
+    return p.children
+      .map((c) => {
+        const name = c.name || (c as any).full_name || "Bé";
+        const cls = c.class_name ? ` (${c.class_name})` : "";
+        return `${name}${cls}`;
+      })
+      .join(", ");
+  }
+
+  const rawSummary = (p.children_summary || "").trim();
+  const isUnlinked =
+    !rawSummary ||
+    rawSummary.includes("Chưa liên kết") ||
+    rawSummary.includes("Chưa có liên kết");
+
+  if (!isUnlinked) {
+    return rawSummary.replace(/^Bé:\s*/, "");
+  }
+
+  const matched = allChildren.filter(
+    (c) =>
+      c.parent_id === p.id ||
+      (c.parent_ids && c.parent_ids.includes(p.id)) ||
+      (p.child_ids && p.child_ids.includes(c.id)) ||
+      (p.child_id && p.child_id === c.id),
+  );
+
+  if (matched.length > 0) {
+    return matched
+      .map((c) => `${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`)
+      .join(", ");
+  }
+
+  return "Chưa liên kết học sinh";
+}
+
+function parentHasChildInClass(
+  p: Parent,
+  classId: string,
+  allChildren: Child[] = [],
+): boolean {
+  if (!classId) return true;
+
+  if (p.children && p.children.length > 0) {
+    if (p.children.some((c) => c.class_id === classId)) return true;
+  }
+
+  const matched = allChildren.filter(
+    (c) =>
+      c.parent_id === p.id ||
+      (c.parent_ids && c.parent_ids.includes(p.id)) ||
+      (p.child_ids && p.child_ids.includes(c.id)) ||
+      (p.child_id && p.child_id === c.id),
+  );
+
+  if (matched.some((c) => c.class_id === classId)) return true;
+
+  return false;
+}
+
 export default function SchoolAdminParentsPage() {
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Parent | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Parent | null>(null);
-  const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
 
   useEffect(() => {
     if (!getToken() || !getStoredSchoolAdmin()) {
@@ -68,9 +139,13 @@ export default function SchoolAdminParentsPage() {
       return;
     }
     setReady(true);
-    getChildren()
-      .then(setChildren)
-      .catch(() => []);
+    Promise.all([
+      getChildren().catch(() => []),
+      getClasses().catch(() => []),
+    ]).then(([c, cl]) => {
+      setChildren(c);
+      setClasses(cl);
+    });
   }, []);
 
   const { data: parents, mutate } = useSWR<Parent[]>(
@@ -80,18 +155,102 @@ export default function SchoolAdminParentsPage() {
   );
 
   const filtered = useMemo(() => {
-    const list = parents ?? [];
+    let list = parents ?? [];
+    if (selectedClassId) {
+      list = list.filter((p) => parentHasChildInClass(p, selectedClassId, children));
+    }
     const q = query.toLowerCase().trim();
     if (!q) return list;
-    return list.filter(
-      (p) =>
+    return list.filter((p) => {
+      const childrenSummary = getParentChildrenSummary(p, children).toLowerCase();
+      return (
         p.full_name.toLowerCase().includes(q) ||
         p.phone.toLowerCase().includes(q) ||
-        p.email.toLowerCase().includes(q) ||
+        (p.email || "").toLowerCase().includes(q) ||
         (p.username || "").toLowerCase().includes(q) ||
-        (p.children_summary || "").toLowerCase().includes(q),
-    );
-  }, [parents, query]);
+        childrenSummary.includes(q)
+      );
+    });
+  }, [parents, query, selectedClassId, children]);
+
+  function handleExportExcel() {
+    if (!filtered || filtered.length === 0) {
+      setToast({ msg: "Không có dữ liệu phụ huynh để xuất", tone: "warn" });
+      return;
+    }
+    const headers = [
+      "Họ và tên",
+      "Số điện thoại",
+      "Email",
+      "Quan hệ",
+      "Con liên kết",
+      "Tên đăng nhập",
+      "Trạng thái",
+    ];
+    const rows = filtered.map((p) => [
+      p.full_name,
+      p.phone,
+      p.email || "",
+      p.relationship || "Phụ huynh",
+      getParentChildrenSummary(p, children),
+      p.username || "",
+      p.status === "active" ? "Đang hoạt động" : "Ngừng",
+    ]);
+    const currentClass = classes.find((cl) => cl.id === selectedClassId);
+    const filename = currentClass
+      ? `danh_sach_phu_huynh_${currentClass.name.replace(/\s+/g, "_")}.xlsx`
+      : "danh_sach_phu_huynh.xlsx";
+    exportToExcel(filename, "PhuHuynh", headers, rows);
+    setToast({ msg: `Đã xuất ${rows.length} phụ huynh ra file Excel`, tone: "ok" });
+  }
+
+  async function handleImportRows(rows: string[][]): Promise<ImportResult> {
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const fullName = row[0]?.trim();
+      const phone = row[1]?.trim();
+      const email = row[2]?.trim() || null;
+      const relationship = row[3]?.trim() || "Phụ huynh";
+      const username = row[4]?.trim() || null;
+      const password = row[5]?.trim() || null;
+
+      if (!fullName || !phone) {
+        failed++;
+        errors.push(`Dòng ${i + 1}: Thiếu họ tên hoặc số điện thoại.`);
+        continue;
+      }
+      if (!/^0\d{9}$/.test(phone)) {
+        failed++;
+        errors.push(`Dòng ${i + 1} (${fullName}): Số điện thoại phải gồm 10 số bắt đầu bằng 0.`);
+        continue;
+      }
+
+      try {
+        await createParent({
+          full_name: fullName,
+          phone,
+          email,
+          relationship,
+          username,
+          password,
+          status: "active",
+        });
+        success++;
+      } catch (err: any) {
+        failed++;
+        errors.push(`Dòng ${i + 1} (${fullName}): ${err?.message || "Lỗi tạo phụ huynh"}`);
+      }
+    }
+
+    if (success > 0) {
+      mutate();
+    }
+    return { total: rows.length, success, failed, errors };
+  }
 
   function openCreate() {
     setEditing(null);
@@ -183,7 +342,7 @@ export default function SchoolAdminParentsPage() {
       active="features"
       pageTitle="Quản lý phụ huynh"
       pageAction={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               mutate();
@@ -194,18 +353,41 @@ export default function SchoolAdminParentsPage() {
           >
             ↻
           </button>
+          <button
+            onClick={handleExportExcel}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Xuất danh sách ra file Excel"
+          >
+            📥 Xuất Excel
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Nhập dữ liệu từ file Excel / CSV"
+          >
+            📤 Nhập file
+          </button>
           <button onClick={openCreate} className="kbtn kbtn-primary">
             + Thêm phụ huynh
           </button>
         </div>
       }
     >
-      <div className="card p-3 mb-3">
-        <SearchBar
-          value={query}
-          onChange={setQuery}
-          placeholder="Tìm phụ huynh, số điện thoại, con liên kết..."
-        />
+      <div className="card p-3 mb-3 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+        <div className="flex-1">
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            placeholder="Tìm phụ huynh, số điện thoại, con liên kết..."
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <ClassFilterSelect
+            classes={classes}
+            value={selectedClassId}
+            onChange={setSelectedClassId}
+          />
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -258,7 +440,7 @@ export default function SchoolAdminParentsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-ink-soft max-w-xs line-clamp-2">
-                      {p.children_summary || "Chưa liên kết"}
+                      {getParentChildrenSummary(p, children)}
                     </td>
                     <td className="px-4 py-3">
                       {p.username ? (
@@ -427,6 +609,27 @@ export default function SchoolAdminParentsPage() {
         message={`Bạn có chắc muốn xóa "${confirmDel?.full_name}"? Liên kết với học sinh sẽ được gỡ.`}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Nhập danh sách phụ huynh từ file"
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh."
+        templateFilename="mau_nhap_phu_huynh.xlsx"
+        sampleHeaders={["Họ và tên", "Số điện thoại", "Email", "Quan hệ (Bố/Mẹ/...)", "Tên đăng nhập", "Mật khẩu"]}
+        sampleRow={[
+          "Nguyễn Văn An",
+          "0912345678",
+          "an.nguyen@gmail.com",
+          "Bố",
+          "an_nguyen",
+          "123456",
+        ]}
+        onImportRows={handleImportRows}
+        onSuccess={() => {
+          setToast({ msg: "Đã nhập danh sách phụ huynh thành công", tone: "ok" });
+        }}
       />
 
       {toast && (

@@ -648,6 +648,119 @@ ON CONFLICT (child_id) DO UPDATE SET
     status = EXCLUDED.status,
     updated_at = NOW();
 
+-- 5.1. Thêm liên kết Phụ huynh - Học sinh (ParentChild)
+INSERT INTO parent_child (
+    id,
+    parent_id,
+    child_id,
+    relationship,
+    is_primary,
+    can_pickup,
+    created_at,
+    updated_at
+) VALUES 
+(
+    'eeeeeeee-0000-0000-0000-000000000001',
+    'cccccccc-0000-0000-0000-000000000001',
+    'dddddddd-0000-0000-0000-000000000001',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000002',
+    'cccccccc-0000-0000-0000-000000000002',
+    'dddddddd-0000-0000-0000-000000000002',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000003',
+    'cccccccc-0000-0000-0000-000000000003',
+    'dddddddd-0000-0000-0000-000000000003',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000004',
+    'cccccccc-0000-0000-0000-000000000004',
+    'dddddddd-0000-0000-0000-000000000004',
+    'Mẹ',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000005',
+    'cccccccc-0000-0000-0000-000000000005',
+    'dddddddd-0000-0000-0000-000000000005',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000006',
+    'cccccccc-0000-0000-0000-000000000006',
+    'dddddddd-0000-0000-0000-000000000006',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000007',
+    'cccccccc-0000-0000-0000-000000000007',
+    'dddddddd-0000-0000-0000-000000000007',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000008',
+    'cccccccc-0000-0000-0000-000000000008',
+    'dddddddd-0000-0000-0000-000000000008',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000009',
+    'cccccccc-0000-0000-0000-000000000009',
+    'dddddddd-0000-0000-0000-000000000009',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+),
+(
+    'eeeeeeee-0000-0000-0000-000000000010',
+    'cccccccc-0000-0000-0000-000000000010',
+    'dddddddd-0000-0000-0000-000000000010',
+    'Bố',
+    true,
+    true,
+    NOW(),
+    NOW()
+)
+ON CONFLICT (parent_id, child_id) DO NOTHING;
+
 -- ===========================================================================
 -- 6. Thêm Khung tiết học mẫu (TimeSlot)
 -- ===========================================================================

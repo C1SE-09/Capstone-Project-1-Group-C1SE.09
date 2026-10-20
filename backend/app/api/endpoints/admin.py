@@ -361,17 +361,57 @@ def list_classes(db: Session = Depends(get_db)):
 def list_parents(db: Session = Depends(get_db)):
     parents = db.query(Parent).order_by(Parent.created_at.desc()).all()
     results = []
+    need_commit = False
     for p in parents:
         children_info = []
         child_ids = []
         children_list = []
+
+        seen_child_ids = set()
+        p_children = []
         for c in p.children:
+            if c.child_id not in seen_child_ids:
+                seen_child_ids.add(c.child_id)
+                p_children.append(c)
+
+        # Fallback: Lấy các học sinh liên kết qua khóa ngoại trực tiếp Child.parent_id (dữ liệu seed / legacy)
+        legacy_children = db.query(Child).filter(Child.parent_id == p.parent_id).all()
+        for c in legacy_children:
+            if c.child_id not in seen_child_ids:
+                seen_child_ids.add(c.child_id)
+                p_children.append(c)
+                # Tự động đồng bộ vào bảng parent_child để các lần truy vấn sau luôn có trong p.children
+                db.execute(
+                    text(
+                        "INSERT INTO parent_child (id, parent_id, child_id, relationship, is_primary, can_pickup, created_at, updated_at) "
+                        "VALUES (:id, :pid, :cid, :rel, true, true, now(), now()) "
+                        "ON CONFLICT (parent_id, child_id) DO NOTHING"
+                    ),
+                    {
+                        "id": uuid.uuid4(),
+                        "pid": p.parent_id,
+                        "cid": c.child_id,
+                        "rel": p.relationship_ or "Phụ huynh",
+                    },
+                )
+                need_commit = True
+
+        for c in p_children:
             c_class = c.class_.name if c.class_ else ""
             children_info.append(f"{c.full_name} ({c_class})" if c_class else c.full_name)
             child_ids.append(str(c.child_id))
-            children_list.append({"id": str(c.child_id), "name": c.full_name, "class_name": c_class})
+            children_list.append({
+                "id": str(c.child_id),
+                "name": c.full_name,
+                "class_name": c_class,
+                "class_id": str(c.class_id) if c.class_id else None,
+            })
 
-        child_desc = ", ".join(children_info) if children_info else "Chưa liên kết học sinh"
+        children_summary = (
+            f"Bé: {', '.join(children_info)}"
+            if children_info
+            else "Chưa liên kết học sinh"
+        )
         user = db.query(User).filter(User.parent_id == p.parent_id).first()
 
         results.append(
@@ -383,12 +423,14 @@ def list_parents(db: Session = Depends(get_db)):
                 "relationship": p.relationship_ or "",
                 "username": user.username if user else None,
                 "status": p.status.value if hasattr(p.status, "value") else str(p.status),
-                "children_summary": f"Bé: {child_desc}",
+                "children_summary": children_summary,
                 "child_id": child_ids[0] if child_ids else None,
                 "child_ids": child_ids,
                 "children": children_list,
             }
         )
+    if need_commit:
+        db.commit()
     return results
 
 
@@ -643,7 +685,7 @@ def check_availability(
 
 @router.get("/children")
 def list_children(db: Session = Depends(get_db)):
-    children = db.query(Child).all()
+    children = db.query(Child).order_by(Child.created_at.desc()).all()
     results = []
     for c in children:
         class_name = c.class_.name if c.class_ else "Chưa xếp lớp"
@@ -914,8 +956,18 @@ def list_time_slots(db: Session = Depends(get_db)):
 
 
 @router.get("/schedules")
-def list_schedules(day_of_week: int | None = 2, db: Session = Depends(get_db)):
+def list_schedules(
+    class_id: str | None = None,
+    day_of_week: int | None = None,
+    db: Session = Depends(get_db),
+):
     query = db.query(ClassSchedule).join(TimeSlot, ClassSchedule.slot_id == TimeSlot.slot_id, isouter=True)
+    if class_id and class_id.strip():
+        try:
+            cid = uuid.UUID(class_id.strip())
+            query = query.filter(ClassSchedule.class_id == cid)
+        except (ValueError, AttributeError):
+            pass
     if day_of_week is not None:
         query = query.filter(ClassSchedule.day_of_week == day_of_week)
 
@@ -929,9 +981,10 @@ def list_schedules(day_of_week: int | None = 2, db: Session = Depends(get_db)):
         results.append(
             {
                 "id": str(s.schedule_id),
+                "class_id": str(s.class_id),
                 "activity_name": s.activity_name,
                 "content": s.content or "",
-                "room_name": s.room_name or (s.class_.name if s.class_ else "Lớp Mầm A"),
+                "room_name": s.room_name or (s.class_.name if s.class_ else "Phòng học"),
                 "time_range": slot_name,
                 "slot_id": str(s.slot_id) if s.slot_id else None,
                 "start_time": start_time,
