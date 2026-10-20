@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.class_data import router as class_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import admin, admin_auth, auth, bug_reports, notifications
+from app.api.endpoints.school_admin_auth import router as school_admin_router
 from app.api.endpoints.admin_dashboard import (
     router as admin_dashboard_router,
 )
@@ -79,6 +80,7 @@ app.include_router(time_slot_router, prefix="/api")
 app.include_router(subject_router, prefix="/api")
 app.include_router(schedule_router, prefix="/api")
 app.include_router(admin_auth.router)
+app.include_router(school_admin_router)
 app.include_router(notifications.router)
 app.include_router(stats_router)
 app.include_router(bug_reports.router)
