@@ -159,7 +159,43 @@ class HttpDashboardRepository implements DashboardRepository {
 
   @override
   Future<void> updateMyPhone(String parentId, String phone) async {
-    await _put('/api/parent/$parentId', data: {'phone': phone});
+    await updateParentProfile(parentId, phone: phone);
+  }
+
+  @override
+  Future<void> updateParentProfile(
+    String parentId, {
+    String? phone,
+    String? email,
+    String? relationship,
+  }) async {
+    final payload = <String, dynamic>{
+      if (phone != null) 'phone': phone,
+      if (email != null) 'email': email,
+      if (relationship != null) 'relationship': relationship,
+    };
+    await _put('/api/parent/$parentId', data: payload);
+  }
+
+  @override
+  Future<Child> updateChildInfo({
+    required String parentId,
+    required String childId,
+    String? fullName,
+    String? nickname,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? medicalAllergies,
+  }) async {
+    final payload = <String, dynamic>{
+      if (fullName != null) 'full_name': fullName,
+      if (nickname != null) 'nickname': nickname,
+      if (dateOfBirth != null) 'date_of_birth': _isoDate(dateOfBirth),
+      if (gender != null) 'gender': gender,
+      if (medicalAllergies != null) 'medical_allergies': medicalAllergies,
+    };
+    final data = await _put('/api/parent/$parentId/child/$childId', data: payload);
+    return Child.fromJson(_asMap(data['child']));
   }
 
   @override
@@ -313,6 +349,21 @@ class HttpDashboardRepository implements DashboardRepository {
     return const {};
   }
 
+  String _extractErrorMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final detail = data['detail'];
+      if (detail is String && detail.trim().isNotEmpty) {
+        return detail.trim();
+      }
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+    }
+    return fallback;
+  }
+
   Future<Map<String, dynamic>> _get(
     String path, {
     Map<String, String>? query,
@@ -322,7 +373,7 @@ class HttpDashboardRepository implements DashboardRepository {
       return _asMap(response.data);
     } on DioException catch (error) {
       throw ClassDataException(
-        error.message ?? 'Không thể tải dữ liệu.',
+        _extractErrorMessage(error, 'Không thể tải dữ liệu. Vui lòng kiểm tra lại mạng hoặc thử lại sau.'),
         statusCode: error.response?.statusCode,
       );
     }
@@ -337,7 +388,7 @@ class HttpDashboardRepository implements DashboardRepository {
       return _asMap(response.data);
     } on DioException catch (error) {
       throw ClassDataException(
-        error.message ?? 'Không thể gửi dữ liệu.',
+        _extractErrorMessage(error, 'Không thể gửi dữ liệu. Vui lòng kiểm tra lại mạng hoặc thử lại sau.'),
         statusCode: error.response?.statusCode,
       );
     }
@@ -352,7 +403,7 @@ class HttpDashboardRepository implements DashboardRepository {
       return _asMap(response.data);
     } on DioException catch (error) {
       throw ClassDataException(
-        error.message ?? 'Không thể lưu dữ liệu.',
+        _extractErrorMessage(error, 'Không thể lưu dữ liệu. Vui lòng kiểm tra lại mạng hoặc thử lại sau.'),
         statusCode: error.response?.statusCode,
       );
     }

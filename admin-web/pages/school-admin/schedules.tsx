@@ -18,9 +18,13 @@ import {
   Spinner,
   Toast,
   ConfirmDialog,
+  ImportModal,
+  ImportResult,
 } from "@/components/ui-school";
+import { exportToExcel } from "@/lib/excel-helper";
 import { getStoredSchoolAdmin, getToken } from "@/lib/api";
 import {
+  Room,
   Schedule,
   SchedulePayload,
   SchoolClass,
@@ -28,6 +32,7 @@ import {
   createSchedule,
   deleteSchedule,
   getClasses,
+  getRooms,
   getSchedules,
   getTimeSlots,
   updateSchedule,
@@ -35,6 +40,28 @@ import {
 
 const DAY_LABELS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"];
 const DAY_SHORT = ["T2", "T3", "T4", "T5", "T6"];
+
+const SHARED_KEYWORDS = [
+  "sân cỏ",
+  "sân trường",
+  "sân chơi",
+  "ngoài trời",
+  "vườn",
+  "bể bơi",
+  "cát nước",
+  "nhà ăn",
+  "y tế",
+];
+
+function isSharedLocation(name?: string | null, roomsList?: Room[]): boolean {
+  if (!name) return false;
+  const n = name.trim().toLowerCase();
+  if (roomsList && roomsList.length > 0) {
+    const matched = roomsList.find((r) => r.name.trim().toLowerCase() === n);
+    if (matched) return Boolean(matched.is_shared);
+  }
+  return SHARED_KEYWORDS.some((kw) => n.includes(kw));
+}
 
 interface FormState {
   activity_name: string;
@@ -61,6 +88,8 @@ export default function SchoolAdminSchedulesPage() {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(0); // index 0..4
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [conflictCycleIndex, setConflictCycleIndex] = useState(0);
   const [query, setQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
@@ -68,6 +97,9 @@ export default function SchoolAdminSchedulesPage() {
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Schedule | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "warn" | "brand" } | null>(null);
+  const [roomDropdownOpen, setRoomDropdownOpen] = useState(false);
+  const [roomSearch, setRoomSearch] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     if (!getToken() || !getStoredSchoolAdmin()) {
@@ -81,49 +113,193 @@ export default function SchoolAdminSchedulesPage() {
     });
   }, []);
 
-  const dayOfWeek = selectedDay + 2; // backend expects 2..6 (Mon..Fri)
+  const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c.name])), [classes]);
+  const currentClassName = selectedClassId ? classMap.get(selectedClassId) || "" : "";
 
-  const { data: schedules, mutate } = useSWR<Schedule[]>(
-    ready && selectedClassId ? ["schedules", dayOfWeek] : null,
-    () => getSchedules(dayOfWeek),
+  // Tải tất cả lịch trong trường để kiểm tra xung đột phòng và trùng lịch tuần
+  const { data: allSchedules, mutate: mutateAll } = useSWR<Schedule[]>(
+    ready ? "all-schedules" : null,
+    () => getSchedules(),
     { refreshInterval: 30000 },
   );
+
+  // Tải danh sách phòng/địa điểm của trường
+  const { data: rooms } = useSWR<Room[]>(
+    ready ? ["rooms", selectedClassId] : null,
+    () => getRooms(selectedClassId),
+  );
+
+  const availableRooms: Room[] = useMemo(() => {
+    if (rooms && rooms.length > 0) return rooms;
+    return [
+      {
+        id: "def-classroom",
+        name: currentClassName ? `Phòng học ${currentClassName}` : "Phòng học của lớp",
+        room_type: "CLASSROOM",
+        class_id: selectedClassId,
+        is_shared: false,
+      },
+      { id: "def-art", name: "Phòng Mỹ thuật & Tạo hình", room_type: "FUNCTIONAL", class_id: null, is_shared: false },
+      { id: "def-mus", name: "Phòng Âm nhạc & Vận động", room_type: "FUNCTIONAL", class_id: null, is_shared: false },
+      { id: "def-phy", name: "Phòng Thể chất & Đa năng", room_type: "FUNCTIONAL", class_id: null, is_shared: false },
+      { id: "def-it", name: "Phòng Tin học / Đa phương tiện", room_type: "FUNCTIONAL", class_id: null, is_shared: false },
+      { id: "def-grass", name: "Sân cỏ", room_type: "OUTDOOR", class_id: null, is_shared: true },
+      { id: "def-yard", name: "Sân trường", room_type: "OUTDOOR", class_id: null, is_shared: true },
+      { id: "def-sand", name: "Khu vui chơi cát nước", room_type: "OUTDOOR", class_id: null, is_shared: true },
+      { id: "def-garden", name: "Vườn cổ tích & Khám phá", room_type: "OUTDOOR", class_id: null, is_shared: true },
+      { id: "def-meal", name: "Nhà ăn & Bếp bán trú", room_type: "COMMON", class_id: null, is_shared: true },
+      { id: "def-med", name: "Phòng y tế", room_type: "COMMON", class_id: null, is_shared: true },
+    ];
+  }, [rooms, currentClassName, selectedClassId]);
+
+  const filteredRoomGroups = useMemo(() => {
+    const q = roomSearch.toLowerCase().trim();
+    const matched = availableRooms.filter(
+      (r) => !q || r.name.toLowerCase().includes(q) || r.room_type.toLowerCase().includes(q),
+    );
+
+    const dedicated = matched.filter(
+      (r) => r.room_type === "CLASSROOM" || (selectedClassId && r.class_id === selectedClassId),
+    );
+    const functional = matched.filter(
+      (r) => r.room_type === "FUNCTIONAL" && (!selectedClassId || r.class_id !== selectedClassId),
+    );
+    const outdoor = matched.filter((r) => r.room_type === "OUTDOOR");
+    const common = matched.filter((r) => r.room_type === "COMMON");
+
+    const groups: { icon: string; title: string; items: Room[] }[] = [];
+    if (dedicated.length > 0) groups.push({ icon: "🏫", title: "Phòng lớp học", items: dedicated });
+    if (functional.length > 0) groups.push({ icon: "🎨", title: "Phòng chức năng", items: functional });
+    if (outdoor.length > 0) groups.push({ icon: "⚽", title: "Khu ngoài trời", items: outdoor });
+    if (common.length > 0) groups.push({ icon: "🏢", title: "Khu vực sinh hoạt chung", items: common });
+
+    return groups;
+  }, [availableRooms, roomSearch, selectedClassId]);
+
+  const exactMatchInList = useMemo(() => {
+    const q = roomSearch.toLowerCase().trim();
+    return availableRooms.some((r) => r.name.toLowerCase().trim() === q);
+  }, [availableRooms, roomSearch]);
+
+  const dayOfWeek = selectedDay + 2; // backend expects 2..6 (Mon..Fri)
+
+  const { data: directDaySchedules, mutate: mutateDay } = useSWR<Schedule[]>(
+    ready && selectedClassId ? ["schedules", selectedClassId, dayOfWeek] : null,
+    () => getSchedules(selectedClassId, dayOfWeek),
+    { refreshInterval: 30000 },
+  );
+
+  const schedules = useMemo(() => {
+    if (directDaySchedules) return directDaySchedules;
+    if (!allSchedules || !selectedClassId) return undefined;
+    return allSchedules.filter(
+      (s) => s.class_id === selectedClassId && s.day_of_week === dayOfWeek,
+    );
+  }, [directDaySchedules, allSchedules, selectedClassId, dayOfWeek]);
 
   const { data: timeSlots } = useSWR<TimeSlot[]>(
     ready ? "time-slots" : null,
     () => getTimeSlots(),
   );
 
-  // Tính xung đột cùng phòng + khung giờ đè
-  const conflicts = useMemo(() => {
-    const list = schedules ?? [];
-    const seen = new Set<string>();
-    const result: Schedule[] = [];
-    for (let i = 0; i < list.length; i++) {
-      for (let j = i + 1; j < list.length; j++) {
-        const a = list[i];
-        const b = list[j];
-        if (!a.room_name.trim() || !b.room_name.trim()) continue;
-        if (a.room_name.trim().toLowerCase() !== b.room_name.trim().toLowerCase()) continue;
-        if (!a.start_time || !b.start_time || !a.end_time || !b.end_time) continue;
-        const aS = toMin(a.start_time);
-        const aE = toMin(a.end_time);
+  // Xác định lý do xung đột cho từng tiết của lớp đang chọn
+  const conflictReasons = useMemo(() => {
+    const reasons = new Map<string, string>();
+    if (!allSchedules || !selectedClassId) return reasons;
+
+    const classScheds = allSchedules.filter((s) => s.class_id === selectedClassId);
+
+    for (const a of classScheds) {
+      if (!a.start_time || !a.end_time) continue;
+      const aS = toMin(a.start_time);
+      const aE = toMin(a.end_time);
+
+      for (const b of allSchedules) {
+        if (b.id === a.id || b.day_of_week !== a.day_of_week) continue;
+        if (!b.start_time || !b.end_time) continue;
         const bS = toMin(b.start_time);
         const bE = toMin(b.end_time);
+
+        // Trùng giờ
         if (aS < bE && aE > bS) {
-          if (!seen.has(a.id)) {
-            result.push(a);
-            seen.add(a.id);
-          }
-          if (!seen.has(b.id)) {
-            result.push(b);
-            seen.add(b.id);
+          const sameClass = b.class_id === a.class_id;
+          const isShared = isSharedLocation(a.room_name, rooms);
+          const sameRoom = Boolean(
+            !isShared &&
+            a.room_name &&
+            b.room_name &&
+            a.room_name.trim().toLowerCase() === b.room_name.trim().toLowerCase(),
+          );
+
+          if (sameClass) {
+            reasons.set(
+              a.id,
+              `Trùng khung giờ với "${b.activity_name}" (${b.start_time} - ${b.end_time})`,
+            );
+            break;
+          } else if (sameRoom) {
+            const otherClassName = (b.class_id && classMap.get(b.class_id)) || "lớp khác";
+            reasons.set(
+              a.id,
+              `Trùng phòng "${a.room_name}" với ${otherClassName} ("${b.activity_name}")`,
+            );
+            break;
           }
         }
       }
     }
-    return result;
-  }, [schedules]);
+    return reasons;
+  }, [allSchedules, selectedClassId, classMap, rooms]);
+
+  // Xung đột trong ngày đang chọn
+  const conflicts = useMemo(() => {
+    return (schedules ?? []).filter((s) => conflictReasons.has(s.id));
+  }, [schedules, conflictReasons]);
+
+  // Toàn bộ các tiết bị xung đột trong tuần của lớp này, sắp xếp theo gần hôm nay nhất
+  const weeklyConflicts = useMemo(() => {
+    if (!allSchedules || !selectedClassId) return [];
+    const jsDay = new Date().getDay(); // 0: CN, 1: T2, ..., 6: T7
+    const todayIndex = jsDay >= 1 && jsDay <= 5 ? jsDay - 1 : 0;
+
+    const list = allSchedules.filter(
+      (s) => s.class_id === selectedClassId && conflictReasons.has(s.id),
+    );
+
+    return list.slice().sort((a, b) => {
+      const dayA = a.day_of_week - 2;
+      const dayB = b.day_of_week - 2;
+      const distA = (dayA - todayIndex + 5) % 5;
+      const distB = (dayB - todayIndex + 5) % 5;
+      if (distA !== distB) return distA - distB;
+      return toMin(a.start_time || "") - toMin(b.start_time || "");
+    });
+  }, [allSchedules, selectedClassId, conflictReasons]);
+
+  const nearestConflict = weeklyConflicts[0] || null;
+
+  function jumpToConflict(targetSchedule?: Schedule) {
+    if (weeklyConflicts.length === 0) return;
+    const target = targetSchedule || weeklyConflicts[conflictCycleIndex % weeklyConflicts.length];
+    if (!target) return;
+
+    const targetDayIndex = target.day_of_week - 2;
+    setSelectedDay(targetDayIndex);
+    setQuery("");
+    setHighlightedId(target.id);
+    setConflictCycleIndex((prev) => (prev + 1) % weeklyConflicts.length);
+
+    setTimeout(() => {
+      const el = document.getElementById(`schedule-${target.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 150);
+
+    setTimeout(() => {
+      setHighlightedId((curr) => (curr === target.id ? null : curr));
+    }, 4500);
+  }
 
   const filteredSchedules = useMemo(() => {
     const list = (schedules ?? []).slice().sort((a, b) =>
@@ -142,7 +318,19 @@ export default function SchoolAdminSchedulesPage() {
 
   function openCreate(forDay: number) {
     setEditing(null);
-    setForm({ ...EMPTY_FORM, day_of_week: forDay + 2 });
+    const classroomRoom = availableRooms.find(
+      (r) => r.room_type === "CLASSROOM" && r.class_id === selectedClassId
+    );
+    const defaultRoom =
+      classroomRoom?.name ||
+      (currentClassName
+        ? currentClassName.startsWith("Lớp ")
+          ? `Phòng học ${currentClassName.replace("Lớp ", "")}`
+          : `Phòng học ${currentClassName}`
+        : "Phòng học");
+    setForm({ ...EMPTY_FORM, day_of_week: forDay + 2, room_name: defaultRoom });
+    setRoomSearch("");
+    setRoomDropdownOpen(false);
     setDrawerOpen(true);
   }
 
@@ -157,6 +345,8 @@ export default function SchoolAdminSchedulesPage() {
       end_time: s.end_time || "",
       day_of_week: s.day_of_week,
     });
+    setRoomSearch(s.room_name || "");
+    setRoomDropdownOpen(false);
     setDrawerOpen(true);
   }
 
@@ -172,6 +362,7 @@ export default function SchoolAdminSchedulesPage() {
     setSaving(true);
     try {
       const payload: SchedulePayload = {
+        class_id: selectedClassId,
         activity_name: form.activity_name.trim(),
         content: form.content.trim() || null,
         room_name: form.room_name.trim() || "Phòng học",
@@ -188,7 +379,8 @@ export default function SchoolAdminSchedulesPage() {
         setToast({ msg: "Đã thêm hoạt động", tone: "ok" });
       }
       setDrawerOpen(false);
-      mutate();
+      mutateDay();
+      mutateAll();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể lưu hoạt động", tone: "bad" });
     } finally {
@@ -200,11 +392,312 @@ export default function SchoolAdminSchedulesPage() {
     try {
       await deleteSchedule(s.id);
       setToast({ msg: "Đã xóa hoạt động", tone: "ok" });
-      mutate();
+      mutateDay();
+      mutateAll();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
     }
     setConfirmDel(null);
+  }
+
+  function handleExportExcel(exportAll = false) {
+    const headers = [
+      "Lớp",
+      "Thứ",
+      "Khung giờ",
+      "Tên hoạt động",
+      "Địa điểm / Phòng học",
+      "Nội dung chi tiết",
+    ];
+
+    if (exportAll) {
+      const allList = (allSchedules ?? []).slice().sort((a, b) => {
+        const nameA = a.class_id ? classMap.get(a.class_id) || "" : "";
+        const nameB = b.class_id ? classMap.get(b.class_id) || "" : "";
+        if (nameA !== nameB) return nameA.localeCompare(nameB);
+        if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+        return (a.start_time || "").localeCompare(b.start_time || "");
+      });
+
+      if (allList.length === 0) {
+        setToast({ msg: "Chưa có hoạt động nào trong toàn trường để xuất", tone: "warn" });
+        return;
+      }
+
+      const rows = allList.map((s) => [
+        (s.class_id && classMap.get(s.class_id)) || "Chưa phân lớp",
+        DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
+        s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
+        s.activity_name,
+        s.room_name || "",
+        s.content || "",
+      ]);
+
+      exportToExcel("thoi_khoa_bieu_toan_truong.xlsx", "ToanTruong", headers, rows);
+      setToast({
+        msg: `Đã xuất ${rows.length} hoạt động của toàn trường ra file Excel`,
+        tone: "ok",
+      });
+      return;
+    }
+
+    if (!selectedClassId) {
+      setToast({ msg: "Vui lòng chọn một lớp để xuất thời khóa biểu", tone: "warn" });
+      return;
+    }
+
+    const classScheds = (allSchedules ?? [])
+      .filter((s) => s.class_id === selectedClassId)
+      .sort((a, b) => {
+        if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+        return (a.start_time || "").localeCompare(b.start_time || "");
+      });
+
+    const rows =
+      classScheds.length > 0
+        ? classScheds.map((s) => [
+          currentClassName || "Lớp",
+          DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
+          s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
+          s.activity_name,
+          s.room_name || "",
+          s.content || "",
+        ])
+        : [
+          [
+            currentClassName || "Lớp Mầm A",
+            "Thứ 2",
+            "07:00 - 07:30",
+            "Đón trẻ, thể dục buổi sáng",
+            "Sân cỏ",
+            "Khởi động ngày mới, tập bài thể dục theo nhạc",
+          ],
+          [
+            currentClassName || "Lớp Mầm A",
+            "Thứ 2",
+            "08:10 - 08:40",
+            "Học hát & Vận động âm nhạc",
+            "Phòng Âm nhạc & Vận động",
+            "Tập bài hát Cháu yêu bà, vỗ tay theo phách",
+          ],
+        ];
+
+    const filename = currentClassName
+      ? `thoi_khoa_bieu_${currentClassName.replace(/\s+/g, "_")}.xlsx`
+      : "thoi_khoa_bieu.xlsx";
+
+    exportToExcel(filename, "ThoiKhoaBieu", headers, rows);
+    setToast({
+      msg: `Đã xuất ${classScheds.length} hoạt động của ${currentClassName || "lớp"} ra file Excel`,
+      tone: "ok",
+    });
+  }
+
+  async function handleImportRows(rows: string[][]): Promise<ImportResult> {
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    // Lọc bỏ các dòng hoàn toàn trống và dòng tiêu đề nếu còn sót lại
+    const validRows: { lineNum: number; raw: string[] }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.every((c) => !String(c ?? "").trim())) {
+        // Dòng trống -> Bỏ qua
+        continue;
+      }
+      const joined = row.join(" ").toLowerCase();
+      if (
+        (joined.includes("thứ") || joined.includes("day")) &&
+        (joined.includes("hoạt động") || joined.includes("activity") || joined.includes("khung giờ") || joined.includes("giờ"))
+      ) {
+        // Dòng tiêu đề -> Bỏ qua
+        continue;
+      }
+      validRows.push({ lineNum: i + 1, raw: row });
+    }
+
+    if (validRows.length === 0) {
+      return { total: 0, success: 0, failed: 0, errors: ["File không có dòng dữ liệu hợp lệ."] };
+    }
+
+    // Lấy dữ liệu mới nhất để so khớp
+    const freshAll: Schedule[] = await getSchedules().catch(() => (allSchedules ? [...allSchedules] : []));
+
+    for (const item of validRows) {
+      const row = item.raw;
+      const lineNum = item.lineNum;
+
+      // Hỗ trợ 2 định dạng:
+      // 5 cột: [Thứ, Giờ, Tên hoạt động, Phòng, Nội dung]
+      // 6 cột: [Tên lớp, Thứ, Giờ, Tên hoạt động, Phòng, Nội dung]
+      let className = "";
+      let dayStr = "";
+      let timeStr = "";
+      let activityName = "";
+      let roomName = "";
+      let content = "";
+
+      const col0Day = parseDayOfWeek(row[0]);
+      const col1Day = parseDayOfWeek(row[1]);
+
+      if (col0Day !== null) {
+        dayStr = row[0] ?? "";
+        timeStr = row[1] ?? "";
+        activityName = row[2] ?? "";
+        roomName = row[3] ?? "";
+        content = row[4] ?? "";
+      } else if (col1Day !== null) {
+        className = row[0] ?? "";
+        dayStr = row[1] ?? "";
+        timeStr = row[2] ?? "";
+        activityName = row[3] ?? "";
+        roomName = row[4] ?? "";
+        content = row[5] ?? "";
+      } else {
+        className = row[0] ?? "";
+        dayStr = row[1] ?? "";
+        timeStr = row[2] ?? "";
+        activityName = row[3] ?? "";
+        roomName = row[4] ?? "";
+        content = row[5] ?? "";
+      }
+
+      // 1. Kiểm tra tên hoạt động
+      if (!activityName || !activityName.trim()) {
+        failed++;
+        errors.push(`Dòng ${lineNum}: Thiếu tên hoạt động.`);
+        continue;
+      }
+
+      // 2. Kiểm tra thứ
+      const dayOfWeek = parseDayOfWeek(dayStr);
+      if (!dayOfWeek || dayOfWeek < 2 || dayOfWeek > 7) {
+        failed++;
+        errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Thiếu hoặc sai định dạng Thứ (ví dụ: Thứ 2, Thứ 3...).`);
+        continue;
+      }
+
+      // 3. Xác định lớp học
+      let targetClassId = selectedClassId;
+      if (className && className.trim()) {
+        const cn = className.trim().toLowerCase();
+        const found = classes.find(
+          (c) =>
+            c.id === className.trim() ||
+            c.name.toLowerCase() === cn ||
+            c.name.toLowerCase().replace("lớp ", "") === cn.replace("lớp ", "")
+        );
+        if (found) {
+          targetClassId = found.id;
+        } else {
+          failed++;
+          errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Không tìm thấy lớp "${className.trim()}" trong danh sách lớp của trường.`);
+          continue;
+        }
+      }
+
+      if (!targetClassId) {
+        failed++;
+        errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Vui lòng chọn lớp trước khi nạp lịch.`);
+        continue;
+      }
+
+      // 4. Xác định khung giờ
+      let slotId: string | null = null;
+      let startTime: string | null = null;
+      let endTime: string | null = null;
+
+      const trimmedTime = (timeStr || "").trim();
+      const matchedSlot = timeSlots?.find(
+        (ts) =>
+          ts.name.trim().toLowerCase() === trimmedTime.toLowerCase() ||
+          `${ts.start_time} - ${ts.end_time}` === trimmedTime ||
+          `${ts.start_time}-${ts.end_time}` === trimmedTime
+      );
+
+      if (matchedSlot) {
+        slotId = matchedSlot.id;
+        startTime = matchedSlot.start_time;
+        endTime = matchedSlot.end_time;
+      } else {
+        const parsed = parseTimeRange(trimmedTime);
+        if (!parsed) {
+          failed++;
+          errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Thiếu hoặc sai định dạng khung giờ (ví dụ: 08:10 - 08:40).`);
+          continue;
+        }
+        startTime = parsed.start;
+        endTime = parsed.end;
+      }
+
+      // 5. Xác định địa điểm / phòng học (nếu trống tự lấy phòng chính của lớp)
+      const targetClassName = classMap.get(targetClassId) || currentClassName || "";
+      const defaultRoom = targetClassName
+        ? targetClassName.startsWith("Lớp ")
+          ? `Phòng học ${targetClassName.replace("Lớp ", "")}`
+          : `Phòng học ${targetClassName}`
+        : "Phòng học";
+      const finalRoomName = roomName.trim() || defaultRoom;
+
+      const payload: SchedulePayload = {
+        class_id: targetClassId,
+        activity_name: activityName.trim(),
+        content: content.trim() || null,
+        room_name: finalRoomName,
+        slot_id: slotId,
+        start_time: slotId ? null : startTime,
+        end_time: slotId ? null : endTime,
+        day_of_week: dayOfWeek,
+      };
+
+      // 6. Kiểm tra xem lớp này đã có lịch ở khung giờ đó chưa: nếu có thì cập nhật, nếu chưa thì tạo mới
+      const existing = freshAll.find((s) => {
+        if (s.class_id !== targetClassId || s.day_of_week !== dayOfWeek) return false;
+        if (slotId && s.slot_id === slotId) return true;
+        if (startTime && endTime && s.start_time && s.end_time) {
+          const s1 = toMin(startTime);
+          const e1 = toMin(endTime);
+          const s2 = toMin(s.start_time);
+          const e2 = toMin(s.end_time);
+          return s1 < e2 && e1 > s2;
+        }
+        return false;
+      });
+
+      try {
+        if (existing) {
+          await updateSchedule(existing.id, payload);
+          existing.activity_name = payload.activity_name;
+          existing.room_name = payload.room_name || existing.room_name;
+          existing.content = payload.content || "";
+        } else {
+          const res = await createSchedule(payload);
+          freshAll.push({
+            id: res.id,
+            activity_name: payload.activity_name,
+            content: payload.content || "",
+            class_id: targetClassId,
+            room_name: payload.room_name || "",
+            time_range: `${startTime} - ${endTime}`,
+            slot_id: slotId,
+            start_time: startTime,
+            end_time: endTime,
+            day_of_week: dayOfWeek,
+            is_active: true,
+          });
+        }
+        success++;
+      } catch (err: any) {
+        failed++;
+        errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): ${err?.message || "Lỗi lưu hoạt động"}`);
+      }
+    }
+
+    mutateDay();
+    mutateAll();
+
+    return { total: validRows.length, success, failed, errors };
   }
 
   function pickSlot(slot: TimeSlot) {
@@ -223,15 +716,107 @@ export default function SchoolAdminSchedulesPage() {
       active="features"
       pageTitle="Thời khóa biểu"
       pageAction={
-        <button onClick={() => openCreate(selectedDay)} className="kbtn kbtn-primary">
-          + Thêm hoạt động
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              mutateDay();
+              mutateAll();
+              setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
+            }}
+            className="kbtn kbtn-secondary"
+            title="Làm mới"
+          >
+            ↻
+          </button>
+          <button
+            onClick={() => handleExportExcel(true)}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Xuất toàn bộ thời khóa biểu tất cả các lớp ra file Excel"
+          >
+            🏫 Xuất lịch toàn trường
+          </button>
+          <button
+            onClick={() => handleExportExcel(false)}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Xuất thời khóa biểu của lớp đang chọn ra file Excel"
+          >
+            📥 Xuất excel
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Nhập thời khóa biểu từ file Excel / CSV"
+          >
+            📤 Nhập file
+          </button>
+          <button onClick={() => openCreate(selectedDay)} className="kbtn kbtn-primary">
+            + Thêm hoạt động
+          </button>
+        </div>
       }
     >
       <p className="text-sm text-ink-soft -mt-3 mb-4">
         Lên lịch hoạt động cho từng lớp theo tuần. Hệ thống tự động phát hiện xung
         đột phòng/khung giờ.
       </p>
+
+      {/* Cảnh báo xung đột NẰM TRÊN PHẦN CHỌN LỚP (Chỉ hiện khi có xung đột) */}
+      {selectedClassId && allSchedules && weeklyConflicts.length > 0 && (
+        <div
+          onClick={() => jumpToConflict()}
+          role="button"
+          tabIndex={0}
+          className="card p-3.5 mb-4 flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-md border select-none group"
+          style={{
+            background: "#FBF6ED",
+            borderColor: "#D9A54C",
+          }}
+          title="Nhấn để nhảy tới tiết bị xung đột"
+        >
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="text-2xl shrink-0 mt-0.5 animate-pulse">⚠️</span>
+            <div className="min-w-0">
+              <div className="font-bold text-sm text-[#8A5E12] flex items-center gap-2 flex-wrap">
+                <span>Phát hiện {weeklyConflicts.length} tiết học bị xung đột trong tuần</span>
+                {weeklyConflicts.length > 1 && (
+                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#8A5E12]/15 text-[#8A5E12]">
+                    Nhấn lần {(conflictCycleIndex % weeklyConflicts.length) + 1}/{weeklyConflicts.length}
+                  </span>
+                )}
+              </div>
+              {nearestConflict && (
+                <div className="text-xs text-[#605D57] mt-1 line-clamp-1">
+                  <strong className="text-[#8A5E12]">Gần hiện tại nhất:</strong>{" "}
+                  <span className="font-semibold text-ink">
+                    {(() => {
+                      const nearestDayIndex = nearestConflict.day_of_week - 2;
+                      const jsDay = new Date().getDay();
+                      const todayIndex = jsDay >= 1 && jsDay <= 5 ? jsDay - 1 : 0;
+                      if (nearestDayIndex === todayIndex) return `Hôm nay (${DAY_LABELS[nearestDayIndex]})`;
+                      if (nearestDayIndex === (todayIndex + 1) % 5) return `Ngày mai (${DAY_LABELS[nearestDayIndex]})`;
+                      return DAY_LABELS[nearestDayIndex];
+                    })()}
+                  </span>{" "}
+                  ({nearestConflict.start_time} - {nearestConflict.end_time}):{" "}
+                  <span className="font-medium text-ink">{nearestConflict.activity_name}</span>
+                  {conflictReasons.get(nearestConflict.id) && (
+                    <span className="text-[#8A5E12] ml-1">
+                      · {conflictReasons.get(nearestConflict.id)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-bold text-white shrink-0 shadow-sm transition group-hover:scale-105"
+            style={{ background: "#B0791B" }}
+          >
+            <span>Sửa tiết xung đột</span>
+            <span className="text-sm transition group-hover:translate-x-0.5">→</span>
+          </div>
+        </div>
+      )}
 
       {/* Class selector */}
       {classes.length > 0 && (
@@ -322,17 +907,24 @@ export default function SchoolAdminSchedulesPage() {
         ) : (
           <ul>
             {filteredSchedules.map((s, idx) => {
-              const hasConflict = conflicts.some((c) => c.id === s.id);
+              const hasConflict = conflictReasons.has(s.id);
+              const reason = conflictReasons.get(s.id);
+              const isHighlighted = highlightedId === s.id;
               return (
                 <li
                   key={s.id}
-                  className={`flex items-start gap-3 px-4 py-3 ${idx > 0 ? "border-t border-line" : ""}`}
+                  id={`schedule-${s.id}`}
+                  className={`flex items-start gap-3 px-4 py-3 transition-all duration-300 ${idx > 0 ? "border-t border-line" : ""
+                    } ${isHighlighted
+                      ? "bg-[#FFF9EE] ring-2 ring-[#B0791B] ring-offset-2 z-10 relative rounded-control shadow-sm"
+                      : ""
+                    }`}
                 >
                   <div
                     className="flex flex-col items-center justify-center rounded-control px-2.5 py-1 min-w-[80px]"
-                    style={{ background: "#E6EFEC" }}
+                    style={{ background: isHighlighted ? "#FCEBCB" : "#E6EFEC" }}
                   >
-                    <div className="font-bold text-sm" style={{ color: "#16665a" }}>
+                    <div className="font-bold text-sm" style={{ color: isHighlighted ? "#8A5E12" : "#16665a" }}>
                       {s.start_time || "--:--"}
                     </div>
                     <div className="text-[10px]" style={{ color: "#605D57" }}>
@@ -345,11 +937,22 @@ export default function SchoolAdminSchedulesPage() {
                       {hasConflict && (
                         <Pill tone="warn">⚠️ Xung đột</Pill>
                       )}
+                      {isHighlighted && (
+                        <span className="text-[11px] px-2 py-0.5 rounded font-bold bg-[#B0791B] text-white animate-pulse">
+                          Đang xem xung đột
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-ink-soft mt-0.5">
                       {s.time_range && `Khung giờ: ${s.time_range}`}
                       {s.room_name && ` · Phòng: ${s.room_name}`}
                     </div>
+                    {hasConflict && reason && (
+                      <div className="mt-1.5 text-xs text-[#8A5E12] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FBF6ED] border border-[#E2BF81] inline-block">
+                        <span>⚠️</span>
+                        <span>{reason}</span>
+                      </div>
+                    )}
                     {s.content && (
                       <div className="text-xs text-ink-soft mt-1 line-clamp-2">
                         {s.content}
@@ -411,11 +1014,10 @@ export default function SchoolAdminSchedulesPage() {
                 key={label}
                 type="button"
                 onClick={() => setForm({ ...form, day_of_week: idx + 2 })}
-                className={`px-3 py-1.5 rounded-control text-xs font-semibold border ${
-                  form.day_of_week === idx + 2
-                    ? "text-white border-transparent"
-                    : "bg-white text-ink border-line-strong"
-                }`}
+                className={`px-3 py-1.5 rounded-control text-xs font-semibold border ${form.day_of_week === idx + 2
+                  ? "text-white border-transparent"
+                  : "bg-white text-ink border-line-strong"
+                  }`}
                 style={form.day_of_week === idx + 2 ? { background: "#16665a" } : {}}
               >
                 {label}
@@ -431,11 +1033,10 @@ export default function SchoolAdminSchedulesPage() {
                   key={slot.id}
                   type="button"
                   onClick={() => pickSlot(slot)}
-                  className={`px-2.5 py-1.5 rounded-control text-xs font-semibold border ${
-                    form.slot_id === slot.id
-                      ? "text-white border-transparent"
-                      : "bg-white text-ink border-line-strong"
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-control text-xs font-semibold border ${form.slot_id === slot.id
+                    ? "text-white border-transparent"
+                    : "bg-white text-ink border-line-strong"
+                    }`}
                   style={form.slot_id === slot.id ? { background: "#16665a" } : {}}
                 >
                   {slot.name}
@@ -467,13 +1068,149 @@ export default function SchoolAdminSchedulesPage() {
             />
           </div>
         </FormField>
-        <FormField label="Phòng">
-          <input
-            className="kinput"
-            value={form.room_name}
-            onChange={(e) => setForm({ ...form, room_name: e.target.value })}
-            placeholder="VD: Phòng Mầm A, Sân trường..."
-          />
+        <FormField label="Địa điểm / Phòng học">
+          <div className="relative">
+            <div className="relative flex items-center">
+              <svg
+                className="w-4 h-4 text-ink-faint absolute left-3 pointer-events-none"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                className="kinput"
+                style={{ paddingLeft: "36px", paddingRight: "32px" }}
+                value={roomDropdownOpen ? roomSearch : form.room_name}
+                onFocus={() => {
+                  setRoomSearch(form.room_name);
+                  setRoomDropdownOpen(true);
+                }}
+                onChange={(e) => {
+                  setRoomSearch(e.target.value);
+                  setForm({ ...form, room_name: e.target.value });
+                  setRoomDropdownOpen(true);
+                }}
+                placeholder="Tìm hoặc gõ tên phòng / sân bãi..."
+              />
+              {form.room_name && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm({ ...form, room_name: "" });
+                    setRoomSearch("");
+                  }}
+                  className="absolute right-2.5 text-xs text-ink-faint hover:text-ink w-5 h-5 rounded-full hover:bg-surface-sunken flex items-center justify-center transition"
+                  title="Xóa địa điểm"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Quick chips below */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <span className="text-[11px] text-ink-faint self-center mr-0.5">Gợi ý nhanh:</span>
+              {[
+                currentClassName ? `Phòng học ${currentClassName}` : "Phòng học của lớp",
+                "Sân cỏ",
+                "Sân trường",
+                "Phòng Mỹ thuật & Tạo hình",
+                "Phòng Âm nhạc & Vận động",
+              ].map((chip) => {
+                const isSelected = form.room_name.trim().toLowerCase() === chip.trim().toLowerCase();
+                return (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => {
+                      setForm({ ...form, room_name: chip });
+                      setRoomSearch("");
+                      setRoomDropdownOpen(false);
+                    }}
+                    className={`px-2 py-0.5 rounded-full text-[11px] border transition ${isSelected
+                      ? "bg-[#16665a] text-white border-transparent font-semibold shadow-xs"
+                      : "bg-surface-sunken text-ink-soft hover:bg-white hover:text-ink border-line"
+                      }`}
+                  >
+                    {chip}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Dropdown list */}
+            {roomDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setRoomDropdownOpen(false)}
+                />
+                <div
+                  className="absolute z-20 left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-control bg-white border border-line-strong shadow-xl p-1.5 text-xs animate-in fade-in slide-in-from-top-1 duration-150"
+                  style={{ backdropFilter: "blur(8px)" }}
+                >
+                  {/* Option to use custom typed text */}
+                  {roomSearch.trim() && !exactMatchInList && (
+                    <div
+                      onClick={() => {
+                        setForm({ ...form, room_name: roomSearch.trim() });
+                        setRoomDropdownOpen(false);
+                      }}
+                      className="p-2 mb-1 rounded bg-[#EDF5F2] hover:bg-[#E0EFEA] text-[#16665A] font-semibold cursor-pointer flex items-center justify-between"
+                    >
+                      <span>➕ Sử dụng địa điểm: &ldquo;{roomSearch.trim()}&rdquo;</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white text-[#16665A] border border-[#C4DCD3]">
+                        Nhập tự do
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Filtered grouped rooms */}
+                  {filteredRoomGroups.map((group) => (
+                    <div key={group.title} className="mb-2 last:mb-0">
+                      <div className="px-2 py-1 text-[10px] font-bold text-ink-faint uppercase tracking-wider flex items-center gap-1">
+                        <span>{group.icon}</span>
+                        <span>{group.title}</span>
+                      </div>
+                      {group.items.map((r) => {
+                        const isSelected = form.room_name.trim().toLowerCase() === r.name.trim().toLowerCase();
+                        return (
+                          <div
+                            key={r.id || r.name}
+                            onClick={() => {
+                              setForm({ ...form, room_name: r.name });
+                              setRoomSearch("");
+                              setRoomDropdownOpen(false);
+                            }}
+                            className={`p-2 rounded cursor-pointer flex items-center justify-between transition ${isSelected
+                              ? "bg-[#16665a]/10 text-[#16665a] font-bold"
+                              : "hover:bg-surface-sunken text-ink"
+                              }`}
+                          >
+                            <span className="truncate">{r.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+
+                  {filteredRoomGroups.every((g) => g.items.length === 0) && !roomSearch.trim() && (
+                    <div className="p-3 text-center text-ink-faint">
+                      Không tìm thấy phòng phù hợp. Bạn có thể gõ tên phòng trực tiếp vào ô tìm kiếm.
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </FormField>
         <FormField label="Nội dung chi tiết">
           <textarea
@@ -494,6 +1231,38 @@ export default function SchoolAdminSchedulesPage() {
         onCancel={() => setConfirmDel(null)}
       />
 
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Nhập thời khóa biểu từ file Excel"
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống cho phép nạp và tự động cảnh báo nếu có tiết học bị trùng phòng."
+        templateFilename={
+          currentClassName
+            ? `mau_nhap_thoi_khoa_bieu_${currentClassName.replace(/\s+/g, "_")}.xlsx`
+            : "mau_nhap_thoi_khoa_bieu.xlsx"
+        }
+        sampleHeaders={[
+          "Lớp",
+          "Thứ",
+          "Khung giờ",
+          "Tên hoạt động",
+          "Địa điểm / Phòng học",
+          "Nội dung chi tiết",
+        ]}
+        sampleRow={[
+          currentClassName || "Lớp Mầm A",
+          "Thứ 2",
+          "08:10 - 08:40",
+          "Học hát & Vận động âm nhạc",
+          "Phòng Âm nhạc & Vận động",
+          "Tập bài hát Cháu yêu bà, vận động vỗ tay theo phách",
+        ]}
+        onImportRows={handleImportRows}
+        onSuccess={() => {
+          setToast({ msg: "Đã nạp thời khóa biểu thành công", tone: "ok" });
+        }}
+      />
+
       {toast && (
         <Toast message={toast.msg} tone={toast.tone} onClose={() => setToast(null)} />
       )}
@@ -505,4 +1274,53 @@ function toMin(t: string): number {
   const [h, m] = t.split(":").map((x) => parseInt(x, 10));
   if (isNaN(h) || isNaN(m)) return 0;
   return h * 60 + m;
+}
+
+function parseDayOfWeek(val: any): number | null {
+  if (val === undefined || val === null) return null;
+  const s = String(val).trim().toLowerCase();
+  if (!s) return null;
+
+  if (/^[2-7]$/.test(s)) return parseInt(s, 10);
+
+  const m = s.match(/(?:thứ|thu|t)\s*([2-7])/i);
+  if (m) return parseInt(m[1], 10);
+
+  if (s.includes("hai") || s.includes("mon")) return 2;
+  if (s.includes("ba") || s.includes("tue")) return 3;
+  if (s.includes("tư") || s.includes("tu") || s.includes("wed")) return 4;
+  if (s.includes("năm") || s.includes("nam") || s.includes("thu")) return 5;
+  if (s.includes("sáu") || s.includes("sau") || s.includes("fri")) return 6;
+  if (s.includes("bảy") || s.includes("bay") || s.includes("sat")) return 7;
+
+  return null;
+}
+
+function parseTimeRange(val: any): { start: string; end: string } | null {
+  if (!val) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+
+  // Handles: 07:00 - 07:30, 07:00-07:30, 7h00 - 7h30, 7:00 - 7:30, 07:00 đến 07:30, 07:00 -> 07:30
+  const match = s.match(/(\d{1,2})[h:](\d{2})?\s*(?:[-–—~]|đến|to|->)\s*(\d{1,2})[h:](\d{2})?/i);
+  if (match) {
+    const h1 = match[1].padStart(2, "0");
+    const m1 = (match[2] || "00").padStart(2, "0");
+    const h2 = match[3].padStart(2, "0");
+    const m2 = (match[4] || "00").padStart(2, "0");
+    return {
+      start: `${h1}:${m1}`,
+      end: `${h2}:${m2}`,
+    };
+  }
+
+  const times = s.match(/\b\d{1,2}:\d{2}\b/g);
+  if (times && times.length >= 2) {
+    return {
+      start: times[0].padStart(5, "0"),
+      end: times[1].padStart(5, "0"),
+    };
+  }
+
+  return null;
 }

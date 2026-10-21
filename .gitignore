@@ -35,3 +35,5 @@ GEMINI.md
 
 # Docs & Design references
 docs/
+.vercel
+.env*

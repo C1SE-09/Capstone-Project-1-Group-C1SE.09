@@ -1,6 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from datetime import date, datetime, timedelta, timezone
 
+vn_tz = timezone(timedelta(hours=7))
+
+def get_today() -> date:
+    """Trả về ngày hôm nay theo giờ Việt Nam (UTC+7)"""
+    return datetime.now(vn_tz).date()
 class Settings(BaseSettings):
     # Database & cache
     database_url: str = (
@@ -23,6 +29,7 @@ class Settings(BaseSettings):
     minio_password: str = "minioadmin123"
     minio_bucket: str = "audio"
     minio_secure: bool = False
+    minio_public_url: str = ""  # URL công khai truy cập MinIO từ client ngoài Docker (ví dụ http://localhost:9000)
 
     # SMTP Email
     smtp_host: str = "smtp.gmail.com"

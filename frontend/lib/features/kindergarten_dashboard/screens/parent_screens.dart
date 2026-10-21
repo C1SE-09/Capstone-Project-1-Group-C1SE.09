@@ -6,13 +6,13 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
-import 'package:adark_frontend/domain/entities/child/child.dart' as domain_child;
+import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
 
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' hide Child;
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_account.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -118,13 +118,32 @@ class _ParentFlowState extends State<ParentFlow> {
     });
   }
 
-  void _onHealthUpdated(domain_child.Child child) {
+  void _onHealthUpdated(Child child) => _onChildUpdated(child);
+
+  void _onParentUpdated(String phone, String? email, String? relationship) {
+    setState(() {
+      future = future.then(
+        (current) => _ParentData(
+          current.parent.copyWith(
+            phone: phone,
+            email: email,
+            relationship: relationship,
+          ),
+          current.overview,
+          current.reports,
+          current.today,
+        ),
+      );
+    });
+  }
+
+  void _onChildUpdated(Child updatedChild) {
     setState(() {
       future = future.then(
         (current) => _ParentData(
           current.parent,
           ChildOverview(
-            child: child,
+            child: updatedChild,
             className: current.overview.className,
             teacherName: current.overview.teacherName,
             teacherId: current.overview.teacherId,
@@ -217,6 +236,8 @@ class _ParentFlowState extends State<ParentFlow> {
                       onOpenReport: (report) => _openReport(data, report),
                       onPhoneUpdated: _onPhoneUpdated,
                       onHealthUpdated: _onHealthUpdated,
+                      onParentUpdated: _onParentUpdated,
+                      onChildUpdated: _onChildUpdated,
                       onLogout: widget.onLogout,
                     ),
             ),
@@ -382,30 +403,26 @@ class _ParentOverview extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              InkWell(
-                onTap: () => showParentChildSheet(context, overview: overview),
-                child: Row(
-                  children: [
-                    Avatar(name: child.fullName, size: 48),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            child.fullName,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
-                          ),
-                          Text(
-                            'Lớp ${overview.className} · ${overview.teacherName}',
-                            style: TextStyle(fontSize: 12, color: context.k.inkFaint),
-                          ),
-                        ],
-                      ),
+              Row(
+                children: [
+                  Avatar(name: child.fullName, size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          child.fullName,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
+                        ),
+                        Text(
+                          'Lớp ${overview.className} · ${overview.teacherName}',
+                          style: TextStyle(fontSize: 12, color: context.k.inkFaint),
+                        ),
+                      ],
                     ),
-                    Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
-                  ],
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               const Divider(height: 1),

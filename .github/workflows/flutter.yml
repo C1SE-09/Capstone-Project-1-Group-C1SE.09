@@ -3,6 +3,13 @@ name: Flutter Analysis
 on:
   pull_request:
     branches: [ "develop", "main" ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/flutter.yml"
+
+concurrency:
+  group: flutter-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -16,6 +23,7 @@ jobs:
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
+        cache: true
 
     - name: Install dependencies
       working-directory: ./frontend

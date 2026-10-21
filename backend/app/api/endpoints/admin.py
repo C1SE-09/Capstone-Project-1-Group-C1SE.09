@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime
 from app.core.database import get_db
 from app.core.security import hash_password, require_role
 from app.models.child import Child, ChildStatus, Parent, ParentChild, ParentStatus
-from app.models.schedule import ClassSchedule, Subject, TimeSlot
+from app.models.schedule import ClassSchedule, Room, Subject, TimeSlot
 from app.models.user import Class_, School, Teacher, TeacherStatus, User, UserRole, UserStatus
 from app.services.health_profile_service import (
     classify_legacy_allergy,
@@ -150,6 +150,15 @@ class ScheduleUpdate(BaseModel):
     start_time: str | None = None
     end_time: str | None = None
     day_of_week: int | None = None
+
+
+class RoomCreate(BaseModel):
+    name: str
+    room_type: str = "CLASSROOM"
+    class_id: str | None = None
+    capacity: int | None = 30
+    is_shared: bool = False
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -370,17 +379,57 @@ def list_classes(db: Session = Depends(get_db)):
 def list_parents(db: Session = Depends(get_db)):
     parents = db.query(Parent).order_by(Parent.created_at.desc()).all()
     results = []
+    need_commit = False
     for p in parents:
         children_info = []
         child_ids = []
         children_list = []
+
+        seen_child_ids = set()
+        p_children = []
         for c in p.children:
+            if c.child_id not in seen_child_ids:
+                seen_child_ids.add(c.child_id)
+                p_children.append(c)
+
+        # Fallback: Lấy các học sinh liên kết qua khóa ngoại trực tiếp Child.parent_id (dữ liệu seed / legacy)
+        legacy_children = db.query(Child).filter(Child.parent_id == p.parent_id).all()
+        for c in legacy_children:
+            if c.child_id not in seen_child_ids:
+                seen_child_ids.add(c.child_id)
+                p_children.append(c)
+                # Tự động đồng bộ vào bảng parent_child để các lần truy vấn sau luôn có trong p.children
+                db.execute(
+                    text(
+                        "INSERT INTO parent_child (id, parent_id, child_id, relationship, is_primary, can_pickup, created_at, updated_at) "
+                        "VALUES (:id, :pid, :cid, :rel, true, true, now(), now()) "
+                        "ON CONFLICT (parent_id, child_id) DO NOTHING"
+                    ),
+                    {
+                        "id": uuid.uuid4(),
+                        "pid": p.parent_id,
+                        "cid": c.child_id,
+                        "rel": p.relationship_ or "Phụ huynh",
+                    },
+                )
+                need_commit = True
+
+        for c in p_children:
             c_class = c.class_.name if c.class_ else ""
             children_info.append(f"{c.full_name} ({c_class})" if c_class else c.full_name)
             child_ids.append(str(c.child_id))
-            children_list.append({"id": str(c.child_id), "name": c.full_name, "class_name": c_class})
+            children_list.append({
+                "id": str(c.child_id),
+                "name": c.full_name,
+                "class_name": c_class,
+                "class_id": str(c.class_id) if c.class_id else None,
+            })
 
-        child_desc = ", ".join(children_info) if children_info else "Chưa liên kết học sinh"
+        children_summary = (
+            f"Bé: {', '.join(children_info)}"
+            if children_info
+            else "Chưa liên kết học sinh"
+        )
         user = db.query(User).filter(User.parent_id == p.parent_id).first()
 
         results.append(
@@ -392,12 +441,14 @@ def list_parents(db: Session = Depends(get_db)):
                 "relationship": p.relationship_ or "",
                 "username": user.username if user else None,
                 "status": p.status.value if hasattr(p.status, "value") else str(p.status),
-                "children_summary": f"Bé: {child_desc}",
+                "children_summary": children_summary,
                 "child_id": child_ids[0] if child_ids else None,
                 "child_ids": child_ids,
                 "children": children_list,
             }
         )
+    if need_commit:
+        db.commit()
     return results
 
 
@@ -655,7 +706,15 @@ def list_children(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
 ):
-    children = db.query(Child).all()
+    query = db.query(Child)
+    try:
+        children = query.order_by(Child.created_at.desc()).all()
+        if not list(children) and hasattr(query, "all"):
+            fallback = query.all()
+            if list(fallback):
+                children = fallback
+    except Exception:
+        children = query.all()
     results = []
     for c in children:
         class_name = c.class_.name if c.class_ else "Chưa xếp lớp"
@@ -1020,8 +1079,18 @@ def list_time_slots(db: Session = Depends(get_db)):
 
 
 @router.get("/schedules")
-def list_schedules(day_of_week: int | None = 2, db: Session = Depends(get_db)):
+def list_schedules(
+    class_id: str | None = None,
+    day_of_week: int | None = None,
+    db: Session = Depends(get_db),
+):
     query = db.query(ClassSchedule).join(TimeSlot, ClassSchedule.slot_id == TimeSlot.slot_id, isouter=True)
+    if class_id and class_id.strip():
+        try:
+            cid = uuid.UUID(class_id.strip())
+            query = query.filter(ClassSchedule.class_id == cid)
+        except (ValueError, AttributeError):
+            pass
     if day_of_week is not None:
         query = query.filter(ClassSchedule.day_of_week == day_of_week)
 
@@ -1035,9 +1104,10 @@ def list_schedules(day_of_week: int | None = 2, db: Session = Depends(get_db)):
         results.append(
             {
                 "id": str(s.schedule_id),
+                "class_id": str(s.class_id),
                 "activity_name": s.activity_name,
                 "content": s.content or "",
-                "room_name": s.room_name or (s.class_.name if s.class_ else "Lớp Mầm A"),
+                "room_name": s.room_name or (s.class_.name if s.class_ else "Phòng học"),
                 "time_range": slot_name,
                 "slot_id": str(s.slot_id) if s.slot_id else None,
                 "start_time": start_time,
@@ -1063,6 +1133,7 @@ def _resolve_and_validate_slot(
     start_time: str | None,
     end_time: str | None,
     day_of_week: int,
+    class_id: uuid.UUID | None = None,
     exclude_schedule_id: uuid.UUID | None = None,
 ) -> TimeSlot:
     slot = None
@@ -1098,7 +1169,7 @@ def _resolve_and_validate_slot(
     if not slot:
         raise HTTPException(status_code=400, detail="Không tìm thấy khung giờ phù hợp.")
 
-    # Overlap / Collision Check against other schedules on day_of_week
+    # Overlap / Collision Check against other schedules of THIS class on day_of_week
     t_start = _to_minutes(slot.start_time)
     t_end = _to_minutes(slot.end_time)
 
@@ -1107,6 +1178,8 @@ def _resolve_and_validate_slot(
         .join(TimeSlot, ClassSchedule.slot_id == TimeSlot.slot_id)
         .filter(ClassSchedule.day_of_week == day_of_week)
     )
+    if class_id:
+        query = query.filter(ClassSchedule.class_id == class_id)
     if exclude_schedule_id:
         query = query.filter(ClassSchedule.schedule_id != exclude_schedule_id)
 
@@ -1118,7 +1191,7 @@ def _resolve_and_validate_slot(
             if t_start < o_end and t_end > o_start:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Khung giờ ({slot.name}) bị trùng hoặc đè lên hoạt động '{other.activity_name}' ({other.time_slot.name}).",
+                    detail=f"Lớp này đã có hoạt động '{other.activity_name}' ({other.time_slot.name}) trong khung giờ ({slot.name}).",
                 )
 
     return slot
@@ -1130,17 +1203,20 @@ def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
     first_teacher = db.query(Teacher).first()
     first_subject = db.query(Subject).first()
 
+    target_class_id = uuid.UUID(data.class_id) if data.class_id else (first_class.class_id if first_class else uuid.uuid4())
+
     target_slot = _resolve_and_validate_slot(
         db,
         slot_id=data.slot_id,
         start_time=data.start_time,
         end_time=data.end_time,
         day_of_week=data.day_of_week,
+        class_id=target_class_id,
     )
 
     schedule = ClassSchedule(
         schedule_id=uuid.uuid4(),
-        class_id=uuid.UUID(data.class_id) if data.class_id else (first_class.class_id if first_class else uuid.uuid4()),
+        class_id=target_class_id,
         subject_id=first_subject.subject_id if first_subject else uuid.uuid4(),
         slot_id=target_slot.slot_id,
         teacher_id=uuid.UUID(data.teacher_id) if data.teacher_id else (first_teacher.teacher_id if first_teacher else None),
@@ -1178,6 +1254,7 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
             start_time=data.start_time,
             end_time=data.end_time,
             day_of_week=s.day_of_week,
+            class_id=s.class_id,
             exclude_schedule_id=s.schedule_id,
         )
         s.slot_id = target_slot.slot_id
@@ -1195,3 +1272,62 @@ def delete_schedule(schedule_id: str, db: Session = Depends(get_db)):
     db.delete(s)
     db.commit()
     return {"message": "Đã xóa lịch sinh hoạt thành công"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. Rooms & Facilities Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get("/rooms")
+def list_rooms(
+    class_id: str | None = None,
+    db: Session = Depends(get_db),
+):
+    rooms = db.query(Room).filter(Room.is_active).all()
+
+    def sort_key(r: Room):
+        is_current_class = 0 if (class_id and str(r.class_id) == class_id) else 1
+        type_priority = {
+            "CLASSROOM": 1,
+            "FUNCTIONAL": 2,
+            "OUTDOOR": 3,
+            "COMMON": 4,
+        }.get(r.room_type, 5)
+        return (is_current_class, type_priority, r.name)
+
+    sorted_rooms = sorted(rooms, key=sort_key)
+    return [
+        {
+            "id": str(r.room_id),
+            "name": r.name,
+            "room_type": r.room_type,
+            "class_id": str(r.class_id) if r.class_id else None,
+            "capacity": r.capacity,
+            "is_shared": r.is_shared,
+        }
+        for r in sorted_rooms
+    ]
+
+
+@router.post("/rooms", status_code=status.HTTP_201_CREATED)
+def create_room(data: RoomCreate, db: Session = Depends(get_db)):
+    first_school = db.query(School).first()
+    if not first_school:
+        raise HTTPException(status_code=400, detail="Chưa có trường học trong hệ thống.")
+
+    room = Room(
+        room_id=uuid.uuid4(),
+        school_id=first_school.school_id,
+        class_id=uuid.UUID(data.class_id) if data.class_id else None,
+        name=data.name.strip(),
+        room_type=data.room_type.strip(),
+        capacity=data.capacity or 30,
+        is_shared=data.is_shared,
+        is_active=True,
+    )
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    return {"message": "Tạo phòng / địa điểm thành công", "id": str(room.room_id)}
+

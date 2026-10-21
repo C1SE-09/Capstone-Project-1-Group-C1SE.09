@@ -97,6 +97,7 @@ from app.services.notification_service import (
 from app.services.validation_service import ValidationError, validate_transcript_content
 from app.tasks.notifications import send_report_notifications
 from app.tasks.process_audio import process_audio_task
+from app.config import get_today
 
 logger = logging.getLogger(__name__)
 
@@ -676,7 +677,7 @@ def create_report_from_extraction(
         )
 
     # 3. Tạo DailyReport
-    today = datetime.now(UTC).date()
+    today = get_today()
     existing_report = (
         db.query(DailyReport)
         .filter(
@@ -759,7 +760,7 @@ def create_manual_report(
             )
 
     # 2. Check trùng lặp báo cáo trong ngày
-    target_date = payload.report_date or datetime.now(UTC).date()
+    target_date = payload.report_date or get_today()
     existing_report = (
         db.query(DailyReport)
         .filter(
@@ -894,7 +895,7 @@ def publish_report(
     is_update = bool(report.status == DailyReportStatus.PUBLISHED or report.published_at is not None)
 
     report.status = DailyReportStatus.PUBLISHED
-    report.published_at = datetime.now(UTC).date()
+    report.published_at = get_today()
     db.commit()
     db.refresh(report)
 

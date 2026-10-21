@@ -18,8 +18,12 @@ import {
   Spinner,
   ConfirmDialog,
   Toast,
+  ClassFilterSelect,
+  ImportModal,
+  ImportResult,
 } from "@/components/ui-school";
 import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { exportToExcel } from "@/lib/excel-helper";
 import {
   Teacher,
   TeacherPayload,
@@ -56,13 +60,15 @@ const EMPTY_FORM: TeacherFormState = {
 export default function SchoolAdminTeachersPage() {
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [form, setForm] = useState<TeacherFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Teacher | null>(null);
-  const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
 
   useEffect(() => {
     if (!getToken() || !getStoredSchoolAdmin()) {
@@ -82,7 +88,15 @@ export default function SchoolAdminTeachersPage() {
   );
 
   const filtered = useMemo(() => {
-    const list = teachers ?? [];
+    let list = teachers ?? [];
+    if (selectedClassId) {
+      list = list.filter((t) => {
+        if (t.class_ids && t.class_ids.includes(selectedClassId)) return true;
+        if (t.class_id === selectedClassId) return true;
+        if (t.classes && t.classes.some((c) => c.id === selectedClassId)) return true;
+        return false;
+      });
+    }
     const q = query.toLowerCase().trim();
     if (!q) return list;
     return list.filter(
@@ -90,9 +104,100 @@ export default function SchoolAdminTeachersPage() {
         t.full_name.toLowerCase().includes(q) ||
         t.email.toLowerCase().includes(q) ||
         t.phone.toLowerCase().includes(q) ||
-        t.class_name.toLowerCase().includes(q),
+        (t.class_name || "").toLowerCase().includes(q),
     );
-  }, [teachers, query]);
+  }, [teachers, query, selectedClassId]);
+
+  function handleExportExcel() {
+    if (!filtered || filtered.length === 0) {
+      setToast({ msg: "Không có dữ liệu giáo viên để xuất", tone: "warn" });
+      return;
+    }
+    const headers = [
+      "Họ và tên",
+      "Email",
+      "Số điện thoại",
+      "Lớp phụ trách",
+      "Tên đăng nhập",
+      "Trạng thái",
+    ];
+    const rows = filtered.map((t) => [
+      t.full_name,
+      t.email,
+      t.phone,
+      t.classes && t.classes.length > 0
+        ? t.classes.map((c) => c.name).join(", ")
+        : t.class_name || "Chưa phân lớp",
+      t.username || "",
+      t.status === "active" ? "Đang hoạt động" : "Ngừng",
+    ]);
+    const currentClass = classes.find((c) => c.id === selectedClassId);
+    const filename = currentClass
+      ? `danh_sach_giao_vien_${currentClass.name.replace(/\s+/g, "_")}.xlsx`
+      : "danh_sach_giao_vien.xlsx";
+    exportToExcel(filename, "GiaoVien", headers, rows);
+    setToast({ msg: `Đã xuất ${rows.length} giáo viên ra file Excel`, tone: "ok" });
+  }
+
+  async function handleImportRows(rows: string[][]): Promise<ImportResult> {
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const fullName = row[0]?.trim();
+      const email = row[1]?.trim();
+      const phone = row[2]?.trim();
+      const classNameOrId = row[3]?.trim();
+      const username = row[4]?.trim() || null;
+      const password = row[5]?.trim() || null;
+
+      if (!fullName || !email || !phone) {
+        failed++;
+        errors.push(`Dòng ${i + 1}: Thiếu họ tên, email hoặc số điện thoại.`);
+        continue;
+      }
+      if (!/^0\d{9}$/.test(phone)) {
+        failed++;
+        errors.push(`Dòng ${i + 1} (${fullName}): Số điện thoại phải gồm 10 số.`);
+        continue;
+      }
+
+      let matchedClassIds: string[] = [];
+      if (classNameOrId) {
+        const found = classes.find(
+          (c) =>
+            c.id === classNameOrId ||
+            c.name.toLowerCase() === classNameOrId.toLowerCase()
+        );
+        if (found) {
+          matchedClassIds = [found.id];
+        }
+      }
+
+      try {
+        await createTeacher({
+          full_name: fullName,
+          email,
+          phone,
+          class_ids: matchedClassIds,
+          username,
+          password,
+          status: "active",
+        });
+        success++;
+      } catch (err: any) {
+        failed++;
+        errors.push(`Dòng ${i + 1} (${fullName}): ${err?.message || "Lỗi tạo giáo viên"}`);
+      }
+    }
+
+    if (success > 0) {
+      mutate();
+    }
+    return { total: rows.length, success, failed, errors };
+  }
 
   function openCreate() {
     setEditing(null);
@@ -183,7 +288,7 @@ export default function SchoolAdminTeachersPage() {
       active="features"
       pageTitle="Quản lý giáo viên"
       pageAction={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               mutate();
@@ -194,18 +299,41 @@ export default function SchoolAdminTeachersPage() {
           >
             ↻
           </button>
+          <button
+            onClick={handleExportExcel}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Xuất danh sách ra file Excel"
+          >
+            📥 Xuất Excel
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Nhập dữ liệu từ file Excel / CSV"
+          >
+            📤 Nhập file
+          </button>
           <button onClick={openCreate} className="kbtn kbtn-primary">
             + Thêm giáo viên
           </button>
         </div>
       }
     >
-      <div className="card p-3 mb-3">
-        <SearchBar
-          value={query}
-          onChange={setQuery}
-          placeholder="Tìm giáo viên, số điện thoại, lớp..."
-        />
+      <div className="card p-3 mb-3 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+        <div className="flex-1">
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            placeholder="Tìm giáo viên, số điện thoại, lớp..."
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <ClassFilterSelect
+            classes={classes}
+            value={selectedClassId}
+            onChange={setSelectedClassId}
+          />
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -422,6 +550,27 @@ export default function SchoolAdminTeachersPage() {
         confirmLabel="Xóa"
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Nhập danh sách giáo viên từ file"
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường."
+        templateFilename="mau_nhap_giao_vien.xlsx"
+        sampleHeaders={["Họ và tên", "Email", "Số điện thoại", "Tên lớp", "Tên đăng nhập", "Mật khẩu"]}
+        sampleRow={[
+          "Nguyễn Thị Mai",
+          "mai.nguyen@gmail.com",
+          "0901234567",
+          classes[0]?.name || "Lớp Mầm 1",
+          "mainguyen",
+          "123456",
+        ]}
+        onImportRows={handleImportRows}
+        onSuccess={() => {
+          setToast({ msg: "Đã nhập danh sách giáo viên thành công", tone: "ok" });
+        }}
       />
 
       {toast && (

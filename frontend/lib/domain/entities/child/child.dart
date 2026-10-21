@@ -1,4 +1,4 @@
-﻿// frontend/lib/domain/entities/child/child.dart
+// frontend/lib/domain/entities/child/child.dart
 // =========================================================
 // Entity Child — MIRROR backend app/models/child.py (Child)
 
@@ -81,6 +81,30 @@ class Child extends BaseEntity {
       healthUpdatedByUserId: json['health_updated_by_user_id'] as String?,
       healthUpdateSource: json['health_update_source'] as String?,
       healthVersion: json['health_version'] as int? ?? 1,
+    );
+  }
+
+  Child copyWith({
+    String? childId,
+    String? parentId,
+    String? classId,
+    String? fullName,
+    String? nickname,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? avatarUrl,
+    String? medicalAllergies,
+  }) {
+    return Child(
+      childId: childId ?? this.childId,
+      parentId: parentId ?? this.parentId,
+      classId: classId ?? this.classId,
+      fullName: fullName ?? this.fullName,
+      nickname: nickname ?? this.nickname,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      medicalAllergies: medicalAllergies ?? this.medicalAllergies,
     );
   }
 }

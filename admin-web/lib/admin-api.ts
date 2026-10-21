@@ -83,7 +83,7 @@ export interface Parent {
   children_summary: string;
   child_id: string | null;
   child_ids: string[];
-  children: { id: string; name: string; class_name: string }[];
+  children: { id: string; name: string; class_name: string; class_id?: string | null }[];
 }
 
 export interface ParentPayload {
@@ -212,6 +212,7 @@ export interface Schedule {
   id: string;
   activity_name: string;
   content: string;
+  class_id?: string;
   room_name: string;
   time_range: string;
   slot_id: string | null;
@@ -222,6 +223,7 @@ export interface Schedule {
 }
 
 export interface SchedulePayload {
+  class_id?: string | null;
   activity_name: string;
   content?: string | null;
   room_name?: string | null;
@@ -235,9 +237,28 @@ export function getTimeSlots() {
   return apiFetch<TimeSlot[]>("/api/admin/time-slots", { account: "schoolAdmin" });
 }
 
-export function getSchedules(dayOfWeek?: number) {
+export function getSchedules(
+  classIdOrDay?: string | number | null,
+  dayOfWeek?: number,
+) {
+  let classId: string | null = null;
+  let day: number | undefined = undefined;
+
+  if (typeof classIdOrDay === "number") {
+    day = classIdOrDay;
+  } else if (typeof classIdOrDay === "string") {
+    classId = classIdOrDay;
+    day = dayOfWeek;
+  } else {
+    day = dayOfWeek;
+  }
+
+  const query: Record<string, any> = {};
+  if (classId) query.class_id = classId;
+  if (day !== undefined) query.day_of_week = day;
+
   return apiFetch<Schedule[]>("/api/admin/schedules", {
-    query: dayOfWeek !== undefined ? { day_of_week: dayOfWeek } : undefined,
+    query,
     account: "schoolAdmin",
   });
 }
@@ -261,6 +282,39 @@ export function updateSchedule(id: string, data: Partial<SchedulePayload>) {
 export function deleteSchedule(id: string) {
   return apiFetch<{ message: string }>(`/api/admin/schedules/${id}`, {
     method: "DELETE",
+    account: "schoolAdmin",
+  });
+}
+
+/* ════════ Rooms & Facilities ════════ */
+export interface Room {
+  id: string;
+  name: string;
+  room_type: "CLASSROOM" | "FUNCTIONAL" | "OUTDOOR" | "COMMON";
+  class_id: string | null;
+  capacity?: number | null;
+  is_shared: boolean;
+}
+
+export function getRooms(classId?: string | null) {
+  const query: Record<string, any> = {};
+  if (classId) query.class_id = classId;
+  return apiFetch<Room[]>("/api/admin/rooms", {
+    query,
+    account: "schoolAdmin",
+  });
+}
+
+export function createRoom(data: {
+  name: string;
+  room_type?: string;
+  class_id?: string | null;
+  capacity?: number;
+  is_shared?: boolean;
+}) {
+  return apiFetch<{ id: string; message: string }>("/api/admin/rooms", {
+    method: "POST",
+    body: data,
     account: "schoolAdmin",
   });
 }

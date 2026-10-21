@@ -40,6 +40,31 @@ class _MockParentRepo extends HttpDashboardRepository {
 
   int updateCalls = 0;
   String? lastPhone;
+  int updateChildCalls = 0;
+  Child? lastUpdatedChild;
+
+  @override
+  Future<Child> updateChildInfo({
+    required String parentId,
+    required String childId,
+    String? fullName,
+    String? nickname,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? medicalAllergies,
+  }) async {
+    updateChildCalls++;
+    lastUpdatedChild = Child(
+      childId: childId,
+      classId: 'class-1',
+      fullName: fullName ?? 'Trần Bảo Bảo',
+      nickname: nickname,
+      dateOfBirth: dateOfBirth,
+      gender: gender,
+      medicalAllergies: medicalAllergies,
+    );
+    return lastUpdatedChild!;
+  }
 
   @override
   Future<Parent> getCurrentParent() async => Parent(
@@ -124,10 +149,24 @@ class _MockParentRepo extends HttpDashboardRepository {
     status: ReportStatus.read,
   );
 
+  String? lastEmail;
+  String? lastRelationship;
+
   @override
-  Future<void> updateMyPhone(String parentId, String phone) async {
+  Future<void> updateMyPhone(String parentId, String phone) =>
+      updateParentProfile(parentId, phone: phone);
+
+  @override
+  Future<void> updateParentProfile(
+    String parentId, {
+    String? phone,
+    String? email,
+    String? relationship,
+  }) async {
     updateCalls++;
-    lastPhone = phone;
+    if (phone != null) lastPhone = phone;
+    lastEmail = email;
+    lastRelationship = relationship;
     if (phoneFailure != null) {
       throw ClassDataException('lỗi', statusCode: phoneFailure);
     }
@@ -325,65 +364,74 @@ void main() {
     );
   });
 
-  testWidgets('sheet sửa SĐT từ chối số sai định dạng', (tester) async {
+  testWidgets('ấn vào SĐT phụ huynh tự động copy và hiện thông báo', (tester) async {
     final repo = _MockParentRepo();
     await _pump(tester, repo);
 
     await tester.tap(find.text('0901234567'));
     await tester.pumpAndSettle();
+
+    expect(find.text('Đã sao chép số điện thoại'), findsOneWidget);
+    expect(find.text('Chỉnh sửa thông tin'), findsNothing);
+  });
+
+  testWidgets('sheet sửa thông tin phụ huynh từ chối số sai định dạng', (tester) async {
+    final repo = _MockParentRepo();
+    await _pump(tester, repo);
+
+    await tester.tap(find.byTooltip('Chỉnh sửa thông tin'));
+    await tester.pumpAndSettle();
     expect(find.text('Chỉnh sửa thông tin'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField), '12345');
+    final phoneFinder = find.widgetWithText(TextField, 'Số điện thoại *');
+    await tester.enterText(phoneFinder, '12345');
     await tester.pumpAndSettle();
 
-    final save = tester.widget<KButton>(find.widgetWithText(KButton, 'Lưu'));
+    final save = tester.widget<KButton>(find.widgetWithText(KButton, 'Lưu thay đổi'));
     expect(save.onPressed, isNull, reason: 'số sai định dạng thì nút Lưu phải tắt');
     expect(repo.updateCalls, 0);
   });
 
-  testWidgets('sheet sửa SĐT lưu số hợp lệ và cập nhật màn', (tester) async {
+  testWidgets('sheet sửa thông tin phụ huynh lưu số, email và quan hệ hợp lệ', (tester) async {
     final repo = _MockParentRepo();
     await _pump(tester, repo);
 
-    await tester.tap(find.text('0901234567'));
+    await tester.tap(find.byTooltip('Chỉnh sửa thông tin'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '0987654321');
+    final phoneFinder = find.widgetWithText(TextField, 'Số điện thoại *');
+    await tester.enterText(phoneFinder, '0987654321');
+
+    final emailFinder = find.widgetWithText(TextField, 'Email');
+    await tester.enterText(emailFinder, 'tuan.new@gmail.com');
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(KButton, 'Lưu'));
+
+    await tester.tap(find.widgetWithText(KButton, 'Lưu thay đổi'));
     await tester.pumpAndSettle();
 
     expect(repo.updateCalls, 1);
     expect(repo.lastPhone, '0987654321');
+    expect(repo.lastEmail, 'tuan.new@gmail.com');
     expect(find.text('0987654321'), findsWidgets);
+    expect(find.text('tuan.new@gmail.com'), findsOneWidget);
     expect(find.text('Chỉnh sửa thông tin'), findsNothing);
   });
 
-  testWidgets('sheet sửa SĐT hiện lỗi khi backend trả 409', (tester) async {
+  testWidgets('sheet sửa thông tin phụ huynh hiện lỗi khi backend trả 409', (tester) async {
     final repo = _MockParentRepo(phoneFailure: 409);
     await _pump(tester, repo);
 
-    await tester.tap(find.text('0901234567'));
+    await tester.tap(find.byTooltip('Chỉnh sửa thông tin'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '0987654321');
+
+    final phoneFinder = find.widgetWithText(TextField, 'Số điện thoại *');
+    await tester.enterText(phoneFinder, '0987654321');
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(KButton, 'Lưu'));
+
+    await tester.tap(find.widgetWithText(KButton, 'Lưu thay đổi'));
     await tester.pumpAndSettle();
 
     expect(find.text('Số điện thoại đã được sử dụng'), findsOneWidget);
-  });
-
-  testWidgets('sheet chi tiết bé hiện phòng, ngày sinh và SĐT cô', (tester) async {
-    await _pump(tester, _MockParentRepo());
-
-    await tester.tap(find.text('Trần Bảo Bảo').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Ngày sinh'), findsOneWidget);
-    expect(find.text('12/03/2023'), findsOneWidget);
-    expect(find.text('Phòng'), findsOneWidget);
-    expect(find.text('Phòng 1'), findsOneWidget);
-    expect(find.text('0987654321'), findsOneWidget);
   });
 
   testWidgets('toggle thông báo đẩy lưu lựa chọn xuống máy', (tester) async {
@@ -399,4 +447,69 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('kinderlog-parent-push'), isFalse);
   });
+
+  testWidgets('sheet chỉnh sửa thông tin bé lưu thông tin và cập nhật giao diện', (tester) async {
+    final repo = _MockParentRepo();
+    await _pump(tester, repo);
+
+    // Mở sheet sửa thông tin bé từ icon lớn ở tên bé
+    expect(find.byTooltip('Chỉnh sửa thông tin bé'), findsOneWidget);
+    await tester.tap(find.byTooltip('Chỉnh sửa thông tin bé'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chỉnh sửa thông tin bé'), findsOneWidget);
+    expect(find.text('Trần Bảo Bảo'), findsWidgets);
+    expect(find.text('Bảo'), findsWidgets);
+
+    final nicknameFinder = find.widgetWithText(TextField, 'Tên gọi ở nhà (Biệt danh)');
+    await tester.enterText(nicknameFinder, 'Bảo Bối');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Bé trai (Nam)'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(KButton, 'Lưu thay đổi'));
+    await tester.pumpAndSettle();
+
+    expect(repo.updateChildCalls, 1);
+    expect(repo.lastUpdatedChild?.nickname, 'Bảo Bối');
+    expect(repo.lastUpdatedChild?.gender, 'male');
+    expect(find.text('Chỉnh sửa thông tin bé'), findsNothing);
+    expect(find.text('Biệt danh: Bảo Bối'), findsOneWidget);
+  });
+
+  testWidgets('sheet chỉnh sửa thông tin bé chặn lưu khi họ tên rỗng', (tester) async {
+    final repo = _MockParentRepo();
+    await _pump(tester, repo);
+
+    await tester.tap(find.byTooltip('Chỉnh sửa thông tin bé'));
+    await tester.pumpAndSettle();
+
+    final nameFinder = find.widgetWithText(TextField, 'Họ và tên của bé *');
+    await tester.enterText(nameFinder, '   ');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(KButton, 'Lưu thay đổi'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Họ và tên của bé không được để trống.'), findsOneWidget);
+    expect(repo.updateChildCalls, 0);
+  });
+
+  testWidgets('card thông tin bé chỉ có icon edit lớn ở tên bé, không có nút xem chi tiết và sửa thông tin', (tester) async {
+    await _pump(tester, _MockParentRepo());
+
+    // 2 nút ở dưới đáy card đã bị xóa
+    expect(find.text('Xem chi tiết'), findsNothing);
+    expect(find.text('Sửa thông tin'), findsNothing);
+
+    // Icon edit lớn ở header tên bé
+    expect(find.byTooltip('Chỉnh sửa thông tin bé'), findsOneWidget);
+
+    // Toàn màn hình có 3 icon edit: hero phụ huynh, tên bé, dòng hồ sơ sức khỏe
+    final editIcons = find.byIcon(Icons.edit_outlined);
+    expect(editIcons, findsNWidgets(3));
+  });
 }
+
+

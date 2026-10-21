@@ -18,8 +18,12 @@ import {
   Spinner,
   ConfirmDialog,
   Toast,
+  ClassFilterSelect,
+  ImportModal,
+  ImportResult,
 } from "@/components/ui-school";
 import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { exportToExcel } from "@/lib/excel-helper";
 import {
   Child,
   ChildPayload,
@@ -64,14 +68,16 @@ const EMPTY: FormState = {
 export default function SchoolAdminStudentsPage() {
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [parents, setParents] = useState<Parent[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Child | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Child | null>(null);
-  const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
 
   useEffect(() => {
     if (!getToken() || !getStoredSchoolAdmin()) {
@@ -94,19 +100,115 @@ export default function SchoolAdminStudentsPage() {
   );
 
   const filtered = useMemo(() => {
-    const list = children ?? [];
+    let list = children ?? [];
+    if (selectedClassId) {
+      list = list.filter((c) => c.class_id === selectedClassId);
+    }
     const q = query.toLowerCase().trim();
     if (!q) return list;
     return list.filter(
       (c) =>
         c.full_name.toLowerCase().includes(q) ||
         (c.nickname || "").toLowerCase().includes(q) ||
-        c.class_name.toLowerCase().includes(q) ||
+        (c.class_name || "").toLowerCase().includes(q) ||
         (c.parents_summary || "").toLowerCase().includes(q) ||
         (c.note || "").toLowerCase().includes(q) ||
         (c.care_notes || "").toLowerCase().includes(q),
     );
-  }, [children, query]);
+  }, [children, query, selectedClassId]);
+
+  function handleExportExcel() {
+    if (!filtered || filtered.length === 0) {
+      setToast({ msg: "Không có dữ liệu học sinh để xuất", tone: "warn" });
+      return;
+    }
+    const headers = [
+      "Họ và tên",
+      "Biệt danh",
+      "Lớp",
+      "Phụ huynh",
+      "Ngày sinh",
+      "Giới tính",
+      "Ghi chú / Dị ứng",
+      "Trạng thái",
+    ];
+    const rows = filtered.map((c) => [
+      c.full_name,
+      c.nickname || "",
+      c.class_name || "Chưa xếp lớp",
+      c.parents_summary || "Chưa liên kết",
+      c.date_of_birth ? formatDate(c.date_of_birth) : "",
+      c.gender === "female" ? "Nữ" : "Nam",
+      c.note || "",
+      c.status === "enrolled" ? "Đang học" : c.status,
+    ]);
+    const currentClass = classes.find((cl) => cl.id === selectedClassId);
+    const filename = currentClass
+      ? `danh_sach_hoc_sinh_${currentClass.name.replace(/\s+/g, "_")}.xlsx`
+      : "danh_sach_hoc_sinh.xlsx";
+    exportToExcel(filename, "HocSinh", headers, rows);
+    setToast({ msg: `Đã xuất ${rows.length} học sinh ra file Excel`, tone: "ok" });
+  }
+
+  async function handleImportRows(rows: string[][]): Promise<ImportResult> {
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const fullName = row[0]?.trim();
+      const nickname = row[1]?.trim() || null;
+      const classNameOrId = row[2]?.trim();
+      const dob = row[3]?.trim() || null;
+      const genderStr = (row[4]?.trim() || "").toLowerCase();
+      const note = row[5]?.trim() || "";
+
+      if (!fullName) {
+        failed++;
+        errors.push(`Dòng ${i + 1}: Thiếu họ tên học sinh.`);
+        continue;
+      }
+
+      let matchedClassId: string | null = null;
+      if (classNameOrId) {
+        const found = classes.find(
+          (c) =>
+            c.id === classNameOrId ||
+            c.name.toLowerCase() === classNameOrId.toLowerCase()
+        );
+        if (found) {
+          matchedClassId = found.id;
+        }
+      }
+      if (!matchedClassId && classes.length > 0) {
+        matchedClassId = classes[0].id;
+      }
+
+      const gender = genderStr.includes("nữ") || genderStr === "female" ? "female" : "male";
+
+      try {
+        await createChild({
+          full_name: fullName,
+          nickname,
+          class_id: matchedClassId,
+          date_of_birth: dob,
+          gender,
+          medical_allergies: note,
+          status: "enrolled",
+        });
+        success++;
+      } catch (err: any) {
+        failed++;
+        errors.push(`Dòng ${i + 1} (${fullName}): ${err?.message || "Lỗi tạo học sinh"}`);
+      }
+    }
+
+    if (success > 0) {
+      mutate();
+    }
+    return { total: rows.length, success, failed, errors };
+  }
 
   function openCreate() {
     setEditing(null);
@@ -211,7 +313,7 @@ export default function SchoolAdminStudentsPage() {
       active="features"
       pageTitle="Quản lý học sinh"
       pageAction={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               mutate();
@@ -222,18 +324,41 @@ export default function SchoolAdminStudentsPage() {
           >
             ↻
           </button>
+          <button
+            onClick={handleExportExcel}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Xuất danh sách ra file Excel"
+          >
+            📥 Xuất Excel
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Nhập dữ liệu từ file Excel / CSV"
+          >
+            📤 Nhập file
+          </button>
           <button onClick={openCreate} className="kbtn kbtn-primary">
             + Thêm học sinh
           </button>
         </div>
       }
     >
-      <div className="card p-3 mb-3">
-        <SearchBar
-          value={query}
-          onChange={setQuery}
-          placeholder="Tìm học sinh, lớp, dị ứng, phụ huynh..."
-        />
+      <div className="card p-3 mb-3 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+        <div className="flex-1">
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            placeholder="Tìm học sinh, lớp, dị ứng, phụ huynh..."
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <ClassFilterSelect
+            classes={classes}
+            value={selectedClassId}
+            onChange={setSelectedClassId}
+          />
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -523,6 +648,27 @@ export default function SchoolAdminStudentsPage() {
         message={`Bạn có chắc muốn xóa "${confirmDel?.full_name}"? Toàn bộ liên kết phụ huynh sẽ bị xóa.`}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Nhập danh sách học sinh từ file"
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt học sinh."
+        templateFilename="mau_nhap_hoc_sinh.xlsx"
+        sampleHeaders={["Họ và tên", "Biệt danh", "Tên lớp", "Ngày sinh (YYYY-MM-DD)", "Giới tính (Nam/Nữ)", "Ghi chú / Dị ứng"]}
+        sampleRow={[
+          "Nguyễn Bảo An",
+          "Bống",
+          classes[0]?.name || "Lớp Mầm 1",
+          "2021-05-15",
+          "Nữ",
+          "Dị ứng hải sản",
+        ]}
+        onImportRows={handleImportRows}
+        onSuccess={() => {
+          setToast({ msg: "Đã nhập danh sách học sinh thành công", tone: "ok" });
+        }}
       />
 
       {toast && (

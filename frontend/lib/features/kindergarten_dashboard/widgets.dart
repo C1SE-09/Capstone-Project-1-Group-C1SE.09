@@ -465,6 +465,7 @@ class KInfoRow extends StatelessWidget {
     this.danger = false,
     this.onTap,
     this.icon,
+    this.showEditIcon = true,
   });
 
   final String label;
@@ -472,6 +473,7 @@ class KInfoRow extends StatelessWidget {
   final bool danger;
   final VoidCallback? onTap;
   final IconData? icon;
+  final bool showEditIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -481,16 +483,14 @@ class KInfoRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 13, color: context.k.inkSoft),
-              ),
+            Text(
+              label,
+              style: TextStyle(fontSize: 13, color: context.k.inkSoft),
             ),
             const SizedBox(width: 12),
-            Flexible(
+            Expanded(
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   if (danger && icon != null) ...[
                     Icon(icon, size: 15, color: context.k.bad),
@@ -506,7 +506,7 @@ class KInfoRow extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (onTap != null) ...[
+                  if (onTap != null && showEditIcon) ...[
                     const SizedBox(width: 8),
                     Icon(Icons.edit_outlined, size: 16, color: context.k.brand),
                   ],

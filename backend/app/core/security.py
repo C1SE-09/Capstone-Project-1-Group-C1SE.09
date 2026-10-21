@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 SECRET_KEY = getattr(settings, "jwt_secret_key", "kinderlog-secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_SECONDS = 15 * 60  # 15 phút
-REFRESH_TOKEN_EXPIRE_SECONDS = 30 * 24 * 60 * 60  # 30 ngày
+REFRESH_TOKEN_EXPIRE_SECONDS = 4 * 60 * 60  # 4 giờ (hết hạn trong ngày, tránh trẻ em mượn máy)
 MAX_CONCURRENT_DEVICES = 4
 
 KEY_SESSION_PREFIX = "session:"

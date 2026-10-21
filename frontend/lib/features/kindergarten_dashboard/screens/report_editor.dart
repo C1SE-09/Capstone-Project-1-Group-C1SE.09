@@ -10,6 +10,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' as u
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class ReportEditorScreen extends StatefulWidget {
@@ -338,7 +339,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       );
     } catch (e) {
       debugPrint('Save draft error: $e');
-      if (mounted) setState(() => submitError = 'Không thể lưu bản nháp. Vui lòng thử lại.');
+      if (mounted) setState(() => submitError = getFriendlyErrorMessage(e, fallback: 'Không thể lưu bản nháp. Vui lòng thử lại.'));
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -383,7 +384,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       widget.onSent();
     } catch (e) {
       debugPrint('Send report error: $e');
-      if (mounted) setState(() => submitError = 'Không thể gửi báo cáo. Vui lòng thử lại.');
+      if (mounted) setState(() => submitError = getFriendlyErrorMessage(e, fallback: 'Không thể gửi báo cáo. Vui lòng thử lại.'));
     } finally {
       if (mounted) setState(() => submitting = false);
     }
