@@ -15,7 +15,14 @@ source venv/bin/activate
 
 # Thư viện CUDA của pip package. stt_service.py cũng tự dò lại, nhưng set
 # sẵn ở đây để chắc chắn ctranslate2 tìm thấy cublas/cudnn.
-export LD_LIBRARY_PATH="${PWD}/venv/lib/python3.*/site-packages/nvidia/cublas/lib:${PWD}/venv/lib/python3.*/site-packages/nvidia/cudnn/lib:${LD_LIBRARY_PATH:-}"
+#
+# LƯU Ý: bash KHÔNG expand glob (python3.*) trong phép gán biến → path sẽ
+# chứa dấu "*" và dynamic linker không tìm được → ctranslate2 load nhầm
+# cuBLAS của hệ thống → lỗi CUBLAS_STATUS_INVALID_VALUE. Phải tìm đường
+# dẫn thật bằng Python.
+NVIDIA_SITE="$(python -c 'import site; print(site.getsitepackages()[0])')"
+export LD_LIBRARY_PATH="${NVIDIA_SITE}/nvidia/cublas/lib:${NVIDIA_SITE}/nvidia/cudnn/lib:${LD_LIBRARY_PATH:-}"
+echo "[start-worker] LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
 
 # --pool=prefork + concurrency=1: nạp đúng 1 model vào VRAM, tránh OOM.
 exec celery \
