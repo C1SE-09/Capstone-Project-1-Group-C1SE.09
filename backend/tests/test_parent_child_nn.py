@@ -11,8 +11,12 @@ from app.api.endpoints.admin import (
 )
 from app.models.child import Child, ChildStatus, Parent, ParentChild
 from app.models.device_token import DeviceToken
-from app.models.user import Class_
+from app.models.user import Class_, User, UserRole
 from app.services.notification_service import child_parents_device_tokens
+
+ADMIN_USER = User(
+    user_id=uuid.uuid4(), username="admin", password_hash="x", role=UserRole.ADMIN
+)
 
 
 class TestParentChildModelRelationships:
@@ -107,7 +111,7 @@ class TestAdminParentChildEndpoints:
             parent_ids=[str(p1_id), str(p2_id)],
         )
 
-        res = create_child(payload, mock_db)
+        res = create_child(payload, mock_db, ADMIN_USER)
         assert res["message"] == "Tạo học sinh thành công"
         assert mock_db.commit.called
 
@@ -129,7 +133,7 @@ class TestAdminParentChildEndpoints:
 
         mock_db.query.return_value.all.return_value = [c]
 
-        results = list_children(mock_db)
+        results = list_children(mock_db, ADMIN_USER)
         assert len(results) == 1
         item = results[0]
         assert len(item["parents"]) == 2

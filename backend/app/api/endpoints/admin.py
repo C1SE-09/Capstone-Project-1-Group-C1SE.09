@@ -1,12 +1,17 @@
 import re
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 from app.core.database import get_db
-from app.core.security import hash_password
+from app.core.security import hash_password, require_role
 from app.models.child import Child, ChildStatus, Parent, ParentChild, ParentStatus
 from app.models.schedule import ClassSchedule, Subject, TimeSlot
 from app.models.user import Class_, School, Teacher, TeacherStatus, User, UserRole, UserStatus
+from app.services.health_profile_service import (
+    classify_legacy_allergy,
+    ensure_within_limits,
+    normalize_health_values,
+)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -101,6 +106,8 @@ class ChildCreate(BaseModel):
     parent_ids: list[str] | None = None
     parent_items: list[ChildParentItem] | None = None
     medical_allergies: str | None = None
+    allergy_status: str | None = None
+    care_notes: str | None = None
     date_of_birth: str | None = None
     gender: str | None = "male"
     status: str = "enrolled"
@@ -114,6 +121,8 @@ class ChildUpdate(BaseModel):
     parent_ids: list[str] | None = None
     parent_items: list[ChildParentItem] | None = None
     medical_allergies: str | None = None
+    allergy_status: str | None = None
+    care_notes: str | None = None
     date_of_birth: str | None = None
     gender: str | None = None
     status: str | None = None
@@ -642,7 +651,10 @@ def check_availability(
 
 
 @router.get("/children")
-def list_children(db: Session = Depends(get_db)):
+def list_children(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
     children = db.query(Child).all()
     results = []
     for c in children:
@@ -710,6 +722,9 @@ def list_children(db: Session = Depends(get_db)):
                 "date_of_birth": str(c.date_of_birth) if c.date_of_birth else None,
                 "gender": c.gender or "male",
                 "note": note_str.strip(),
+                "allergy_status": c.allergy_status or "unknown",
+                "care_notes": c.care_notes or "",
+                "health_version": c.health_version or 1,
                 "status": c.status.value if hasattr(c.status, "value") else str(c.status),
             }
         )
@@ -717,13 +732,41 @@ def list_children(db: Session = Depends(get_db)):
 
 
 @router.post("/children", status_code=status.HTTP_201_CREATED)
-def create_child(data: ChildCreate, db: Session = Depends(get_db)):
+def create_child(
+    data: ChildCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
     class_uuid = uuid.UUID(data.class_id) if data.class_id and data.class_id.strip() else None
     if not class_uuid:
         first_class = db.query(Class_).first()
         class_uuid = first_class.class_id if first_class else None
 
-    note_val = data.medical_allergies.strip() if data.medical_allergies and data.medical_allergies.strip() else None
+    health: dict = {}
+    health_fields = {"allergy_status", "medical_allergies", "care_notes"} & data.model_fields_set
+    if health_fields:
+        ensure_within_limits(
+            medical_allergies=data.medical_allergies
+            if "medical_allergies" in health_fields
+            else None,
+            care_notes=data.care_notes if "care_notes" in health_fields else None,
+        )
+        values = normalize_health_values(
+            allergy_status=data.allergy_status
+            or classify_legacy_allergy(data.medical_allergies),
+            medical_allergies=data.medical_allergies,
+            care_notes=data.care_notes,
+        )
+        note_val = values["medical_allergies"]
+        health = {
+            "allergy_status": values["allergy_status"],
+            "care_notes": values["care_notes"],
+            "health_updated_at": datetime.now(UTC),
+            "health_updated_by_user_id": current_user.user_id,
+            "health_update_source": "admin",
+        }
+    else:
+        note_val = None
 
     # Xác định danh sách phụ huynh và phụ huynh chính
     parent_uuid = uuid.UUID(data.parent_id) if data.parent_id and data.parent_id.strip() else None
@@ -755,6 +798,7 @@ def create_child(data: ChildCreate, db: Session = Depends(get_db)):
         date_of_birth=parsed_dob,
         gender=data.gender.strip() if data.gender else "male",
         status=ChildStatus.ENROLLED,
+        **health,
     )
     db.add(child)
     db.flush()
@@ -793,7 +837,12 @@ def create_child(data: ChildCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/children/{child_id}")
-def update_child(child_id: str, data: ChildUpdate, db: Session = Depends(get_db)):
+def update_child(
+    child_id: str,
+    data: ChildUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
     c = db.query(Child).filter(Child.child_id == uuid.UUID(child_id)).first()
     if not c:
         raise HTTPException(status_code=404, detail="Không tìm thấy học sinh")
@@ -804,8 +853,46 @@ def update_child(child_id: str, data: ChildUpdate, db: Session = Depends(get_db)
         c.nickname = data.nickname.strip() if data.nickname else None
     if data.class_id is not None:
         c.class_id = uuid.UUID(data.class_id.strip()) if data.class_id.strip() else None
-    if data.medical_allergies is not None:
-        c.medical_allergies = data.medical_allergies.strip() if data.medical_allergies.strip() else None
+
+    # Admin ghi kiểu last-write-wins; chỉ chạm sức khỏe khi payload thực sự có field.
+    health_fields = {"allergy_status", "medical_allergies", "care_notes"} & data.model_fields_set
+    if health_fields:
+        status_val = (
+            data.allergy_status
+            if "allergy_status" in health_fields
+            else (c.allergy_status or classify_legacy_allergy(c.medical_allergies))
+        )
+        text = (
+            data.medical_allergies
+            if "medical_allergies" in health_fields
+            else c.medical_allergies
+        )
+        notes = data.care_notes if "care_notes" in health_fields else c.care_notes
+        ensure_within_limits(
+            medical_allergies=text if "medical_allergies" in health_fields else None,
+            care_notes=notes if "care_notes" in health_fields else None,
+        )
+        values = normalize_health_values(
+            allergy_status=status_val, medical_allergies=text, care_notes=notes
+        )
+        current = (
+            c.allergy_status or "unknown",
+            c.medical_allergies,
+            c.care_notes,
+        )
+        if (
+            values["allergy_status"],
+            values["medical_allergies"],
+            values["care_notes"],
+        ) != current:
+            c.allergy_status = values["allergy_status"]
+            c.medical_allergies = values["medical_allergies"]
+            c.care_notes = values["care_notes"]
+            c.health_updated_at = datetime.now(UTC)
+            c.health_updated_by_user_id = current_user.user_id
+            c.health_update_source = "admin"
+            c.health_version = (c.health_version or 1) + 1
+
     if data.date_of_birth is not None:
         if data.date_of_birth.strip():
             try:
@@ -883,7 +970,11 @@ def update_child(child_id: str, data: ChildUpdate, db: Session = Depends(get_db)
 
 
 @router.delete("/children/{child_id}")
-def delete_child(child_id: str, db: Session = Depends(get_db)):
+def delete_child(
+    child_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
     c = db.query(Child).filter(Child.child_id == uuid.UUID(child_id)).first()
     if not c:
         raise HTTPException(status_code=404, detail="Không tìm thấy học sinh")

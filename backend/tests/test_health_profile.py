@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.child_health import router as child_health_router
+from app.api.endpoints.admin import router as admin_router
 from app.core.access import resolve_child_for_actor
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -443,3 +444,115 @@ def test_requires_auth(mock_db):
     resp = TestClient(app).get(f"/api/children/{uuid.uuid4()}/health-profile")
     assert resp.status_code == 401
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# API admin: /api/admin/children
+# ---------------------------------------------------------------------------
+
+app.include_router(admin_router, prefix="/api")
+
+
+@pytest.fixture()
+def admin_user():
+    return User(
+        user_id=uuid.uuid4(),
+        username="admin",
+        password_hash="x",
+        role=UserRole.ADMIN,
+    )
+
+
+@pytest.fixture()
+def admin_client(mock_db, admin_user):
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_admin_update_without_health_fields_keeps_parent_data(admin_client, mock_db):
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="present",
+        medical_allergies="Đậu phộng",
+        care_notes="Tránh nắng",
+        health_version=4,
+        health_update_source="parent",
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = admin_client.put(
+        f"/api/admin/children/{child.child_id}", json={"full_name": "Bé A2"}
+    )
+    assert resp.status_code == 200, resp.text
+    assert child.full_name == "Bé A2"
+    assert child.medical_allergies == "Đậu phộng"
+    assert child.care_notes == "Tránh nắng"
+    assert child.health_version == 4
+
+
+def test_admin_update_health_fields_bumps_version(admin_client, mock_db):
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="unknown",
+        health_version=2,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = admin_client.put(
+        f"/api/admin/children/{child.child_id}",
+        json={
+            "allergy_status": "present",
+            "medical_allergies": " Đậu phộng ",
+            "care_notes": "Tránh nắng",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert child.allergy_status == "present"
+    assert child.medical_allergies == "Đậu phộng"
+    assert child.care_notes == "Tránh nắng"
+    assert child.health_version == 3
+    assert child.health_update_source == "admin"
+
+
+def test_admin_update_none_clears_allergy_text(admin_client, mock_db):
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="present",
+        medical_allergies="Đậu phộng",
+        health_version=1,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = admin_client.put(
+        f"/api/admin/children/{child.child_id}", json={"allergy_status": "none"}
+    )
+    assert resp.status_code == 200, resp.text
+    assert child.allergy_status == "none"
+    assert child.medical_allergies is None
+
+
+def test_admin_children_requires_admin(client_teacher):
+    assert client_teacher.get("/api/admin/children").status_code == 403
+
+
+def test_admin_list_children_exposes_health_fields(admin_client, mock_db):
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="none",
+        care_notes="Tránh nắng",
+        health_version=2,
+    )
+    mock_db.query.return_value.all.return_value = [child]
+
+    resp = admin_client.get("/api/admin/children")
+    assert resp.status_code == 200, resp.text
+    item = resp.json()[0]
+    assert item["allergy_status"] == "none"
+    assert item["care_notes"] == "Tránh nắng"
+    assert item["health_version"] == 2
