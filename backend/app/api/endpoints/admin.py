@@ -5,7 +5,7 @@ from datetime import date
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.models.child import Child, ChildStatus, Parent, ParentChild, ParentStatus
-from app.models.schedule import ClassSchedule, Subject, TimeSlot
+from app.models.schedule import ClassSchedule, Room, Subject, TimeSlot
 from app.models.user import Class_, School, Teacher, TeacherStatus, User, UserRole, UserStatus
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -141,6 +141,15 @@ class ScheduleUpdate(BaseModel):
     start_time: str | None = None
     end_time: str | None = None
     day_of_week: int | None = None
+
+
+class RoomCreate(BaseModel):
+    name: str
+    room_type: str = "CLASSROOM"
+    class_id: str | None = None
+    capacity: int | None = 30
+    is_shared: bool = False
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1018,6 +1027,7 @@ def _resolve_and_validate_slot(
     start_time: str | None,
     end_time: str | None,
     day_of_week: int,
+    class_id: uuid.UUID | None = None,
     exclude_schedule_id: uuid.UUID | None = None,
 ) -> TimeSlot:
     slot = None
@@ -1053,7 +1063,7 @@ def _resolve_and_validate_slot(
     if not slot:
         raise HTTPException(status_code=400, detail="Không tìm thấy khung giờ phù hợp.")
 
-    # Overlap / Collision Check against other schedules on day_of_week
+    # Overlap / Collision Check against other schedules of THIS class on day_of_week
     t_start = _to_minutes(slot.start_time)
     t_end = _to_minutes(slot.end_time)
 
@@ -1062,6 +1072,8 @@ def _resolve_and_validate_slot(
         .join(TimeSlot, ClassSchedule.slot_id == TimeSlot.slot_id)
         .filter(ClassSchedule.day_of_week == day_of_week)
     )
+    if class_id:
+        query = query.filter(ClassSchedule.class_id == class_id)
     if exclude_schedule_id:
         query = query.filter(ClassSchedule.schedule_id != exclude_schedule_id)
 
@@ -1073,7 +1085,7 @@ def _resolve_and_validate_slot(
             if t_start < o_end and t_end > o_start:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Khung giờ ({slot.name}) bị trùng hoặc đè lên hoạt động '{other.activity_name}' ({other.time_slot.name}).",
+                    detail=f"Lớp này đã có hoạt động '{other.activity_name}' ({other.time_slot.name}) trong khung giờ ({slot.name}).",
                 )
 
     return slot
@@ -1085,17 +1097,20 @@ def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
     first_teacher = db.query(Teacher).first()
     first_subject = db.query(Subject).first()
 
+    target_class_id = uuid.UUID(data.class_id) if data.class_id else (first_class.class_id if first_class else uuid.uuid4())
+
     target_slot = _resolve_and_validate_slot(
         db,
         slot_id=data.slot_id,
         start_time=data.start_time,
         end_time=data.end_time,
         day_of_week=data.day_of_week,
+        class_id=target_class_id,
     )
 
     schedule = ClassSchedule(
         schedule_id=uuid.uuid4(),
-        class_id=uuid.UUID(data.class_id) if data.class_id else (first_class.class_id if first_class else uuid.uuid4()),
+        class_id=target_class_id,
         subject_id=first_subject.subject_id if first_subject else uuid.uuid4(),
         slot_id=target_slot.slot_id,
         teacher_id=uuid.UUID(data.teacher_id) if data.teacher_id else (first_teacher.teacher_id if first_teacher else None),
@@ -1133,6 +1148,7 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
             start_time=data.start_time,
             end_time=data.end_time,
             day_of_week=s.day_of_week,
+            class_id=s.class_id,
             exclude_schedule_id=s.schedule_id,
         )
         s.slot_id = target_slot.slot_id
@@ -1150,3 +1166,62 @@ def delete_schedule(schedule_id: str, db: Session = Depends(get_db)):
     db.delete(s)
     db.commit()
     return {"message": "Đã xóa lịch sinh hoạt thành công"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. Rooms & Facilities Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get("/rooms")
+def list_rooms(
+    class_id: str | None = None,
+    db: Session = Depends(get_db),
+):
+    rooms = db.query(Room).filter(Room.is_active == True).all()
+
+    def sort_key(r: Room):
+        is_current_class = 0 if (class_id and str(r.class_id) == class_id) else 1
+        type_priority = {
+            "CLASSROOM": 1,
+            "FUNCTIONAL": 2,
+            "OUTDOOR": 3,
+            "COMMON": 4,
+        }.get(r.room_type, 5)
+        return (is_current_class, type_priority, r.name)
+
+    sorted_rooms = sorted(rooms, key=sort_key)
+    return [
+        {
+            "id": str(r.room_id),
+            "name": r.name,
+            "room_type": r.room_type,
+            "class_id": str(r.class_id) if r.class_id else None,
+            "capacity": r.capacity,
+            "is_shared": r.is_shared,
+        }
+        for r in sorted_rooms
+    ]
+
+
+@router.post("/rooms", status_code=status.HTTP_201_CREATED)
+def create_room(data: RoomCreate, db: Session = Depends(get_db)):
+    first_school = db.query(School).first()
+    if not first_school:
+        raise HTTPException(status_code=400, detail="Chưa có trường học trong hệ thống.")
+
+    room = Room(
+        room_id=uuid.uuid4(),
+        school_id=first_school.school_id,
+        class_id=uuid.UUID(data.class_id) if data.class_id else None,
+        name=data.name.strip(),
+        room_type=data.room_type.strip(),
+        capacity=data.capacity or 30,
+        is_shared=data.is_shared,
+        is_active=True,
+    )
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    return {"message": "Tạo phòng / địa điểm thành công", "id": str(room.room_id)}
+

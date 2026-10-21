@@ -105,11 +105,15 @@ export async function parseExcelOrCsv(file: File): Promise<string[][]> {
 
   // Loại bỏ dòng header đầu tiên nếu có chứa tiêu đề
   if (cleanRows.length > 0) {
-    const firstCell = cleanRows[0][0]?.toLowerCase() || "";
+    const firstRowText = cleanRows[0].join(" ").toLowerCase();
     if (
-      firstCell.includes("họ") ||
-      firstCell.includes("name") ||
-      firstCell.includes("tên")
+      firstRowText.includes("họ") ||
+      firstRowText.includes("name") ||
+      firstRowText.includes("tên") ||
+      firstRowText.includes("thứ") ||
+      firstRowText.includes("lớp") ||
+      firstRowText.includes("khung giờ") ||
+      firstRowText.includes("hoạt động")
     ) {
       return cleanRows.slice(1);
     }

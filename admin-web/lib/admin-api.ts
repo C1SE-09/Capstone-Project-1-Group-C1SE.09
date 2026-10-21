@@ -281,6 +281,39 @@ export function deleteSchedule(id: string) {
   });
 }
 
+/* ════════ Rooms & Facilities ════════ */
+export interface Room {
+  id: string;
+  name: string;
+  room_type: "CLASSROOM" | "FUNCTIONAL" | "OUTDOOR" | "COMMON";
+  class_id: string | null;
+  capacity?: number | null;
+  is_shared: boolean;
+}
+
+export function getRooms(classId?: string | null) {
+  const query: Record<string, any> = {};
+  if (classId) query.class_id = classId;
+  return apiFetch<Room[]>("/api/admin/rooms", {
+    query,
+    account: "schoolAdmin",
+  });
+}
+
+export function createRoom(data: {
+  name: string;
+  room_type?: string;
+  class_id?: string | null;
+  capacity?: number;
+  is_shared?: boolean;
+}) {
+  return apiFetch<{ id: string; message: string }>("/api/admin/rooms", {
+    method: "POST",
+    body: data,
+    account: "schoolAdmin",
+  });
+}
+
 /* ════════ Availability check (for duplicate username/email/phone) ════════ */
 export interface AvailabilityCheck {
   username_exists: boolean;
