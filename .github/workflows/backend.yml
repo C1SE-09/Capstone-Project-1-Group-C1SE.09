@@ -3,6 +3,13 @@ name: Backend CI
 on:
   pull_request:
     branches: [ "develop", "main" ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -19,35 +26,30 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
+          --health-interval 5s
+          --health-timeout 3s
           --health-retries 5
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Free Disk Space
-      run: |
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
-        sudo rm -rf /opt/hostedtoolcache/CodeQL
-
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
+        cache: "pip"
+        cache-dependency-path: backend/requirements.txt
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Cài đặt PyTorch CPU nhẹ và không lưu cache để tiết kiệm dung lượng
-        pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-        # Lọc bỏ extra-index-url cu121, các gói nvidia và torch để tránh kéo lại bản GPU
+        # Cài đặt PyTorch CPU (bỏ torchvision và torchaudio vì backend không sử dụng)
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        # Lọc bỏ extra-index-url cu121, các gói nvidia và torch để tránh kéo bản GPU
         grep -v -E "extra-index-url|nvidia-|torch" backend/requirements.txt > req_ci.txt
-        pip install --no-cache-dir -r req_ci.txt
-        pip install --no-cache-dir ruff pytest httpx pytest-cov
+        pip install -r req_ci.txt
+        pip install ruff pytest httpx pytest-cov
 
     - name: Lint code with Ruff
       run: ruff check backend/
