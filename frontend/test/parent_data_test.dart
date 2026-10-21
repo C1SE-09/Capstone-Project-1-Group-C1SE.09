@@ -10,6 +10,7 @@ import 'package:adark_frontend/data/repositories/http_class_data_repository.dart
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_health_profile_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -290,6 +291,11 @@ void main() {
           isA<ClassDataException>().having((e) => e.statusCode, 'statusCode', 409),
         ),
       );
+    });
+
+    test('healthCharCount đếm code point như backend', () {
+      expect(healthCharCount('Đậu phộng'), 9);
+      expect(healthCharCount('👨‍👩‍👧'), 5);
     });
   });
 }

@@ -12,6 +12,7 @@ import 'package:adark_frontend/core/notifications/push_notification_service.dart
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 
@@ -19,6 +20,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'bug_report_sheet.dart';
 import 'change_password_screen.dart';
+import 'parent_health_profile_screen.dart';
 
 /// Khoá lưu lựa chọn nhận thông báo đẩy trên máy.
 const kParentPushPrefsKey = 'kinderlog-parent-push';
@@ -42,6 +44,7 @@ class ParentAccount extends StatefulWidget {
     required this.onPhoneUpdated,
     this.repository,
     this.onLogout,
+    this.onHealthUpdated,
   });
 
   final Parent parent;
@@ -51,6 +54,7 @@ class ParentAccount extends StatefulWidget {
   final ValueChanged<String> onPhoneUpdated;
   final HttpDashboardRepository? repository;
   final VoidCallback? onLogout;
+  final ValueChanged<Child>? onHealthUpdated;
 
   @override
   State<ParentAccount> createState() => _ParentAccountState();
@@ -99,6 +103,16 @@ class _ParentAccountState extends State<ParentAccount> {
       parent: widget.parent,
       repository: widget.repository,
       onSaved: widget.onPhoneUpdated,
+    );
+  }
+
+  void _openHealthProfile() {
+    showParentHealthProfile(
+      context,
+      child: widget.overview.child,
+      className: widget.overview.className,
+      repository: widget.repository ?? HttpDashboardRepository(),
+      onSaved: widget.onHealthUpdated,
     );
   }
 
@@ -272,6 +286,16 @@ class _ParentAccountState extends State<ParentAccount> {
                   danger: true,
                   icon: Icons.warning_amber_rounded,
                 ),
+              KInfoRow(
+                label: 'Hồ sơ sức khỏe',
+                value: switch (child.allergyStatus) {
+                  'present' => 'Có dị ứng',
+                  'none' => 'Không có dị ứng',
+                  _ => 'Chưa khai báo',
+                },
+                icon: Icons.health_and_safety_outlined,
+                onTap: _openHealthProfile,
+              ),
             ],
           ),
         ),

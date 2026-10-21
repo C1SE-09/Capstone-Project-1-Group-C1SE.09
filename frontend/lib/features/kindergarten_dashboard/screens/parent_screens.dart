@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart' as domain_child;
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
@@ -117,6 +118,26 @@ class _ParentFlowState extends State<ParentFlow> {
     });
   }
 
+  void _onHealthUpdated(domain_child.Child child) {
+    setState(() {
+      future = future.then(
+        (current) => _ParentData(
+          current.parent,
+          ChildOverview(
+            child: child,
+            className: current.overview.className,
+            teacherName: current.overview.teacherName,
+            teacherId: current.overview.teacherId,
+            teacherPhone: current.overview.teacherPhone,
+            roomNumber: current.overview.roomNumber,
+          ),
+          current.reports,
+          current.today,
+        ),
+      );
+    });
+  }
+
   /// Báo cáo chưa đọc (đã gửi nhưng phụ huynh chưa mở).
   int _unreadCount(_ParentData data) {
     // API trả báo cáo hôm nay nằm luôn trong danh sách gần đây → khử trùng theo id,
@@ -195,6 +216,7 @@ class _ParentFlowState extends State<ParentFlow> {
                       repository: repository,
                       onOpenReport: (report) => _openReport(data, report),
                       onPhoneUpdated: _onPhoneUpdated,
+                      onHealthUpdated: _onHealthUpdated,
                       onLogout: widget.onLogout,
                     ),
             ),
@@ -435,8 +457,12 @@ class _ParentOverview extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Bé bị dị ứng $allergy — nhà trường đã nắm thông tin',
+                        'Bé bị dị ứng $allergy',
                         style: const TextStyle(fontSize: 13),
+                      ),
+                      Text(
+                        'Cập nhật trong Hồ sơ sức khỏe để cô giáo lưu ý.',
+                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
                       ),
                     ],
                   ),

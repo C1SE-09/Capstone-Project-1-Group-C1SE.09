@@ -270,8 +270,9 @@ void main() {
         openAccount: false,
       );
 
+      expect(find.text('Bé bị dị ứng đậu phộng'), findsOneWidget);
       expect(
-        find.text('Bé bị dị ứng đậu phộng — nhà trường đã nắm thông tin'),
+        find.text('Cập nhật trong Hồ sơ sức khỏe để cô giáo lưu ý.'),
         findsOneWidget,
       );
     },
