@@ -1,0 +1,8 @@
+backend/
+frontend/
+docs/
+.git/
+.venv/
+.idea/
+.vscode/
+.agents/
