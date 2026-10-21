@@ -75,6 +75,18 @@ def _child_dict(child: Child) -> dict[str, Any]:
         "gender": child.gender,
         "avatar_url": child.avatar_url,
         "medical_allergies": child.medical_allergies,
+        "allergy_status": child.allergy_status or "unknown",
+        "care_notes": child.care_notes,
+        "health_updated_at": (
+            child.health_updated_at.isoformat() if child.health_updated_at else None
+        ),
+        "health_updated_by_user_id": (
+            str(child.health_updated_by_user_id)
+            if child.health_updated_by_user_id
+            else None
+        ),
+        "health_update_source": child.health_update_source,
+        "health_version": child.health_version or 1,
     }
 
 

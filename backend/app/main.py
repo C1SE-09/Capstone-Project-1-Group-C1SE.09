@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.class_data import router as class_router
+from app.api.child_health import router as child_health_router
 from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import admin, admin_auth, auth, bug_reports, notifications
 from app.api.endpoints.school_admin_auth import router as school_admin_router
@@ -75,6 +76,7 @@ app.include_router(parent_router)
 app.include_router(reports_router)
 app.include_router(class_router)
 app.include_router(dashboard_router)
+app.include_router(child_health_router)
 app.include_router(stt_router, prefix="/api/stt", tags=["stt"])
 app.include_router(time_slot_router, prefix="/api")
 app.include_router(subject_router, prefix="/api")

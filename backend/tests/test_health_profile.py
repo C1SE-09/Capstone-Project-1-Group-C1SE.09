@@ -9,9 +9,13 @@ import uuid
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 
+from app.api.child_health import router as child_health_router
 from app.core.access import resolve_child_for_actor
+from app.core.database import get_db
+from app.core.security import get_current_user
 from app.models.child import Child, ParentChild
 from app.models.user import Teacher, User, UserRole
 from app.services.health_profile_service import (
@@ -242,3 +246,200 @@ def test_missing_child_returns_404():
     with pytest.raises(HTTPException) as exc:
         resolve_child_for_actor(db, uuid.uuid4(), user)
     assert exc.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# API GET/PATCH /api/children/{child_id}/health-profile
+# ---------------------------------------------------------------------------
+
+app = FastAPI()
+app.include_router(child_health_router)
+
+PARENT_A = uuid.uuid4()
+
+
+@pytest.fixture()
+def mock_db():
+    db = MagicMock()
+    db.commit = MagicMock()
+    return db
+
+
+@pytest.fixture()
+def parent_user():
+    return User(
+        user_id=uuid.uuid4(),
+        username="parent.tuan",
+        password_hash="x",
+        role=UserRole.PARENT,
+        parent_id=PARENT_A,
+    )
+
+
+@pytest.fixture()
+def teacher_user():
+    teacher = Teacher(teacher_id=uuid.uuid4(), class_id=uuid.uuid4(), full_name="Cô Mai")
+    user = User(
+        user_id=uuid.uuid4(),
+        username="teacher.mai",
+        password_hash="x",
+        role=UserRole.TEACHER,
+        teacher_id=teacher.teacher_id,
+    )
+    user.teacher = teacher
+    return user
+
+
+@pytest.fixture()
+def client(mock_db, parent_user):
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: parent_user
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def client_teacher(mock_db, teacher_user):
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: teacher_user
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_get_returns_health_fields(client, mock_db):
+    child = Child(
+        child_id=uuid.uuid4(),
+        parent_id=PARENT_A,
+        full_name="Bé A",
+        allergy_status="present",
+        medical_allergies="Đậu phộng",
+        care_notes="Tránh nắng",
+        health_version=3,
+        health_update_source="parent",
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = client.get(f"/api/children/{child.child_id}/health-profile")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["allergy_status"] == "present"
+    assert body["medical_allergies"] == "Đậu phộng"
+    assert body["care_notes"] == "Tránh nắng"
+    assert body["health_version"] == 3
+
+
+def test_patch_requires_allergy_text_when_present(client, mock_db, parent_user):
+    child = Child(
+        child_id=uuid.uuid4(),
+        parent_id=parent_user.parent_id,
+        full_name="Bé A",
+        allergy_status="unknown",
+        health_version=1,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = client.patch(
+        f"/api/children/{child.child_id}/health-profile",
+        json={
+            "allergy_status": "present",
+            "medical_allergies": " ",
+            "expected_version": 1,
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_patch_stale_version_returns_409(client, mock_db, parent_user):
+    child = Child(
+        child_id=uuid.uuid4(),
+        parent_id=parent_user.parent_id,
+        full_name="Bé A",
+        allergy_status="unknown",
+        health_version=2,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+    mock_db.query.return_value.filter.return_value.update.return_value = 0
+
+    resp = client.patch(
+        f"/api/children/{child.child_id}/health-profile",
+        json={"allergy_status": "none", "expected_version": 1},
+    )
+    assert resp.status_code == 409
+
+
+def test_patch_success_writes_health_fields(client, mock_db, parent_user):
+    child = Child(
+        child_id=uuid.uuid4(),
+        parent_id=parent_user.parent_id,
+        full_name="Bé A",
+        allergy_status="unknown",
+        health_version=1,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+    mock_db.query.return_value.filter.return_value.update.return_value = 1
+
+    resp = client.patch(
+        f"/api/children/{child.child_id}/health-profile",
+        json={
+            "allergy_status": "present",
+            "medical_allergies": " Đậu phộng ",
+            "expected_version": 1,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    payload = mock_db.query.return_value.filter.return_value.update.call_args.args[0]
+    assert payload["allergy_status"] == "present"
+    assert payload["medical_allergies"] == "Đậu phộng"
+    assert payload["health_update_source"] == "parent"
+    assert payload["health_updated_by_user_id"] == parent_user.user_id
+
+
+def test_teacher_cannot_patch(client_teacher, mock_db):
+    resp = client_teacher.patch(
+        f"/api/children/{uuid.uuid4()}/health-profile",
+        json={"allergy_status": "none", "expected_version": 1},
+    )
+    assert resp.status_code == 403
+
+
+def test_teacher_can_read_own_class_child(client_teacher, mock_db, teacher_user):
+    child = Child(
+        child_id=uuid.uuid4(),
+        class_id=teacher_user.teacher.class_id,
+        full_name="Bé A",
+        allergy_status="none",
+        health_version=1,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = client_teacher.get(f"/api/children/{child.child_id}/health-profile")
+    assert resp.status_code == 200, resp.text
+
+
+def test_get_other_parent_child_returns_403(client, mock_db, parent_user):
+    child = Child(
+        child_id=uuid.uuid4(),
+        parent_id=uuid.uuid4(),
+        full_name="Bé B",
+        allergy_status="none",
+        health_version=1,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = client.get(f"/api/children/{child.child_id}/health-profile")
+    assert resp.status_code == 403
+
+
+def test_patch_forbids_extra_fields(client, mock_db, parent_user):
+    resp = client.patch(
+        f"/api/children/{uuid.uuid4()}/health-profile",
+        json={"health_version": 99, "expected_version": 1},
+    )
+    assert resp.status_code == 422
+
+
+def test_requires_auth(mock_db):
+    app.dependency_overrides[get_db] = lambda: mock_db
+    resp = TestClient(app).get(f"/api/children/{uuid.uuid4()}/health-profile")
+    assert resp.status_code == 401
+    app.dependency_overrides.clear()
