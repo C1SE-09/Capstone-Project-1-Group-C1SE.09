@@ -23,6 +23,7 @@ from app.schemas.admin_dashboard import (
 from sqlalchemy import Date, cast, func, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from app.config import get_today
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ SENT_STATUSES = {
 
 def get_overview_stats(db: Session, target_date: date | None = None) -> AdminOverviewStats:
     """Tính toán các chỉ số thống kê tổng quan toàn hệ thống."""
-    today = target_date or datetime.now(UTC).date()
+    today = target_date or get_today()
 
     total_schools = db.query(func.count(School.school_id)).scalar() or 0
     total_classes = db.query(func.count(Class_.class_id)).scalar() or 0
@@ -84,7 +85,7 @@ def get_overview_stats(db: Session, target_date: date | None = None) -> AdminOve
 
 def get_classes_progress(db: Session, target_date: date | None = None) -> list[ClassProgressStat]:
     """Lấy danh sách tiến độ nộp báo cáo theo từng lớp trong ngày."""
-    today = target_date or datetime.now(UTC).date()
+    today = target_date or get_today()
     classes = db.query(Class_).order_by(Class_.name).all()
 
     results: list[ClassProgressStat] = []
@@ -131,7 +132,7 @@ def get_classes_progress(db: Session, target_date: date | None = None) -> list[C
 def get_report_trends(db: Session, days: int = 7) -> list[ReportTrendItem]:
     """Lấy xu hướng tạo và duyệt báo cáo theo N ngày gần nhất."""
     days = max(1, min(days, 60))
-    today = datetime.now(UTC).date()
+    today = get_today()
     start_date = today - timedelta(days=days - 1)
 
     reports = (
