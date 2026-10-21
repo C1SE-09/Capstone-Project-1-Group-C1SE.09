@@ -1178,7 +1178,7 @@ def list_rooms(
     class_id: str | None = None,
     db: Session = Depends(get_db),
 ):
-    rooms = db.query(Room).filter(Room.is_active == True).all()
+    rooms = db.query(Room).filter(Room.is_active).all()
 
     def sort_key(r: Room):
         is_current_class = 0 if (class_id and str(r.class_id) == class_id) else 1

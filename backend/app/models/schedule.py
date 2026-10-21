@@ -26,7 +26,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models.user import Class_, School, Teacher
+    from app.models.user import Class_, Teacher
 
 
 class TimeSlot(Base, TimestampMixin):
