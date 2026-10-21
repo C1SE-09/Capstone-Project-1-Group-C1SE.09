@@ -25,8 +25,17 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Large models
+# Large models (tải về Network Volume trên RunPod)
+models/
+backend/models/
 backend/models/PhoWhisper-large-ct2/
+
+# Cache + binary static trên RunPod Network Volume
+.pip-cache/
+.hf-cache/
+bin/
+backend/bin/
+backend/requirements-worker.txt
 
 kinderlog_firebase_service.json
 

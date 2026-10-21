@@ -29,23 +29,6 @@ minio_client = Minio(
 )
 
 
-def _build_public_url(bucket: str, object_name: str) -> str:
-    """
-    Dựng URL để client/worker tải file audio từ MinIO.
-
-    Nếu `MINIO_PUBLIC_URL` được set (vd: http://160.191.87.202:9000) thì dùng
-    URL đó. Lý do: `minio_endpoint` là endpoint nội bộ dùng để kết nối SDK
-    (trong docker-compose là "minio:9000"), nhưng Celery worker chạy ở pod
-    RunPod ngoài Docker thì không phân giải được hostname "minio".
-    """
-    base = settings.minio_public_url.rstrip("/")
-    if base:
-        return f"{base}/{bucket}/{object_name}"
-
-    protocol = "https" if settings.minio_secure else "http"
-    return f"{protocol}://{settings.minio_endpoint}/{bucket}/{object_name}"
-
-
 def _ensure_bucket_exists(bucket_name: str) -> None:
     """Tạo bucket nếu chưa tồn tại và đặt policy public-read."""
     if not minio_client.bucket_exists(bucket_name):
@@ -102,7 +85,8 @@ def upload_audio_to_minio(
     )
 
     # Trả về URL dạng http://<endpoint>/<bucket>/<object>
-    return _build_public_url(bucket, object_name)
+    protocol = "https" if settings.minio_secure else "http"
+    return f"{protocol}://{settings.minio_endpoint}/{bucket}/{object_name}"
 
 
 def upload_audio_bytes_to_minio(
@@ -128,7 +112,8 @@ def upload_audio_bytes_to_minio(
         content_type=content_type,
     )
 
-    return _build_public_url(bucket, object_name)
+    protocol = "https" if settings.minio_secure else "http"
+    return f"{protocol}://{settings.minio_endpoint}/{bucket}/{object_name}"
 
 
 # ---------------------------------------------------------------------------
