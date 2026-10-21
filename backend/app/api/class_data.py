@@ -1,9 +1,14 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.dashboard import _child_dict
+from app.core.access import role_of, teacher_owns_class
 from app.core.database import get_db
+from app.core.security import require_any_role
 from app.models.child import Child, ChildStatus
-from app.models.user import Class_, Teacher
+from app.models.user import Class_, Teacher, User
 
 router = APIRouter(prefix="/api/class", tags=["class"])
 
@@ -43,34 +48,35 @@ def get_class(
 def get_children(
     class_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin")),
 ):
-    class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
+    try:
+        class_uuid = uuid.UUID(class_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Class not found") from None
+
+    if role_of(current_user) == "teacher" and not teacher_owns_class(
+        current_user, class_uuid
+    ):
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+
+    class_data = db.query(Class_).filter(Class_.class_id == class_uuid).first()
 
     if not class_data:
         raise HTTPException(status_code=404, detail="Class not found")
 
     children = (
         db.query(Child)
-        .filter(Child.class_id == class_id, Child.status == ChildStatus.ENROLLED)
+        .filter(Child.class_id == class_uuid, Child.status == ChildStatus.ENROLLED)
         .order_by(Child.full_name)
         .all()
     )
 
     return {
-        "class_id": str(class_id),
+        "class_id": str(class_uuid),
         "children": [
             {
-                "child_id": str(child.child_id),
-                "parent_id": str(child.parent_id) if child.parent_id else None,
-                "class_id": str(child.class_id) if child.class_id else None,
-                "full_name": child.full_name,
-                "nickname": child.nickname,
-                "date_of_birth": (
-                    child.date_of_birth.isoformat() if child.date_of_birth else None
-                ),
-                "gender": child.gender,
-                "avatar_url": child.avatar_url,
-                "medical_allergies": child.medical_allergies,
+                **_child_dict(child),
                 "status": child.status.value
                 if hasattr(child.status, "value")
                 else str(child.status),

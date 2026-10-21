@@ -21,10 +21,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.access import role_of, teacher_owns_class
 from app.core.database import get_db
+from app.core.security import require_any_role
 from app.models.child import Child, ChildStatus, Parent
 from app.models.report import DailyReport, DailyReportStatus, VoiceRecord
-from app.models.user import Class_, Teacher
+from app.models.user import Class_, Teacher, User
 
 router = APIRouter(tags=["dashboard"])
 
@@ -249,11 +251,17 @@ def get_class_dashboard(
     class_id: uuid.UUID,
     date_param: date | None = Query(default=None, alias="date"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin")),
 ):
     """
     Trả về summary của lớp khớp ClassDashboardSummary (frontend):
     tổng trẻ, completed/draft/missing, danh sách trẻ cần xử lý.
     """
+    if role_of(current_user) == "teacher" and not teacher_owns_class(
+        current_user, class_id
+    ):
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+
     class_ = db.query(Class_).filter(Class_.class_id == class_id).first()
     if class_ is None:
         raise HTTPException(status_code=404, detail="Class not found")
@@ -451,11 +459,14 @@ def get_class_activities(
 def get_parent(
     parent_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
 ):
     """Trả về thông tin 1 phụ huynh, khớp entity Parent (frontend)."""
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
+    if role_of(current_user) == "parent" and current_user.parent_id != parent_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
     return {
         "parent_id": str(parent.parent_id),
         "full_name": parent.full_name,
@@ -475,6 +486,7 @@ def get_parent(
 def get_parent_primary_child(
     parent_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
 ):
     """
     Trả về 1 đứa con (đầu tiên) + tên lớp + tên giáo viên,
@@ -483,6 +495,8 @@ def get_parent_primary_child(
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
+    if role_of(current_user) == "parent" and current_user.parent_id != parent_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
 
     children: list[Child] = []
     if hasattr(parent, "children") and parent.children:
