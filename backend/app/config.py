@@ -1,6 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from datetime import date, datetime, timedelta, timezone
 
+vn_tz = timezone(timedelta(hours=7))
+
+def get_today() -> date:
+    """Trả về ngày hôm nay theo giờ Việt Nam (UTC+7)"""
+    return datetime.now(vn_tz).date()
 class Settings(BaseSettings):
     # Database & cache
     database_url: str = (

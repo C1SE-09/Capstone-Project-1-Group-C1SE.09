@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from app.models.child import Child
@@ -40,6 +40,8 @@ from app.models.report import (
 )
 from app.models.user import Class_
 from sqlalchemy.orm import Session
+
+from app.config import get_today
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +178,7 @@ def _populate_activities(
 
 def _today_utc() -> datetime:
     """Lấy ngày hiện tại theo UTC (chỉ date part)."""
-    return datetime.now(UTC).date()
+    return get_today()
 
 
 # ===========================================================================
