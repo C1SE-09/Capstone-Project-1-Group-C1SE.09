@@ -47,6 +47,7 @@ from app.models.report import (
 )
 from app.models.schedule import (
     ClassSchedule,
+    Room,
     Subject,
     TimeSlot,
 )
@@ -85,6 +86,7 @@ __all__ = [
     "Parent",
     "ParentChild",
     "ParentStatus",
+    "Room",
     "School",
     "SchoolStatus",
     "Subject",

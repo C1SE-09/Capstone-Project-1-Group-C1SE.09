@@ -3,7 +3,7 @@
 
   Voice-driven daily reports for Vietnamese kindergartens. A teacher speaks a short
   summary of a child's day; the system transcribes it, extracts structured
-  information, and delivers a report to the parent.
+  information, and delivers a report to the parent .
 
   **Stack** — Flutter (Android) · FastAPI · PostgreSQL · Redis · Celery · PhoWhisper (STT) · Gemini (extraction)
 

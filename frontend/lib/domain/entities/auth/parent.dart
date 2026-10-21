@@ -1,4 +1,4 @@
-﻿// frontend/lib/domain/entities/auth/parent.dart
+// frontend/lib/domain/entities/auth/parent.dart
 // =========================================================
 // Entity Parent — MIRROR backend app/models/child.py (Parent)
 // (một tài khoản phụ huynh đại diện cả gia đình; có thể có
@@ -31,15 +31,20 @@ class Parent extends BaseEntity {
   /// Mốc tạo tài khoản — màn Tài khoản tính "N ngày cùng con ở KinderLog".
   final DateTime? createdAt;
 
-  /// Chỉ dùng để cập nhật SĐT tại chỗ sau khi PUT thành công.
-  Parent copyWith({String? phone}) => Parent(
+  /// Dùng để cập nhật thông tin tại chỗ sau khi PUT thành công.
+  Parent copyWith({
+    String? phone,
+    String? email,
+    String? relationship,
+    String? fullName,
+  }) => Parent(
     parentId: parentId,
-    fullName: fullName,
+    fullName: fullName ?? this.fullName,
     phone: phone ?? this.phone,
-    email: email,
+    email: email ?? this.email,
     avatarUrl: avatarUrl,
     isVerified: isVerified,
-    relationship: relationship,
+    relationship: relationship ?? this.relationship,
     createdAt: createdAt,
   );
 

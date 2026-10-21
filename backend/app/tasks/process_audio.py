@@ -10,13 +10,13 @@ import shutil
 import subprocess
 import tempfile
 import uuid
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit, urlunsplit
 from urllib.request import urlopen
 
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import SessionLocal
+from app.core.storage import fetch_audio_from_minio
 from app.models.report import VoiceRecord, VoiceRecordStatus
 from app.services.stt_service import stt_service
 from app.tasks.celery_app import celery_app
@@ -24,27 +24,67 @@ from app.tasks.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 
+class AudioFetchError(RuntimeError):
+    """Không tải được file ghi âm từ kho lưu trữ (lỗi hạ tầng, không phải lỗi âm thanh)."""
+
+
+def _download_over_http(audio_url: str, dest_path: str) -> None:
+    """Tải audio bằng HTTP ẩn danh (bucket public-read)."""
+    parts = urlsplit(audio_url)
+    encoded_path = quote(parts.path, safe="/:@&=+$,-_.!~*'()")
+    safe_url = urlunsplit(
+        (parts.scheme, parts.netloc, encoded_path, parts.query, parts.fragment)
+    )
+    with urlopen(safe_url, timeout=60) as resp, open(dest_path, "wb") as out_file:
+        shutil.copyfileobj(resp, out_file)
+
+
 def _download_audio(audio_url: str) -> str:
-    """Tải file âm thanh từ URL lưu vào đĩa đệm tạm."""
+    """
+    Tải file âm thanh từ kho lưu trữ về đĩa đệm tạm.
+
+    Ưu tiên HTTP GET (nhanh, không cần credentials). Nếu thất bại — thường do
+    hostname trong ``audio_url`` không phân giải được từ worker, hoặc bucket
+    không public — sẽ thử lại bằng MinIO SDK với credentials của backend.
+    """
     suffix = os.path.splitext(audio_url.partition("?")[0])[1] or ".wav"
-    fd, tmp_path = tempfile.mkstemp(suffix=suffix)
-    os.close(fd)
-    try:
-        parts = urlsplit(audio_url)
-        encoded_path = quote(parts.path, safe="/:@&=+$,-_.!~*'()")
-        safe_url = urlunsplit(
-            (parts.scheme, parts.netloc, encoded_path, parts.query, parts.fragment)
-        )
-        with urlopen(safe_url, timeout=60) as resp, open(tmp_path, "wb") as out_file:
-            shutil.copyfileobj(resp, out_file)
-        return tmp_path
-    except (HTTPError, URLError, OSError):
-        if os.path.exists(tmp_path):
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
-        raise
+    last_error: Exception | None = None
+
+    for attempt in ("http", "sdk"):
+        fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+        os.close(fd)
+        try:
+            if attempt == "http":
+                _download_over_http(audio_url, tmp_path)
+            else:
+                fetch_audio_from_minio(audio_url, tmp_path)
+
+            if os.path.getsize(tmp_path) == 0:
+                raise OSError("File tải về rỗng")
+
+            logger.info(
+                "[Process] Tải audio qua %s: %s",
+                "HTTP" if attempt == "http" else "MinIO SDK",
+                audio_url,
+            )
+            return tmp_path
+        except Exception as exc:
+            # Bắt rộng có chủ đích: hai cơ chế tải (urllib và MinIO SDK) ném
+            # loại lỗi khác nhau — HTTPError/URLError/OSError cho urllib,
+            # S3Error/MinioException cho SDK. Mục tiêu là thử hết phương án
+            # còn lại rồi mới báo lỗi tổng hợp.
+            last_error = exc
+            _safe_remove(tmp_path)
+            logger.warning(
+                "[Process] Tải audio qua %s thất bại (%s: %s)",
+                "HTTP" if attempt == "http" else "MinIO SDK",
+                type(exc).__name__,
+                exc,
+            )
+
+    raise AudioFetchError(
+        f"Không tải được file ghi âm từ kho lưu trữ ({audio_url}): {last_error}"
+    )
 
 
 def _normalize_audio(src_path: str) -> str:
@@ -116,6 +156,30 @@ def _safe_remove(path: str | None) -> None:
             pass
 
 
+def _friendly_error(exc: Exception) -> str:
+    """
+    Chuyển lỗi kỹ thuật thành thông báo ghi đúng nguyên nhân.
+
+    Trước đây mọi lỗi không chứa từ khoá "micro/giọng nói" đều bị gộp thành
+    "micro thu không được âm thanh", khiến lỗi hạ tầng (không tải được file từ
+    MinIO) hiện ra trên UI như một lỗi âm thanh và rất khó chẩn đoán.
+    """
+    if isinstance(exc, AudioFetchError):
+        return (
+            "Máy chủ xử lý không tải được file ghi âm. "
+            "Vui lòng thử lại hoặc liên hệ quản trị viên."
+        )
+    if isinstance(exc, FileNotFoundError):
+        return f"Không tìm thấy file ghi âm: {exc}"
+    if isinstance(exc, ValueError):
+        # Lỗi do chính STT service ném ra (âm thanh quá nhỏ / không có tiếng nói).
+        return str(exc).strip()
+    return (
+        "Hệ thống không xử lý được file ghi âm. "
+        "Vui lòng thử lại hoặc liên hệ quản trị viên."
+    )
+
+
 @celery_app.task(name="process_audio_task", acks_late=True, queue="audio")
 def process_audio_task(voice_record_id: str) -> dict:
     """Run PhoWhisper STT only, save transcript, and mark completed.
@@ -138,9 +202,8 @@ def process_audio_task(voice_record_id: str) -> dict:
         db.commit()
         logger.info("[Process] Bắt đầu xử lý VoiceRecord %s", voice_record_id)
 
-        # 2. Tải file từ MinIO
+        # 2. Tải file từ MinIO (HTTP, fallback sang MinIO SDK)
         tmp_path = _download_audio(record.audio_url)
-        logger.info("[Process] Tải file từ MinIO thành công: %s", voice_record_id)
 
         # 2b. Chuẩn hoá sang WAV 16kHz mono (.m4a/.webm/.mp3 → .wav)
         normalized_path = _normalize_audio(tmp_path)
@@ -176,13 +239,7 @@ def process_audio_task(voice_record_id: str) -> dict:
             failed_record = db.get(VoiceRecord, record_id)
             if failed_record:
                 failed_record.status = VoiceRecordStatus.FAILED
-                err_text = str(exc).strip()
-                if any(k in err_text for k in ["Micro", "Không", "File", "giọng nói", "âm thanh", "micro"]):
-                    failed_record.error_message = err_text
-                else:
-                    failed_record.error_message = (
-                        "Không thể nhận diện nội dung giọng nói từ file ghi âm. Vui lòng nói to, rõ ràng hơn hoặc thử lại."
-                    )
+                failed_record.error_message = _friendly_error(exc)
                 db.commit()
                 logger.error(
                     "[Process] Đánh dấu FAILED cho VoiceRecord %s: %s",

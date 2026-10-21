@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 /// Màn hình Đổi mật khẩu dành cho người dùng đã đăng nhập (Giáo viên / Phụ huynh).
@@ -89,12 +90,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       } else if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _errorMessage = e.message);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.');
+      setState(() => _errorMessage = getFriendlyErrorMessage(
+        e,
+        fallback: 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.',
+      ));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -439,12 +440,12 @@ class __ChangePasswordFormSheetState
           backgroundColor: KColors.ok,
         ),
       );
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _errorMessage = e.message);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.');
+      setState(() => _errorMessage = getFriendlyErrorMessage(
+        e,
+        fallback: 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.',
+      ));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

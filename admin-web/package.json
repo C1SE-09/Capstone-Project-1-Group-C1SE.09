@@ -2,7 +2,7 @@
   "name": "kinderlog-admin-web",
   "version": "1.0.0",
   "private": true,
-  "description": "KinderLog Admin Web - Quản lý bug reports (cho Admin App / dev team)",
+  "description": "KinderLog Admin Web - 2 chế độ: School Admin (quản lý GV/HS/PH/Lịch) + Web Admin (quản lý bug reports)",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
@@ -13,7 +13,8 @@
     "next": "14.2.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "swr": "2.2.5"
+    "swr": "2.2.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "20.14.10",

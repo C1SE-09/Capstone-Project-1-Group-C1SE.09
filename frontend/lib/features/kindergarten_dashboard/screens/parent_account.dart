@@ -9,9 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
-import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
+import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 
@@ -23,13 +24,54 @@ import 'change_password_screen.dart';
 /// Khoá lưu lựa chọn nhận thông báo đẩy trên máy.
 const kParentPushPrefsKey = 'kinderlog-parent-push';
 
-/// SĐT hợp lệ: khớp đúng pattern backend `^0\d{9,10}$`.
-bool isValidParentPhone(String value) => RegExp(r'^0\d{9,10}$').hasMatch(value.trim());
+/// Danh sách quan hệ mặc định với bé.
+const kRelationshipOptions = ['Bố', 'Mẹ', 'Ông', 'Bà', 'Người giám hộ'];
+
+/// SĐT hợp lệ: đúng 10 chữ số, bắt đầu bằng 0.
+bool isValidParentPhone(String value) => RegExp(r'^0\d{9}$').hasMatch(value.trim());
+
+/// Email hợp lệ: cho phép để trống hoặc đúng định dạng email.
+bool isValidParentEmail(String value) {
+  final v = value.trim();
+  if (v.isEmpty) return true;
+  return RegExp(r'^[\w\.\-]+@[\w\-]+\.[a-zA-Z0-9]{2,}$').hasMatch(v);
+}
 
 /// Ngày gắn bó = số ngày kể từ lúc tạo tài khoản (createdAt).
 int parentJourneyDays(DateTime? createdAt, {DateTime? now}) {
   if (createdAt == null) return 0;
   return (now ?? DateTime.now()).difference(createdAt).inDays.clamp(0, 100000);
+}
+
+/// Định dạng số tuổi của trẻ từ ngày sinh (ví dụ: "4 tuổi" hoặc "3 tuổi 8 tháng").
+String formatChildAge(DateTime? dob, {DateTime? now}) {
+  if (dob == null) return '';
+  final current = now ?? DateTime.now();
+  int years = current.year - dob.year;
+  int months = current.month - dob.month;
+  if (current.day < dob.day) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  if (years <= 0) {
+    return '$months tháng tuổi';
+  } else if (months == 0) {
+    return '$years tuổi';
+  } else {
+    return '$years tuổi $months tháng';
+  }
+}
+
+/// Chuyển đổi mã giới tính sang tiếng Việt thân thiện.
+String formatGender(String? gender) {
+  if (gender == null || gender.trim().isEmpty) return 'Chưa cập nhật';
+  final g = gender.trim().toLowerCase();
+  if (g == 'male' || g == 'nam') return 'Bé trai (Nam)';
+  if (g == 'female' || g == 'nữ' || g == 'nu') return 'Bé gái (Nữ)';
+  return 'Khác';
 }
 
 class ParentAccount extends StatefulWidget {
@@ -40,6 +82,8 @@ class ParentAccount extends StatefulWidget {
     required this.reports,
     required this.onOpenReport,
     required this.onPhoneUpdated,
+    this.onParentUpdated,
+    this.onChildUpdated,
     this.repository,
     this.onLogout,
   });
@@ -49,6 +93,8 @@ class ParentAccount extends StatefulWidget {
   final List<DailyReport> reports;
   final ValueChanged<DailyReport> onOpenReport;
   final ValueChanged<String> onPhoneUpdated;
+  final void Function(String phone, String? email, String? relationship)? onParentUpdated;
+  final ValueChanged<Child>? onChildUpdated;
   final HttpDashboardRepository? repository;
   final VoidCallback? onLogout;
 
@@ -93,12 +139,25 @@ class _ParentAccountState extends State<ParentAccount> {
     }
   }
 
-  void _openPhoneSheet() {
-    showParentPhoneSheet(
+  void _openProfileSheet() {
+    showParentProfileSheet(
       context,
       parent: widget.parent,
       repository: widget.repository,
-      onSaved: widget.onPhoneUpdated,
+      onSaved: (phone, email, relationship) {
+        widget.onPhoneUpdated(phone);
+        widget.onParentUpdated?.call(phone, email, relationship);
+      },
+    );
+  }
+
+  void _openEditChildSheet() {
+    showParentChildEditSheet(
+      context,
+      child: widget.overview.child,
+      parentId: widget.parent.parentId,
+      repository: widget.repository,
+      onSaved: (updated) => widget.onChildUpdated?.call(updated),
     );
   }
 
@@ -162,7 +221,7 @@ class _ParentAccountState extends State<ParentAccount> {
                     ),
                   ),
                   IconButton(
-                    onPressed: _openPhoneSheet,
+                    onPressed: _openProfileSheet,
                     tooltip: 'Chỉnh sửa thông tin',
                     icon: const Icon(Icons.edit_outlined, color: Colors.white),
                   ),
@@ -230,7 +289,16 @@ class _ParentAccountState extends State<ParentAccount> {
                 KInfoRow(
                   label: 'Số điện thoại',
                   value: parent.phone!.trim(),
-                  onTap: _openPhoneSheet,
+                  showEditIcon: false,
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: parent.phone!.trim()));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã sao chép số điện thoại'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                 ),
             ],
           ),
@@ -241,28 +309,62 @@ class _ParentAccountState extends State<ParentAccount> {
         KCard(
           child: Column(
             children: [
-              InkWell(
-                onTap: () => showParentChildSheet(context, overview: widget.overview),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Row(
-                    children: [
-                      Avatar(name: child.fullName, size: 44),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          child.fullName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Avatar(name: child.fullName, size: 48),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            child.fullName,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          if ((child.nickname ?? '').trim().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                'Biệt danh: ${child.nickname!.trim()}',
+                                style: TextStyle(fontSize: 13, color: context.k.inkSoft),
+                              ),
+                            ),
+                        ],
                       ),
-                      Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Chỉnh sửa thông tin bé',
+                      onPressed: _openEditChildSheet,
+                    ),
+                  ],
                 ),
               ),
               const Divider(height: 1),
-              if ((child.nickname ?? '').trim().isNotEmpty)
-                KInfoRow(label: 'Biệt danh', value: child.nickname!.trim()),
+              KInfoRow(
+                label: 'Họ và tên',
+                value: child.fullName,
+              ),
+              KInfoRow(
+                label: 'Biệt danh',
+                value: (child.nickname ?? '').trim().isNotEmpty
+                    ? child.nickname!.trim()
+                    : 'Chưa thiết lập',
+              ),
+              if (child.dateOfBirth != null)
+                KInfoRow(
+                  label: 'Sinh ngày',
+                  value: formatChildAge(child.dateOfBirth!).isNotEmpty
+                      ? '${kDateLabel(child.dateOfBirth!)} (${formatChildAge(child.dateOfBirth!)})'
+                      : kDateLabel(child.dateOfBirth!),
+                ),
+              if (child.gender != null && child.gender!.trim().isNotEmpty)
+                KInfoRow(
+                  label: 'Giới tính',
+                  value: formatGender(child.gender),
+                ),
               KInfoRow(label: 'Lớp', value: widget.overview.className),
               KInfoRow(label: 'Giáo viên chủ nhiệm', value: widget.overview.teacherName),
               if (child.allergy != null)
@@ -371,79 +473,114 @@ class _ParentAccountState extends State<ParentAccount> {
   }
 }
 
-/// Sheet sửa số điện thoại — PUT /api/parent/{id} (self-service).
+/// Sheet sửa thông tin phụ huynh (SĐT, Email, Quan hệ với bé) — PUT /api/parent/{id}.
+Future<void> showParentProfileSheet(
+  BuildContext context, {
+  required Parent parent,
+  required void Function(String phone, String? email, String? relationship) onSaved,
+  HttpDashboardRepository? repository,
+}) {
+  return showKSheet(
+    context,
+    _ParentProfileForm(parent: parent, repository: repository, onSaved: onSaved),
+  );
+}
+
+/// Giữ alias tương thích nếu có component gọi showParentPhoneSheet.
 Future<void> showParentPhoneSheet(
   BuildContext context, {
   required Parent parent,
   required ValueChanged<String> onSaved,
   HttpDashboardRepository? repository,
 }) {
-  return showKSheet(
+  return showParentProfileSheet(
     context,
-    _ParentPhoneForm(parent: parent, repository: repository, onSaved: onSaved),
+    parent: parent,
+    repository: repository,
+    onSaved: (phone, _, __) => onSaved(phone),
   );
 }
 
-class _ParentPhoneForm extends StatefulWidget {
-  const _ParentPhoneForm({required this.parent, required this.onSaved, this.repository});
+class _ParentProfileForm extends StatefulWidget {
+  const _ParentProfileForm({required this.parent, required this.onSaved, this.repository});
 
   final Parent parent;
-  final ValueChanged<String> onSaved;
+  final void Function(String phone, String? email, String? relationship) onSaved;
   final HttpDashboardRepository? repository;
 
   @override
-  State<_ParentPhoneForm> createState() => _ParentPhoneFormState();
+  State<_ParentProfileForm> createState() => _ParentProfileFormState();
 }
 
-class _ParentPhoneFormState extends State<_ParentPhoneForm> {
-  late final TextEditingController _controller =
+class _ParentProfileFormState extends State<_ParentProfileForm> {
+  late final TextEditingController _phoneController =
       TextEditingController(text: widget.parent.phone ?? '');
+  late final TextEditingController _emailController =
+      TextEditingController(text: widget.parent.email ?? '');
+  late String? _relationship = widget.parent.relationship?.trim();
   String? _error;
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    if (_relationship != null && !kRelationshipOptions.contains(_relationship)) {
+      _relationship = null;
+    }
+  }
+
+  @override
   void dispose() {
-    _controller.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    final phone = _controller.text.trim();
+    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim();
     if (!isValidParentPhone(phone)) return;
+    if (!isValidParentEmail(email)) {
+      setState(() => _error = 'Email không hợp lệ. Vui lòng kiểm tra lại.');
+      return;
+    }
+
     setState(() {
       _saving = true;
       _error = null;
     });
+
     try {
-      await widget.repository?.updateMyPhone(widget.parent.parentId, phone);
+      await widget.repository?.updateParentProfile(
+        widget.parent.parentId,
+        phone: phone,
+        email: email.isEmpty ? null : email,
+        relationship: _relationship,
+      );
       if (!mounted) return;
-      widget.onSaved(phone);
+      widget.onSaved(phone, email.isEmpty ? null : email, _relationship);
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã lưu số điện thoại')),
+        const SnackBar(content: Text('Đã lưu thông tin phụ huynh')),
       );
-    } on ClassDataException catch (error) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = switch (error.statusCode) {
-          409 => 'Số điện thoại đã được sử dụng',
-          422 => 'Số điện thoại không hợp lệ',
-          _ => 'Không lưu được số điện thoại, vui lòng thử lại.',
-        };
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = 'Không lưu được số điện thoại, vui lòng thử lại.';
+        _error = getFriendlyErrorMessage(
+          error,
+          fallback: 'Không lưu được thông tin, vui lòng thử lại.',
+        );
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final valid = isValidParentPhone(_controller.text);
+    final validPhone = isValidParentPhone(_phoneController.text);
+    final validEmail = isValidParentEmail(_emailController.text);
+    final canSave = validPhone && validEmail && !_saving;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -451,14 +588,35 @@ class _ParentPhoneFormState extends State<_ParentPhoneForm> {
         Text('Chỉnh sửa thông tin', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
         TextField(
-          controller: _controller,
+          controller: _phoneController,
           keyboardType: TextInputType.phone,
           autofocus: true,
           onChanged: (_) => setState(() => _error = null),
           decoration: const InputDecoration(
-            labelText: 'Số điện thoại',
-            helperText: '10–11 số, bắt đầu bằng 0',
+            labelText: 'Số điện thoại *',
+            helperText: '10 chữ số, bắt đầu bằng 0',
           ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          onChanged: (_) => setState(() => _error = null),
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            helperText: 'vd: phuhuynh@gmail.com',
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _relationship,
+          decoration: const InputDecoration(
+            labelText: 'Quan hệ với bé',
+          ),
+          items: kRelationshipOptions
+              .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+              .toList(),
+          onChanged: (val) => setState(() => _relationship = val),
         ),
         if (_error != null) ...[
           const SizedBox(height: 8),
@@ -466,42 +624,139 @@ class _ParentPhoneFormState extends State<_ParentPhoneForm> {
         ],
         const SizedBox(height: 20),
         KButton(
-          label: _saving ? 'Đang lưu…' : 'Lưu',
-          onPressed: valid && !_saving ? _save : null,
+          label: _saving ? 'Đang lưu…' : 'Lưu thay đổi',
+          onPressed: canSave ? _save : null,
         ),
       ],
     );
   }
 }
 
-/// Sheet chi tiết bé: thông tin, dị ứng, liên hệ giáo viên (bấm để copy).
-Future<void> showParentChildSheet(
+/// Sheet chỉnh sửa thông tin của bé (họ tên, biệt danh, ngày sinh, giới tính, dị ứng).
+Future<void> showParentChildEditSheet(
   BuildContext context, {
-  required ChildOverview overview,
+  required Child child,
+  required String parentId,
+  required HttpDashboardRepository? repository,
+  required ValueChanged<Child> onSaved,
 }) {
-  return showKSheet(context, _ParentChildSheetBody(overview: overview));
+  return showKSheet(
+    context,
+    _ParentChildEditSheetBody(
+      child: child,
+      parentId: parentId,
+      repository: repository,
+      onSaved: onSaved,
+    ),
+  );
 }
 
-class _ParentChildSheetBody extends StatelessWidget {
-  const _ParentChildSheetBody({required this.overview});
+class _ParentChildEditSheetBody extends StatefulWidget {
+  const _ParentChildEditSheetBody({
+    required this.child,
+    required this.parentId,
+    required this.repository,
+    required this.onSaved,
+  });
 
-  final ChildOverview overview;
+  final Child child;
+  final String parentId;
+  final HttpDashboardRepository? repository;
+  final ValueChanged<Child> onSaved;
 
-  Future<void> _copyPhone(BuildContext context, String phone) async {
-    await Clipboard.setData(ClipboardData(text: phone));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã copy số điện thoại')),
+  @override
+  State<_ParentChildEditSheetBody> createState() => _ParentChildEditSheetBodyState();
+}
+
+class _ParentChildEditSheetBodyState extends State<_ParentChildEditSheetBody> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _nicknameController;
+  late final TextEditingController _allergyController;
+  DateTime? _selectedDob;
+  String _selectedGender = 'male';
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.child.fullName);
+    _nicknameController = TextEditingController(text: widget.child.nickname ?? '');
+    _allergyController = TextEditingController(text: widget.child.medicalAllergies ?? '');
+    _selectedDob = widget.child.dateOfBirth;
+    final g = (widget.child.gender ?? '').trim().toLowerCase();
+    _selectedGender = (g == 'female' || g == 'nữ' || g == 'nu') ? 'female' : 'male';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _nicknameController.dispose();
+    _allergyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDob ?? DateTime(now.year - 3, now.month, now.day),
+      firstDate: DateTime(2015),
+      lastDate: now,
+      helpText: 'Chọn ngày sinh của bé',
+      cancelText: 'Hủy',
+      confirmText: 'Chọn',
     );
+    if (picked != null) {
+      setState(() => _selectedDob = picked);
+    }
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Họ và tên của bé không được để trống.');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      final updated = await widget.repository?.updateChildInfo(
+        parentId: widget.parentId,
+        childId: widget.child.childId,
+        fullName: name,
+        nickname: _nicknameController.text.trim().isEmpty ? null : _nicknameController.text.trim(),
+        dateOfBirth: _selectedDob,
+        gender: _selectedGender,
+        medicalAllergies: _allergyController.text.trim().isEmpty ? null : _allergyController.text.trim(),
+      );
+
+      if (!mounted) return;
+      if (updated != null) {
+        widget.onSaved(updated);
+      }
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã cập nhật thông tin của bé thành công')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = getFriendlyErrorMessage(
+          e,
+          fallback: 'Không thể lưu thông tin của bé. Vui lòng thử lại sau.',
+        );
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final child = overview.child;
-    final dob = child.dateOfBirth;
-    final phone = overview.teacherPhone?.trim();
-    final allergy = child.allergy; // đã bỏ "Không có" + tiền tố "Dị ứng"
-
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
       child: SingleChildScrollView(
@@ -511,65 +766,176 @@ class _ParentChildSheetBody extends StatelessWidget {
           children: [
             Row(
               children: [
-                Avatar(name: child.fullName, size: 56),
+                Expanded(
+                  child: Text(
+                    'Chỉnh sửa thông tin bé',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Họ và tên
+            TextField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Họ và tên của bé *',
+                hintText: 'Ví dụ: Nguyễn Minh An',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              onChanged: (_) => setState(() => _error = null),
+            ),
+            const SizedBox(height: 14),
+
+            // Biệt danh
+            TextField(
+              controller: _nicknameController,
+              decoration: const InputDecoration(
+                labelText: 'Tên gọi ở nhà (Biệt danh)',
+                hintText: 'Ví dụ: Bơ, Sóc, Bon...',
+                prefixIcon: Icon(Icons.favorite_outline),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Ngày sinh
+            InkWell(
+              onTap: _pickDate,
+              borderRadius: BorderRadius.circular(KRadii.control),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Ngày sinh của bé',
+                  prefixIcon: Icon(Icons.cake_outlined),
+                  suffixIcon: Icon(Icons.calendar_today_outlined, size: 20),
+                ),
+                child: Text(
+                  _selectedDob != null
+                      ? '${kDateLabel(_selectedDob!)} (${formatChildAge(_selectedDob!)})'
+                      : 'Chọn ngày sinh',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _selectedDob != null ? context.k.ink : context.k.inkFaint,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Giới tính
+            Text(
+              'Giới tính',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _GenderOption(
+                    label: 'Bé trai (Nam)',
+                    icon: Icons.male_rounded,
+                    isSelected: _selectedGender == 'male',
+                    onTap: () => setState(() => _selectedGender = 'male'),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(child.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                      if ((child.nickname ?? '').trim().isNotEmpty)
-                        Text(
-                          'Biệt danh: ${child.nickname!.trim()}',
-                          style: TextStyle(fontSize: 13, color: context.k.inkSoft),
-                        ),
-                    ],
+                  child: _GenderOption(
+                    label: 'Bé gái (Nữ)',
+                    icon: Icons.female_rounded,
+                    isSelected: _selectedGender == 'female',
+                    onTap: () => setState(() => _selectedGender = 'female'),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (dob != null) KInfoRow(label: 'Ngày sinh', value: kDateLabel(dob)),
-            KInfoRow(label: 'Lớp', value: overview.className),
-            if ((overview.roomNumber ?? '').trim().isNotEmpty)
-              KInfoRow(label: 'Phòng', value: overview.roomNumber!.trim()),
-            KInfoRow(label: 'Giáo viên chủ nhiệm', value: overview.teacherName),
-            if (allergy != null && allergy.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: context.k.badTint,
-                  borderRadius: BorderRadius.circular(KRadii.control),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, size: 18, color: context.k.bad),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Dị ứng $allergy',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.k.bad),
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 14),
+
+            // Dị ứng & Lưu ý sức khỏe
+            TextField(
+              controller: _allergyController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Dị ứng & Lưu ý sức khỏe',
+                hintText: 'Ghi chú các dị ứng đồ ăn, phấn hoa, thuốc hoặc dặn dò cho cô...',
+                alignLabelWithHint: true,
+                prefixIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 40),
+                  child: Icon(Icons.healing_outlined),
                 ),
               ),
+            ),
+
+            if (_error != null) ...[
+              const SizedBox(height: 10),
+              Text(_error!, style: TextStyle(fontSize: 13, color: context.k.bad)),
             ],
-            if (phone != null && phone.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              KButton(
-                label: phone,
-                icon: Icons.copy_rounded,
-                onPressed: () => _copyPhone(context, phone),
+
+            const SizedBox(height: 24),
+            KButton(
+              label: _saving ? 'Đang lưu thông tin…' : 'Lưu thay đổi',
+              icon: Icons.save_outlined,
+              onPressed: _saving ? null : _save,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GenderOption extends StatelessWidget {
+  const _GenderOption({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(KRadii.control),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? context.k.brand.withValues(alpha: .08) : context.k.surface,
+          borderRadius: BorderRadius.circular(KRadii.control),
+          border: Border.all(
+            color: isSelected ? context.k.brand : context.k.line,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? context.k.brand : context.k.inkSoft,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected ? context.k.brand : context.k.ink,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Bấm để copy số điện thoại của cô.',
-                style: TextStyle(fontSize: 12, color: context.k.inkFaint),
-              ),
-            ],
+            ),
           ],
         ),
       ),

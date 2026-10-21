@@ -1,5 +1,6 @@
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
+import 'package:adark_frontend/core/services/crash_logging_service.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -9,6 +10,8 @@ import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Khởi tạo hệ thống bắt lỗi & lưu crash log toàn cục
+  await CrashLoggingService.instance.initialize();
   await ThemeController.instance.load();
   // Chỉ khôi phục phiên còn trong hạn 1 giờ trước khi dựng giao diện.
   await SessionManagementService.instance.loadPersistedSession();

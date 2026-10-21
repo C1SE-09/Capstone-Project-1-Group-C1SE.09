@@ -255,3 +255,85 @@ class ClassSchedule(Base, TimestampMixin):
             f"<ClassSchedule id={self.schedule_id!s} class_id={self.class_id!s} "
             f"day={self.day_of_week} slot={self.slot_id!s}>"
         )
+
+
+class Room(Base, TimestampMixin):
+    """Rooms and physical locations in the school.
+
+    Columns
+    -------
+    room_id   : UUID PK
+    school_id : FK → school.school_id (CASCADE)
+    class_id  : FK → class.class_id (SET NULL, optional, for dedicated classroom)
+    name      : Display name (e.g. "Phòng học Mầm A", "Phòng Âm nhạc", "Sân cỏ")
+    room_type : Type category (CLASSROOM, FUNCTIONAL, OUTDOOR, COMMON)
+    capacity  : Max children capacity
+    is_shared : If True, multiple classes can use this location at once without conflict
+    is_active : Active flag
+    """
+
+    __tablename__ = "room"
+
+    __table_args__ = (
+        Index("ix_room_school_id", "school_id"),
+        Index("ix_room_class_id", "class_id"),
+        Index("ix_room_type", "room_type"),
+        {"comment": "Physical rooms and locations within a school"},
+    )
+
+    room_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        comment="Surrogate primary key (UUID v4)",
+    )
+    school_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("school.school_id", ondelete="CASCADE", name="fk_room_school_id"),
+        nullable=False,
+        comment="Owning school",
+    )
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("class.class_id", ondelete="SET NULL", name="fk_room_class_id"),
+        nullable=True,
+        comment="Dedicated classroom for this class (null if functional or shared space)",
+    )
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        comment="Display name of the room or location",
+    )
+    room_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="CLASSROOM",
+        comment="Room type: CLASSROOM, FUNCTIONAL, OUTDOOR, COMMON",
+    )
+    capacity: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        default=30,
+        comment="Capacity of children or occupants",
+    )
+    is_shared: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="True if multiple classes can occupy at the same time (e.g. Sân cỏ, Sân trường)",
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+        comment="Active flag",
+    )
+
+    # Relationships
+    class_: Mapped[Class_ | None] = relationship("Class_", lazy="joined")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<Room id={self.room_id!s} name={self.name!r} type={self.room_type!r} shared={self.is_shared}>"
+
