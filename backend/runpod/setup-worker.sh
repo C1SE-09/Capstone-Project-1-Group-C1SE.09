@@ -182,6 +182,14 @@ grep -cE '^[^#[:space:]]' requirements-worker.txt | sed 's/^/      /;s/$/ packag
 # Dùng cache trên NV: nếu phải cài lại (venv bị mất) thì KHÔNG tải lại wheel.
 pip install -r requirements-worker.txt
 
+# Venv cũ (setup trước đây) có thể đã cài torch. `pip install` KHÔNG tự gỡ
+# package không còn nằm trong requirements → torch vẫn nằm trong venv trên NV
+# và chiếm ~7GB vô ích. Gỡ thủ công nếu còn.
+if pip list 2>/dev/null | grep -qiE '^(torch|torchvision|torchaudio)[[:space:]]'; then
+  echo "    Phát hiện torch cũ trong venv — gỡ để tiết kiệm ~7GB NV"
+  pip uninstall -y torch torchvision torchaudio 2>&1 | tail -3 || true
+fi
+
 # ── 5. Kiểm tra CUDA ────────────────────────────────────────────────────────
 log "5/6 Kiểm tra GPU"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
