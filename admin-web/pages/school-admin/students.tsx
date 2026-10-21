@@ -42,6 +42,8 @@ interface FormState {
   date_of_birth: string;
   gender: string;
   medical_allergies: string;
+  allergy_status: string;
+  care_notes: string;
   status: string;
 }
 
@@ -54,6 +56,8 @@ const EMPTY: FormState = {
   date_of_birth: "",
   gender: "male",
   medical_allergies: "",
+  allergy_status: "unknown",
+  care_notes: "",
   status: "enrolled",
 };
 
@@ -99,7 +103,8 @@ export default function SchoolAdminStudentsPage() {
         (c.nickname || "").toLowerCase().includes(q) ||
         c.class_name.toLowerCase().includes(q) ||
         (c.parents_summary || "").toLowerCase().includes(q) ||
-        (c.note || "").toLowerCase().includes(q),
+        (c.note || "").toLowerCase().includes(q) ||
+        (c.care_notes || "").toLowerCase().includes(q),
     );
   }, [children, query]);
 
@@ -120,6 +125,8 @@ export default function SchoolAdminStudentsPage() {
       date_of_birth: c.date_of_birth || "",
       gender: c.gender || "male",
       medical_allergies: c.note || "",
+      allergy_status: c.allergy_status || "unknown",
+      care_notes: c.care_notes || "",
       status: c.status,
     });
     setDrawerOpen(true);
@@ -128,6 +135,10 @@ export default function SchoolAdminStudentsPage() {
   async function handleSave() {
     if (!form.full_name.trim()) {
       setToast({ msg: "Vui lòng nhập họ tên học sinh", tone: "bad" });
+      return;
+    }
+    if (form.allergy_status === "present" && !form.medical_allergies.trim()) {
+      setToast({ msg: "Vui lòng nhập mô tả dị ứng của bé", tone: "bad" });
       return;
     }
     setSaving(true);
@@ -149,6 +160,8 @@ export default function SchoolAdminStudentsPage() {
         date_of_birth: form.date_of_birth || null,
         gender: form.gender,
         medical_allergies: form.medical_allergies.trim() || null,
+        allergy_status: form.allergy_status,
+        care_notes: form.care_notes.trim() || null,
         status: form.status,
       };
       if (editing) {
@@ -284,8 +297,13 @@ export default function SchoolAdminStudentsPage() {
                     <td className="px-4 py-3 text-ink-soft">
                       {c.date_of_birth ? formatDate(c.date_of_birth) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-ink-soft max-w-xs line-clamp-2">
-                      {c.note || "—"}
+                    <td className="px-4 py-3 text-ink-soft max-w-xs">
+                      <div className="line-clamp-1">{c.note || "—"}</div>
+                      {c.care_notes && (
+                        <div className="text-xs mt-0.5 line-clamp-2">
+                          Lưu ý: {c.care_notes}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
@@ -454,13 +472,35 @@ export default function SchoolAdminStudentsPage() {
             </div>
           )}
         </FormField>
-        <FormField label="Dị ứng / Ghi chú y tế">
+        <FormField label="Trạng thái dị ứng">
+          <select
+            className="kinput"
+            value={form.allergy_status}
+            onChange={(e) => setForm({ ...form, allergy_status: e.target.value })}
+          >
+            <option value="unknown">Chưa khai báo</option>
+            <option value="none">Không có dị ứng được biết</option>
+            <option value="present">Có dị ứng</option>
+          </select>
+        </FormField>
+        {form.allergy_status === "present" && (
+          <FormField label="Mô tả dị ứng">
+            <textarea
+              className="kinput"
+              rows={3}
+              value={form.medical_allergies}
+              onChange={(e) => setForm({ ...form, medical_allergies: e.target.value })}
+              placeholder="VD: Dị ứng đậu phộng..."
+            />
+          </FormField>
+        )}
+        <FormField label="Lưu ý chăm sóc">
           <textarea
             className="kinput"
             rows={3}
-            value={form.medical_allergies}
-            onChange={(e) => setForm({ ...form, medical_allergies: e.target.value })}
-            placeholder="VD: Dị ứng đậu phộng..."
+            value={form.care_notes}
+            onChange={(e) => setForm({ ...form, care_notes: e.target.value })}
+            placeholder="VD: Tránh nắng, không cho ăn đồ ngọt..."
           />
         </FormField>
         <FormField label="Trạng thái">
