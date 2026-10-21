@@ -15,6 +15,12 @@ class Child extends BaseEntity {
     this.gender,
     this.avatarUrl,
     this.medicalAllergies,
+    this.allergyStatus = 'unknown',
+    this.careNotes,
+    this.healthUpdatedAt,
+    this.healthUpdatedByUserId,
+    this.healthUpdateSource,
+    this.healthVersion = 1,
   });
 
   final String childId;
@@ -26,6 +32,12 @@ class Child extends BaseEntity {
   final String? gender;
   final String? avatarUrl;
   final String? medicalAllergies;
+  final String allergyStatus; // unknown | none | present
+  final String? careNotes;
+  final DateTime? healthUpdatedAt;
+  final String? healthUpdatedByUserId;
+  final String? healthUpdateSource; // parent | admin | legacy
+  final int healthVersion;
 
   /// Tên hiển thị: ưu tiên nickname, không có thì dùng tên đầy đủ.
   String get displayName =>
@@ -61,6 +73,14 @@ class Child extends BaseEntity {
       gender: json['gender'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       medicalAllergies: json['medical_allergies'] as String?,
+      allergyStatus: json['allergy_status'] as String? ?? 'unknown',
+      careNotes: json['care_notes'] as String?,
+      healthUpdatedAt: json['health_updated_at'] != null
+          ? DateTime.tryParse(json['health_updated_at'] as String)
+          : null,
+      healthUpdatedByUserId: json['health_updated_by_user_id'] as String?,
+      healthUpdateSource: json['health_update_source'] as String?,
+      healthVersion: json['health_version'] as int? ?? 1,
     );
   }
 }

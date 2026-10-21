@@ -194,4 +194,102 @@ void main() {
       );
     });
   });
+
+  group('Hồ sơ sức khỏe của bé', () {
+    test('Child.fromJson đọc đúng trường sức khỏe', () {
+      final child = Child.fromJson({
+        'child_id': 'c1',
+        'full_name': 'Bé A',
+        'allergy_status': 'present',
+        'medical_allergies': 'Đậu phộng',
+        'care_notes': 'Tránh nắng',
+        'health_version': 3,
+        'health_update_source': 'parent',
+        'health_updated_at': '2026-10-21T01:00:00+00:00',
+      });
+
+      expect(child.allergyStatus, 'present');
+      expect(child.careNotes, 'Tránh nắng');
+      expect(child.healthVersion, 3);
+      expect(child.healthUpdateSource, 'parent');
+      expect(child.healthUpdatedAt, isNotNull);
+    });
+
+    test('fromJson chịu được response cũ thiếu trường sức khỏe', () {
+      final child = Child.fromJson({'child_id': 'c1', 'full_name': 'Bé A'});
+
+      expect(child.allergyStatus, 'unknown');
+      expect(child.careNotes, isNull);
+      expect(child.healthVersion, 1);
+    });
+
+    test('getChildHealthProfile gọi GET health-profile', () async {
+      final (repo, adapter) = _repo({
+        'child_id': 'child-1',
+        'full_name': 'Bé A',
+        'allergy_status': 'present',
+        'medical_allergies': 'Đậu phộng',
+        'health_version': 2,
+      });
+
+      final child = await repo.getChildHealthProfile('child-1');
+
+      expect(adapter.lastRequest!.method, 'GET');
+      expect(adapter.lastRequest!.path, '/api/children/child-1/health-profile');
+      expect(child.allergyStatus, 'present');
+    });
+
+    test('updateChildHealthProfile gửi PATCH kèm expected_version', () async {
+      final (repo, adapter) = _repo({
+        'child_id': 'child-1',
+        'full_name': 'Bé A',
+        'allergy_status': 'none',
+        'medical_allergies': null,
+        'care_notes': 'Tránh nắng',
+        'health_version': 3,
+      });
+
+      await repo.updateChildHealthProfile(
+        childId: 'child-1',
+        allergyStatus: 'none',
+        careNotes: 'Tránh nắng',
+        expectedVersion: 2,
+      );
+
+      expect(adapter.lastRequest!.method, 'PATCH');
+      expect(adapter.lastRequest!.path, '/api/children/child-1/health-profile');
+      expect(adapter.lastRequest!.data, {
+        'allergy_status': 'none',
+        'medical_allergies': null,
+        'care_notes': 'Tránh nắng',
+        'expected_version': 2,
+      });
+    });
+
+    test('lỗi 409 ném ClassDataException để màn hiện banner tải lại', () async {
+      final adapter = _FakeAdapter(
+        (_) async => ResponseBody.fromString(
+          jsonEncode({'detail': 'Hồ sơ vừa được cập nhật ở nơi khác'}),
+          409,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        ),
+      );
+      final dio = Dio(BaseOptions(baseUrl: 'http://test.local'))
+        ..httpClientAdapter = adapter;
+      final repo = HttpDashboardRepository(dio: dio, parentId: 'parent-1');
+
+      expect(
+        () => repo.updateChildHealthProfile(
+          childId: 'child-1',
+          allergyStatus: 'none',
+          expectedVersion: 1,
+        ),
+        throwsA(
+          isA<ClassDataException>().having((e) => e.statusCode, 'statusCode', 409),
+        ),
+      );
+    });
+  });
 }
