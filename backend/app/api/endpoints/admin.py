@@ -868,10 +868,12 @@ def update_child(
             else c.medical_allergies
         )
         notes = data.care_notes if "care_notes" in health_fields else c.care_notes
-        ensure_within_limits(
-            medical_allergies=text if "medical_allergies" in health_fields else None,
-            care_notes=notes if "care_notes" in health_fields else None,
-        )
+        if (
+            "allergy_status" not in health_fields
+            and (text or "").strip()
+            and status_val != "present"
+        ):
+            status_val = "present"
         values = normalize_health_values(
             allergy_status=status_val, medical_allergies=text, care_notes=notes
         )
@@ -885,6 +887,19 @@ def update_child(
             values["medical_allergies"],
             values["care_notes"],
         ) != current:
+            # Dữ liệu cũ dài hơn 1000 chỉ bị chặn khi thực sự thay đổi.
+            ensure_within_limits(
+                medical_allergies=(
+                    values["medical_allergies"]
+                    if values["medical_allergies"] != c.medical_allergies
+                    else None
+                ),
+                care_notes=(
+                    values["care_notes"]
+                    if values["care_notes"] != c.care_notes
+                    else None
+                ),
+            )
             c.allergy_status = values["allergy_status"]
             c.medical_allergies = values["medical_allergies"]
             c.care_notes = values["care_notes"]

@@ -103,6 +103,80 @@ def test_unchanged_legacy_text_longer_than_limit_is_allowed():
     assert payload["medical_allergies"] == "a" * 1500
 
 
+def test_unchanged_long_text_sent_again_is_allowed():
+    # Client gửi lại nguyên văn text cũ dài hơn 1000 nhưng không sửa ⇒ vẫn lưu được.
+    actor = User(
+        user_id=uuid.uuid4(),
+        username="parent",
+        password_hash="x",
+        role=UserRole.PARENT,
+    )
+    long_text = "a" * 1500
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="present",
+        medical_allergies=long_text,
+        health_version=1,
+    )
+    db = MagicMock()
+    db.query.return_value.filter.return_value.update.return_value = 1
+
+    apply_health_patch(
+        db,
+        child,
+        {"medical_allergies": long_text, "care_notes": "Tránh nắng"},
+        1,
+        actor,
+    )
+    payload = db.query.return_value.filter.return_value.update.call_args.args[0]
+    assert payload["medical_allergies"] == long_text
+    assert payload["care_notes"] == "Tránh nắng"
+
+
+def test_changed_long_text_is_rejected():
+    actor = User(
+        user_id=uuid.uuid4(),
+        username="parent",
+        password_hash="x",
+        role=UserRole.PARENT,
+    )
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="present",
+        medical_allergies="a" * 1000,
+        health_version=1,
+    )
+    db = MagicMock()
+
+    with pytest.raises(HTTPException) as exc:
+        apply_health_patch(db, child, {"medical_allergies": "a" * 1001}, 1, actor)
+    assert exc.value.status_code == 422
+
+
+def test_patch_text_without_status_is_treated_as_present():
+    actor = User(
+        user_id=uuid.uuid4(),
+        username="parent",
+        password_hash="x",
+        role=UserRole.PARENT,
+    )
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="none",
+        health_version=1,
+    )
+    db = MagicMock()
+    db.query.return_value.filter.return_value.update.return_value = 1
+
+    apply_health_patch(db, child, {"medical_allergies": "Đậu phộng"}, 1, actor)
+    payload = db.query.return_value.filter.return_value.update.call_args.args[0]
+    assert payload["allergy_status"] == "present"
+    assert payload["medical_allergies"] == "Đậu phộng"
+
+
 def test_patch_noop_does_not_bump_version():
     actor = User(
         user_id=uuid.uuid4(),
@@ -534,6 +608,27 @@ def test_admin_update_none_clears_allergy_text(admin_client, mock_db):
     assert resp.status_code == 200, resp.text
     assert child.allergy_status == "none"
     assert child.medical_allergies is None
+
+
+def test_admin_update_allows_unchanged_long_legacy_text(admin_client, mock_db):
+    long_text = "a" * 1500
+    child = Child(
+        child_id=uuid.uuid4(),
+        full_name="Bé A",
+        allergy_status="present",
+        medical_allergies=long_text,
+        health_version=1,
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
+
+    resp = admin_client.put(
+        f"/api/admin/children/{child.child_id}",
+        json={"medical_allergies": long_text, "care_notes": "Tránh nắng"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert child.medical_allergies == long_text
+    assert child.care_notes == "Tránh nắng"
+    assert child.health_version == 2
 
 
 def test_admin_children_requires_admin(client_teacher):

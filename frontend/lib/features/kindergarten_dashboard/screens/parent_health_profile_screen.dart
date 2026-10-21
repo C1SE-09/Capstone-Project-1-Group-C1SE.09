@@ -201,7 +201,10 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
     }
     if (healthCharCount(_allergyValue) > _maxChars ||
         healthCharCount(_notesValue) > _maxChars) {
-      setState(() => _fieldError = 'Nội dung vượt quá 1000 ký tự.');
+      setState(() {
+        _bannerTitle = 'Nội dung quá dài';
+        _bannerBody = 'Mô tả dị ứng và lưu ý chăm sóc tối đa 1000 ký tự.';
+      });
       return;
     }
 
@@ -258,8 +261,9 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
     final hasData = _child.allergyStatus != 'unknown' ||
         (_child.medicalAllergies ?? '').trim().isNotEmpty ||
         (_child.careNotes ?? '').trim().isNotEmpty;
+    if (!hasData) return null;
     if (source == 'legacy' || source == null) {
-      return hasData ? 'Thông tin từ hồ sơ hiện có' : null;
+      return 'Thông tin từ hồ sơ hiện có';
     }
     final updatedAt = _child.healthUpdatedAt;
     if (updatedAt == null) return null;

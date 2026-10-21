@@ -75,18 +75,20 @@ def apply_health_patch(
     if source not in WRITE_SOURCES:
         raise HTTPException(status_code=403, detail="Bạn không có quyền cập nhật")
 
-    status = changes.get("allergy_status", child.allergy_status or "unknown")
+    status = changes.get("allergy_status")
     text = (
         changes["medical_allergies"]
         if "medical_allergies" in changes
         else child.medical_allergies
     )
     notes = changes["care_notes"] if "care_notes" in changes else child.care_notes
+    if status is None:
+        status = child.allergy_status or "unknown"
+        # Client gửi mô tả dị ứng mà không gửi trạng thái ⇒ hiểu là "có dị ứng",
+        # tránh việc nuốt mất text vì trạng thái cũ là none/unknown.
+        if (text or "").strip() and status != "present":
+            status = "present"
 
-    ensure_within_limits(
-        medical_allergies=text if "medical_allergies" in changes else None,
-        care_notes=notes if "care_notes" in changes else None,
-    )
     values = normalize_health_values(
         allergy_status=status, medical_allergies=text, care_notes=notes
     )
@@ -102,6 +104,18 @@ def apply_health_patch(
         values["care_notes"],
     ) == current:
         return child
+
+    # Dữ liệu cũ dài hơn 1000 chỉ bị chặn khi thực sự thay đổi.
+    ensure_within_limits(
+        medical_allergies=(
+            values["medical_allergies"]
+            if values["medical_allergies"] != child.medical_allergies
+            else None
+        ),
+        care_notes=(
+            values["care_notes"] if values["care_notes"] != child.care_notes else None
+        ),
+    )
 
     result = (
         db.query(Child)
