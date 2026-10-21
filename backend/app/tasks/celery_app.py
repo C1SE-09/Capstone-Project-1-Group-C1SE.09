@@ -3,6 +3,7 @@
 import re
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.config import settings
 
@@ -26,6 +27,7 @@ celery_app = Celery(
         "app.tasks.process_audio",
         "app.tasks.notifications",
         "app.tasks.bug_report_notifications",
+        "app.tasks.attendance_notifications",
     ],
 )
 
@@ -35,6 +37,13 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    # Lịch tự động nhắc nhở điểm danh lúc 07:40 (00:40 UTC) Thứ 2 - Thứ 6
+    beat_schedule={
+        "remind-unmarked-attendance-morning": {
+            "task": "remind_unmarked_attendance",
+            "schedule": crontab(hour=0, minute=40, day_of_week="1-5"),
+        },
+    },
     task_track_started=True,
     broker_connection_retry_on_startup=True,
     # Worker chỉ lấy trước đúng một task để không giữ nhiều audio chờ trong RAM.

@@ -15,7 +15,7 @@ MVP Note:
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -25,7 +25,7 @@ from app.core.database import get_db
 from app.models.child import Child, ChildStatus, Parent
 from app.models.report import DailyReport, DailyReportStatus, VoiceRecord
 from app.models.user import Class_, Teacher
-
+from app.config import get_today
 router = APIRouter(tags=["dashboard"])
 
 
@@ -179,7 +179,7 @@ def get_teacher_classes(
         child_ids = [c.child_id for c in children]
 
         # Thống kê báo cáo hôm nay
-        today = datetime.now(tz=UTC).date()
+        today = get_today()
         reports = (
             db.query(DailyReport)
             .filter(
@@ -246,7 +246,7 @@ def get_class_dashboard(
     if class_ is None:
         raise HTTPException(status_code=404, detail="Class not found")
 
-    target_date = date_param or datetime.now(tz=UTC).date()
+    target_date = date_param or get_today()
 
     children = (
         db.query(Child)
@@ -544,7 +544,7 @@ def get_child_reports(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    target_date = date_param or datetime.now(tz=UTC).date()
+    target_date = date_param or get_today()
 
     today_query = db.query(DailyReport).filter(
         DailyReport.child_id == child_id,
@@ -613,7 +613,7 @@ def mark_report_as_read(
     ):
         report.status = DailyReportStatus.READ
         if not report.read_at:
-            report.read_at = datetime.now(tz=UTC)
+            report.read_at = get_today()
         db.commit()
         db.refresh(report)
 
