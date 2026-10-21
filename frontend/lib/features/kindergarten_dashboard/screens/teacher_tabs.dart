@@ -409,6 +409,8 @@ class _ChildRow extends StatelessWidget {
                     Text('Sức khỏe: ${child.severity.label}', style: Theme.of(context).textTheme.bodySmall)
                   else if (child.allergy != null)
                     Text('Dị ứng: ${child.allergy}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.warn)),
+                  if ((child.careNotes ?? '').trim().isNotEmpty)
+                    Text('Lưu ý: ${child.careNotes!.trim()}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkSoft)),
                 ],
               ),
             ),

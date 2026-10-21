@@ -31,6 +31,7 @@ class Child {
     required this.severity,
     this.nickname,
     this.allergy,
+    this.careNotes,
   });
 
   final String id;
@@ -40,6 +41,7 @@ class Child {
   final bool present;
   final String time;
   final String? allergy;
+  final String? careNotes;
   final Severity severity;
 }
 
