@@ -11,7 +11,36 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import { getStoredSchoolAdmin, getToken } from "@/lib/api";
-import { getParents, getTeachers, getChildren, getSchedules } from "@/lib/admin-api";
+import {
+  getParents,
+  getTeachers,
+  getChildren,
+  getSchedules,
+  getRooms,
+  Room,
+} from "@/lib/admin-api";
+
+const SHARED_KEYWORDS = [
+  "sân cỏ",
+  "sân trường",
+  "sân chơi",
+  "ngoài trời",
+  "vườn",
+  "bể bơi",
+  "cát nước",
+  "nhà ăn",
+  "y tế",
+];
+
+function isSharedLocation(name?: string | null, roomsList?: Room[]): boolean {
+  if (!name) return false;
+  const n = name.trim().toLowerCase();
+  if (roomsList && roomsList.length > 0) {
+    const matched = roomsList.find((r) => r.name.trim().toLowerCase() === n);
+    if (matched) return Boolean(matched.is_shared);
+  }
+  return SHARED_KEYWORDS.some((kw) => n.includes(kw));
+}
 
 interface Tile {
   href: string;
@@ -50,31 +79,44 @@ export default function SchoolAdminFeaturesPage() {
 
     (async () => {
       try {
-        const [teachers, students, parents, schedules] = await Promise.all([
+        const [teachers, students, parents, schedules, rooms] = await Promise.all([
           getTeachers().catch(() => []),
           getChildren().catch(() => []),
           getParents().catch(() => []),
-          getSchedules(2).catch(() => []),
+          getSchedules().catch(() => []),
+          getRooms().catch(() => []),
         ]);
-        // Đếm xung đột cho thứ 2 (giống Flutter app)
+
+        // Đếm số cặp tiết học bị xung đột trong tuần (loại trừ các khu vực sinh hoạt chung)
         let conflicts = 0;
         for (let i = 0; i < schedules.length; i++) {
           for (let j = i + 1; j < schedules.length; j++) {
             const a = schedules[i];
             const b = schedules[j];
+            if (a.day_of_week !== b.day_of_week) continue;
             if (
               a.start_time &&
               b.start_time &&
               a.end_time &&
-              b.end_time &&
-              a.room_name.trim() &&
-              a.room_name.trim().toLowerCase() === b.room_name.trim().toLowerCase()
+              b.end_time
             ) {
               const aS = toMin(a.start_time);
               const aE = toMin(a.end_time);
               const bS = toMin(b.start_time);
               const bE = toMin(b.end_time);
-              if (aS < bE && aE > bS) conflicts++;
+              if (aS < bE && aE > bS) {
+                const sameClass = Boolean(a.class_id && b.class_id && a.class_id === b.class_id);
+                const isShared = isSharedLocation(a.room_name, rooms);
+                const sameRoom = Boolean(
+                  !isShared &&
+                  a.room_name &&
+                  b.room_name &&
+                  a.room_name.trim().toLowerCase() === b.room_name.trim().toLowerCase()
+                );
+                if (sameClass || sameRoom) {
+                  conflicts++;
+                }
+              }
             }
           }
         }
