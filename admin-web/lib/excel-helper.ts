@@ -85,39 +85,79 @@ export function downloadExcelTemplate(
 
 /**
  * Đọc file Excel (.xlsx, .xls) hoặc file CSV tải lên và trả về danh sách các dòng dữ liệu.
+ * Tự động đọc và ghép toàn bộ các Sheet nếu file có nhiều sheet (ví dụ mỗi lớp 1 sheet).
  */
 export async function parseExcelOrCsv(file: File): Promise<string[][]> {
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data, { type: "array" });
-  const firstSheetName = wb.SheetNames[0];
-  if (!firstSheetName) return [];
+  if (!wb.SheetNames || wb.SheetNames.length === 0) return [];
 
-  const ws = wb.Sheets[firstSheetName];
-  const rawRows: unknown[][] = XLSX.utils.sheet_to_json(ws, {
-    header: 1,
-    defval: "",
-    blankrows: false,
-  });
+  const allRows: string[][] = [];
 
-  const cleanRows = rawRows
-    .map((row) => row.map((cell) => String(cell ?? "").trim()))
-    .filter((row) => row.some((cell) => cell.length > 0));
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    if (!ws) continue;
 
-  // Loại bỏ dòng header đầu tiên nếu có chứa tiêu đề
-  if (cleanRows.length > 0) {
-    const firstRowText = cleanRows[0].join(" ").toLowerCase();
-    if (
-      firstRowText.includes("họ") ||
-      firstRowText.includes("name") ||
-      firstRowText.includes("tên") ||
-      firstRowText.includes("thứ") ||
-      firstRowText.includes("lớp") ||
-      firstRowText.includes("khung giờ") ||
-      firstRowText.includes("hoạt động")
-    ) {
-      return cleanRows.slice(1);
+    const rawRows: unknown[][] = XLSX.utils.sheet_to_json(ws, {
+      header: 1,
+      defval: "",
+      blankrows: false,
+    });
+
+    const cleanRows = rawRows
+      .map((row) => row.map((cell) => String(cell ?? "").trim()))
+      .filter((row) => row.some((cell) => cell.length > 0));
+
+    if (cleanRows.length === 0) continue;
+
+    // Loại bỏ dòng header đầu tiên nếu có chứa tiêu đề (chỉ khi dòng đó không phải là dòng dữ liệu thực)
+    let dataRows = cleanRows;
+    const firstRow = cleanRows[0];
+    const isFirstRowData = firstRow.some((cell) => {
+      const c = cell.trim();
+      return (
+        /\d{1,2}[h:]\d{2}/i.test(c) || // Chứa giờ như 7h00, 07:00
+        /^0\d{9,10}$/.test(c) ||        // Số điện thoại
+        /^\d{4}-\d{2}-\d{2}$/.test(c)   // Ngày tháng YYYY-MM-DD
+      );
+    });
+
+    if (!isFirstRowData) {
+      const firstRowText = firstRow.join(" ").toLowerCase();
+      if (
+        firstRowText.includes("họ") ||
+        firstRowText.includes("name") ||
+        firstRowText.includes("tên") ||
+        firstRowText.includes("thứ") ||
+        firstRowText.includes("lớp") ||
+        firstRowText.includes("khung giờ") ||
+        firstRowText.includes("hoạt động")
+      ) {
+        dataRows = cleanRows.slice(1);
+      }
+    }
+
+    // Nếu file có nhiều sheet và tên sheet có tên lớp (VD: "Lớp Mầm A", "Lớp Mầm B"),
+    // trong khi các dòng chưa có cột lớp (cột 0 là Thứ...), tự động chèn tên sheet vào đầu dòng
+    const isClassSheet =
+      wb.SheetNames.length > 1 &&
+      (sheetName.toLowerCase().includes("lớp") ||
+        sheetName.toLowerCase().includes("mầm") ||
+        sheetName.toLowerCase().includes("chồi") ||
+        sheetName.toLowerCase().includes("lá") ||
+        sheetName.toLowerCase().includes("nhà trẻ"));
+
+    for (const r of dataRows) {
+      if (isClassSheet && r.length > 0) {
+        const col0 = r[0].toLowerCase();
+        if (col0.startsWith("thứ") || col0.startsWith("t") || /^thứ\s*\d/i.test(col0)) {
+          allRows.push([sheetName, ...r]);
+          continue;
+        }
+      }
+      allRows.push(r);
     }
   }
 
-  return cleanRows;
+  return allRows;
 }

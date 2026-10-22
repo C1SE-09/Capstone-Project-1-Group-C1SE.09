@@ -30,6 +30,7 @@ const NS = {
   schoolAdmin: {
     token: "school_admin_token",
     refresh: "school_admin_refresh",
+    sessionId: "school_admin_session_id",
     info: "school_admin_info",
   },
   adminApp: {
@@ -74,9 +75,36 @@ export function setRefreshToken(token: string) {
   window.localStorage.setItem(NS.schoolAdmin.refresh, token);
 }
 
+export function getSessionId(): string | null {
+  if (typeof window === "undefined") return null;
+  const stored = window.localStorage.getItem(NS.schoolAdmin.sessionId);
+  if (stored) return stored;
+  // Fallback: giải mã từ JWT access token nếu session_id chưa lưu riêng
+  const token = getToken("schoolAdmin");
+  if (token) {
+    try {
+      const parts = token.split(".");
+      if (parts.length >= 2) {
+        const payload = JSON.parse(atob(parts[1]));
+        return payload.session_id || null;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function setSessionId(sid: string) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(NS.schoolAdmin.sessionId, sid);
+  }
+}
+
 export function clearAllTokens() {
   window.localStorage.removeItem(NS.schoolAdmin.token);
   window.localStorage.removeItem(NS.schoolAdmin.refresh);
+  window.localStorage.removeItem(NS.schoolAdmin.sessionId);
   window.localStorage.removeItem(NS.schoolAdmin.info);
   window.localStorage.removeItem(NS.adminApp.token);
   window.localStorage.removeItem(NS.adminApp.info);
@@ -89,6 +117,7 @@ export function clearToken(kind?: AccountKind) {
   window.localStorage.removeItem(ks.info);
   if (k === "schoolAdmin") {
     window.localStorage.removeItem(NS.schoolAdmin.refresh);
+    window.localStorage.removeItem(NS.schoolAdmin.sessionId);
   }
 }
 
@@ -153,9 +182,51 @@ interface RequestOpts {
   account?: AccountKind;
 }
 
+let isRefreshingPromise: Promise<string | null> | null = null;
+
+async function performTokenRefresh(): Promise<string | null> {
+  const sid = getSessionId();
+  const rf = getRefreshToken();
+  if (!sid || !rf) return null;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Bypass-Tunnel-Reminder": "true",
+      },
+      body: JSON.stringify({
+        session_id: sid,
+        refresh_token: rf,
+      }),
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = await res.json();
+    if (data.access_token) {
+      setToken(data.access_token, "schoolAdmin");
+      if (data.refresh_token) {
+        setRefreshToken(data.refresh_token);
+      }
+      if (data.session_id) {
+        setSessionId(data.session_id);
+      }
+      return data.access_token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function apiFetch<T = any>(
   path: string,
   opts: RequestOpts = {},
+  isRetry = false,
 ): Promise<T> {
   const {
     method = "GET",
@@ -206,6 +277,26 @@ export async function apiFetch<T = any>(
   });
 
   if (!res.ok) {
+    // Tự động làm mới token nếu 401 khi gọi API có auth
+    if (
+      res.status === 401 &&
+      auth &&
+      !isRetry &&
+      !path.includes("/login") &&
+      !path.includes("/refresh")
+    ) {
+      if (!isRefreshingPromise) {
+        isRefreshingPromise = performTokenRefresh().finally(() => {
+          isRefreshingPromise = null;
+        });
+      }
+      const newToken = await isRefreshingPromise;
+      if (newToken) {
+        // Thử lại request gốc với token mới vừa được cấp
+        return apiFetch<T>(path, opts, true);
+      }
+    }
+
     let detail = `HTTP ${res.status}`;
     try {
       const errJson = await res.json();
