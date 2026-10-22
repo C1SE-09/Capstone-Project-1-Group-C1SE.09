@@ -23,6 +23,7 @@ class OverviewScreen extends StatefulWidget {
     this.onHealth,
     this.onSelectClass,
     this.onOpenTimetable,
+    this.onOpenAttendance,
     this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
     this.repository,
     this.scheduleRepository,
@@ -32,6 +33,7 @@ class OverviewScreen extends StatefulWidget {
   final VoidCallback? onHealth;
   final VoidCallback? onSelectClass;
   final VoidCallback? onOpenTimetable;
+  final VoidCallback? onOpenAttendance;
   final String classId;
   final HttpDashboardRepository? repository;
   final ScheduleRepository? scheduleRepository;
@@ -148,6 +150,43 @@ class _OverviewScreenState extends State<OverviewScreen> {
             ],
           ),
         ),
+        if (widget.onOpenAttendance != null) ...[
+          const SizedBox(height: 12),
+          KCard(
+            onTap: widget.onOpenAttendance,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: context.k.okTint,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.how_to_reg_outlined, size: 20, color: context.k.ok),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Điểm danh hôm nay',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        'Điểm danh nhanh học sinh có mặt, vắng hoặc đến trễ',
+                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         Text('Hôm nay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink)),
         const SizedBox(height: 10),
@@ -228,13 +267,26 @@ class _OverviewScreenState extends State<OverviewScreen> {
 class _OverviewData { const _OverviewData(this.teacher, this.dashboard, this.todayItems); final Teacher teacher; final ClassDashboardSummary dashboard; final List<ClassSchedule> todayItems; }
 
 class ClassListScreen extends StatefulWidget {
-  const ClassListScreen({super.key, required this.initialHealthOnly, required this.onRecord, required this.onEdit, required this.children, this.onSelectClass, this.onOpenTimetable, this.className = 'Lớp', this.schoolName = 'Chưa có thông tin trường', this.classId = 'aaaaaaaa-0000-0000-0000-000000000001'});
+  const ClassListScreen({
+    super.key,
+    required this.initialHealthOnly,
+    required this.onRecord,
+    required this.onEdit,
+    required this.children,
+    this.onSelectClass,
+    this.onOpenTimetable,
+    this.onOpenAttendance,
+    this.className = 'Lớp',
+    this.schoolName = 'Chưa có thông tin trường',
+    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+  });
   final bool initialHealthOnly;
   final ValueChanged<Child> onRecord;
   final ValueChanged<Child> onEdit;
   final List<Child> children;
   final VoidCallback? onSelectClass;
   final VoidCallback? onOpenTimetable;
+  final VoidCallback? onOpenAttendance;
   final String classId;
   final String className;
   final String schoolName;
@@ -282,7 +334,35 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
                 ],
               ),
-              const SizedBox(height: 14),
+              if (widget.onOpenAttendance != null) ...[
+                const SizedBox(height: 14),
+                KCard(
+                  onTap: widget.onOpenAttendance,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(color: context.k.okTint, borderRadius: BorderRadius.circular(8)),
+                        child: Icon(Icons.how_to_reg_outlined, size: 18, color: context.k.ok),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Điểm danh hôm nay', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text('Điểm danh học sinh đến lớp, vắng hoặc trễ', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
               KCard(
                 onTap: widget.onOpenTimetable,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
