@@ -197,7 +197,7 @@ def save_class_attendance_batch(
     stmt = insert(AttendanceRecord).values(values)
     upsert_stmt = stmt.on_conflict_do_update(
         constraint="uq_attendance_child_date",
-        set = {
+        set_ = {
             "status": stmt.excluded.status,
             "check_in_time": stmt.excluded.check_in_time,
             "note": stmt.excluded.note,
