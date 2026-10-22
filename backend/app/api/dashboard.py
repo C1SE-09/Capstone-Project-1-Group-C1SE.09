@@ -463,6 +463,8 @@ def get_parent(
     current_user: User = Depends(require_any_role("parent", "admin")),
 ):
     """Trả về thông tin 1 phụ huynh, khớp entity Parent (frontend)."""
+    if role_of(current_user) == "parent" and current_user.parent_id:
+        parent_id = current_user.parent_id
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
@@ -493,6 +495,8 @@ def get_parent_primary_child(
     Trả về 1 đứa con (đầu tiên) + tên lớp + tên giáo viên,
     khớp entity ChildOverview (frontend).
     """
+    if role_of(current_user) == "parent" and current_user.parent_id:
+        parent_id = current_user.parent_id
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
