@@ -108,6 +108,10 @@ nó tự gọi `setup-worker.sh` để cài lại — nhờ cache pip trên NV n
 tải lại wheel nào**. Nếu `git` biến mất (pod bị terminate), nó cài lại từ cache
 apt trên NV.
 
+> **Worker trên pod chỉ nghe queue `audio`** (chuyển giọng nói → chữ, cần GPU).
+> Queue `notifications` do worker trên VPS xử lý — xem `docker-compose.yml`.
+> Nhờ vậy pod không phải cài Firebase, và VPS không phải nạp model 2.9GB.
+
 > **Tắt pod xong bật lại:** chạy đúng 1 lệnh trên là đủ, không tải lại gì:
 > ```bash
 > cd /workspace/kinderlog/backend && bash runpod/start-worker.sh
@@ -182,6 +186,9 @@ Trong pod, chạy:
 
 ```bash
 cd /workspace/kinderlog/backend && source venv/bin/activate
-celery -A app.tasks.celery_app.celery_app call ping
-# → nhận "pong" từ worker là OK
+celery -A app.tasks.celery_app.celery_app call ping --queue audio
 ```
+
+Phải có `--queue audio`: task `ping` không có trong `task_routes` nên mặc
+định rơi vào queue `celery`, mà worker trên pod không nghe queue đó → lệnh
+không có phản hồi dù worker vẫn chạy bình thường.
