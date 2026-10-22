@@ -11,7 +11,6 @@ from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import admin, admin_auth, auth, bug_reports, notifications
 from app.api.endpoints.school_admin_auth import router as school_admin_router
 from app.api.endpoints.attendance import router as attendance_router
-from app.api.endpoints.school_admin_auth import router as school_admin_router
 from app.api.endpoints.admin_dashboard import (
     router as admin_dashboard_router,
 )

@@ -11,6 +11,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/report_editor.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
@@ -183,6 +184,22 @@ class _TeacherShellState extends State<TeacherShell> {
     if (mounted) setState(() {});
   }
 
+  Future<void> openAttendance(String className, List<Child> children) async {
+    final now = DateTime.now();
+    final dateStr = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => AttendanceScreen(
+        classId: _activeClassId ?? '',
+        className: className,
+        date: dateStr,
+        roster: children,
+      ),
+    ));
+    if (mounted) setState(() => _initData());
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
         future: _initFuture,
@@ -238,6 +255,7 @@ class _TeacherShellState extends State<TeacherShell> {
                         classId: currentClassId,
                         repository: repository,
                         onOpenTimetable: () => openTimetable(className),
+                        onOpenAttendance: () => openAttendance(className, children),
                         onOpenReport: (name) => openReport(childByName(name, children)),
                         onHistory: () => setState(() => tab = TeacherTab.history),
                         onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; }),
@@ -249,6 +267,7 @@ class _TeacherShellState extends State<TeacherShell> {
                         className: className,
                         schoolName: 'Chưa có thông tin trường',
                         onOpenTimetable: () => openTimetable(className),
+                        onOpenAttendance: () => openAttendance(className, children),
                         onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: currentClassId, className: className, repository: repository))),
                         onEdit: openReport,
                       ),
