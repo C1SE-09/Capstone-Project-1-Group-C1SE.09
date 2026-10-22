@@ -266,6 +266,10 @@ class _TeacherShellState extends State<TeacherShell> {
                         classId: currentClassId,
                         className: className,
                         schoolName: 'Chưa có thông tin trường',
+                        onRefresh: () async {
+                          final c = await _loadChildren();
+                          if (mounted) setState(() => childrenFuture = Future.value(c));
+                        },
                         onOpenTimetable: () => openTimetable(className),
                         onOpenAttendance: () => openAttendance(className, children),
                         onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: currentClassId, className: className, repository: repository))),

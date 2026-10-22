@@ -31,6 +31,7 @@ import {
   SchoolClass,
   createChild,
   deleteChild,
+  deleteChildrenBatch,
   getChildren,
   getClasses,
   getParents,
@@ -77,6 +78,9 @@ export default function SchoolAdminStudentsPage() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Child | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDel, setConfirmBulkDel] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
 
   useEffect(() => {
@@ -314,11 +318,53 @@ export default function SchoolAdminStudentsPage() {
     try {
       await deleteChild(c.id);
       setToast({ msg: `Đã xóa ${c.full_name}`, tone: "ok" });
+      setSelectedIds((prev) => prev.filter((id) => id !== c.id));
       mutate();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
     }
     setConfirmDel(null);
+  }
+
+  const allSelected =
+    filtered.length > 0 && filtered.every((c) => selectedIds.includes(c.id));
+  const someSelected =
+    selectedIds.length > 0 && !allSelected;
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map((c) => c.id));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await deleteChildrenBatch(selectedIds);
+      setToast({
+        msg: res.message || `Đã xóa ${selectedIds.length} học sinh`,
+        tone: "ok",
+      });
+      setSelectedIds([]);
+      mutate();
+    } catch (err: any) {
+      setToast({
+        msg: err?.message || "Không thể xóa hàng loạt học sinh",
+        tone: "bad",
+      });
+    } finally {
+      setBulkDeleting(false);
+      setConfirmBulkDel(false);
+    }
   }
 
   function toggleParent(pid: string) {
@@ -389,6 +435,41 @@ export default function SchoolAdminStudentsPage() {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div
+          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
+          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
+        >
+          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
+              style={{ background: "#BB4A34" }}
+            >
+              {selectedIds.length}
+            </span>
+            <span>Đã chọn {selectedIds.length} học sinh</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="kbtn kbtn-secondary text-xs"
+              disabled={bulkDeleting}
+            >
+              Bỏ chọn
+            </button>
+            <button
+              onClick={() => setConfirmBulkDel(true)}
+              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
+              style={{ background: "#BB4A34" }}
+              disabled={bulkDeleting}
+            >
+              <span>🗑️</span>
+              <span>Xóa đã chọn ({selectedIds.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="card overflow-hidden">
         {!children && !childrenError ? (
           <Spinner />
@@ -418,6 +499,18 @@ export default function SchoolAdminStudentsPage() {
                 style={{ background: "#EFECE5", color: "#605D57" }}
               >
                 <tr>
+                  <th className="px-3 py-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded cursor-pointer"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected;
+                      }}
+                      onChange={toggleSelectAll}
+                      title="Chọn tất cả học sinh hiển thị"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
                   <th className="px-4 py-3 text-left font-semibold">Lớp</th>
                   <th className="px-4 py-3 text-left font-semibold">Phụ huynh</th>
@@ -427,8 +520,23 @@ export default function SchoolAdminStudentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c, idx) => (
-                  <tr key={c.id} className={idx > 0 ? "border-t border-line" : ""}>
+                {filtered.map((c, idx) => {
+                  const isSelected = selectedIds.includes(c.id);
+                  return (
+                  <tr
+                    key={c.id}
+                    className={`${idx > 0 ? "border-t border-line" : ""} ${
+                      isSelected ? "bg-[#FDF8F6]" : ""
+                    }`}
+                  >
+                    <td className="px-3 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(c.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div
@@ -484,7 +592,8 @@ export default function SchoolAdminStudentsPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -708,6 +817,15 @@ export default function SchoolAdminStudentsPage() {
         message={`Bạn có chắc muốn xóa "${confirmDel?.full_name}"? Toàn bộ liên kết phụ huynh sẽ bị xóa.`}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDel}
+        title={`Xóa ${selectedIds.length} học sinh đã chọn?`}
+        message={`Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} học sinh này? Toàn bộ hồ sơ sức khỏe và dữ liệu liên quan sẽ được xóa bỏ.`}
+        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} học sinh`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
       />
 
       <ImportModal

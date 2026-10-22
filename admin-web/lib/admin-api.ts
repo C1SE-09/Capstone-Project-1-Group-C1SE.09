@@ -71,6 +71,14 @@ export function deleteTeacher(id: string) {
   });
 }
 
+export function deleteTeachersBatch(ids: string[]) {
+  return apiFetch<{ message: string; deleted_count: number }>(`/api/admin/teachers/batch-delete`, {
+    method: "POST",
+    body: { ids },
+    account: "schoolAdmin",
+  });
+}
+
 /* ════════ Parents ════════ */
 export interface Parent {
   id: string;
@@ -121,6 +129,14 @@ export function updateParent(id: string, data: ParentPayload) {
 export function deleteParent(id: string) {
   return apiFetch<{ message: string }>(`/api/admin/parents/${id}`, {
     method: "DELETE",
+    account: "schoolAdmin",
+  });
+}
+
+export function deleteParentsBatch(ids: string[]) {
+  return apiFetch<{ message: string; deleted_count: number }>(`/api/admin/parents/batch-delete`, {
+    method: "POST",
+    body: { ids },
     account: "schoolAdmin",
   });
 }
@@ -195,6 +211,14 @@ export function updateChild(id: string, data: ChildPayload) {
 export function deleteChild(id: string) {
   return apiFetch<{ message: string }>(`/api/admin/children/${id}`, {
     method: "DELETE",
+    account: "schoolAdmin",
+  });
+}
+
+export function deleteChildrenBatch(ids: string[]) {
+  return apiFetch<{ message: string; deleted_count: number }>(`/api/admin/children/batch-delete`, {
+    method: "POST",
+    body: { ids },
     account: "schoolAdmin",
   });
 }
@@ -282,6 +306,14 @@ export function updateSchedule(id: string, data: Partial<SchedulePayload>) {
 export function deleteSchedule(id: string) {
   return apiFetch<{ message: string }>(`/api/admin/schedules/${id}`, {
     method: "DELETE",
+    account: "schoolAdmin",
+  });
+}
+
+export function deleteSchedulesBatch(ids: string[]) {
+  return apiFetch<{ message: string; deleted_count: number }>(`/api/admin/schedules/batch-delete`, {
+    method: "POST",
+    body: { ids },
     account: "schoolAdmin",
   });
 }

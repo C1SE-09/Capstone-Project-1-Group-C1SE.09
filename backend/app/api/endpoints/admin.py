@@ -20,6 +20,10 @@ from sqlalchemy.orm import Session
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+class BatchDeleteRequest(BaseModel):
+    ids: list[str]
+
+
 def _validate_phone_10_digits(phone: str | None) -> None:
     if phone and phone.strip():
         clean = phone.strip()
@@ -340,6 +344,24 @@ def update_teacher(teacher_id: str, data: TeacherUpdate, db: Session = Depends(g
     return {"message": "Cập nhật giáo viên thành công"}
 
 
+@router.post("/teachers/batch-delete")
+@router.delete("/teachers/batch-delete")
+def batch_delete_teachers(payload: BatchDeleteRequest, db: Session = Depends(get_db)):
+    deleted_count = 0
+    for teacher_id in payload.ids:
+        try:
+            t_uid = uuid.UUID(teacher_id.strip())
+        except Exception:
+            continue
+        t = db.query(Teacher).filter(Teacher.teacher_id == t_uid).first()
+        if not t:
+            continue
+        db.delete(t)
+        deleted_count += 1
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} giáo viên", "deleted_count": deleted_count}
+
+
 @router.delete("/teachers/{teacher_id}")
 def delete_teacher(teacher_id: str, db: Session = Depends(get_db)):
     t = db.query(Teacher).filter(Teacher.teacher_id == uuid.UUID(teacher_id)).first()
@@ -520,6 +542,40 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
     return {"message": "Tạo phụ huynh thành công", "id": str(parent.parent_id)}
 
 
+class BatchDeleteParentsRequest(BaseModel):
+    ids: list[str]
+
+
+@router.post("/parents/batch-delete")
+@router.delete("/parents/batch-delete")
+def batch_delete_parents(payload: BatchDeleteParentsRequest, db: Session = Depends(get_db)):
+    deleted_count = 0
+    for parent_id in payload.ids:
+        try:
+            p_uid = uuid.UUID(parent_id.strip())
+        except Exception:
+            continue
+        p = db.query(Parent).filter(Parent.parent_id == p_uid).first()
+        if not p:
+            continue
+
+        links = db.query(ParentChild).filter(ParentChild.parent_id == p.parent_id).all()
+        for link in links:
+            ch = db.query(Child).filter(Child.child_id == link.child_id).first()
+            if ch and ch.parent_id == p.parent_id:
+                other = db.query(ParentChild).filter(
+                    ParentChild.child_id == ch.child_id,
+                    ParentChild.parent_id != p.parent_id,
+                ).first()
+                ch.parent_id = other.parent_id if other else None
+
+        db.delete(p)
+        deleted_count += 1
+
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} phụ huynh", "deleted_count": deleted_count}
+
+
 @router.put("/parents/{parent_id}")
 def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_db)):
     p = db.query(Parent).filter(Parent.parent_id == uuid.UUID(parent_id)).first()
@@ -613,7 +669,12 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
 
 @router.delete("/parents/{parent_id}")
 def delete_parent(parent_id: str, db: Session = Depends(get_db)):
-    p = db.query(Parent).filter(Parent.parent_id == uuid.UUID(parent_id)).first()
+    try:
+        p_uid = uuid.UUID(parent_id.strip())
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID phụ huynh không hợp lệ")
+
+    p = db.query(Parent).filter(Parent.parent_id == p_uid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Không tìm thấy phụ huynh")
 
@@ -1060,6 +1121,27 @@ def update_child(
     return {"message": "Cập nhật học sinh thành công"}
 
 
+@router.post("/children/batch-delete")
+@router.delete("/children/batch-delete")
+def batch_delete_children(
+    payload: BatchDeleteRequest,
+    db: Session = Depends(get_db),
+):
+    deleted_count = 0
+    for child_id in payload.ids:
+        try:
+            c_uid = uuid.UUID(child_id.strip())
+        except Exception:
+            continue
+        c = db.query(Child).filter(Child.child_id == c_uid).first()
+        if not c:
+            continue
+        db.delete(c)
+        deleted_count += 1
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} học sinh", "deleted_count": deleted_count}
+
+
 @router.delete("/children/{child_id}")
 def delete_child(
     child_id: str,
@@ -1253,6 +1335,24 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
 
     db.commit()
     return {"message": "Cập nhật lịch sinh hoạt thành công"}
+
+
+@router.post("/schedules/batch-delete")
+@router.delete("/schedules/batch-delete")
+def batch_delete_schedules(payload: BatchDeleteRequest, db: Session = Depends(get_db)):
+    deleted_count = 0
+    for schedule_id in payload.ids:
+        try:
+            s_uid = uuid.UUID(schedule_id.strip())
+        except Exception:
+            continue
+        s = db.query(ClassSchedule).filter(ClassSchedule.schedule_id == s_uid).first()
+        if not s:
+            continue
+        db.delete(s)
+        deleted_count += 1
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} lịch sinh hoạt", "deleted_count": deleted_count}
 
 
 @router.delete("/schedules/{schedule_id}")
