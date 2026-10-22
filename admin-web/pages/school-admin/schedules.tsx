@@ -22,7 +22,7 @@ import {
   ImportResult,
 } from "@/components/ui-school";
 import { exportToExcel } from "@/lib/excel-helper";
-import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import {
   Room,
   Schedule,
@@ -117,7 +117,7 @@ export default function SchoolAdminSchedulesPage() {
   const currentClassName = selectedClassId ? classMap.get(selectedClassId) || "" : "";
 
   // Tải tất cả lịch trong trường để kiểm tra xung đột phòng và trùng lịch tuần
-  const { data: allSchedules, mutate: mutateAll } = useSWR<Schedule[]>(
+  const { data: allSchedules, error: allSchedulesError, mutate: mutateAll } = useSWR<Schedule[]>(
     ready ? "all-schedules" : null,
     () => getSchedules(),
     { refreshInterval: 30000 },
@@ -183,11 +183,20 @@ export default function SchoolAdminSchedulesPage() {
 
   const dayOfWeek = selectedDay + 2; // backend expects 2..6 (Mon..Fri)
 
-  const { data: directDaySchedules, mutate: mutateDay } = useSWR<Schedule[]>(
+  const { data: directDaySchedules, error: daySchedulesError, mutate: mutateDay } = useSWR<Schedule[]>(
     ready && selectedClassId ? ["schedules", selectedClassId, dayOfWeek] : null,
     () => getSchedules(selectedClassId, dayOfWeek),
     { refreshInterval: 30000 },
   );
+
+  const scheduleError = daySchedulesError || allSchedulesError;
+
+  useEffect(() => {
+    if (scheduleError && (scheduleError as any).status === 401) {
+      clearToken("schoolAdmin");
+      window.location.href = "/login";
+    }
+  }, [scheduleError]);
 
   const schedules = useMemo(() => {
     if (directDaySchedules) return directDaySchedules;
@@ -892,8 +901,25 @@ export default function SchoolAdminSchedulesPage() {
 
       {/* Schedule list */}
       <div className="card overflow-hidden">
-        {!schedules ? (
+        {!schedules && !scheduleError ? (
           <Spinner />
+        ) : scheduleError ? (
+          <div className="text-center py-12">
+            <div className="text-bad font-semibold mb-2">
+              {(scheduleError as any)?.status === 401
+                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
+                : `Không thể tải thời khóa biểu (${(scheduleError as any)?.detail || "Vui lòng thử lại"})`}
+            </div>
+            <button
+              onClick={() => {
+                mutateAll();
+                mutateDay();
+              }}
+              className="kbtn kbtn-secondary mt-2"
+            >
+              Thử lại
+            </button>
+          </div>
         ) : filteredSchedules.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">📅</div>

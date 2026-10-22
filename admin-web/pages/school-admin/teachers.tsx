@@ -22,7 +22,7 @@ import {
   ImportModal,
   ImportResult,
 } from "@/components/ui-school";
-import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   Teacher,
@@ -81,11 +81,18 @@ export default function SchoolAdminTeachersPage() {
       .catch(() => {});
   }, []);
 
-  const { data: teachers, mutate } = useSWR<Teacher[]>(
+  const { data: teachers, error: teachersError, mutate } = useSWR<Teacher[]>(
     ready ? "teachers" : null,
     () => getTeachers(),
     { refreshInterval: 30000 },
   );
+
+  useEffect(() => {
+    if (teachersError && (teachersError as any).status === 401) {
+      clearToken("schoolAdmin");
+      window.location.href = "/login";
+    }
+  }, [teachersError]);
 
   const filtered = useMemo(() => {
     let list = teachers ?? [];
@@ -337,8 +344,19 @@ export default function SchoolAdminTeachersPage() {
       </div>
 
       <div className="card overflow-hidden">
-        {!teachers ? (
+        {!teachers && !teachersError ? (
           <Spinner />
+        ) : teachersError ? (
+          <div className="text-center py-12">
+            <div className="text-bad font-semibold mb-2">
+              {(teachersError as any)?.status === 401
+                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
+                : `Không thể tải danh sách giáo viên (${(teachersError as any)?.detail || "Vui lòng thử lại"})`}
+            </div>
+            <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
+              Thử lại
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">👨‍🏫</div>

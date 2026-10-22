@@ -954,11 +954,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       fontWeight: FontWeight.w700,
                     ),
               ),
-              const SizedBox(height: 5),
-              Text(
-                subtitle,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
+              if (subtitle.trim().isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ],
             ],
           ),
         ),
@@ -1582,7 +1584,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: [
         _heading(
           'Chức năng quản trị hệ thống',
-          'Quản lý giáo viên, học sinh, phụ huynh và kiểm tra xung đột thời khóa biểu tự động.',
+          '',
         ),
         const SizedBox(height: 16),
         // Lưới 2x2 hiển thị trọn vẹn 100% cả 4 danh mục không bị cắt xén
@@ -1794,6 +1796,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           v.nickname.isNotEmpty ? 'Bé ${v.nickname}' : 'Học sinh',
           [
             'Lớp: ${v.className}',
+            if (v.dateOfBirth != null && v.dateOfBirth!.trim().isNotEmpty)
+              'Ngày sinh: ${_formatIsoDate(v.dateOfBirth!)}',
             'Phụ huynh: ${v.parentsSummary.isNotEmpty ? v.parentsSummary : (v.parentName ?? "Chưa liên kết")}',
             'Y tế: ${v.note.isNotEmpty ? v.note : "Bình thường, không dị ứng"}',
           ],
@@ -1900,6 +1904,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ),
     );
+  }
+
+  String _formatIsoDate(String iso) {
+    try {
+      final parts = iso.split('T')[0].split('-');
+      if (parts.length == 3) {
+        return '${parts[2].padLeft(2, '0')}/${parts[1].padLeft(2, '0')}/${parts[0]}';
+      }
+      final d = DateTime.parse(iso);
+      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    } catch (_) {
+      return iso;
+    }
   }
 
   // ═════════════════════════════════════════════════════════════════════════════
@@ -2137,12 +2154,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     int schedDay = _selectedDay;
     String? selectedClassId;
     List<String> studentParentIds = [];
+    DateTime? studentDob;
     if (category == AdminCategory.students) {
       if (item is AdminChildDto) {
         selectedClassId = item.classId;
         studentParentIds = List<String>.from(item.parentIds);
         if (studentParentIds.isEmpty && item.parentId != null) {
           studentParentIds.add(item.parentId!);
+        }
+        if (item.dateOfBirth != null && item.dateOfBirth!.isNotEmpty) {
+          studentDob = DateTime.tryParse(item.dateOfBirth!.split('T')[0]);
         }
       }
       if (selectedClassId == null && _classes.isNotEmpty) {
@@ -2347,6 +2368,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       fontSize: 14,
                                     ),
                                   ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        InkWell(
+                          onTap: () async {
+                            final now = DateTime.now();
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: studentDob ?? DateTime(now.year - 3, now.month, now.day),
+                              firstDate: DateTime(2010),
+                              lastDate: now,
+                              helpText: 'Chọn ngày sinh của bé',
+                              cancelText: 'Hủy',
+                              confirmText: 'Chọn',
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                studentDob = picked;
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Ngày sinh của học sinh (dd/MM/yyyy)',
+                              hintText: 'Bấm để chọn ngày sinh...',
+                              suffixIcon: Icon(Icons.calendar_today_outlined, size: 20),
+                            ),
+                            child: Text(
+                              studentDob != null
+                                  ? '${studentDob!.day.toString().padLeft(2, '0')}/${studentDob!.month.toString().padLeft(2, '0')}/${studentDob!.year}'
+                                  : 'Chưa thiết lập (Bấm để chọn ngày sinh)',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: studentDob != null
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Theme.of(context).hintColor,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -2702,6 +2762,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               classId: selectedClassId,
               parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
               parentIds: studentParentIds,
+              dateOfBirth: studentDob != null
+                  ? '${studentDob.year}-${studentDob.month.toString().padLeft(2, '0')}-${studentDob.day.toString().padLeft(2, '0')}'
+                  : null,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );
             break;
@@ -2757,6 +2820,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               classId: selectedClassId,
               parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
               parentIds: studentParentIds,
+              dateOfBirth: studentDob != null
+                  ? '${studentDob.year}-${studentDob.month.toString().padLeft(2, '0')}-${studentDob.day.toString().padLeft(2, '0')}'
+                  : null,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );
             break;

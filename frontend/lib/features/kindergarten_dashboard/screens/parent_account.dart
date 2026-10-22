@@ -48,6 +48,7 @@ int parentJourneyDays(DateTime? createdAt, {DateTime? now}) {
 String formatChildAge(DateTime? dob, {DateTime? now}) {
   if (dob == null) return '';
   final current = now ?? DateTime.now();
+  if (dob.isAfter(current)) return '';
   int years = current.year - dob.year;
   int months = current.month - dob.month;
   if (current.day < dob.day) {
@@ -739,6 +740,11 @@ class _ParentChildEditSheetBodyState extends State<_ParentChildEditSheetBody> {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() => _error = 'Họ và tên của bé không được để trống.');
+      return;
+    }
+
+    if (_selectedDob != null && _selectedDob!.isAfter(DateTime.now())) {
+      setState(() => _error = 'Ngày sinh của bé không thể là ngày trong tương lai.');
       return;
     }
 

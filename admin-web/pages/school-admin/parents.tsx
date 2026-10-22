@@ -19,7 +19,7 @@ import {
   ImportModal,
   ImportResult,
 } from "@/components/ui-school";
-import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   Child,
@@ -148,11 +148,18 @@ export default function SchoolAdminParentsPage() {
     });
   }, []);
 
-  const { data: parents, mutate } = useSWR<Parent[]>(
+  const { data: parents, error: parentsError, mutate } = useSWR<Parent[]>(
     ready ? "parents" : null,
     () => getParents(),
     { refreshInterval: 30000 },
   );
+
+  useEffect(() => {
+    if (parentsError && (parentsError as any).status === 401) {
+      clearToken("schoolAdmin");
+      window.location.href = "/login";
+    }
+  }, [parentsError]);
 
   const filtered = useMemo(() => {
     let list = parents ?? [];
@@ -391,8 +398,19 @@ export default function SchoolAdminParentsPage() {
       </div>
 
       <div className="card overflow-hidden">
-        {!parents ? (
+        {!parents && !parentsError ? (
           <Spinner />
+        ) : parentsError ? (
+          <div className="text-center py-12">
+            <div className="text-bad font-semibold mb-2">
+              {(parentsError as any)?.status === 401
+                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
+                : `Không thể tải danh sách phụ huynh (${(parentsError as any)?.detail || "Vui lòng thử lại"})`}
+            </div>
+            <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
+              Thử lại
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">👪</div>

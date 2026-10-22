@@ -22,7 +22,7 @@ import {
   ImportModal,
   ImportResult,
 } from "@/components/ui-school";
-import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   Child,
@@ -93,11 +93,18 @@ export default function SchoolAdminStudentsPage() {
     );
   }, []);
 
-  const { data: children, mutate } = useSWR<Child[]>(
+  const { data: children, error: childrenError, mutate } = useSWR<Child[]>(
     ready ? "students" : null,
     () => getChildren(),
     { refreshInterval: 30000 },
   );
+
+  useEffect(() => {
+    if (childrenError && (childrenError as any).status === 401) {
+      clearToken("schoolAdmin");
+      window.location.href = "/login";
+    }
+  }, [childrenError]);
 
   const filtered = useMemo(() => {
     let list = children ?? [];
@@ -170,6 +177,17 @@ export default function SchoolAdminStudentsPage() {
         continue;
       }
 
+      if (dob) {
+        const today = new Date().toISOString().split("T")[0];
+        if (dob > today) {
+          failed++;
+          errors.push(
+            `Dòng ${i + 1} (${fullName}): Ngày sinh (${dob}) không thể là ngày trong tương lai.`,
+          );
+          continue;
+        }
+      }
+
       let matchedClassId: string | null = null;
       if (classNameOrId) {
         const found = classes.find(
@@ -238,6 +256,16 @@ export default function SchoolAdminStudentsPage() {
     if (!form.full_name.trim()) {
       setToast({ msg: "Vui lòng nhập họ tên học sinh", tone: "bad" });
       return;
+    }
+    if (form.date_of_birth) {
+      const today = new Date().toISOString().split("T")[0];
+      if (form.date_of_birth > today) {
+        setToast({
+          msg: "Ngày sinh không thể là ngày trong tương lai",
+          tone: "bad",
+        });
+        return;
+      }
     }
     if (form.allergy_status === "present" && !form.medical_allergies.trim()) {
       setToast({ msg: "Vui lòng nhập mô tả dị ứng của bé", tone: "bad" });
@@ -362,8 +390,19 @@ export default function SchoolAdminStudentsPage() {
       </div>
 
       <div className="card overflow-hidden">
-        {!children ? (
+        {!children && !childrenError ? (
           <Spinner />
+        ) : childrenError ? (
+          <div className="text-center py-12">
+            <div className="text-bad font-semibold mb-2">
+              {(childrenError as any)?.status === 401
+                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
+                : `Không thể tải danh sách học sinh (${(childrenError as any)?.detail || "Vui lòng thử lại"})`}
+            </div>
+            <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
+              Thử lại
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">🧒</div>
@@ -504,12 +543,33 @@ export default function SchoolAdminStudentsPage() {
             ))}
           </select>
         </FormField>
-        <FormField label="Ngày sinh">
+        <FormField
+          label="Ngày sinh"
+          hint={
+            form.date_of_birth
+              ? `Đã chọn: ${formatDate(form.date_of_birth)}`
+              : "Bấm để chọn ngày sinh (dd/mm/yyyy)"
+          }
+        >
           <input
             type="date"
-            className="kinput"
+            className="kinput cursor-pointer"
+            max={new Date().toISOString().split("T")[0]}
             value={form.date_of_birth}
-            onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+            onKeyDown={(e) => e.preventDefault()}
+            onClick={(e) => (e.target as any).showPicker?.()}
+            onChange={(e) => {
+              const val = e.target.value;
+              const today = new Date().toISOString().split("T")[0];
+              if (val && val > today) {
+                setToast({
+                  msg: "Không thể chọn ngày trong tương lai",
+                  tone: "warn",
+                });
+                return;
+              }
+              setForm({ ...form, date_of_birth: val });
+            }}
           />
         </FormField>
         <FormField label="Giới tính">
@@ -678,10 +738,14 @@ export default function SchoolAdminStudentsPage() {
   );
 }
 
-function formatDate(iso: string) {
-  // iso yyyy-mm-dd → dd/mm/yyyy
+function formatDate(iso: string | null | undefined): string {
+  // iso yyyy-mm-dd hoặc yyyy-mm-ddThh:mm:ss → dd/mm/yyyy
   if (!iso) return "—";
-  const parts = iso.split("-");
-  if (parts.length !== 3) return iso;
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const datePart = iso.split("T")[0];
+  const parts = datePart.split("-");
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
+  }
+  return iso;
 }

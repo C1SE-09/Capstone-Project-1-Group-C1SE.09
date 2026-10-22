@@ -844,8 +844,16 @@ def create_child(
     if data.date_of_birth and data.date_of_birth.strip():
         try:
             parsed_dob = date.fromisoformat(data.date_of_birth.strip())
-        except Exception:
-            pass
+            if parsed_dob > date.today():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Ngày sinh của học sinh không thể là ngày trong tương lai.",
+                )
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Định dạng ngày sinh không hợp lệ (YYYY-MM-DD).",
+            )
 
     child = Child(
         child_id=uuid.uuid4(),
@@ -970,9 +978,18 @@ def update_child(
     if data.date_of_birth is not None:
         if data.date_of_birth.strip():
             try:
-                c.date_of_birth = date.fromisoformat(data.date_of_birth.strip())
-            except Exception:
-                pass
+                dob_val = date.fromisoformat(data.date_of_birth.strip())
+                if dob_val > date.today():
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Ngày sinh của học sinh không thể là ngày trong tương lai.",
+                    )
+                c.date_of_birth = dob_val
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Định dạng ngày sinh không hợp lệ (YYYY-MM-DD).",
+                )
         else:
             c.date_of_birth = None
     if data.gender is not None:
