@@ -21,11 +21,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.config import get_today
+from app.core.access import role_of, teacher_owns_class
 from app.core.database import get_db
+from app.core.security import require_any_role
 from app.models.child import Child, ChildStatus, Parent
 from app.models.report import DailyReport, DailyReportStatus, VoiceRecord
-from app.models.user import Class_, Teacher
-from app.config import get_today
+from app.models.user import Class_, Teacher, User
+
 router = APIRouter(tags=["dashboard"])
 
 
@@ -75,6 +78,18 @@ def _child_dict(child: Child) -> dict[str, Any]:
         "gender": child.gender,
         "avatar_url": child.avatar_url,
         "medical_allergies": child.medical_allergies,
+        "allergy_status": child.allergy_status or "unknown",
+        "care_notes": child.care_notes,
+        "health_updated_at": (
+            child.health_updated_at.isoformat() if child.health_updated_at else None
+        ),
+        "health_updated_by_user_id": (
+            str(child.health_updated_by_user_id)
+            if child.health_updated_by_user_id
+            else None
+        ),
+        "health_update_source": child.health_update_source,
+        "health_version": child.health_version or 1,
     }
 
 
@@ -237,11 +252,17 @@ def get_class_dashboard(
     class_id: uuid.UUID,
     date_param: date | None = Query(default=None, alias="date"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin")),
 ):
     """
     Trả về summary của lớp khớp ClassDashboardSummary (frontend):
     tổng trẻ, completed/draft/missing, danh sách trẻ cần xử lý.
     """
+    if role_of(current_user) == "teacher" and not teacher_owns_class(
+        current_user, class_id
+    ):
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+
     class_ = db.query(Class_).filter(Class_.class_id == class_id).first()
     if class_ is None:
         raise HTTPException(status_code=404, detail="Class not found")
@@ -439,11 +460,14 @@ def get_class_activities(
 def get_parent(
     parent_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
 ):
     """Trả về thông tin 1 phụ huynh, khớp entity Parent (frontend)."""
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
+    if role_of(current_user) == "parent" and current_user.parent_id != parent_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
     return {
         "parent_id": str(parent.parent_id),
         "full_name": parent.full_name,
@@ -463,6 +487,7 @@ def get_parent(
 def get_parent_primary_child(
     parent_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
 ):
     """
     Trả về 1 đứa con (đầu tiên) + tên lớp + tên giáo viên,
@@ -471,6 +496,8 @@ def get_parent_primary_child(
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
     if not parent:
         raise HTTPException(status_code=404, detail="Parent not found")
+    if role_of(current_user) == "parent" and current_user.parent_id != parent_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
 
     children: list[Child] = []
     if hasattr(parent, "children") and parent.children:

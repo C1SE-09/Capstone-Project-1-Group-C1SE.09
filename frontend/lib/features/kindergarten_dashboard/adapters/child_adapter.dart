@@ -15,6 +15,7 @@ ui.Child uiChildFromDomain({
       name: child.fullName,
       nickname: child.nickname,
       allergy: child.medicalAllergies,
+      careNotes: child.careNotes,
       status: reportStatus,
       severity: severity,
       present: true,

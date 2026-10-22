@@ -199,6 +199,32 @@ class HttpDashboardRepository implements DashboardRepository {
   }
 
   @override
+  Future<Child> getChildHealthProfile(String childId) async {
+    final data = await _get('/api/children/$childId/health-profile');
+    return Child.fromJson(data);
+  }
+
+  @override
+  Future<Child> updateChildHealthProfile({
+    required String childId,
+    required String allergyStatus,
+    String? medicalAllergies,
+    String? careNotes,
+    required int expectedVersion,
+  }) async {
+    final data = await _patch(
+      '/api/children/$childId/health-profile',
+      data: {
+        'allergy_status': allergyStatus,
+        'medical_allergies': medicalAllergies,
+        'care_notes': careNotes,
+        'expected_version': expectedVersion,
+      },
+    );
+    return Child.fromJson(data);
+  }
+
+  @override
   Future<DailyReport?> getTodayReport(
     String childId,
     DateTime date, {
@@ -378,6 +404,21 @@ class HttpDashboardRepository implements DashboardRepository {
     } on DioException catch (error) {
       throw ClassDataException(
         _extractErrorMessage(error, 'Không thể lưu dữ liệu. Vui lòng kiểm tra lại mạng hoặc thử lại sau.'),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> _patch(
+    String path, {
+    dynamic data,
+  }) async {
+    try {
+      final response = await _dio.patch(path, data: data);
+      return _asMap(response.data);
+    } on DioException catch (error) {
+      throw ClassDataException(
+        error.message ?? 'Không thể lưu dữ liệu.',
         statusCode: error.response?.statusCode,
       );
     }

@@ -309,8 +309,9 @@ void main() {
         openAccount: false,
       );
 
+      expect(find.text('Bé bị dị ứng đậu phộng'), findsOneWidget);
       expect(
-        find.text('Bé bị dị ứng đậu phộng — nhà trường đã nắm thông tin'),
+        find.text('Cập nhật trong Hồ sơ sức khỏe để cô giáo lưu ý.'),
         findsOneWidget,
       );
     },
@@ -505,9 +506,9 @@ void main() {
     // Icon edit lớn ở header tên bé
     expect(find.byTooltip('Chỉnh sửa thông tin bé'), findsOneWidget);
 
-    // Toàn màn hình chỉ có đúng 2 icon edit: 1 ở hero phụ huynh, 1 ở tên bé
+    // Toàn màn hình có 3 icon edit: hero phụ huynh, tên bé, dòng hồ sơ sức khỏe
     final editIcons = find.byIcon(Icons.edit_outlined);
-    expect(editIcons, findsNWidgets(2));
+    expect(editIcons, findsNWidgets(3));
   });
 }
 

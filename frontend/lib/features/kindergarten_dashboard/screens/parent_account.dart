@@ -20,6 +20,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'bug_report_sheet.dart';
 import 'change_password_screen.dart';
+import 'parent_health_profile_screen.dart';
 
 /// Khoá lưu lựa chọn nhận thông báo đẩy trên máy.
 const kParentPushPrefsKey = 'kinderlog-parent-push';
@@ -86,6 +87,7 @@ class ParentAccount extends StatefulWidget {
     this.onChildUpdated,
     this.repository,
     this.onLogout,
+    this.onHealthUpdated,
   });
 
   final Parent parent;
@@ -97,6 +99,7 @@ class ParentAccount extends StatefulWidget {
   final ValueChanged<Child>? onChildUpdated;
   final HttpDashboardRepository? repository;
   final VoidCallback? onLogout;
+  final ValueChanged<Child>? onHealthUpdated;
 
   @override
   State<ParentAccount> createState() => _ParentAccountState();
@@ -158,6 +161,16 @@ class _ParentAccountState extends State<ParentAccount> {
       parentId: widget.parent.parentId,
       repository: widget.repository,
       onSaved: (updated) => widget.onChildUpdated?.call(updated),
+    );
+  }
+
+  void _openHealthProfile() {
+    showParentHealthProfile(
+      context,
+      child: widget.overview.child,
+      className: widget.overview.className,
+      repository: widget.repository ?? HttpDashboardRepository(),
+      onSaved: widget.onHealthUpdated,
     );
   }
 
@@ -374,6 +387,16 @@ class _ParentAccountState extends State<ParentAccount> {
                   danger: true,
                   icon: Icons.warning_amber_rounded,
                 ),
+              KInfoRow(
+                label: 'Hồ sơ sức khỏe',
+                value: switch (child.allergyStatus) {
+                  'present' => 'Có dị ứng',
+                  'none' => 'Không có dị ứng',
+                  _ => 'Chưa khai báo',
+                },
+                icon: Icons.health_and_safety_outlined,
+                onTap: _openHealthProfile,
+              ),
             ],
           ),
         ),

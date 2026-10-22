@@ -118,6 +118,8 @@ class _ParentFlowState extends State<ParentFlow> {
     });
   }
 
+  void _onHealthUpdated(Child child) => _onChildUpdated(child);
+
   void _onParentUpdated(String phone, String? email, String? relationship) {
     setState(() {
       future = future.then(
@@ -233,6 +235,7 @@ class _ParentFlowState extends State<ParentFlow> {
                       repository: repository,
                       onOpenReport: (report) => _openReport(data, report),
                       onPhoneUpdated: _onPhoneUpdated,
+                      onHealthUpdated: _onHealthUpdated,
                       onParentUpdated: _onParentUpdated,
                       onChildUpdated: _onChildUpdated,
                       onLogout: widget.onLogout,
@@ -471,8 +474,12 @@ class _ParentOverview extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Bé bị dị ứng $allergy — nhà trường đã nắm thông tin',
+                        'Bé bị dị ứng $allergy',
                         style: const TextStyle(fontSize: 13),
+                      ),
+                      Text(
+                        'Cập nhật trong Hồ sơ sức khỏe để cô giáo lưu ý.',
+                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
                       ),
                     ],
                   ),

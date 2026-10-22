@@ -217,6 +217,14 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                             style: TextStyle(
                                                 fontSize: 12,
                                                 color: context.k.warn)),
+                                      if ((child.careNotes ?? '')
+                                          .trim()
+                                          .isNotEmpty)
+                                        Text(
+                                            'Lưu ý: ${child.careNotes!.trim()}',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: context.k.inkSoft)),
                                     ],
                                   ),
                                 ),

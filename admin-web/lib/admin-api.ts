@@ -151,6 +151,9 @@ export interface Child {
   date_of_birth: string | null;
   gender: string;
   note: string;
+  allergy_status: string; // unknown | none | present
+  care_notes: string;
+  health_version: number;
   status: string;
 }
 
@@ -162,6 +165,8 @@ export interface ChildPayload {
   parent_ids?: string[] | null;
   parent_items?: { parent_id: string; relationship: string; is_primary: boolean; can_pickup: boolean }[] | null;
   medical_allergies?: string | null;
+  allergy_status?: string;
+  care_notes?: string | null;
   date_of_birth?: string | null;
   gender?: string;
   status?: string;
