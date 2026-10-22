@@ -29,6 +29,7 @@ import {
   SchoolClass,
   createParent,
   deleteParent,
+  deleteParentsBatch,
   getChildren,
   getClasses,
   getParents,
@@ -131,6 +132,9 @@ export default function SchoolAdminParentsPage() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Parent | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDel, setConfirmBulkDel] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
 
   useEffect(() => {
@@ -321,15 +325,57 @@ export default function SchoolAdminParentsPage() {
     }
   }
 
+  const allSelected =
+    filtered.length > 0 && filtered.every((p) => selectedIds.includes(p.id));
+  const someSelected =
+    selectedIds.length > 0 && !allSelected;
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map((p) => p.id));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
   async function handleDelete(p: Parent) {
     try {
       await deleteParent(p.id);
       setToast({ msg: `Đã xóa ${p.full_name}`, tone: "ok" });
+      setSelectedIds((prev) => prev.filter((id) => id !== p.id));
       mutate();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
     }
     setConfirmDel(null);
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await deleteParentsBatch(selectedIds);
+      setToast({
+        msg: res.message || `Đã xóa ${selectedIds.length} phụ huynh`,
+        tone: "ok",
+      });
+      setSelectedIds([]);
+      mutate();
+    } catch (err: any) {
+      setToast({
+        msg: err?.message || "Không thể xóa hàng loạt phụ huynh",
+        tone: "bad",
+      });
+    } finally {
+      setBulkDeleting(false);
+      setConfirmBulkDel(false);
+    }
   }
 
   function toggleChild(cid: string) {
@@ -397,6 +443,41 @@ export default function SchoolAdminParentsPage() {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div
+          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
+          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
+        >
+          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
+              style={{ background: "#BB4A34" }}
+            >
+              {selectedIds.length}
+            </span>
+            <span>Đã chọn {selectedIds.length} phụ huynh</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="kbtn kbtn-secondary text-xs"
+              disabled={bulkDeleting}
+            >
+              Bỏ chọn
+            </button>
+            <button
+              onClick={() => setConfirmBulkDel(true)}
+              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
+              style={{ background: "#BB4A34" }}
+              disabled={bulkDeleting}
+            >
+              <span>🗑️</span>
+              <span>Xóa đã chọn ({selectedIds.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="card overflow-hidden">
         {!parents && !parentsError ? (
           <Spinner />
@@ -426,6 +507,18 @@ export default function SchoolAdminParentsPage() {
                 style={{ background: "#EFECE5", color: "#605D57" }}
               >
                 <tr>
+                  <th className="px-3 py-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded cursor-pointer"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected;
+                      }}
+                      onChange={toggleSelectAll}
+                      title="Chọn tất cả phụ huynh hiển thị"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
                   <th className="px-4 py-3 text-left font-semibold">SĐT / Quan hệ</th>
                   <th className="px-4 py-3 text-left font-semibold">Con liên kết</th>
@@ -435,8 +528,23 @@ export default function SchoolAdminParentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p, idx) => (
-                  <tr key={p.id} className={idx > 0 ? "border-t border-line" : ""}>
+                {filtered.map((p, idx) => {
+                  const isSelected = selectedIds.includes(p.id);
+                  return (
+                  <tr
+                    key={p.id}
+                    className={`${idx > 0 ? "border-t border-line" : ""} ${
+                      isSelected ? "bg-[#FDF8F6]" : ""
+                    }`}
+                  >
+                    <td className="px-3 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(p.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div
@@ -487,15 +595,23 @@ export default function SchoolAdminParentsPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      <div className="text-xs text-ink-faint mt-2">
-        Tổng: <span className="font-bold text-ink">{filtered.length}</span> phụ huynh
+      <div className="text-xs text-ink-faint mt-2 flex items-center justify-between">
+        <div>
+          Tổng: <span className="font-bold text-ink">{filtered.length}</span> phụ huynh
+          {selectedIds.length > 0 && (
+            <span className="ml-2 font-semibold text-bad">
+              (Đã chọn {selectedIds.length})
+            </span>
+          )}
+        </div>
       </div>
 
       <Drawer
@@ -624,9 +740,18 @@ export default function SchoolAdminParentsPage() {
       <ConfirmDialog
         open={!!confirmDel}
         title="Xóa phụ huynh?"
-        message={`Bạn có chắc muốn xóa "${confirmDel?.full_name}"? Liên kết với học sinh sẽ được gỡ.`}
+        message={`Bạn có chắc muốn xóa "${confirmDel?.full_name}"? Toàn bộ tài khoản và liên kết với học sinh sẽ được gỡ.`}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDel}
+        title={`Xóa ${selectedIds.length} phụ huynh đã chọn?`}
+        message={`Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} phụ huynh này? Toàn bộ tài khoản và liên kết với học sinh sẽ được gỡ bỏ.`}
+        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} phụ huynh`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
       />
 
       <ImportModal

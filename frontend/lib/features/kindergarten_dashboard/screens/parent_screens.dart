@@ -177,6 +177,17 @@ class _ParentFlowState extends State<ParentFlow> {
         .length;
   }
 
+  Future<void> _handleRefresh() async {
+    try {
+      final refreshed = await _load();
+      if (mounted) setState(() => future = Future.value(refreshed));
+    } catch (e) {
+      if (mounted) {
+        setState(() => future = Future.error(e));
+      }
+    }
+  }
+
   // Renders loading, error, empty, and fetched parent data states.
   @override
   Widget build(BuildContext context) => FutureBuilder<_ParentData>(
@@ -209,37 +220,66 @@ class _ParentFlowState extends State<ParentFlow> {
             }
             return Scaffold(
               backgroundColor: context.k.canvas,
-              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+              body: SafeArea(
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: _loadError(() => setState(() => future = _load())),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             );
           }
           final data = snapshot.data;
           if (data == null) {
             return Scaffold(
               backgroundColor: context.k.canvas,
-              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+              body: SafeArea(
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: _loadError(() => setState(() => future = _load())),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             );
           }
           final unread = _unreadCount(data);
           return Scaffold(
             backgroundColor: context.k.canvas,
             body: SafeArea(
-              child: _tab == 0
-                  ? _ParentOverview(
-                      data: data,
-                      onOpenReport: (report) => _openReport(data, report),
-                    )
-                  : ParentAccount(
-                      parent: data.parent,
-                      overview: data.overview,
-                      reports: data.reports,
-                      repository: repository,
-                      onOpenReport: (report) => _openReport(data, report),
-                      onPhoneUpdated: _onPhoneUpdated,
-                      onHealthUpdated: _onHealthUpdated,
-                      onParentUpdated: _onParentUpdated,
-                      onChildUpdated: _onChildUpdated,
-                      onLogout: widget.onLogout,
-                    ),
+              child: RefreshIndicator(
+                onRefresh: _handleRefresh,
+                child: _tab == 0
+                    ? _ParentOverview(
+                        data: data,
+                        onOpenReport: (report) => _openReport(data, report),
+                      )
+                    : ParentAccount(
+                        parent: data.parent,
+                        overview: data.overview,
+                        reports: data.reports,
+                        repository: repository,
+                        onOpenReport: (report) => _openReport(data, report),
+                        onPhoneUpdated: _onPhoneUpdated,
+                        onHealthUpdated: _onHealthUpdated,
+                        onParentUpdated: _onParentUpdated,
+                        onChildUpdated: _onChildUpdated,
+                        onLogout: widget.onLogout,
+                      ),
+              ),
             ),
             bottomNavigationBar: NavigationBar(
               selectedIndex: _tab,
@@ -368,6 +408,7 @@ class _ParentOverview extends StatelessWidget {
     final allergy = child.allergy; // đã bỏ "Không có" + tiền tố "Dị ứng"
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
         Row(
@@ -655,13 +696,20 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
     final report = _currentReport;
     final date = kDateLabel(report?.reportDate ?? DateTime.now());
 
-    // Dùng giá trị đã trích xuất, thiếu thì lấy mặc định để báo cáo luôn đủ mục.
-    final eating = _nonEmpty(report?.eating) ?? 'Ăn hết suất cơm trưa, uống đủ nước.';
-    final sleeping = _nonEmpty(report?.sleeping) ?? 'Ngủ ngon giấc, đúng giờ.';
-    final activities = _nonEmpty(report?.activitiesText) ?? 'Tham gia tích cực các hoạt động học tập và vui chơi.';
-    final mood = _nonEmpty(report?.mood) ?? 'Vui vẻ, hào hứng, hòa đồng với bạn bè.';
+    // Chỉ hiển thị các mục có dữ liệu thực tế được giáo viên nhập/ghi âm
+    final eating = _nonEmpty(report?.eating);
+    final sleeping = _nonEmpty(report?.sleeping);
+    final activities = _nonEmpty(report?.activitiesText);
+    final mood = _nonEmpty(report?.mood);
     final health = _nonEmpty(report?.health);
     final note = _nonEmpty(report?.summaryText);
+
+    final hasAnyData = eating != null ||
+        sleeping != null ||
+        activities != null ||
+        mood != null ||
+        health != null ||
+        note != null;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
@@ -700,12 +748,28 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
-                  _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
-                  _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
-                  _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
-                  if (health != null) _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
-                  if (note != null) _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
+                  if (eating != null)
+                    _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
+                  if (sleeping != null)
+                    _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
+                  if (activities != null)
+                    _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
+                  if (mood != null)
+                    _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
+                  if (health != null)
+                    _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
+                  if (note != null)
+                    _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
+                  if (!hasAnyData)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'Chưa có thông tin ghi nhận cho ngày này.',
+                          style: TextStyle(color: context.k.inkFaint, fontSize: 13),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

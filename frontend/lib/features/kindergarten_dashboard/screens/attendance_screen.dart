@@ -280,9 +280,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Column(
+            : RefreshIndicator(
+                onRefresh: _fetchLatest,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -377,6 +380,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       ),
                   ],
                 ),
+              ),
               ),
         bottomNavigationBar: SafeArea(
           top: false,

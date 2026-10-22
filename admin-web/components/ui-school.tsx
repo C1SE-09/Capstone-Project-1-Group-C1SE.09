@@ -107,11 +107,12 @@ export function ProgressBar({
   tone = "brand",
   height = 8,
 }: {
-  value: number; // 0..1
+  value: number; // 0..1 hoặc 0..100
   tone?: "brand" | "ok" | "warn" | "bad";
   height?: number;
 }) {
-  const clamped = Math.max(0, Math.min(1, value));
+  const normalized = value > 1 ? value / 100 : value;
+  const clamped = Math.max(0, Math.min(1, normalized));
   const color = TONE_COLOR[tone === "ok" ? "ok" : tone === "warn" ? "warn" : tone === "bad" ? "bad" : "brand"].ring;
   return (
     <div

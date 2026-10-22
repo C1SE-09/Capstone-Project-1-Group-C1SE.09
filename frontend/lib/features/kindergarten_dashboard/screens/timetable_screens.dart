@@ -381,10 +381,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
     final isToday = selected == todayIndex;
     final date = _dateOfDay(selected);
 
-    return ListView(
+    final listWidget = ListView(
       padding: EdgeInsets.zero,
       shrinkWrap: widget.embedded,
-      physics: widget.embedded ? const NeverScrollableScrollPhysics() : null,
+      physics: widget.embedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -478,6 +478,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
         ],
         const SizedBox(height: 12),
       ],
+    );
+
+    if (widget.embedded) return listWidget;
+    return RefreshIndicator(
+      onRefresh: () async {
+        final d = await _load();
+        if (mounted) setState(() => _future = Future.value(d));
+      },
+      child: listWidget,
     );
   }
 

@@ -700,13 +700,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             Expanded(
               child: SelectionArea(
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 800),
-                      child: _content(),
+                child: RefreshIndicator(
+                  onRefresh: _loadInitialData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 800),
+                        child: _content(),
+                      ),
                     ),
                   ),
                 ),
@@ -1081,9 +1085,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required int sentCount,
     required int draftCount,
   }) {
-    final rateColor = completionRate >= 0.8
+    final normRate = completionRate > 1.0 ? completionRate / 100.0 : completionRate;
+    final rateColor = normRate >= 0.8
         ? AppColors.success
-        : completionRate >= 0.5
+        : normRate >= 0.5
             ? AppColors.warning
             : AppColors.danger;
 
@@ -1443,17 +1448,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 ],
                               ),
                             ),
-                            Text(
-                              '${(item.completionRate * 100).round()}%',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                                color: item.completionRate >= 0.8
+                            Builder(
+                              builder: (context) {
+                                final normRate = item.completionRate > 1.0
+                                    ? item.completionRate / 100.0
+                                    : item.completionRate;
+                                final displayPercent = item.completionRate > 1.0
+                                    ? item.completionRate.round()
+                                    : (item.completionRate * 100).round();
+                                final color = normRate >= 0.8
                                     ? AppColors.success
-                                    : item.completionRate >= 0.4
+                                    : normRate >= 0.4
                                         ? AppColors.warning
-                                        : AppColors.danger,
-                              ),
+                                        : AppColors.danger;
+                                return Text(
+                                  '$displayPercent%',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    color: color,
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -1480,15 +1496,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: item.completionRate.clamp(0.0, 1.0),
-                          minHeight: 6,
-                          borderRadius: BorderRadius.circular(8),
-                          color: item.completionRate >= 0.8
-                              ? AppColors.success
-                              : item.completionRate >= 0.4
-                                  ? AppColors.warning
-                                  : AppColors.danger,
+                        Builder(
+                          builder: (context) {
+                            final normRate = item.completionRate > 1.0
+                                ? item.completionRate / 100.0
+                                : item.completionRate;
+                            final color = normRate >= 0.8
+                                ? AppColors.success
+                                : normRate >= 0.4
+                                    ? AppColors.warning
+                                    : AppColors.danger;
+                            return LinearProgressIndicator(
+                              value: normRate.clamp(0.0, 1.0),
+                              minHeight: 6,
+                              borderRadius: BorderRadius.circular(8),
+                              color: color,
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -2763,7 +2787,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
               parentIds: studentParentIds,
               dateOfBirth: studentDob != null
-                  ? '${studentDob.year}-${studentDob.month.toString().padLeft(2, '0')}-${studentDob.day.toString().padLeft(2, '0')}'
+                  ? '${studentDob!.year}-${studentDob!.month.toString().padLeft(2, '0')}-${studentDob!.day.toString().padLeft(2, '0')}'
                   : null,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );
@@ -2821,7 +2845,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
               parentIds: studentParentIds,
               dateOfBirth: studentDob != null
-                  ? '${studentDob.year}-${studentDob.month.toString().padLeft(2, '0')}-${studentDob.day.toString().padLeft(2, '0')}'
+                  ? '${studentDob!.year}-${studentDob!.month.toString().padLeft(2, '0')}-${studentDob!.day.toString().padLeft(2, '0')}'
                   : null,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );

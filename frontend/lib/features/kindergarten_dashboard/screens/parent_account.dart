@@ -183,6 +183,7 @@ class _ParentAccountState extends State<ParentAccount> {
     final latestReport = widget.reports.isEmpty ? null : widget.reports.first;
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
       children: [
         // ── Hero ───────────────────────────────────────────────

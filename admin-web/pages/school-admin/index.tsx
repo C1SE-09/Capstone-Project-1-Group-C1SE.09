@@ -45,12 +45,14 @@ interface ReportTrend {
 }
 
 function fmtPercent(p: number) {
-  return `${(p * 100).toFixed(p < 1 ? 1 : 0)}%`;
+  const val = p > 1 ? p : p * 100;
+  return `${val.toFixed(val < 100 && val % 1 !== 0 ? 1 : 0)}%`;
 }
 
 function toneFromRate(r: number): "ok" | "warn" | "bad" {
-  if (r >= 0.8) return "ok";
-  if (r >= 0.4) return "warn";
+  const normalized = r > 1 ? r / 100 : r;
+  if (normalized >= 0.8) return "ok";
+  if (normalized >= 0.4) return "warn";
   return "bad";
 }
 
@@ -251,7 +253,7 @@ export default function SchoolAdminOverviewPage() {
                                   : "#BB4A34",
                           }}
                         >
-                          {(c.completion_rate * 100).toFixed(0)}%
+                          {fmtPercent(c.completion_rate)}
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-xs text-ink-soft mt-2">

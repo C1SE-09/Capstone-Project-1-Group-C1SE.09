@@ -31,6 +31,7 @@ import {
   TimeSlot,
   createSchedule,
   deleteSchedule,
+  deleteSchedulesBatch,
   getClasses,
   getRooms,
   getSchedules,
@@ -96,6 +97,9 @@ export default function SchoolAdminSchedulesPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Schedule | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDel, setConfirmBulkDel] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "warn" | "brand" } | null>(null);
   const [roomDropdownOpen, setRoomDropdownOpen] = useState(false);
   const [roomSearch, setRoomSearch] = useState("");
@@ -401,12 +405,56 @@ export default function SchoolAdminSchedulesPage() {
     try {
       await deleteSchedule(s.id);
       setToast({ msg: "Đã xóa hoạt động", tone: "ok" });
+      setSelectedIds((prev) => prev.filter((id) => id !== s.id));
       mutateDay();
       mutateAll();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
     }
     setConfirmDel(null);
+  }
+
+  const allSelected =
+    filteredSchedules.length > 0 &&
+    filteredSchedules.every((s) => selectedIds.includes(s.id));
+  const someSelected =
+    selectedIds.length > 0 && !allSelected;
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredSchedules.map((s) => s.id));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await deleteSchedulesBatch(selectedIds);
+      setToast({
+        msg: res.message || `Đã xóa ${selectedIds.length} hoạt động`,
+        tone: "ok",
+      });
+      setSelectedIds([]);
+      mutateDay();
+      mutateAll();
+    } catch (err: any) {
+      setToast({
+        msg: err?.message || "Không thể xóa hàng loạt hoạt động",
+        tone: "bad",
+      });
+    } finally {
+      setBulkDeleting(false);
+      setConfirmBulkDel(false);
+    }
   }
 
   function handleExportExcel(exportAll = false) {
@@ -914,6 +962,41 @@ export default function SchoolAdminSchedulesPage() {
         </div>
       )}
 
+      {selectedIds.length > 0 && (
+        <div
+          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
+          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
+        >
+          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
+              style={{ background: "#BB4A34" }}
+            >
+              {selectedIds.length}
+            </span>
+            <span>Đã chọn {selectedIds.length} hoạt động</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="kbtn kbtn-secondary text-xs"
+              disabled={bulkDeleting}
+            >
+              Bỏ chọn
+            </button>
+            <button
+              onClick={() => setConfirmBulkDel(true)}
+              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
+              style={{ background: "#BB4A34" }}
+              disabled={bulkDeleting}
+            >
+              <span>🗑️</span>
+              <span>Xóa đã chọn ({selectedIds.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Schedule list */}
       <div className="card overflow-hidden">
         {!schedules && !scheduleError ? (
@@ -946,25 +1029,58 @@ export default function SchoolAdminSchedulesPage() {
             </div>
           </div>
         ) : (
-          <ul>
-            {filteredSchedules.map((s, idx) => {
-              const hasConflict = conflictReasons.has(s.id);
-              const reason = conflictReasons.get(s.id);
-              const isHighlighted = highlightedId === s.id;
-              return (
-                <li
-                  key={s.id}
-                  id={`schedule-${s.id}`}
-                  className={`flex items-start gap-3 px-4 py-3 transition-all duration-300 ${idx > 0 ? "border-t border-line" : ""
-                    } ${isHighlighted
-                      ? "bg-[#FFF9EE] ring-2 ring-[#B0791B] ring-offset-2 z-10 relative rounded-control shadow-sm"
-                      : ""
+          <div>
+            <div
+              className="px-4 py-2.5 flex items-center justify-between border-b border-line text-xs font-semibold"
+              style={{ background: "#EFECE5", color: "#605D57" }}
+            >
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="rounded cursor-pointer"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={toggleSelectAll}
+                  title="Chọn tất cả hoạt động hiển thị"
+                />
+                <span>Chọn tất cả ({filteredSchedules.length})</span>
+              </label>
+              <span>{DAY_LABELS[selectedDay]}</span>
+            </div>
+            <ul>
+              {filteredSchedules.map((s, idx) => {
+                const hasConflict = conflictReasons.has(s.id);
+                const reason = conflictReasons.get(s.id);
+                const isHighlighted = highlightedId === s.id;
+                const isSelected = selectedIds.includes(s.id);
+                return (
+                  <li
+                    key={s.id}
+                    id={`schedule-${s.id}`}
+                    className={`flex items-start gap-3 px-4 py-3 transition-all duration-300 ${
+                      idx > 0 ? "border-t border-line" : ""
+                    } ${
+                      isSelected
+                        ? "bg-[#FDF8F6]"
+                        : isHighlighted
+                          ? "bg-[#FFF9EE] ring-2 ring-[#B0791B] ring-offset-2 z-10 relative rounded-control shadow-sm"
+                          : ""
                     }`}
-                >
-                  <div
-                    className="flex flex-col items-center justify-center rounded-control px-2.5 py-1 min-w-[80px]"
-                    style={{ background: isHighlighted ? "#FCEBCB" : "#E6EFEC" }}
                   >
+                    <div className="pt-2">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(s.id)}
+                      />
+                    </div>
+                    <div
+                      className="flex flex-col items-center justify-center rounded-control px-2.5 py-1 min-w-[80px]"
+                      style={{ background: isHighlighted ? "#FCEBCB" : "#E6EFEC" }}
+                    >
                     <div className="font-bold text-sm" style={{ color: isHighlighted ? "#8A5E12" : "#16665a" }}>
                       {s.start_time || "--:--"}
                     </div>
@@ -1018,6 +1134,7 @@ export default function SchoolAdminSchedulesPage() {
               );
             })}
           </ul>
+        </div>
         )}
       </div>
 
@@ -1270,6 +1387,15 @@ export default function SchoolAdminSchedulesPage() {
         message={`Bạn có chắc muốn xóa hoạt động "${confirmDel?.activity_name}"?`}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDel}
+        title={`Xóa ${selectedIds.length} hoạt động đã chọn?`}
+        message={`Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} hoạt động này khỏi thời khóa biểu? Thao tác này không thể hoàn tác.`}
+        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} hoạt động`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
       />
 
       <ImportModal
