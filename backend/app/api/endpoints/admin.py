@@ -1186,31 +1186,6 @@ def _resolve_and_validate_slot(
     if not slot:
         raise HTTPException(status_code=400, detail="Không tìm thấy khung giờ phù hợp.")
 
-    # Overlap / Collision Check against other schedules of THIS class on day_of_week
-    t_start = _to_minutes(slot.start_time)
-    t_end = _to_minutes(slot.end_time)
-
-    query = (
-        db.query(ClassSchedule)
-        .join(TimeSlot, ClassSchedule.slot_id == TimeSlot.slot_id)
-        .filter(ClassSchedule.day_of_week == day_of_week)
-    )
-    if class_id:
-        query = query.filter(ClassSchedule.class_id == class_id)
-    if exclude_schedule_id:
-        query = query.filter(ClassSchedule.schedule_id != exclude_schedule_id)
-
-    for other in query.all():
-        if other.time_slot:
-            o_start = _to_minutes(other.time_slot.start_time)
-            o_end = _to_minutes(other.time_slot.end_time)
-            # Overlap: t_start < o_end and t_end > o_start
-            if t_start < o_end and t_end > o_start:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Lớp này đã có hoạt động '{other.activity_name}' ({other.time_slot.name}) trong khung giờ ({slot.name}).",
-                )
-
     return slot
 
 

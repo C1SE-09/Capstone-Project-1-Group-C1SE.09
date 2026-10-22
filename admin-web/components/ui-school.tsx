@@ -507,6 +507,9 @@ export function ImportModal({
   sampleHeaders,
   sampleRow,
   templateFilename,
+  allowOverwrite = false,
+  overwriteLabel,
+  overwriteHint,
   onImportRows,
   onSuccess,
 }: {
@@ -517,11 +520,15 @@ export function ImportModal({
   sampleHeaders: string[];
   sampleRow: string[];
   templateFilename: string;
-  onImportRows: (rows: string[][]) => Promise<ImportResult>;
+  allowOverwrite?: boolean;
+  overwriteLabel?: string;
+  overwriteHint?: string;
+  onImportRows: (rows: string[][], options?: { overwrite?: boolean }) => Promise<ImportResult>;
   onSuccess?: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [overwrite, setOverwrite] = useState(true);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -532,6 +539,7 @@ export function ImportModal({
   useEffect(() => {
     if (open) {
       setFile(null);
+      setOverwrite(true);
       setParsedRows([]);
       setParsing(false);
       setImporting(false);
@@ -574,7 +582,7 @@ export function ImportModal({
     setImporting(true);
     setErrorMsg(null);
     try {
-      const res = await onImportRows(parsedRows);
+      const res = await onImportRows(parsedRows, { overwrite });
       setResult(res);
       if (res.success > 0 && onSuccess) {
         onSuccess();
@@ -677,6 +685,27 @@ export function ImportModal({
             </div>
           </label>
         </div>
+
+        {/* Overwrite option */}
+        {allowOverwrite && (
+          <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-1.5 transition-colors">
+            <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-ink select-none">
+              <input
+                type="checkbox"
+                checked={overwrite}
+                onChange={(e) => setOverwrite(e.target.checked)}
+                className="w-4 h-4 rounded border-line text-brand focus:ring-brand accent-brand cursor-pointer"
+              />
+              <span>{overwriteLabel || "Ghi đè dữ liệu nếu đã tồn tại"}</span>
+            </label>
+            <p className="text-[11px] text-ink-soft pl-6.5 leading-relaxed">
+              {overwriteHint ||
+                (overwrite
+                  ? "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới từ file Excel sẽ cập nhật thay thế dữ liệu cũ."
+                  : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng trong file Excel.")}
+            </p>
+          </div>
+        )}
 
         {/* Parsing state */}
         {parsing && (

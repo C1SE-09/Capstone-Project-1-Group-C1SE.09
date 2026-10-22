@@ -502,12 +502,16 @@ export default function SchoolAdminSchedulesPage() {
     });
   }
 
-  async function handleImportRows(rows: string[][]): Promise<ImportResult> {
+  async function handleImportRows(
+    rows: string[][],
+    options?: { overwrite?: boolean }
+  ): Promise<ImportResult> {
+    const allowOverwrite = options?.overwrite !== false;
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
 
-    // Lọc bỏ các dòng hoàn toàn trống và dòng tiêu đề nếu còn sót lại
+    // Lọc bỏ các dòng hoàn toàn trống và các dòng tiêu đề (Header / Ghi chú) nếu còn sót lại
     const validRows: { lineNum: number; raw: string[] }[] = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -515,14 +519,19 @@ export default function SchoolAdminSchedulesPage() {
         // Dòng trống -> Bỏ qua
         continue;
       }
-      const joined = row.join(" ").toLowerCase();
-      if (
-        (joined.includes("thứ") || joined.includes("day")) &&
-        (joined.includes("hoạt động") || joined.includes("activity") || joined.includes("khung giờ") || joined.includes("giờ"))
-      ) {
-        // Dòng tiêu đề -> Bỏ qua
+
+      // Xác định dòng tiêu đề (Header) vs dòng dữ liệu:
+      // Trong file thời khóa biểu, dòng dữ liệu BẮT BUỘC phải có Thứ (Thứ 2..Thứ 7, CN) ở cột 0 (định dạng 5 cột)
+      // hoặc ở cột 1 (định dạng 6 cột có tên lớp).
+      // Dòng tiêu đề cột (chứa chữ "Lớp", "Thứ", "Khung giờ"...) hoặc dòng ghi chú sẽ không có Thứ hợp lệ -> Bỏ qua an toàn.
+      const col0Day = parseDayOfWeek(row[0]);
+      const col1Day = parseDayOfWeek(row[1]);
+
+      if (col0Day === null && col1Day === null) {
+        // Cả 2 cột đầu đều không phải Thứ 2..CN -> Đây là dòng tiêu đề hoặc dòng ghi chú -> Bỏ qua
         continue;
       }
+
       validRows.push({ lineNum: i + 1, raw: row });
     }
 
@@ -556,13 +565,6 @@ export default function SchoolAdminSchedulesPage() {
         activityName = row[2] ?? "";
         roomName = row[3] ?? "";
         content = row[4] ?? "";
-      } else if (col1Day !== null) {
-        className = row[0] ?? "";
-        dayStr = row[1] ?? "";
-        timeStr = row[2] ?? "";
-        activityName = row[3] ?? "";
-        roomName = row[4] ?? "";
-        content = row[5] ?? "";
       } else {
         className = row[0] ?? "";
         dayStr = row[1] ?? "";
@@ -618,26 +620,32 @@ export default function SchoolAdminSchedulesPage() {
       let endTime: string | null = null;
 
       const trimmedTime = (timeStr || "").trim();
-      const matchedSlot = timeSlots?.find(
+      let matchedSlot = timeSlots?.find(
         (ts) =>
           ts.name.trim().toLowerCase() === trimmedTime.toLowerCase() ||
           `${ts.start_time} - ${ts.end_time}` === trimmedTime ||
           `${ts.start_time}-${ts.end_time}` === trimmedTime
       );
 
+      const parsed = parseTimeRange(trimmedTime);
+      if (!matchedSlot && parsed) {
+        // Thử tìm slot theo start_time và end_time đã parse
+        matchedSlot = timeSlots?.find(
+          (ts) => ts.start_time === parsed.start && ts.end_time === parsed.end
+        );
+      }
+
       if (matchedSlot) {
         slotId = matchedSlot.id;
         startTime = matchedSlot.start_time;
         endTime = matchedSlot.end_time;
-      } else {
-        const parsed = parseTimeRange(trimmedTime);
-        if (!parsed) {
-          failed++;
-          errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Thiếu hoặc sai định dạng khung giờ (ví dụ: 08:10 - 08:40).`);
-          continue;
-        }
+      } else if (parsed) {
         startTime = parsed.start;
         endTime = parsed.end;
+      } else {
+        failed++;
+        errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Thiếu hoặc sai định dạng khung giờ (ví dụ: 08:10 - 08:40).`);
+        continue;
       }
 
       // 5. Xác định địa điểm / phòng học (nếu trống tự lấy phòng chính của lớp)
@@ -660,19 +668,23 @@ export default function SchoolAdminSchedulesPage() {
         day_of_week: dayOfWeek,
       };
 
-      // 6. Kiểm tra xem lớp này đã có lịch ở khung giờ đó chưa: nếu có thì cập nhật, nếu chưa thì tạo mới
-      const existing = freshAll.find((s) => {
-        if (s.class_id !== targetClassId || s.day_of_week !== dayOfWeek) return false;
-        if (slotId && s.slot_id === slotId) return true;
-        if (startTime && endTime && s.start_time && s.end_time) {
-          const s1 = toMin(startTime);
-          const e1 = toMin(endTime);
-          const s2 = toMin(s.start_time);
-          const e2 = toMin(s.end_time);
-          return s1 < e2 && e1 > s2;
-        }
-        return false;
-      });
+      // 6. Kiểm tra xem lớp này đã có lịch ở khung giờ đó chưa:
+      // - Nếu bật ghi đè: cập nhật lại tiết cũ
+      // - Nếu tắt ghi đè: cứ ghi mới bình thường, hệ thống sẽ cảnh báo trùng lịch trực quan sau ở màn hình chính
+      const existing = allowOverwrite
+        ? freshAll.find((s) => {
+            if (s.class_id !== targetClassId || s.day_of_week !== dayOfWeek) return false;
+            if (slotId && s.slot_id === slotId) return true;
+            if (startTime && endTime && s.start_time && s.end_time) {
+              const s1 = toMin(startTime);
+              const e1 = toMin(endTime);
+              const s2 = toMin(s.start_time);
+              const e2 = toMin(s.end_time);
+              return s1 < e2 && e1 > s2;
+            }
+            return false;
+          })
+        : null;
 
       try {
         if (existing) {
@@ -680,6 +692,9 @@ export default function SchoolAdminSchedulesPage() {
           existing.activity_name = payload.activity_name;
           existing.room_name = payload.room_name || existing.room_name;
           existing.content = payload.content || "";
+          existing.slot_id = payload.slot_id ?? null;
+          existing.start_time = startTime;
+          existing.end_time = endTime;
         } else {
           const res = await createSchedule(payload);
           freshAll.push({
@@ -688,7 +703,7 @@ export default function SchoolAdminSchedulesPage() {
             content: payload.content || "",
             class_id: targetClassId,
             room_name: payload.room_name || "",
-            time_range: `${startTime} - ${endTime}`,
+            time_range: matchedSlot?.name || `${startTime} - ${endTime}`,
             slot_id: slotId,
             start_time: startTime,
             end_time: endTime,
@@ -1283,6 +1298,9 @@ export default function SchoolAdminSchedulesPage() {
           "Phòng Âm nhạc & Vận động",
           "Tập bài hát Cháu yêu bà, vận động vỗ tay theo phách",
         ]}
+        allowOverwrite={true}
+        overwriteLabel="Ghi đè hoạt động nếu lớp đã có lịch ở cùng khung giờ"
+        overwriteHint="Nếu bật: Cập nhật lại tiết học cũ ở cùng khung giờ. Nếu tắt: Vẫn tạo mới tiết học bình thường, hệ thống sẽ cảnh báo xung đột lịch trực quan ở ngoài bảng thời khóa biểu."
         onImportRows={handleImportRows}
         onSuccess={() => {
           setToast({ msg: "Đã nạp thời khóa biểu thành công", tone: "ok" });
@@ -1308,16 +1326,13 @@ function parseDayOfWeek(val: any): number | null {
   if (!s) return null;
 
   if (/^[2-7]$/.test(s)) return parseInt(s, 10);
-
-  const m = s.match(/(?:thứ|thu|t)\s*([2-7])/i);
-  if (m) return parseInt(m[1], 10);
-
-  if (s.includes("hai") || s.includes("mon")) return 2;
-  if (s.includes("ba") || s.includes("tue")) return 3;
-  if (s.includes("tư") || s.includes("tu") || s.includes("wed")) return 4;
-  if (s.includes("năm") || s.includes("nam") || s.includes("thu")) return 5;
-  if (s.includes("sáu") || s.includes("sau") || s.includes("fri")) return 6;
-  if (s.includes("bảy") || s.includes("bay") || s.includes("sat")) return 7;
+  if (/^(t|thứ\s*|thu\s*)2$/i.test(s) || /^(thứ|thu)?\s*hai$/i.test(s) || /^(mon|monday)$/i.test(s)) return 2;
+  if (/^(t|thứ\s*|thu\s*)3$/i.test(s) || /^(thứ|thu)?\s*ba$/i.test(s) || /^(tue|tuesday)$/i.test(s)) return 3;
+  if (/^(t|thứ\s*|thu\s*)4$/i.test(s) || /^(thứ|thu)?\s*(tư|tu)$/i.test(s) || /^(wed|wednesday)$/i.test(s)) return 4;
+  if (/^(t|thứ\s*|thu\s*)5$/i.test(s) || /^(thứ|thu)?\s*(năm|nam)$/i.test(s) || /^(thu|thursday)$/i.test(s)) return 5;
+  if (/^(t|thứ\s*|thu\s*)6$/i.test(s) || /^(thứ|thu)?\s*(sáu|sau)$/i.test(s) || /^(fri|friday)$/i.test(s)) return 6;
+  if (/^(t|thứ\s*|thu\s*)7$/i.test(s) || /^(thứ|thu)?\s*(bảy|bay)$/i.test(s) || /^(sat|saturday)$/i.test(s)) return 7;
+  if (/^(cn|chủ\s*nhật|chu\s*nhat|sun|sunday)$/i.test(s)) return 8;
 
   return null;
 }
