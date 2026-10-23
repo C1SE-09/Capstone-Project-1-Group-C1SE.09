@@ -211,10 +211,19 @@ def create_teacher(data: TeacherCreate, db: Session = Depends(get_db)):
     _validate_phone_10_digits(data.phone)
     _validate_gmail_format(data.email)
 
-    if data.username and data.username.strip():
-        existing_user = db.query(User).filter(User.username == data.username.strip()).first()
+    resolved_username = (
+        data.username.strip()
+        if data.username and data.username.strip()
+        else (data.phone.strip() if data.phone and data.phone.strip() else (data.email.strip() if data.email else None))
+    )
+
+    if resolved_username:
+        existing_user = db.query(User).filter(User.username == resolved_username).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tên đăng nhập / Số điện thoại '{resolved_username}' đã tồn tại trên hệ thống. Vui lòng chọn tên khác."
+            )
 
     if data.email and data.email.strip():
         existing_email = db.query(Teacher).filter(Teacher.email == data.email.strip()).first()
@@ -252,11 +261,11 @@ def create_teacher(data: TeacherCreate, db: Session = Depends(get_db)):
             {"tid": teacher.teacher_id, "cid": cid}
         )
 
-    if data.username and data.username.strip():
+    if resolved_username:
         pwd = data.password.strip() if data.password and data.password.strip() else "123456"
         user = User(
             user_id=uuid.uuid4(),
-            username=data.username.strip(),
+            username=resolved_username,
             password_hash=hash_password(pwd),
             role=UserRole.TEACHER,
             teacher_id=teacher.teacher_id,
@@ -479,10 +488,19 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
     _validate_phone_10_digits(data.phone)
     _validate_gmail_format(data.email)
 
-    if data.username and data.username.strip():
-        existing_user = db.query(User).filter(User.username == data.username.strip()).first()
+    resolved_username = (
+        data.username.strip()
+        if data.username and data.username.strip()
+        else (data.phone.strip() if data.phone and data.phone.strip() else (data.email.strip() if data.email else None))
+    )
+
+    if resolved_username:
+        existing_user = db.query(User).filter(User.username == resolved_username).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tên đăng nhập / Số điện thoại '{resolved_username}' đã tồn tại trên hệ thống. Vui lòng chọn tên khác."
+            )
 
     if data.email and data.email.strip():
         existing_email = db.query(Parent).filter(Parent.email == data.email.strip()).first()
@@ -524,11 +542,11 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
                 if child.parent_id is None:
                     child.parent_id = parent.parent_id
 
-    if data.username and data.username.strip():
+    if resolved_username:
         pwd = data.password.strip() if data.password and data.password.strip() else "123456"
         user = User(
             user_id=uuid.uuid4(),
-            username=data.username.strip(),
+            username=resolved_username,
             password_hash=hash_password(pwd),
             role=UserRole.PARENT,
             parent_id=parent.parent_id,

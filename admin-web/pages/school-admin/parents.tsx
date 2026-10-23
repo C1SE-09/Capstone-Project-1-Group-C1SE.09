@@ -226,8 +226,8 @@ export default function SchoolAdminParentsPage() {
       const phone = row[1]?.trim();
       const email = row[2]?.trim() || null;
       const relationship = row[3]?.trim() || "Phụ huynh";
-      const username = row[4]?.trim() || null;
-      const password = row[5]?.trim() || null;
+      const username = row[4]?.trim() || phone;
+      const password = row[5]?.trim() || "123456";
 
       if (!fullName || !phone) {
         failed++;
@@ -758,7 +758,7 @@ export default function SchoolAdminParentsPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách phụ huynh từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh."
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh. Nếu để trống cột Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (phụ huynh có thể đăng nhập bằng cả Email hoặc Số điện thoại)."
         templateFilename="mau_nhap_phu_huynh.xlsx"
         sampleHeaders={["Họ và tên", "Số điện thoại", "Email", "Quan hệ (Bố/Mẹ/...)", "Tên đăng nhập", "Mật khẩu"]}
         sampleRow={[

@@ -200,7 +200,7 @@ export function createChild(data: ChildPayload) {
   });
 }
 
-export function updateChild(id: string, data: ChildPayload) {
+export function updateChild(id: string, data: Partial<ChildPayload>) {
   return apiFetch<{ message: string }>(`/api/admin/children/${id}`, {
     method: "PUT",
     body: data,
