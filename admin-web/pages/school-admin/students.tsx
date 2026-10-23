@@ -13,6 +13,7 @@ import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
   Drawer,
   FormField,
+  Modal,
   Pill,
   SearchBar,
   Spinner,
@@ -23,7 +24,14 @@ import {
   ImportResult,
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
-import { exportToExcel } from "@/lib/excel-helper";
+import {
+  ExcelSheetData,
+  exportMultiSheetToExcel,
+  exportToExcel,
+  formatDateToDmy,
+  normalizeHeader,
+  parseDateToIso,
+} from "@/lib/excel-helper";
 import {
   Child,
   ChildPayload,
@@ -66,6 +74,172 @@ const EMPTY: FormState = {
   status: "enrolled",
 };
 
+interface AgeDetail {
+  years: number;
+  months: number;
+  birthYear: string;
+  formattedDob: string;
+  timestamp: number | null;
+}
+
+interface DuplicateStudentAlert {
+  existingChild: Child;
+  targetClassName: string;
+  suggestedNewNickname: string;
+  suggestedExistingNickname: string;
+  customNewNickname: string;
+  customExistingNickname: string;
+  isNewOlder: boolean;
+  isSameAge: boolean;
+  ageInfoNew: AgeDetail;
+  ageInfoExisting: AgeDetail;
+  payload: ChildPayload;
+  editingChildId?: string | null;
+}
+
+function extractLastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return parts.slice(-2).join(" ");
+  }
+  return parts[0] || fullName;
+}
+
+/**
+ * Trích xuất chi tiết ngày sinh, năm sinh và tính tuổi theo năm/tháng hiện tại:
+ */
+function getAgeDetail(dob?: string | null): AgeDetail {
+  if (!dob) {
+    return {
+      years: 0,
+      months: 0,
+      birthYear: "—",
+      formattedDob: "Chưa rõ",
+      timestamp: null,
+    };
+  }
+  const cleaned = dob.split("T")[0].trim();
+  let d = 0,
+    m = 0,
+    y = 0;
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleaned)) {
+    const parts = cleaned.split("/").map(Number);
+    d = parts[0];
+    m = parts[1];
+    y = parts[2];
+  } else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleaned)) {
+    const parts = cleaned.split("-").map(Number);
+    y = parts[0];
+    m = parts[1];
+    d = parts[2];
+  }
+
+  if (!y || isNaN(y)) {
+    const parsed = Date.parse(cleaned);
+    if (!isNaN(parsed)) {
+      const dt = new Date(parsed);
+      y = dt.getFullYear();
+      m = dt.getMonth() + 1;
+      d = dt.getDate();
+    } else {
+      return {
+        years: 0,
+        months: 0,
+        birthYear: "—",
+        formattedDob: cleaned,
+        timestamp: null,
+      };
+    }
+  }
+
+  const birthDate = new Date(y, m - 1, d);
+  const now = new Date();
+  let years = now.getFullYear() - birthDate.getFullYear();
+  let months = now.getMonth() - birthDate.getMonth();
+  if (now.getDate() < birthDate.getDate()) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  const formattedDob = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  return {
+    years: Math.max(0, years),
+    months: Math.max(0, months),
+    birthYear: String(y),
+    formattedDob,
+    timestamp: birthDate.getTime(),
+  };
+}
+
+/**
+ * So sánh độ tuổi dựa trên ngày sinh (xét toàn diện năm, tháng, ngày):
+ * - Nếu dob1 sinh trước dob2 (năm nhỏ hơn hoặc cùng năm nhưng tháng/ngày nhỏ hơn):
+ *   -> Bé 1 lớn tuổi hơn -> trả về -1 (Bé 1: Lớn, Bé 2: Nhỏ)
+ * - Nếu dob1 sinh sau dob2 (năm lớn hơn hoặc cùng năm nhưng tháng/ngày lớn hơn):
+ *   -> Bé 1 nhỏ tuổi hơn -> trả về 1 (Bé 1: Nhỏ, Bé 2: Lớn)
+ * - Cùng ngày tháng năm hoặc thiếu dữ liệu -> trả về 0
+ */
+function compareAges(dob1?: string | null, dob2?: string | null): number {
+  const p1 = getAgeDetail(dob1);
+  const p2 = getAgeDetail(dob2);
+  if (p1.timestamp === null && p2.timestamp === null) return 0;
+  if (p1.timestamp === null) return 1;
+  if (p2.timestamp === null) return -1;
+  if (p1.timestamp < p2.timestamp) return -1;
+  if (p1.timestamp > p2.timestamp) return 1;
+  return 0;
+}
+
+function cleanNickname(nick?: string | null, fullName?: string): string {
+  if (nick && nick.trim()) {
+    return nick.replace(/\s*\((lớn|nhỏ|lon|nho|\d+|a|b)\)$/i, "").trim();
+  }
+  return extractLastName(fullName || "");
+}
+
+/**
+ * Tìm lớp học linh hoạt dựa trên ID, tên lớp hoặc tên sheet (hỗ trợ cả có hoặc không có tiền tố "Lớp")
+ */
+function findClassFlexible(classNameOrId: string, classes: SchoolClass[]): SchoolClass | undefined {
+  if (!classNameOrId) return undefined;
+  const target = classNameOrId.trim();
+  const lowerTarget = target.toLowerCase();
+
+  // 1. Khớp chính xác ID hoặc tên
+  let found = classes.find((c) => c.id === classNameOrId || c.name.toLowerCase() === lowerTarget);
+  if (found) return found;
+
+  // 2. Thử thêm hoặc bỏ tiền tố "Lớp " / "Lop "
+  const withoutLop = lowerTarget.replace(/^(lớp|lop)\s+/i, "").trim();
+  const withLop = `lớp ${withoutLop}`;
+
+  found = classes.find((c) => {
+    const cLower = c.name.toLowerCase().trim();
+    const cWithoutLop = cLower.replace(/^(lớp|lop)\s+/i, "").trim();
+    return cLower === withoutLop || cWithoutLop === withoutLop || cLower === withLop;
+  });
+  if (found) return found;
+
+  // 3. Chuẩn hóa bỏ dấu tiếng Việt để so sánh (VD: "Mam 1" khớp "Lớp Mầm 1")
+  const normTarget = normalizeHeader(target);
+  const normWithoutLop = normalizeHeader(withoutLop);
+
+  found = classes.find((c) => {
+    const normC = normalizeHeader(c.name);
+    const normCWithoutLop = normalizeHeader(c.name.replace(/^(lớp|lop)\s+/i, ""));
+    return (
+      normC === normTarget ||
+      normCWithoutLop === normWithoutLop ||
+      normC === normWithoutLop ||
+      normC.includes(normWithoutLop)
+    );
+  });
+  return found;
+}
+
 export default function SchoolAdminStudentsPage() {
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
@@ -81,6 +255,7 @@ export default function SchoolAdminStudentsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmBulkDel, setConfirmBulkDel] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [duplicateAlert, setDuplicateAlert] = useState<DuplicateStudentAlert | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
 
   useEffect(() => {
@@ -129,47 +304,137 @@ export default function SchoolAdminStudentsPage() {
   }, [children, query, selectedClassId]);
 
   function handleExportExcel() {
-    if (!filtered || filtered.length === 0) {
+    if (!children || children.length === 0) {
       setToast({ msg: "Không có dữ liệu học sinh để xuất", tone: "warn" });
       return;
     }
     const headers = [
       "Họ và tên",
       "Biệt danh",
-      "Lớp",
+      "Tên lớp",
       "Phụ huynh",
       "Ngày sinh",
       "Giới tính",
       "Ghi chú / Dị ứng",
       "Trạng thái",
     ];
-    const rows = filtered.map((c) => [
+
+    // Nếu đang chọn toàn trường (không lọc theo lớp) -> tự động xuất toàn trường và chia theo từng sheet
+    if (!selectedClassId) {
+      const sheets: ExcelSheetData[] = [];
+
+      for (const cl of classes) {
+        const classStudents = (children || []).filter((c) => c.class_id === cl.id);
+        if (classStudents.length > 0) {
+          const cRows = classStudents.map((c) => [
+            c.full_name,
+            c.nickname || "",
+            cl.name,
+            c.parents_summary || "Chưa liên kết",
+            c.date_of_birth ? formatDateToDmy(c.date_of_birth) : "",
+            c.gender === "female" ? "Nữ" : "Nam",
+            c.note || "",
+            c.status === "enrolled" ? "Đang học" : c.status,
+          ]);
+          sheets.push({
+            sheetName: cl.name,
+            headers,
+            rows: cRows,
+          });
+        }
+      }
+
+      // Học sinh chưa phân lớp (nếu có)
+      const unassigned = (children || []).filter(
+        (c) => !c.class_id || !classes.some((cl) => cl.id === c.class_id),
+      );
+      if (unassigned.length > 0) {
+        const uRows = unassigned.map((c) => [
+          c.full_name,
+          c.nickname || "",
+          "Chưa xếp lớp",
+          c.parents_summary || "Chưa liên kết",
+          c.date_of_birth ? formatDateToDmy(c.date_of_birth) : "",
+          c.gender === "female" ? "Nữ" : "Nam",
+          c.note || "",
+          c.status === "enrolled" ? "Đang học" : c.status,
+        ]);
+        sheets.push({
+          sheetName: "Chưa xếp lớp",
+          headers,
+          rows: uRows,
+        });
+      }
+
+      if (sheets.length === 0) {
+        setToast({ msg: "Không có dữ liệu học sinh để xuất", tone: "warn" });
+        return;
+      }
+
+      exportMultiSheetToExcel("danh_sach_hoc_sinh_toan_truong.xlsx", sheets);
+      setToast({
+        msg: `Đã xuất danh sách học sinh toàn trường ra ${sheets.length} sheet (chia theo từng lớp)`,
+        tone: "ok",
+      });
+      return;
+    }
+
+    // Nếu đang chọn một lớp cụ thể
+    const currentClass = classes.find((cl) => cl.id === selectedClassId);
+    const targetStudents = filtered;
+    if (targetStudents.length === 0) {
+      setToast({ msg: "Lớp này chưa có học sinh nào để xuất", tone: "warn" });
+      return;
+    }
+
+    const rows = targetStudents.map((c) => [
       c.full_name,
       c.nickname || "",
-      c.class_name || "Chưa xếp lớp",
+      currentClass ? currentClass.name : (c.class_name || "Chưa xếp lớp"),
       c.parents_summary || "Chưa liên kết",
-      c.date_of_birth ? formatDate(c.date_of_birth) : "",
+      c.date_of_birth ? formatDateToDmy(c.date_of_birth) : "",
       c.gender === "female" ? "Nữ" : "Nam",
       c.note || "",
       c.status === "enrolled" ? "Đang học" : c.status,
     ]);
-    const currentClass = classes.find((cl) => cl.id === selectedClassId);
+
+    const sheetName = currentClass ? currentClass.name : "HocSinh";
     const filename = currentClass
       ? `danh_sach_hoc_sinh_${currentClass.name.replace(/\s+/g, "_")}.xlsx`
       : "danh_sach_hoc_sinh.xlsx";
-    exportToExcel(filename, "HocSinh", headers, rows);
-    setToast({ msg: `Đã xuất ${rows.length} học sinh ra file Excel`, tone: "ok" });
+
+    exportToExcel(filename, sheetName, headers, rows);
+    setToast({
+      msg: `Đã xuất ${rows.length} học sinh của lớp "${sheetName}" ra file Excel`,
+      tone: "ok",
+    });
   }
 
   async function handleImportRows(rows: string[][]): Promise<ImportResult> {
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Theo dõi danh sách học sinh để phát hiện trùng tên trong cùng lớp (cả từ DB lẫn trong file import)
+    const workingChildren: {
+      id: string;
+      full_name: string;
+      nickname: string | null;
+      class_id: string | null;
+      date_of_birth: string | null;
+    }[] = (children || []).map((c) => ({
+      id: c.id,
+      full_name: c.full_name,
+      nickname: c.nickname || null,
+      class_id: c.class_id,
+      date_of_birth: c.date_of_birth,
+    }));
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const fullName = row[0]?.trim();
-      const nickname = row[1]?.trim() || null;
+      let nickname = row[1]?.trim() || null;
       const classNameOrId = row[2]?.trim();
       const dob = row[3]?.trim() || null;
       const genderStr = (row[4]?.trim() || "").toLowerCase();
@@ -181,9 +446,18 @@ export default function SchoolAdminStudentsPage() {
         continue;
       }
 
+      let isoDob: string | null = null;
       if (dob) {
+        isoDob = parseDateToIso(dob);
+        if (!isoDob) {
+          failed++;
+          errors.push(
+            `Dòng ${i + 1} (${fullName}): Ngày sinh ("${dob}") không đúng định dạng DD/MM/YYYY.`,
+          );
+          continue;
+        }
         const today = new Date().toISOString().split("T")[0];
-        if (dob > today) {
+        if (isoDob > today) {
           failed++;
           errors.push(
             `Dòng ${i + 1} (${fullName}): Ngày sinh (${dob}) không thể là ngày trong tương lai.`,
@@ -194,30 +468,88 @@ export default function SchoolAdminStudentsPage() {
 
       let matchedClassId: string | null = null;
       if (classNameOrId) {
-        const found = classes.find(
-          (c) =>
-            c.id === classNameOrId ||
-            c.name.toLowerCase() === classNameOrId.toLowerCase()
-        );
+        const found = findClassFlexible(classNameOrId, classes);
         if (found) {
           matchedClassId = found.id;
         }
+      }
+      if (!matchedClassId && selectedClassId) {
+        matchedClassId = selectedClassId;
       }
       if (!matchedClassId && classes.length > 0) {
         matchedClassId = classes[0].id;
       }
 
+      // Phát hiện trùng họ tên trong cùng lớp học
+      if (matchedClassId) {
+        const existingMatch = workingChildren.find(
+          (c) =>
+            c.class_id === matchedClassId &&
+            c.full_name.trim().toLowerCase() === fullName.toLowerCase()
+        );
+
+        if (existingMatch) {
+          const cmp = compareAges(isoDob, existingMatch.date_of_birth);
+          const baseNewNick = cleanNickname(nickname, fullName);
+          const baseExistNick = cleanNickname(existingMatch.nickname, existingMatch.full_name);
+
+          let newSuffix = "(Nhỏ)";
+          let existSuffix = "(Lớn)";
+          if (cmp < 0) {
+            newSuffix = "(Lớn)";
+            existSuffix = "(Nhỏ)";
+          } else if (cmp > 0) {
+            newSuffix = "(Nhỏ)";
+            existSuffix = "(Lớn)";
+          } else {
+            newSuffix = "(1)";
+            existSuffix = "(2)";
+          }
+
+          nickname = `${baseNewNick} ${newSuffix}`.trim();
+          const updatedExistNick = `${baseExistNick} ${existSuffix}`.trim();
+
+          // Cập nhật biệt danh bé cũ nếu bé đó đã có ID trên DB
+          if (existingMatch.id) {
+            try {
+              await updateChild(existingMatch.id, {
+                nickname: updatedExistNick,
+              });
+              existingMatch.nickname = updatedExistNick;
+            } catch (e) {
+              console.error("Lỗi cập nhật biệt danh bé cũ:", e);
+            }
+          }
+
+          const targetClass = classes.find((cl) => cl.id === matchedClassId);
+          const targetClassName = targetClass ? targetClass.name : "lớp";
+          const ageNew = getAgeDetail(isoDob);
+          const ageExist = getAgeDetail(existingMatch.date_of_birth);
+
+          warnings.push(
+            `Dòng ${i + 1} (${fullName}): Trùng tên trong lớp "${targetClassName}". Tự động tính tuổi theo năm & ngày sinh để gán biệt danh: bé sinh trước (${cmp <= 0 ? nickname : updatedExistNick} - sinh ${cmp <= 0 ? ageNew.formattedDob : ageExist.formattedDob}${cmp <= 0 ? (ageNew.birthYear !== "—" ? `, năm ${ageNew.birthYear}` : "") : (ageExist.birthYear !== "—" ? `, năm ${ageExist.birthYear}` : "")} · ${cmp <= 0 ? ageNew.years : ageExist.years} tuổi) và bé sinh sau (${cmp > 0 ? nickname : updatedExistNick} - sinh ${cmp > 0 ? ageNew.formattedDob : ageExist.formattedDob}${cmp > 0 ? (ageNew.birthYear !== "—" ? `, năm ${ageNew.birthYear}` : "") : (ageExist.birthYear !== "—" ? `, năm ${ageExist.birthYear}` : "")} · ${cmp > 0 ? ageNew.years : ageExist.years} tuổi).`
+          );
+        }
+      }
+
       const gender = genderStr.includes("nữ") || genderStr === "female" ? "female" : "male";
 
       try {
-        await createChild({
+        const res = await createChild({
           full_name: fullName,
           nickname,
           class_id: matchedClassId,
-          date_of_birth: dob,
+          date_of_birth: isoDob,
           gender,
           medical_allergies: note,
           status: "enrolled",
+        });
+        workingChildren.push({
+          id: (res as any)?.id || "",
+          full_name: fullName,
+          nickname,
+          class_id: matchedClassId,
+          date_of_birth: isoDob,
         });
         success++;
       } catch (err: any) {
@@ -229,7 +561,7 @@ export default function SchoolAdminStudentsPage() {
     if (success > 0) {
       mutate();
     }
-    return { total: rows.length, success, failed, errors };
+    return { total: rows.length, success, failed, errors, warnings };
   }
 
   function openCreate() {
@@ -298,12 +630,111 @@ export default function SchoolAdminStudentsPage() {
         care_notes: form.care_notes.trim() || null,
         status: form.status,
       };
+      // Cảnh báo trùng họ tên trong cùng một lớp (áp dụng cho cả tạo mới lẫn sửa đổi/chuyển lớp)
+      if (form.class_id) {
+        const trimmedName = form.full_name.trim().toLowerCase();
+        const existingMatch = (children || []).find(
+          (c) =>
+            c.id !== (editing?.id ?? "") &&
+            c.class_id === form.class_id &&
+            c.full_name.trim().toLowerCase() === trimmedName
+        );
+
+        if (existingMatch) {
+          setSaving(false);
+          const cmp = compareAges(form.date_of_birth, existingMatch.date_of_birth);
+          const baseNewNick = cleanNickname(form.nickname, form.full_name);
+          const baseExistNick = cleanNickname(existingMatch.nickname, existingMatch.full_name);
+
+          let newSuffix = "(Nhỏ)";
+          let existSuffix = "(Lớn)";
+
+          if (cmp < 0) {
+            newSuffix = "(Lớn)";
+            existSuffix = "(Nhỏ)";
+          } else if (cmp > 0) {
+            newSuffix = "(Nhỏ)";
+            existSuffix = "(Lớn)";
+          } else {
+            newSuffix = "(1)";
+            existSuffix = "(2)";
+          }
+
+          const suggestedNew = `${baseNewNick} ${newSuffix}`.trim();
+          const suggestedExisting = `${baseExistNick} ${existSuffix}`.trim();
+          const targetClassName = classes.find((cl) => cl.id === form.class_id)?.name || "lớp";
+          const ageNew = getAgeDetail(form.date_of_birth);
+          const ageExist = getAgeDetail(existingMatch.date_of_birth);
+
+          setDuplicateAlert({
+            existingChild: existingMatch,
+            targetClassName,
+            suggestedNewNickname: suggestedNew,
+            suggestedExistingNickname: suggestedExisting,
+            customNewNickname: suggestedNew,
+            customExistingNickname: suggestedExisting,
+            isNewOlder: cmp < 0,
+            isSameAge: cmp === 0,
+            ageInfoNew: ageNew,
+            ageInfoExisting: ageExist,
+            payload,
+            editingChildId: editing?.id ?? null,
+          });
+          return;
+        }
+      }
+
       if (editing) {
         await updateChild(editing.id, payload);
         setToast({ msg: "Đã cập nhật học sinh", tone: "ok" });
       } else {
         await createChild(payload);
         setToast({ msg: "Đã thêm học sinh mới", tone: "ok" });
+      }
+      setDrawerOpen(false);
+      mutate();
+    } catch (err: any) {
+      setToast({ msg: err?.message || "Không thể lưu học sinh", tone: "bad" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmSaveStudent(payload: ChildPayload, applyNicknames: boolean) {
+    if (!duplicateAlert) return;
+    setSaving(true);
+    const alertData = duplicateAlert;
+    setDuplicateAlert(null);
+    try {
+      if (applyNicknames) {
+        payload.nickname = alertData.customNewNickname.trim() || alertData.suggestedNewNickname;
+        // Cập nhật biệt danh phân biệt cho bé cũ trong lớp
+        const existNick = alertData.customExistingNickname.trim() || alertData.suggestedExistingNickname;
+        try {
+          await updateChild(alertData.existingChild.id, {
+            nickname: existNick,
+          });
+        } catch (e) {
+          console.error("Lỗi cập nhật biệt danh bé cũ:", e);
+        }
+      }
+
+      if (alertData.editingChildId) {
+        await updateChild(alertData.editingChildId, payload);
+        setToast({
+          msg: applyNicknames
+            ? `Đã cập nhật học sinh "${payload.full_name}" (${payload.nickname}) và cập nhật bé trong lớp (${alertData.customExistingNickname.trim() || alertData.suggestedExistingNickname})`
+            : `Đã cập nhật học sinh "${payload.full_name}"`,
+          tone: "ok",
+        });
+      } else {
+        await createChild(payload);
+        setToast({
+          msg: applyNicknames
+            ? `Đã thêm học sinh "${payload.full_name}" (${payload.nickname}) và cập nhật bé cũ (${alertData.customExistingNickname.trim() || alertData.suggestedExistingNickname})`
+            : `Đã thêm học sinh "${payload.full_name}"`,
+          tone: "ok",
+        });
       }
       setDrawerOpen(false);
       mutate();
@@ -401,7 +832,11 @@ export default function SchoolAdminStudentsPage() {
           <button
             onClick={handleExportExcel}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
-            title="Xuất danh sách ra file Excel"
+            title={
+              selectedClassId
+                ? `Xuất danh sách học sinh của lớp đang lọc ra file Excel`
+                : "Xuất danh sách học sinh toàn trường ra file Excel (tự động chia theo từng sheet theo lớp)"
+            }
           >
             📥 Xuất Excel
           </button>
@@ -811,6 +1246,192 @@ export default function SchoolAdminStudentsPage() {
         </FormField>
       </Drawer>
 
+      {duplicateAlert && (
+        <Modal
+          open={!!duplicateAlert}
+          onClose={() => setDuplicateAlert(null)}
+          title="⚠️ Cảnh báo: Trùng họ tên trong lớp"
+          size="lg"
+          footer={
+            <div className="flex flex-wrap items-center justify-between w-full gap-2">
+              <button
+                type="button"
+                onClick={() => setDuplicateAlert(null)}
+                className="kbtn kbtn-secondary text-xs"
+              >
+                Quay lại chỉnh sửa
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => confirmSaveStudent(duplicateAlert.payload, false)}
+                  className="kbtn kbtn-secondary text-xs text-ink-soft hover:text-ink"
+                  title="Lưu mà không thêm hậu tố (Lớn / Nhỏ)"
+                >
+                  Giữ nguyên tên gốc
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirmSaveStudent(duplicateAlert.payload, true)}
+                  className="kbtn kbtn-primary text-xs flex items-center gap-1.5 font-bold"
+                >
+                  <span>✓</span>
+                  <span>Áp dụng biệt danh & Lưu</span>
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-xs">
+            {/* Notification alert banner */}
+            <div className="p-3.5 rounded-control bg-warn/15 border border-warn/30 space-y-1">
+              <div className="font-bold text-ink text-sm flex items-center gap-2">
+                <span className="text-base">⚠️</span>
+                <span>
+                  Phát hiện học sinh trùng họ tên trong lớp{" "}
+                  <strong className="text-brand-strong">{duplicateAlert.targetClassName}</strong>
+                </span>
+              </div>
+              <p className="text-ink-soft leading-relaxed">
+                {duplicateAlert.editingChildId
+                  ? `Khi chuyển hoặc cập nhật học sinh "${duplicateAlert.payload.full_name}" vào lớp "${duplicateAlert.targetClassName}", phát hiện trùng hoàn toàn họ và tên với một học sinh đã có sẵn trong lớp này.`
+                  : `Học sinh mới "${duplicateAlert.payload.full_name}" trùng hoàn toàn họ và tên với một học sinh đã có sẵn trong lớp "${duplicateAlert.targetClassName}".`}
+                {" "}Hệ thống đã tự động tính tuổi theo cả năm, tháng và ngày sinh để đề xuất biệt danh phân biệt <strong>(Lớn)</strong> và <strong>(Nhỏ)</strong> giúp giáo viên không bị nhầm lẫn khi điểm danh và theo dõi.
+              </p>
+            </div>
+
+            {/* Comparison cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Existing Child */}
+              <div className="border border-line rounded-card p-3.5 bg-sunken/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-ink">Bé đã có trong lớp</span>
+                  <Pill tone={duplicateAlert.isNewOlder ? "info" : "ok"}>
+                    {duplicateAlert.isSameAge
+                      ? "Cùng tuổi"
+                      : duplicateAlert.isNewOlder
+                      ? "Sinh sau · Nhỏ hơn"
+                      : "Sinh trước · Lớn hơn"}
+                  </Pill>
+                </div>
+
+                <div className="space-y-1.5 text-ink-soft">
+                  <div className="flex justify-between">
+                    <span>Họ và tên:</span>
+                    <strong className="text-ink">{duplicateAlert.existingChild.full_name}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Ngày sinh:</span>
+                    <span className="text-ink font-medium">
+                      {duplicateAlert.ageInfoExisting.formattedDob}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tuổi &amp; Năm sinh:</span>
+                    <span className="text-ink font-bold">
+                      {duplicateAlert.ageInfoExisting.years} tuổi
+                      {duplicateAlert.ageInfoExisting.months > 0 && ` (${duplicateAlert.ageInfoExisting.months} tháng)`}
+                      {duplicateAlert.ageInfoExisting.birthYear !== "—" && ` · Năm ${duplicateAlert.ageInfoExisting.birthYear}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Biệt danh hiện tại:</span>
+                    <span>{duplicateAlert.existingChild.nickname || "(Chưa có)"}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-line space-y-1">
+                  <label className="font-bold text-ink block text-[11px]">
+                    Biệt danh cập nhật:
+                  </label>
+                  <input
+                    type="text"
+                    className="kinput font-bold text-brand-strong"
+                    value={duplicateAlert.customExistingNickname}
+                    onChange={(e) =>
+                      setDuplicateAlert({
+                        ...duplicateAlert,
+                        customExistingNickname: e.target.value,
+                      })
+                    }
+                    placeholder="VD: Bống (Lớn)"
+                  />
+                  <div className="text-[11px] text-ink-faint">
+                    Gợi ý: {duplicateAlert.suggestedExistingNickname}
+                  </div>
+                </div>
+              </div>
+
+              {/* New Child / Edited Child */}
+              <div className="border-2 border-brand/40 rounded-card p-3.5 bg-brand/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-brand-strong">
+                    {duplicateAlert.editingChildId ? "Bé chuyển lớp / cập nhật" : "Bé mới thêm"}
+                  </span>
+                  <Pill tone={duplicateAlert.isNewOlder ? "ok" : "info"}>
+                    {duplicateAlert.isSameAge
+                      ? "Cùng tuổi"
+                      : duplicateAlert.isNewOlder
+                      ? "Sinh trước · Lớn hơn"
+                      : "Sinh sau · Nhỏ hơn"}
+                  </Pill>
+                </div>
+
+                <div className="space-y-1.5 text-ink-soft">
+                  <div className="flex justify-between">
+                    <span>Họ và tên:</span>
+                    <strong className="text-ink">{duplicateAlert.payload.full_name}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Ngày sinh:</span>
+                    <span className="text-ink font-medium">
+                      {duplicateAlert.ageInfoNew.formattedDob}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tuổi &amp; Năm sinh:</span>
+                    <span className="text-ink font-bold">
+                      {duplicateAlert.ageInfoNew.years} tuổi
+                      {duplicateAlert.ageInfoNew.months > 0 && ` (${duplicateAlert.ageInfoNew.months} tháng)`}
+                      {duplicateAlert.ageInfoNew.birthYear !== "—" && ` · Năm ${duplicateAlert.ageInfoNew.birthYear}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{duplicateAlert.editingChildId ? "Biệt danh hiện tại:" : "Biệt danh nhập:"}</span>
+                    <span>{duplicateAlert.payload.nickname || "(Chưa có)"}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-brand/20 space-y-1">
+                  <label className="font-bold text-brand-strong block text-[11px]">
+                    Biệt danh sẽ gán:
+                  </label>
+                  <input
+                    type="text"
+                    className="kinput font-bold text-brand-strong bg-white"
+                    value={duplicateAlert.customNewNickname}
+                    onChange={(e) =>
+                      setDuplicateAlert({
+                        ...duplicateAlert,
+                        customNewNickname: e.target.value,
+                      })
+                    }
+                    placeholder="VD: Bống (Nhỏ)"
+                  />
+                  <div className="text-[11px] text-ink-faint">
+                    Gợi ý: {duplicateAlert.suggestedNewNickname}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-sunken/60 rounded-control text-ink-soft text-[11px] leading-relaxed">
+              💡 <strong>Lưu ý:</strong> Khi bấm &quot;Áp dụng biệt danh &amp; Lưu&quot;, hệ thống sẽ tự động cập nhật biệt danh cho cả 2 học sinh để phụ huynh và giáo viên dễ dàng theo dõi trên danh sách lớp, sổ bé ngoan và điểm danh.
+            </div>
+          </div>
+        </Modal>
+      )}
+
       <ConfirmDialog
         open={!!confirmDel}
         title="Xóa học sinh?"
@@ -832,14 +1453,14 @@ export default function SchoolAdminStudentsPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách học sinh từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt học sinh."
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV. Hệ thống hỗ trợ đọc cùng lúc nhiều sheet (chia theo từng lớp) và tự động nhận diện lớp theo tên sheet."
         templateFilename="mau_nhap_hoc_sinh.xlsx"
-        sampleHeaders={["Họ và tên", "Biệt danh", "Tên lớp", "Ngày sinh (YYYY-MM-DD)", "Giới tính (Nam/Nữ)", "Ghi chú / Dị ứng"]}
+        sampleHeaders={["Họ và tên", "Biệt danh", "Tên lớp", "Ngày sinh (DD/MM/YYYY)", "Giới tính (Nam/Nữ)", "Ghi chú / Dị ứng"]}
         sampleRow={[
           "Nguyễn Bảo An",
           "Bống",
           classes[0]?.name || "Lớp Mầm 1",
-          "2021-05-15",
+          "15/05/2021",
           "Nữ",
           "Dị ứng hải sản",
         ]}

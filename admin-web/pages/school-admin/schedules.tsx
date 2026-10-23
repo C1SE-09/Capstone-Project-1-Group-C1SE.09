@@ -21,7 +21,7 @@ import {
   ImportModal,
   ImportResult,
 } from "@/components/ui-school";
-import { exportToExcel } from "@/lib/excel-helper";
+import { exportMultiSheetToExcel, exportToExcel, ExcelSheetData } from "@/lib/excel-helper";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import {
   Room,
@@ -468,31 +468,71 @@ export default function SchoolAdminSchedulesPage() {
     ];
 
     if (exportAll) {
-      const allList = (allSchedules ?? []).slice().sort((a, b) => {
-        const nameA = a.class_id ? classMap.get(a.class_id) || "" : "";
-        const nameB = b.class_id ? classMap.get(b.class_id) || "" : "";
-        if (nameA !== nameB) return nameA.localeCompare(nameB);
-        if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
-        return (a.start_time || "").localeCompare(b.start_time || "");
-      });
-
-      if (allList.length === 0) {
+      if (!allSchedules || allSchedules.length === 0) {
         setToast({ msg: "Chưa có hoạt động nào trong toàn trường để xuất", tone: "warn" });
         return;
       }
 
-      const rows = allList.map((s) => [
-        (s.class_id && classMap.get(s.class_id)) || "Chưa phân lớp",
-        DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
-        s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
-        s.activity_name,
-        s.room_name || "",
-        s.content || "",
-      ]);
+      const sheets: ExcelSheetData[] = [];
 
-      exportToExcel("thoi_khoa_bieu_toan_truong.xlsx", "ToanTruong", headers, rows);
+      // Duyệt qua từng lớp học để tạo sheet riêng
+      for (const cl of classes) {
+        const cScheds = allSchedules
+          .filter((s) => s.class_id === cl.id)
+          .sort((a, b) => {
+            if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+            return (a.start_time || "").localeCompare(b.start_time || "");
+          });
+
+        if (cScheds.length > 0) {
+          const cRows = cScheds.map((s) => [
+            cl.name,
+            DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
+            s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
+            s.activity_name,
+            s.room_name || "",
+            s.content || "",
+          ]);
+          sheets.push({
+            sheetName: cl.name,
+            headers,
+            rows: cRows,
+          });
+        }
+      }
+
+      // Các hoạt động chưa phân lớp (nếu có)
+      const unassignedScheds = allSchedules
+        .filter((s) => !s.class_id || !classMap.has(s.class_id))
+        .sort((a, b) => {
+          if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+          return (a.start_time || "").localeCompare(b.start_time || "");
+        });
+
+      if (unassignedScheds.length > 0) {
+        const unassignedRows = unassignedScheds.map((s) => [
+          "Chưa phân lớp",
+          DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
+          s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
+          s.activity_name,
+          s.room_name || "",
+          s.content || "",
+        ]);
+        sheets.push({
+          sheetName: "Chưa phân lớp",
+          headers,
+          rows: unassignedRows,
+        });
+      }
+
+      if (sheets.length === 0) {
+        setToast({ msg: "Chưa có hoạt động nào trong toàn trường để xuất", tone: "warn" });
+        return;
+      }
+
+      exportMultiSheetToExcel("thoi_khoa_bieu_toan_truong.xlsx", sheets);
       setToast({
-        msg: `Đã xuất ${rows.length} hoạt động của toàn trường ra file Excel`,
+        msg: `Đã xuất thời khóa biểu toàn trường ra ${sheets.length} sheet (theo từng lớp)`,
         tone: "ok",
       });
       return;
@@ -631,9 +671,18 @@ export default function SchoolAdminSchedulesPage() {
 
       // 2. Kiểm tra thứ
       const dayOfWeek = parseDayOfWeek(dayStr);
-      if (!dayOfWeek || dayOfWeek < 2 || dayOfWeek > 7) {
+      if (!dayOfWeek || dayOfWeek < 2 || dayOfWeek > 8) {
         failed++;
         errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Thiếu hoặc sai định dạng Thứ (ví dụ: Thứ 2, Thứ 3...).`);
+        continue;
+      }
+
+      if (dayOfWeek === 7 || dayOfWeek === 8) {
+        failed++;
+        const dayLabel = dayOfWeek === 7 ? "Thứ 7" : "Chủ Nhật";
+        errors.push(
+          `Dòng ${lineNum} ("${activityName.trim()}"): Thời khóa biểu chỉ áp dụng từ Thứ 2 đến Thứ 6 (không chấp nhận ${dayLabel}).`
+        );
         continue;
       }
 
@@ -962,41 +1011,6 @@ export default function SchoolAdminSchedulesPage() {
         </div>
       )}
 
-      {selectedIds.length > 0 && (
-        <div
-          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
-          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
-        >
-          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
-              style={{ background: "#BB4A34" }}
-            >
-              {selectedIds.length}
-            </span>
-            <span>Đã chọn {selectedIds.length} hoạt động</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedIds([])}
-              className="kbtn kbtn-secondary text-xs"
-              disabled={bulkDeleting}
-            >
-              Bỏ chọn
-            </button>
-            <button
-              onClick={() => setConfirmBulkDel(true)}
-              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
-              style={{ background: "#BB4A34" }}
-              disabled={bulkDeleting}
-            >
-              <span>🗑️</span>
-              <span>Xóa đã chọn ({selectedIds.length})</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Schedule list */}
       <div className="card overflow-hidden">
         {!schedules && !scheduleError ? (
@@ -1031,23 +1045,65 @@ export default function SchoolAdminSchedulesPage() {
         ) : (
           <div>
             <div
-              className="px-4 py-2.5 flex items-center justify-between border-b border-line text-xs font-semibold"
-              style={{ background: "#EFECE5", color: "#605D57" }}
+              className={`px-4 py-2 flex items-center justify-between border-b text-xs font-semibold transition-colors duration-200 ${
+                selectedIds.length > 0
+                  ? "bg-[#FDF8F6] border-[#F2D5CE]"
+                  : "border-line"
+              }`}
+              style={selectedIds.length > 0 ? undefined : { background: "#EFECE5", color: "#605D57" }}
             >
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  className="rounded cursor-pointer"
-                  checked={allSelected}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someSelected;
-                  }}
-                  onChange={toggleSelectAll}
-                  title="Chọn tất cả hoạt động hiển thị"
-                />
-                <span>Chọn tất cả ({filteredSchedules.length})</span>
-              </label>
-              <span>{DAY_LABELS[selectedDay]}</span>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="rounded cursor-pointer"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    title="Chọn tất cả hoạt động hiển thị"
+                  />
+                  <span>Chọn tất cả ({filteredSchedules.length})</span>
+                </label>
+
+                {selectedIds.length > 0 && (
+                  <>
+                    <span className="text-line-strong">|</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-[#BB4A34]">
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
+                        {selectedIds.length}
+                      </span>
+                      <span>Đã chọn {selectedIds.length} hoạt động</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {selectedIds.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedIds([])}
+                      className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
+                      disabled={bulkDeleting}
+                    >
+                      Bỏ chọn
+                    </button>
+                    <button
+                      onClick={() => setConfirmBulkDel(true)}
+                      className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
+                      style={{ background: "#BB4A34" }}
+                      disabled={bulkDeleting}
+                    >
+                      <span>🗑️</span>
+                      <span>Xóa đã chọn ({selectedIds.length})</span>
+                    </button>
+                    <span className="text-line-strong">|</span>
+                  </>
+                )}
+                <span className={selectedIds.length > 0 ? "text-ink font-semibold" : ""}>{DAY_LABELS[selectedDay]}</span>
+              </div>
             </div>
             <ul>
               {filteredSchedules.map((s, idx) => {

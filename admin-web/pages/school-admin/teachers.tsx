@@ -161,8 +161,8 @@ export default function SchoolAdminTeachersPage() {
       const email = row[1]?.trim();
       const phone = row[2]?.trim();
       const classNameOrId = row[3]?.trim();
-      const username = row[4]?.trim() || null;
-      const password = row[5]?.trim() || null;
+      const username = row[4]?.trim() || phone || email;
+      const password = row[5]?.trim() || "123456";
 
       if (!fullName || !email || !phone) {
         failed++;
@@ -689,7 +689,7 @@ export default function SchoolAdminTeachersPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách giáo viên từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường."
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường. Nếu để trống Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (giáo viên có thể đăng nhập bằng cả Email hoặc Số điện thoại)."
         templateFilename="mau_nhap_giao_vien.xlsx"
         sampleHeaders={["Họ và tên", "Email", "Số điện thoại", "Tên lớp", "Tên đăng nhập", "Mật khẩu"]}
         sampleRow={[
