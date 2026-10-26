@@ -215,10 +215,61 @@ export default function SchoolAdminParentsPage() {
     setToast({ msg: `Đã xuất ${rows.length} phụ huynh ra file Excel`, tone: "ok" });
   }
 
+function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedIds: string[]; missingNames: string[] } {
+  if (!conStr || !conStr.trim()) return { matchedIds: [], missingNames: [] };
+
+  const tokens = conStr.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+  const matchedIds: string[] = [];
+  const missingNames: string[] = [];
+
+  for (const token of tokens) {
+    const match = token.match(/^(.*?)\s*\((.*?)\)$/);
+    const childName = (match ? match[1] : token).trim().toLowerCase();
+    const classHint = (match ? match[2] : "").trim().toLowerCase();
+
+    const candidates = allChildren.filter((c) => {
+      const cName = c.full_name.trim().toLowerCase();
+      const cNick = (c.nickname || "").trim().toLowerCase();
+      const matchName =
+        cName === childName ||
+        cName.includes(childName) ||
+        childName.includes(cName) ||
+        cNick === childName;
+      if (!matchName) return false;
+      if (classHint) {
+        const cClass = (c.class_name || "").toLowerCase();
+        return cClass.includes(classHint);
+      }
+      return true;
+    });
+
+    if (candidates.length > 0) {
+      for (const cand of candidates) {
+        if (!matchedIds.includes(cand.id)) {
+          matchedIds.push(cand.id);
+        }
+      }
+    } else {
+      missingNames.push(token);
+    }
+  }
+
+  return { matchedIds, missingNames };
+}
+
   async function handleImportRows(rows: string[][]): Promise<ImportResult> {
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
+    const warnings: string[] = [];
+
+    let currentChildren = children;
+    try {
+      currentChildren = await getChildren();
+      setChildren(currentChildren);
+    } catch {
+      // dùng children sẵn có
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -226,8 +277,32 @@ export default function SchoolAdminParentsPage() {
       const phone = row[1]?.trim();
       const email = row[2]?.trim() || null;
       const relationship = row[3]?.trim() || "Phụ huynh";
-      const username = row[4]?.trim() || phone;
-      const password = row[5]?.trim() || "123456";
+
+      let conStr = "";
+      let username = "";
+      let password = "";
+
+      if (row.length >= 7) {
+        conStr = row[4]?.trim() || "";
+        username = row[5]?.trim() || phone;
+        password = row[6]?.trim() || "123456";
+      } else if (row.length === 6) {
+        const col4 = row[4]?.trim() || "";
+        const col5 = row[5]?.trim() || "";
+        const isChildName = col4.includes(" ") || col4.includes(",") || /[à-ỹÀ-Ỹ]/.test(col4);
+        if (isChildName) {
+          conStr = col4;
+          username = phone;
+          password = col5 || "123456";
+        } else {
+          conStr = "";
+          username = col4 || phone;
+          password = col5 || "123456";
+        }
+      } else {
+        username = row[4]?.trim() || phone;
+        password = row[5]?.trim() || "123456";
+      }
 
       if (!fullName || !phone) {
         failed++;
@@ -240,12 +315,20 @@ export default function SchoolAdminParentsPage() {
         continue;
       }
 
+      const { matchedIds, missingNames } = findMatchingChildren(conStr, currentChildren);
+      if (missingNames.length > 0) {
+        warnings.push(
+          `Dòng ${i + 1} (${fullName}): Không tìm thấy học sinh [${missingNames.join(", ")}] trong hệ thống để tự động liên kết.`
+        );
+      }
+
       try {
         await createParent({
           full_name: fullName,
           phone,
           email,
           relationship,
+          child_ids: matchedIds.length > 0 ? matchedIds : undefined,
           username,
           password,
           status: "active",
@@ -260,7 +343,7 @@ export default function SchoolAdminParentsPage() {
     if (success > 0) {
       mutate();
     }
-    return { total: rows.length, success, failed, errors };
+    return { total: rows.length, success, failed, errors, warnings };
   }
 
   function openCreate() {
@@ -758,15 +841,26 @@ export default function SchoolAdminParentsPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách phụ huynh từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh. Nếu để trống cột Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (phụ huynh có thể đăng nhập bằng cả Email hoặc Số điện thoại)."
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh và tự động liên kết với con theo tên học sinh. Nếu để trống cột Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456."
         templateFilename="mau_nhap_phu_huynh.xlsx"
-        sampleHeaders={["Họ và tên", "Số điện thoại", "Email", "Quan hệ (Bố/Mẹ/...)", "Tên đăng nhập", "Mật khẩu"]}
+        sampleHeaders={[
+          "Họ và tên",
+          "Số điện thoại",
+          "Email",
+          "Quan hệ (Bố/Mẹ/...)",
+          "Con liên kết (Tên bé hoặc Tên bé - Lớp)",
+          "Tên đăng nhập",
+          "Mật khẩu",
+        ]}
         sampleRow={[
           "Nguyễn Văn An",
           "0912345678",
           "an.nguyen@gmail.com",
           "Bố",
-          "an_nguyen",
+          children[0]
+            ? `${children[0].full_name}${children[0].class_name ? ` (${children[0].class_name})` : ""}`
+            : "Nguyễn Bảo An (Lớp Mầm 1)",
+          "0912345678",
           "123456",
         ]}
         onImportRows={handleImportRows}

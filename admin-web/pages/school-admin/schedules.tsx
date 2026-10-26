@@ -14,6 +14,7 @@ import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
   Drawer,
   FormField,
+  Modal,
   Pill,
   Spinner,
   Toast,
@@ -103,7 +104,20 @@ export default function SchoolAdminSchedulesPage() {
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "warn" | "brand" } | null>(null);
   const [roomDropdownOpen, setRoomDropdownOpen] = useState(false);
   const [roomSearch, setRoomSearch] = useState("");
+  const [schoolConflictsModalOpen, setSchoolConflictsModalOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportConfig, setExportConfig] = useState<{
+    scope: "current" | "all";
+    format: "matrix" | "list";
+    dayFilter: "all" | number;
+    sessionFilter: "all" | "morning" | "afternoon";
+  }>({
+    scope: "current",
+    format: "matrix",
+    dayFilter: "all",
+    sessionFilter: "all",
+  });
 
   useEffect(() => {
     if (!getToken() || !getStoredSchoolAdmin()) {
@@ -215,14 +229,12 @@ export default function SchoolAdminSchedulesPage() {
     () => getTimeSlots(),
   );
 
-  // Xác định lý do xung đột cho từng tiết của lớp đang chọn
-  const conflictReasons = useMemo(() => {
+  // Xác định lý do xung đột cho TẤT CẢ các tiết học trên toàn trường
+  const allConflictReasons = useMemo(() => {
     const reasons = new Map<string, string>();
-    if (!allSchedules || !selectedClassId) return reasons;
+    if (!allSchedules || allSchedules.length === 0) return reasons;
 
-    const classScheds = allSchedules.filter((s) => s.class_id === selectedClassId);
-
-    for (const a of classScheds) {
+    for (const a of allSchedules) {
       if (!a.start_time || !a.end_time) continue;
       const aS = toMin(a.start_time);
       const aE = toMin(a.end_time);
@@ -233,7 +245,7 @@ export default function SchoolAdminSchedulesPage() {
         const bS = toMin(b.start_time);
         const bE = toMin(b.end_time);
 
-        // Trùng giờ
+        // Trùng khung giờ
         if (aS < bE && aE > bS) {
           const sameClass = b.class_id === a.class_id;
           const isShared = isSharedLocation(a.room_name, rooms);
@@ -262,21 +274,139 @@ export default function SchoolAdminSchedulesPage() {
       }
     }
     return reasons;
-  }, [allSchedules, selectedClassId, classMap, rooms]);
+  }, [allSchedules, classMap, rooms]);
 
-  // Xung đột trong ngày đang chọn
+  // Lý do xung đột của các tiết thuộc lớp đang chọn
+  const conflictReasons = useMemo(() => {
+    const reasons = new Map<string, string>();
+    if (!allSchedules || !selectedClassId) return reasons;
+    for (const s of allSchedules) {
+      if (s.class_id === selectedClassId && allConflictReasons.has(s.id)) {
+        reasons.set(s.id, allConflictReasons.get(s.id)!);
+      }
+    }
+    return reasons;
+  }, [allSchedules, selectedClassId, allConflictReasons]);
+
+  // Thống kê và gom nhóm xung đột toàn trường theo từng lớp
+  const schoolConflictStats = useMemo(() => {
+    if (!allSchedules || allSchedules.length === 0) {
+      return {
+        totalConflicts: 0,
+        roomConflicts: 0,
+        timeConflicts: 0,
+        classGroups: [] as {
+          classId: string;
+          className: string;
+          gradeLabel?: string;
+          conflicts: {
+            schedule: Schedule;
+            reason: string;
+            dayLabel: string;
+            timeRange: string;
+          }[];
+          earliestDayIndex: number;
+        }[],
+      };
+    }
+
+    const groupsMap = new Map<
+      string,
+      {
+        classId: string;
+        className: string;
+        gradeLabel?: string;
+        conflicts: {
+          schedule: Schedule;
+          reason: string;
+          dayLabel: string;
+          timeRange: string;
+        }[];
+        earliestDayIndex: number;
+      }
+    >();
+
+    let totalConflicts = 0;
+    let roomConflicts = 0;
+    let timeConflicts = 0;
+
+    for (const s of allSchedules) {
+      const reason = allConflictReasons.get(s.id);
+      if (!reason) continue;
+
+      totalConflicts++;
+      if (reason.includes("Trùng phòng")) {
+        roomConflicts++;
+      } else {
+        timeConflicts++;
+      }
+
+      const cid = s.class_id || "unassigned";
+      const cName = s.class_id ? (classMap.get(s.class_id) || "Lớp học") : "Chưa phân lớp";
+      const matchingClass = classes.find((c) => c.id === s.class_id);
+
+      if (!groupsMap.has(cid)) {
+        groupsMap.set(cid, {
+          classId: cid,
+          className: cName,
+          gradeLabel: matchingClass?.grade_label,
+          conflicts: [],
+          earliestDayIndex: Math.max(0, Math.min(4, s.day_of_week - 2)),
+        });
+      }
+
+      const group = groupsMap.get(cid)!;
+      const dayIdx = Math.max(0, Math.min(4, s.day_of_week - 2));
+      if (dayIdx < group.earliestDayIndex) {
+        group.earliestDayIndex = dayIdx;
+      }
+
+      group.conflicts.push({
+        schedule: s,
+        reason,
+        dayLabel: DAY_LABELS[dayIdx] || `Thứ ${s.day_of_week}`,
+        timeRange: s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
+      });
+    }
+
+    const classGroups = Array.from(groupsMap.values());
+    for (const g of classGroups) {
+      g.conflicts.sort((a, b) => {
+        if (a.schedule.day_of_week !== b.schedule.day_of_week) {
+          return a.schedule.day_of_week - b.schedule.day_of_week;
+        }
+        return toMin(a.schedule.start_time || "") - toMin(b.schedule.start_time || "");
+      });
+    }
+
+    // Đưa lớp đang xem lên đầu nếu có xung đột, sau đó xếp theo tên lớp
+    classGroups.sort((a, b) => {
+      if (a.classId === selectedClassId) return -1;
+      if (b.classId === selectedClassId) return 1;
+      return a.className.localeCompare(b.className);
+    });
+
+    return {
+      totalConflicts,
+      roomConflicts,
+      timeConflicts,
+      classGroups,
+    };
+  }, [allSchedules, allConflictReasons, classMap, classes, selectedClassId]);
+
+  // Xung đột trong ngày đang chọn của lớp đang chọn
   const conflicts = useMemo(() => {
-    return (schedules ?? []).filter((s) => conflictReasons.has(s.id));
-  }, [schedules, conflictReasons]);
+    return (schedules ?? []).filter((s) => allConflictReasons.has(s.id));
+  }, [schedules, allConflictReasons]);
 
-  // Toàn bộ các tiết bị xung đột trong tuần của lớp này, sắp xếp theo gần hôm nay nhất
+  // Toàn bộ các tiết bị xung đột trong tuần của lớp đang chọn
   const weeklyConflicts = useMemo(() => {
     if (!allSchedules || !selectedClassId) return [];
     const jsDay = new Date().getDay(); // 0: CN, 1: T2, ..., 6: T7
     const todayIndex = jsDay >= 1 && jsDay <= 5 ? jsDay - 1 : 0;
 
     const list = allSchedules.filter(
-      (s) => s.class_id === selectedClassId && conflictReasons.has(s.id),
+      (s) => s.class_id === selectedClassId && allConflictReasons.has(s.id),
     );
 
     return list.slice().sort((a, b) => {
@@ -287,27 +417,53 @@ export default function SchoolAdminSchedulesPage() {
       if (distA !== distB) return distA - distB;
       return toMin(a.start_time || "") - toMin(b.start_time || "");
     });
-  }, [allSchedules, selectedClassId, conflictReasons]);
+  }, [allSchedules, selectedClassId, allConflictReasons]);
 
   const nearestConflict = weeklyConflicts[0] || null;
 
-  function jumpToConflict(targetSchedule?: Schedule) {
-    if (weeklyConflicts.length === 0) return;
-    const target = targetSchedule || weeklyConflicts[conflictCycleIndex % weeklyConflicts.length];
+  // Nhảy tới lớp và ngày bị xung đột từ popup toàn trường
+  function handleJumpToClassConflict(targetClassId: string, targetSchedule?: Schedule) {
+    setSchoolConflictsModalOpen(false);
+    if (targetClassId !== "unassigned" && targetClassId !== selectedClassId) {
+      setSelectedClassId(targetClassId);
+    }
+
+    const targetDayIndex = targetSchedule
+      ? targetSchedule.day_of_week - 2
+      : (schoolConflictStats.classGroups.find((g) => g.classId === targetClassId)?.earliestDayIndex ?? 0);
+
+    setSelectedDay(Math.max(0, Math.min(4, targetDayIndex)));
+    setQuery("");
+
+    if (targetSchedule) {
+      setHighlightedId(targetSchedule.id);
+      setTimeout(() => {
+        const el = document.getElementById(`schedule-${targetSchedule.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 250);
+
+      setTimeout(() => {
+        setHighlightedId((curr) => (curr === targetSchedule.id ? null : curr));
+      }, 4500);
+    }
+  }
+
+  // Nhảy tới và đánh dấu tiết xung đột trong ngày đang xem
+  function jumpToDayConflict() {
+    if (conflicts.length === 0) return;
+    const target = conflicts[conflictCycleIndex % conflicts.length];
     if (!target) return;
 
-    const targetDayIndex = target.day_of_week - 2;
-    setSelectedDay(targetDayIndex);
-    setQuery("");
+    setConflictCycleIndex((prev) => (prev + 1) % conflicts.length);
     setHighlightedId(target.id);
-    setConflictCycleIndex((prev) => (prev + 1) % weeklyConflicts.length);
-
     setTimeout(() => {
       const el = document.getElementById(`schedule-${target.id}`);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 150);
+    }, 120);
 
     setTimeout(() => {
       setHighlightedId((curr) => (curr === target.id ? null : curr));
@@ -457,137 +613,175 @@ export default function SchoolAdminSchedulesPage() {
     }
   }
 
-  function handleExportExcel(exportAll = false) {
+  function buildClassTimetableSheet(
+    targetClassName: string,
+    classSchedules: Schedule[],
+    format: "matrix" | "list",
+    daysToExport: number[],
+    sessionFilter: "all" | "morning" | "afternoon",
+  ): ExcelSheetData | null {
+    // 1. Lọc theo các thứ được chọn
+    let filtered = classSchedules.filter((s) => daysToExport.includes(s.day_of_week));
+
+    // 2. Lọc theo khung giờ / buổi
+    if (sessionFilter === "morning") {
+      filtered = filtered.filter((s) => (s.start_time || "") < "12:00");
+    } else if (sessionFilter === "afternoon") {
+      filtered = filtered.filter((s) => (s.start_time || "") >= "12:00");
+    }
+
+    if (filtered.length === 0) return null;
+
+    if (format === "list") {
+      const headers = [
+        "Lớp",
+        "Thứ",
+        "Khung giờ",
+        "Tên hoạt động",
+        "Địa điểm / Phòng học",
+        "Nội dung chi tiết",
+      ];
+      const sorted = filtered.slice().sort((a, b) => {
+        if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+        return (a.start_time || "").localeCompare(b.start_time || "");
+      });
+      const rows = sorted.map((s) => [
+        targetClassName,
+        DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
+        s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
+        s.activity_name,
+        s.room_name || "",
+        s.content || "",
+      ]);
+      return { sheetName: targetClassName, headers, rows };
+    }
+
+    // format === "matrix" (Bảng ma trận tuần: Hàng là Khung giờ, Cột là Thứ 2 → Thứ 6)
+    const timeMap = new Map<string, { start: string; end: string }>();
+    for (const s of filtered) {
+      const range = s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : "");
+      if (range && !timeMap.has(range)) {
+        timeMap.set(range, { start: s.start_time || "", end: s.end_time || "" });
+      }
+    }
+
+    const sortedRanges = Array.from(timeMap.entries())
+      .sort((a, b) => a[1].start.localeCompare(b[1].start))
+      .map((e) => e[0]);
+
+    if (sortedRanges.length === 0) return null;
+
     const headers = [
-      "Lớp",
-      "Thứ",
       "Khung giờ",
-      "Tên hoạt động",
-      "Địa điểm / Phòng học",
-      "Nội dung chi tiết",
+      ...daysToExport.map((d) => DAY_LABELS[d - 2] || `Thứ ${d}`),
     ];
 
-    if (exportAll) {
+    const rows: (string | number)[][] = [];
+    for (const range of sortedRanges) {
+      const row: (string | number)[] = [range];
+      for (const d of daysToExport) {
+        const matches = filtered.filter((s) => {
+          const sRange = s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : "");
+          return s.day_of_week === d && sRange === range;
+        });
+
+        if (matches.length === 0) {
+          row.push("—");
+        } else {
+          const cellStr = matches
+            .map((s) => `${s.activity_name}${s.room_name ? ` (${s.room_name})` : ""}`)
+            .join(" | ");
+          row.push(cellStr);
+        }
+      }
+      rows.push(row);
+    }
+
+    return { sheetName: targetClassName, headers, rows };
+  }
+
+  function handleOpenExport(scope: "current" | "all") {
+    setExportConfig((prev) => ({ ...prev, scope }));
+    setExportModalOpen(true);
+  }
+
+  function executeExport() {
+    const { scope, format, dayFilter, sessionFilter } = exportConfig;
+    const daysToExport: number[] =
+      dayFilter === "all"
+        ? [2, 3, 4, 5, 6]
+        : [Number(dayFilter)];
+
+    const daySuffix =
+      dayFilter === "all"
+        ? "_ca_tuan"
+        : `_t${dayFilter}`;
+    const sessionSuffix =
+      sessionFilter === "morning"
+        ? "_sang"
+        : sessionFilter === "afternoon"
+          ? "_chieu"
+          : "";
+
+    if (scope === "all") {
       if (!allSchedules || allSchedules.length === 0) {
         setToast({ msg: "Chưa có hoạt động nào trong toàn trường để xuất", tone: "warn" });
         return;
       }
 
       const sheets: ExcelSheetData[] = [];
-
-      // Duyệt qua từng lớp học để tạo sheet riêng
       for (const cl of classes) {
-        const cScheds = allSchedules
-          .filter((s) => s.class_id === cl.id)
-          .sort((a, b) => {
-            if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
-            return (a.start_time || "").localeCompare(b.start_time || "");
-          });
-
-        if (cScheds.length > 0) {
-          const cRows = cScheds.map((s) => [
-            cl.name,
-            DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
-            s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
-            s.activity_name,
-            s.room_name || "",
-            s.content || "",
-          ]);
-          sheets.push({
-            sheetName: cl.name,
-            headers,
-            rows: cRows,
-          });
-        }
+        const cScheds = allSchedules.filter((s) => s.class_id === cl.id);
+        const sheet = buildClassTimetableSheet(cl.name, cScheds, format, daysToExport, sessionFilter);
+        if (sheet) sheets.push(sheet);
       }
 
-      // Các hoạt động chưa phân lớp (nếu có)
-      const unassignedScheds = allSchedules
-        .filter((s) => !s.class_id || !classMap.has(s.class_id))
-        .sort((a, b) => {
-          if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
-          return (a.start_time || "").localeCompare(b.start_time || "");
-        });
-
-      if (unassignedScheds.length > 0) {
-        const unassignedRows = unassignedScheds.map((s) => [
-          "Chưa phân lớp",
-          DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
-          s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
-          s.activity_name,
-          s.room_name || "",
-          s.content || "",
-        ]);
-        sheets.push({
-          sheetName: "Chưa phân lớp",
-          headers,
-          rows: unassignedRows,
-        });
+      // Hoạt động chưa phân lớp (nếu có)
+      const unassigned = allSchedules.filter((s) => !s.class_id || !classMap.has(s.class_id));
+      if (unassigned.length > 0) {
+        const unSheet = buildClassTimetableSheet("Chưa phân lớp", unassigned, format, daysToExport, sessionFilter);
+        if (unSheet) sheets.push(unSheet);
       }
 
       if (sheets.length === 0) {
-        setToast({ msg: "Chưa có hoạt động nào trong toàn trường để xuất", tone: "warn" });
+        setToast({ msg: "Không có hoạt động nào thỏa mãn bộ lọc để xuất", tone: "warn" });
         return;
       }
 
-      exportMultiSheetToExcel("thoi_khoa_bieu_toan_truong.xlsx", sheets);
+      const suffix = format === "matrix" ? "_ma_tran" : "_danh_sach";
+      exportMultiSheetToExcel(`thoi_khoa_bieu_toan_truong${suffix}${daySuffix}${sessionSuffix}.xlsx`, sheets);
       setToast({
-        msg: `Đã xuất thời khóa biểu toàn trường ra ${sheets.length} sheet (theo từng lớp)`,
+        msg: `Đã xuất thời khóa biểu toàn trường (${format === "matrix" ? "Ma trận tuần" : "Danh sách"}) ra ${sheets.length} sheet`,
         tone: "ok",
       });
+      setExportModalOpen(false);
       return;
     }
 
+    // scope === "current"
     if (!selectedClassId) {
       setToast({ msg: "Vui lòng chọn một lớp để xuất thời khóa biểu", tone: "warn" });
       return;
     }
 
-    const classScheds = (allSchedules ?? [])
-      .filter((s) => s.class_id === selectedClassId)
-      .sort((a, b) => {
-        if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
-        return (a.start_time || "").localeCompare(b.start_time || "");
-      });
+    const cScheds = (allSchedules ?? []).filter((s) => s.class_id === selectedClassId);
+    const sheet = buildClassTimetableSheet(currentClassName || "Lớp", cScheds, format, daysToExport, sessionFilter);
 
-    const rows =
-      classScheds.length > 0
-        ? classScheds.map((s) => [
-          currentClassName || "Lớp",
-          DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
-          s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
-          s.activity_name,
-          s.room_name || "",
-          s.content || "",
-        ])
-        : [
-          [
-            currentClassName || "Lớp Mầm A",
-            "Thứ 2",
-            "07:00 - 07:30",
-            "Đón trẻ, thể dục buổi sáng",
-            "Sân cỏ",
-            "Khởi động ngày mới, tập bài thể dục theo nhạc",
-          ],
-          [
-            currentClassName || "Lớp Mầm A",
-            "Thứ 2",
-            "08:10 - 08:40",
-            "Học hát & Vận động âm nhạc",
-            "Phòng Âm nhạc & Vận động",
-            "Tập bài hát Cháu yêu bà, vỗ tay theo phách",
-          ],
-        ];
+    if (!sheet) {
+      setToast({ msg: "Không có hoạt động nào của lớp thỏa mãn bộ lọc để xuất", tone: "warn" });
+      return;
+    }
 
-    const filename = currentClassName
-      ? `thoi_khoa_bieu_${currentClassName.replace(/\s+/g, "_")}.xlsx`
-      : "thoi_khoa_bieu.xlsx";
+    const cleanClassName = (currentClassName || "lop").replace(/\s+/g, "_");
+    const suffix = format === "matrix" ? "_ma_tran" : "";
+    const filename = `thoi_khoa_bieu_${cleanClassName}${suffix}${daySuffix}${sessionSuffix}.xlsx`;
 
-    exportToExcel(filename, "ThoiKhoaBieu", headers, rows);
+    exportToExcel(filename, sheet.sheetName, sheet.headers, sheet.rows);
     setToast({
-      msg: `Đã xuất ${classScheds.length} hoạt động của ${currentClassName || "lớp"} ra file Excel`,
+      msg: `Đã xuất thời khóa biểu lớp "${currentClassName}" ra file Excel (${format === "matrix" ? "Ma trận tuần" : "Danh sách"})`,
       tone: "ok",
     });
+    setExportModalOpen(false);
   }
 
   async function handleImportRows(
@@ -770,17 +964,17 @@ export default function SchoolAdminSchedulesPage() {
       // - Nếu tắt ghi đè: cứ ghi mới bình thường, hệ thống sẽ cảnh báo trùng lịch trực quan sau ở màn hình chính
       const existing = allowOverwrite
         ? freshAll.find((s) => {
-            if (s.class_id !== targetClassId || s.day_of_week !== dayOfWeek) return false;
-            if (slotId && s.slot_id === slotId) return true;
-            if (startTime && endTime && s.start_time && s.end_time) {
-              const s1 = toMin(startTime);
-              const e1 = toMin(endTime);
-              const s2 = toMin(s.start_time);
-              const e2 = toMin(s.end_time);
-              return s1 < e2 && e1 > s2;
-            }
-            return false;
-          })
+          if (s.class_id !== targetClassId || s.day_of_week !== dayOfWeek) return false;
+          if (slotId && s.slot_id === slotId) return true;
+          if (startTime && endTime && s.start_time && s.end_time) {
+            const s1 = toMin(startTime);
+            const e1 = toMin(endTime);
+            const s2 = toMin(s.start_time);
+            const e2 = toMin(s.end_time);
+            return s1 < e2 && e1 > s2;
+          }
+          return false;
+        })
         : null;
 
       try {
@@ -850,16 +1044,16 @@ export default function SchoolAdminSchedulesPage() {
             ↻
           </button>
           <button
-            onClick={() => handleExportExcel(true)}
+            onClick={() => handleOpenExport("all")}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
-            title="Xuất toàn bộ thời khóa biểu tất cả các lớp ra file Excel"
+            title="Xuất toàn bộ thời khóa biểu tất cả các lớp ra file Excel (Tùy chọn thứ & khung giờ)"
           >
             🏫 Xuất lịch toàn trường
           </button>
           <button
-            onClick={() => handleExportExcel(false)}
+            onClick={() => handleOpenExport("current")}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
-            title="Xuất thời khóa biểu của lớp đang chọn ra file Excel"
+            title="Xuất thời khóa biểu của lớp đang chọn ra file Excel (Tùy chọn thứ & khung giờ)"
           >
             📥 Xuất excel
           </button>
@@ -881,59 +1075,46 @@ export default function SchoolAdminSchedulesPage() {
         đột phòng/khung giờ.
       </p>
 
-      {/* Cảnh báo xung đột NẰM TRÊN PHẦN CHỌN LỚP (Chỉ hiện khi có xung đột) */}
-      {selectedClassId && allSchedules && weeklyConflicts.length > 0 && (
+      {/* Cảnh báo xung đột TOÀN TRƯỜNG (Tone đỏ, đập vào mắt, bấm mở popup danh sách các lớp) */}
+      {schoolConflictStats.totalConflicts > 0 && (
         <div
-          onClick={() => jumpToConflict()}
+          onClick={() => setSchoolConflictsModalOpen(true)}
           role="button"
           tabIndex={0}
           className="card p-3.5 mb-4 flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-md border select-none group"
           style={{
-            background: "#FBF6ED",
-            borderColor: "#D9A54C",
+            background: "#FDF2F0",
+            borderColor: "#F2D5CE",
           }}
-          title="Nhấn để nhảy tới tiết bị xung đột"
+          title="Nhấn để xem danh sách các lớp bị xung đột lịch trên toàn trường"
         >
           <div className="flex items-start gap-3 min-w-0">
-            <span className="text-2xl shrink-0 mt-0.5 animate-pulse">⚠️</span>
+            <span className="text-2xl shrink-0 mt-0.5 animate-pulse">🚨</span>
             <div className="min-w-0">
-              <div className="font-bold text-sm text-[#8A5E12] flex items-center gap-2 flex-wrap">
-                <span>Phát hiện {weeklyConflicts.length} tiết học bị xung đột trong tuần</span>
-                {weeklyConflicts.length > 1 && (
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#8A5E12]/15 text-[#8A5E12]">
-                    Nhấn lần {(conflictCycleIndex % weeklyConflicts.length) + 1}/{weeklyConflicts.length}
-                  </span>
-                )}
+              <div className="font-bold text-sm text-[#BB4A34] flex items-center gap-2 flex-wrap">
+                <span>
+                  Toàn trường: Phát hiện {schoolConflictStats.totalConflicts} tiết học bị xung đột tại {schoolConflictStats.classGroups.length} lớp
+                </span>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#BB4A34]/15 text-[#BB4A34]">
+                  Nhấn xem chi tiết &amp; sửa
+                </span>
               </div>
-              {nearestConflict && (
-                <div className="text-xs text-[#605D57] mt-1 line-clamp-1">
-                  <strong className="text-[#8A5E12]">Gần hiện tại nhất:</strong>{" "}
-                  <span className="font-semibold text-ink">
-                    {(() => {
-                      const nearestDayIndex = nearestConflict.day_of_week - 2;
-                      const jsDay = new Date().getDay();
-                      const todayIndex = jsDay >= 1 && jsDay <= 5 ? jsDay - 1 : 0;
-                      if (nearestDayIndex === todayIndex) return `Hôm nay (${DAY_LABELS[nearestDayIndex]})`;
-                      if (nearestDayIndex === (todayIndex + 1) % 5) return `Ngày mai (${DAY_LABELS[nearestDayIndex]})`;
-                      return DAY_LABELS[nearestDayIndex];
-                    })()}
-                  </span>{" "}
-                  ({nearestConflict.start_time} - {nearestConflict.end_time}):{" "}
-                  <span className="font-medium text-ink">{nearestConflict.activity_name}</span>
-                  {conflictReasons.get(nearestConflict.id) && (
-                    <span className="text-[#8A5E12] ml-1">
-                      · {conflictReasons.get(nearestConflict.id)}
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="text-xs text-[#8C3423] mt-1 line-clamp-1">
+                {schoolConflictStats.roomConflicts > 0 && `${schoolConflictStats.roomConflicts} lỗi trùng phòng học`}
+                {schoolConflictStats.roomConflicts > 0 && schoolConflictStats.timeConflicts > 0 && " · "}
+                {schoolConflictStats.timeConflicts > 0 && `${schoolConflictStats.timeConflicts} lỗi trùng giờ`}
+                {" — Các lớp bị ảnh hưởng: "}
+                <span className="font-semibold text-ink">
+                  {schoolConflictStats.classGroups.map((g) => g.className).join(", ")}
+                </span>
+              </div>
             </div>
           </div>
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-bold text-white shrink-0 shadow-sm transition group-hover:scale-105"
-            style={{ background: "#B0791B" }}
+            style={{ background: "#BB4A34" }}
           >
-            <span>Sửa tiết xung đột</span>
+            <span>Xem danh sách lớp ({schoolConflictStats.classGroups.length})</span>
             <span className="text-sm transition group-hover:translate-x-0.5">→</span>
           </div>
         </div>
@@ -965,18 +1146,29 @@ export default function SchoolAdminSchedulesPage() {
       <div className="card mb-4 p-1.5 flex gap-1 overflow-x-auto">
         {DAY_LABELS.map((label, idx) => {
           const isActive = idx === selectedDay;
+          const dayDOW = idx + 2;
+          const dayHasConflict = (allSchedules || []).some(
+            (s) => s.class_id === selectedClassId && s.day_of_week === dayDOW && allConflictReasons.has(s.id),
+          );
           return (
             <button
               key={label}
               onClick={() => setSelectedDay(idx)}
-              className="flex-1 px-3 py-2 rounded-control text-sm font-semibold whitespace-nowrap transition"
+              className="flex-1 px-3 py-2 rounded-control text-sm font-semibold whitespace-nowrap transition flex items-center justify-center gap-1.5"
               style={
                 isActive
                   ? { background: "#16665a", color: "white" }
                   : { background: "transparent", color: "#605D57" }
               }
             >
-              {label}
+              <span>{label}</span>
+              {dayHasConflict && (
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: isActive ? "#FCD34D" : "#DC2626" }}
+                  title="Có tiết bị xung đột trong ngày này"
+                />
+              )}
             </button>
           );
         })}
@@ -993,21 +1185,86 @@ export default function SchoolAdminSchedulesPage() {
         />
       </div>
 
-      {/* Conflict banner */}
+      {/* Conflict banner của ngày đang chọn (Tone vàng, chuyển nút sửa tiết xung đột xuống đây) */}
       {conflicts.length > 0 && (
         <div
-          className="mb-3 px-4 py-3 rounded-control flex items-center gap-3"
+          className="mb-3 px-4 py-3 rounded-control flex items-center justify-between gap-3 shadow-sm"
           style={{ background: "#F6EED9", border: "1px solid #B0791B" }}
         >
-          <span className="text-2xl">⚠️</span>
-          <div className="flex-1">
-            <div className="font-bold text-sm" style={{ color: "#8A5E12" }}>
-              {conflicts.length} xung đột phòng/khung giờ trong ngày {DAY_SHORT[selectedDay]}
-            </div>
-            <div className="text-xs" style={{ color: "#605D57" }}>
-              Vui lòng điều chỉnh để tránh 2 hoạt động cùng phòng + cùng giờ.
+          <div className="flex items-start gap-2.5 min-w-0">
+            <span className="text-2xl shrink-0 mt-0.5">⚠️</span>
+            <div className="min-w-0">
+              <div className="font-bold text-sm" style={{ color: "#8A5E12" }}>
+                {conflicts.length} xung đột phòng/khung giờ trong ngày {DAY_SHORT[selectedDay]}
+                {conflicts.length > 1 && (
+                  <span className="ml-2 text-[11px] font-normal px-2 py-0.5 rounded-full bg-[#8A5E12]/15 text-[#8A5E12]">
+                    Tiết {(conflictCycleIndex % conflicts.length) + 1}/{conflicts.length}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs mt-0.5 text-ink-soft line-clamp-1">
+                {(() => {
+                  const currConflict = conflicts[conflictCycleIndex % conflicts.length];
+                  const reason = currConflict ? allConflictReasons.get(currConflict.id) : null;
+                  return currConflict ? (
+                    <span>
+                      Tiết <strong>&quot;{currConflict.activity_name}&quot;</strong> ({currConflict.start_time} - {currConflict.end_time})
+                      {reason && ` · ${reason}`}
+                    </span>
+                  ) : (
+                    "Vui lòng điều chỉnh để tránh 2 hoạt động cùng phòng + cùng giờ."
+                  );
+                })()}
+              </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={jumpToDayConflict}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-bold text-white shrink-0 shadow-sm transition hover:scale-105 active:scale-95 cursor-pointer"
+            style={{ background: "#B0791B" }}
+            title="Nhảy tới và đánh dấu tiết học bị xung đột trong ngày này"
+          >
+            <span>Sửa tiết xung đột</span>
+            <span className="text-sm">→</span>
+          </button>
+        </div>
+      )}
+
+      {/* Thông báo nếu ngày hiện tại không có lỗi nhưng tuần này lớp đang có lỗi ở ngày khác */}
+      {conflicts.length === 0 && weeklyConflicts.length > 0 && (
+        <div
+          className="mb-3 px-4 py-2.5 rounded-control flex items-center justify-between gap-3 text-xs"
+          style={{ background: "#FBF6ED", border: "1px dashed #D9A54C" }}
+        >
+          <div className="flex items-center gap-2 text-[#8A5E12] min-w-0">
+            <span className="shrink-0">ℹ️</span>
+            <span className="truncate">
+              Ngày {DAY_LABELS[selectedDay]} không có xung đột. Lớp này có{" "}
+              <strong>{weeklyConflicts.length} tiết bị xung đột</strong> vào các ngày khác trong tuần.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const target = weeklyConflicts[0];
+              if (target) {
+                setSelectedDay(Math.max(0, Math.min(4, target.day_of_week - 2)));
+                setHighlightedId(target.id);
+                setTimeout(() => {
+                  const el = document.getElementById(`schedule-${target.id}`);
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }
+                }, 200);
+              }
+            }}
+            className="text-xs font-bold text-[#8A5E12] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+          >
+            <span>Chuyển tới {DAY_LABELS[weeklyConflicts[0].day_of_week - 2]}</span>
+            <span>→</span>
+          </button>
         </div>
       )}
 
@@ -1045,11 +1302,10 @@ export default function SchoolAdminSchedulesPage() {
         ) : (
           <div>
             <div
-              className={`px-4 py-2 flex items-center justify-between border-b text-xs font-semibold transition-colors duration-200 ${
-                selectedIds.length > 0
-                  ? "bg-[#FDF8F6] border-[#F2D5CE]"
-                  : "border-line"
-              }`}
+              className={`px-4 py-2 flex items-center justify-between border-b text-xs font-semibold transition-colors duration-200 ${selectedIds.length > 0
+                ? "bg-[#FDF8F6] border-[#F2D5CE]"
+                : "border-line"
+                }`}
               style={selectedIds.length > 0 ? undefined : { background: "#EFECE5", color: "#605D57" }}
             >
               <div className="flex items-center gap-3">
@@ -1115,15 +1371,13 @@ export default function SchoolAdminSchedulesPage() {
                   <li
                     key={s.id}
                     id={`schedule-${s.id}`}
-                    className={`flex items-start gap-3 px-4 py-3 transition-all duration-300 ${
-                      idx > 0 ? "border-t border-line" : ""
-                    } ${
-                      isSelected
+                    className={`flex items-start gap-3 px-4 py-3 transition-all duration-300 ${idx > 0 ? "border-t border-line" : ""
+                      } ${isSelected
                         ? "bg-[#FDF8F6]"
                         : isHighlighted
                           ? "bg-[#FFF9EE] ring-2 ring-[#B0791B] ring-offset-2 z-10 relative rounded-control shadow-sm"
                           : ""
-                    }`}
+                      }`}
                   >
                     <div className="pt-2">
                       <input
@@ -1137,60 +1391,60 @@ export default function SchoolAdminSchedulesPage() {
                       className="flex flex-col items-center justify-center rounded-control px-2.5 py-1 min-w-[80px]"
                       style={{ background: isHighlighted ? "#FCEBCB" : "#E6EFEC" }}
                     >
-                    <div className="font-bold text-sm" style={{ color: isHighlighted ? "#8A5E12" : "#16665a" }}>
-                      {s.start_time || "--:--"}
-                    </div>
-                    <div className="text-[10px]" style={{ color: "#605D57" }}>
-                      {s.end_time || "--:--"}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="font-bold text-ink">{s.activity_name}</div>
-                      {hasConflict && (
-                        <Pill tone="warn">⚠️ Xung đột</Pill>
-                      )}
-                      {isHighlighted && (
-                        <span className="text-[11px] px-2 py-0.5 rounded font-bold bg-[#B0791B] text-white animate-pulse">
-                          Đang xem xung đột
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-ink-soft mt-0.5">
-                      {s.time_range && `Khung giờ: ${s.time_range}`}
-                      {s.room_name && ` · Phòng: ${s.room_name}`}
-                    </div>
-                    {hasConflict && reason && (
-                      <div className="mt-1.5 text-xs text-[#8A5E12] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FBF6ED] border border-[#E2BF81] inline-block">
-                        <span>⚠️</span>
-                        <span>{reason}</span>
+                      <div className="font-bold text-sm" style={{ color: isHighlighted ? "#8A5E12" : "#16665a" }}>
+                        {s.start_time || "--:--"}
                       </div>
-                    )}
-                    {s.content && (
-                      <div className="text-xs text-ink-soft mt-1 line-clamp-2">
-                        {s.content}
+                      <div className="text-[10px]" style={{ color: "#605D57" }}>
+                        {s.end_time || "--:--"}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-1">
-                    <button
-                      onClick={() => openEdit(s, selectedDay)}
-                      className="kbtn kbtn-ghost text-xs"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => setConfirmDel(s)}
-                      className="kbtn kbtn-ghost text-xs text-bad"
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="font-bold text-ink">{s.activity_name}</div>
+                        {hasConflict && (
+                          <Pill tone="warn">⚠️ Xung đột</Pill>
+                        )}
+                        {isHighlighted && (
+                          <span className="text-[11px] px-2 py-0.5 rounded font-bold bg-[#B0791B] text-white animate-pulse">
+                            Đang xem xung đột
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-ink-soft mt-0.5">
+                        {s.time_range && `Khung giờ: ${s.time_range}`}
+                        {s.room_name && ` · Phòng: ${s.room_name}`}
+                      </div>
+                      {hasConflict && reason && (
+                        <div className="mt-1.5 text-xs text-[#8A5E12] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FBF6ED] border border-[#E2BF81] inline-block">
+                          <span>⚠️</span>
+                          <span>{reason}</span>
+                        </div>
+                      )}
+                      {s.content && (
+                        <div className="text-xs text-ink-soft mt-1 line-clamp-2">
+                          {s.content}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-start gap-1">
+                      <button
+                        onClick={() => openEdit(s, selectedDay)}
+                        className="kbtn kbtn-ghost text-xs"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => setConfirmDel(s)}
+                        className="kbtn kbtn-ghost text-xs text-bad"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </div>
 
@@ -1488,6 +1742,371 @@ export default function SchoolAdminSchedulesPage() {
           setToast({ msg: "Đã nạp thời khóa biểu thành công", tone: "ok" });
         }}
       />
+
+      {/* Modal tùy chọn xuất thời khóa biểu (theo thứ, theo khung giờ, ma trận / danh sách) */}
+      {exportModalOpen && (
+        <Modal
+          open={exportModalOpen}
+          onClose={() => setExportModalOpen(false)}
+          title="📥 Tùy chọn xuất thời khóa biểu ra Excel"
+          size="md"
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setExportModalOpen(false)}
+                className="kbtn kbtn-secondary text-sm"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={executeExport}
+                className="kbtn kbtn-primary text-sm flex items-center gap-1.5"
+              >
+                <span>📥 Tải file Excel (.xlsx)</span>
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-xs">
+            {/* 1. Phạm vi xuất */}
+            <div>
+              <label className="block text-xs font-semibold text-ink mb-1.5">
+                1. Phạm vi xuất
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, scope: "current" }))}
+                  className={`p-3 rounded-card text-left transition relative cursor-pointer ${exportConfig.scope === "current"
+                    ? "border-2 border-[#16665a] bg-[#E6EFEC] shadow-sm ring-2 ring-[#16665a]/25 text-[#16665a]"
+                    : "border border-line bg-surface text-ink hover:border-lineStrong hover:bg-canvas/50"
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-xs flex items-center gap-1.5">
+                      <span>🏫 Lớp đang chọn</span>
+                    </div>
+                    {exportConfig.scope === "current" ? (
+                      <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
+                        ✓
+                      </span>
+                    ) : (
+                      <span className="w-4 h-4 rounded-full border border-lineStrong bg-white" />
+                    )}
+                  </div>
+                  <div className={`text-[11px] mt-1 truncate ${exportConfig.scope === "current" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
+                    }`}>
+                    {currentClassName || "Chưa chọn lớp"}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, scope: "all" }))}
+                  className={`p-3 rounded-card text-left transition relative cursor-pointer ${exportConfig.scope === "all"
+                    ? "border-2 border-[#16665a] bg-[#E6EFEC] shadow-sm ring-2 ring-[#16665a]/25 text-[#16665a]"
+                    : "border border-line bg-surface text-ink hover:border-lineStrong hover:bg-canvas/50"
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-xs flex items-center gap-1.5">
+                      <span>🌐 Toàn trường</span>
+                    </div>
+                    {exportConfig.scope === "all" ? (
+                      <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
+                        ✓
+                      </span>
+                    ) : (
+                      <span className="w-4 h-4 rounded-full border border-lineStrong bg-white" />
+                    )}
+                  </div>
+                  <div className={`text-[11px] mt-1 ${exportConfig.scope === "all" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
+                    }`}>
+                    Mỗi lớp 1 sheet riêng biệt
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Định dạng file */}
+            <div>
+              <label className="block text-xs font-semibold text-ink mb-1.5">
+                2. Định dạng bảng biểu
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, format: "matrix" }))}
+                  className={`p-3 rounded-card text-left transition relative cursor-pointer ${exportConfig.format === "matrix"
+                    ? "border-2 border-[#16665a] bg-[#E6EFEC] shadow-sm ring-2 ring-[#16665a]/25 text-[#16665a]"
+                    : "border border-line bg-surface text-ink hover:border-lineStrong hover:bg-canvas/50"
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-xs flex items-center gap-1.5">
+                      <span>📊 Ma trận thời khóa biểu</span>
+                    </div>
+                    {exportConfig.format === "matrix" ? (
+                      <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
+                        ✓
+                      </span>
+                    ) : (
+                      <span className="w-4 h-4 rounded-full border border-lineStrong bg-white" />
+                    )}
+                  </div>
+                  <div className={`text-[11px] mt-1 leading-tight ${exportConfig.format === "matrix" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
+                    }`}>
+                    Cột Thứ 2 → Thứ 6, hàng là các khung giờ
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, format: "list" }))}
+                  className={`p-3 rounded-card text-left transition relative cursor-pointer ${exportConfig.format === "list"
+                    ? "border-2 border-[#16665a] bg-[#E6EFEC] shadow-sm ring-2 ring-[#16665a]/25 text-[#16665a]"
+                    : "border border-line bg-surface text-ink hover:border-lineStrong hover:bg-canvas/50"
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-xs flex items-center gap-1.5">
+                      <span>📋 Danh sách chi tiết</span>
+                    </div>
+                    {exportConfig.format === "list" ? (
+                      <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
+                        ✓
+                      </span>
+                    ) : (
+                      <span className="w-4 h-4 rounded-full border border-lineStrong bg-white" />
+                    )}
+                  </div>
+                  <div className={`text-[11px] mt-1 leading-tight ${exportConfig.format === "list" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
+                    }`}>
+                    Mỗi hoạt động 1 hàng, đầy đủ phòng học và ghi chú
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Lọc theo thứ trong tuần */}
+            <div>
+              <label className="block text-xs font-semibold text-ink mb-1.5">
+                3. Lọc theo thứ trong tuần
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, dayFilter: "all" }))}
+                  className={`p-2.5 rounded-control text-center transition text-xs cursor-pointer ${exportConfig.dayFilter === "all"
+                    ? "border-2 border-[#16665a] bg-[#16665a] text-white font-bold ring-2 ring-[#16665a]/25 shadow-sm"
+                    : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
+                    }`}
+                >
+                  📅 Cả tuần (T2 - T6)
+                </button>
+                {[2, 3, 4, 5, 6].map((d) => {
+                  const isCurrentViewingDay = d === selectedDay + 2;
+                  const isSelected = exportConfig.dayFilter === d;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setExportConfig((c) => ({ ...c, dayFilter: d }))}
+                      className={`p-2.5 rounded-control text-center transition text-xs cursor-pointer relative ${isSelected
+                        ? "border-2 border-[#16665a] bg-[#16665a] text-white font-bold ring-2 ring-[#16665a]/25 shadow-sm"
+                        : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
+                        }`}
+                      title={isCurrentViewingDay ? `Thứ ${d} (Đang mở trên màn hình)` : `Thứ ${d}`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span>Thứ {d}</span>
+                        {isCurrentViewingDay && (
+                          <span
+                            className="text-xs shrink-0"
+                            title="Ngày đang mở trên màn hình lịch"
+                          >
+                            📍
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-1.5 px-0.5 flex items-center justify-between text-[11px] text-ink-soft">
+                <span>
+                  📍 <strong>{DAY_LABELS[selectedDay]}</strong> là ngày bạn đang mở trên bảng lịch.
+                </span>
+                {exportConfig.dayFilter !== selectedDay + 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setExportConfig((c) => ({ ...c, dayFilter: selectedDay + 2 }))}
+                    className="text-[#16665a] hover:underline font-semibold cursor-pointer"
+                  >
+                    Chọn {DAY_LABELS[selectedDay]} →
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 4. Lọc theo khung giờ / buổi */}
+            <div>
+              <label className="block text-xs font-semibold text-ink mb-1.5">
+                4. Lọc theo khung giờ / Buổi học
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, sessionFilter: "all" }))}
+                  className={`p-2.5 rounded-control text-center transition text-xs cursor-pointer ${exportConfig.sessionFilter === "all"
+                    ? "border-2 border-[#16665a] bg-[#E6EFEC] text-[#16665a] font-bold ring-2 ring-[#16665a]/25 shadow-sm"
+                    : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
+                    }`}
+                >
+                  ☀️ Cả ngày (Tất cả)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, sessionFilter: "morning" }))}
+                  className={`p-2.5 rounded-control text-center transition text-xs cursor-pointer ${exportConfig.sessionFilter === "morning"
+                    ? "border-2 border-[#16665a] bg-[#E6EFEC] text-[#16665a] font-bold ring-2 ring-[#16665a]/25 shadow-sm"
+                    : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
+                    }`}
+                >
+                  🌅 Buổi sáng (&lt; 12:00)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExportConfig((c) => ({ ...c, sessionFilter: "afternoon" }))}
+                  className={`p-2.5 rounded-control text-center transition text-xs cursor-pointer ${exportConfig.sessionFilter === "afternoon"
+                    ? "border-2 border-[#16665a] bg-[#E6EFEC] text-[#16665a] font-bold ring-2 ring-[#16665a]/25 shadow-sm"
+                    : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
+                    }`}
+                >
+                  🌇 Buổi chiều (≥ 12:00)
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal popup danh sách các lớp bị xung đột lịch trên toàn trường */}
+      {schoolConflictsModalOpen && (
+        <Modal
+          open={schoolConflictsModalOpen}
+          onClose={() => setSchoolConflictsModalOpen(false)}
+          title={`🚨 Danh sách xung đột lịch toàn trường (${schoolConflictStats.totalConflicts} tiết tại ${schoolConflictStats.classGroups.length} lớp)`}
+          size="lg"
+          footer={
+            <div className="flex items-center justify-between w-full">
+              <span className="text-xs text-ink-soft">
+                💡 Bấm vào nút <strong>&quot;Điều chỉnh&quot;</strong> để hệ thống tự động chuyển sang lớp và ngày bị xung đột.
+              </span>
+              <button
+                type="button"
+                onClick={() => setSchoolConflictsModalOpen(false)}
+                className="kbtn kbtn-secondary text-xs"
+              >
+                Đóng
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3.5">
+            <div className="p-3 rounded-control bg-[#FDF2F0] border border-[#F2D5CE] text-xs text-[#8C3423] flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <strong>Tổng cộng:</strong> {schoolConflictStats.totalConflicts} tiết học đang bị xung đột
+                ({schoolConflictStats.roomConflicts} trùng phòng học, {schoolConflictStats.timeConflicts} trùng khung giờ) trên phạm vi toàn trường.
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              {schoolConflictStats.classGroups.map((group) => {
+                const isCurrentClass = group.classId === selectedClassId;
+                return (
+                  <div
+                    key={group.classId}
+                    className={`p-3.5 rounded-card border transition ${isCurrentClass
+                      ? "bg-brand/5 border-brand/40 shadow-sm"
+                      : "bg-sunken/40 border-line hover:border-ink-faint"
+                      }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-line/60">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-ink">
+                          {group.className}
+                        </span>
+                        {group.gradeLabel && (
+                          <span className="text-xs text-ink-soft">
+                            ({group.gradeLabel})
+                          </span>
+                        )}
+                        {isCurrentClass && (
+                          <Pill tone="brand">Lớp đang xem</Pill>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Pill tone="bad">
+                          {group.conflicts.length} xung đột
+                        </Pill>
+                        {group.classId !== "unassigned" && (
+                          <button
+                            type="button"
+                            onClick={() => handleJumpToClassConflict(group.classId, group.conflicts[0]?.schedule)}
+                            className="kbtn text-xs text-white font-bold px-2.5 py-1 flex items-center gap-1 shadow-sm cursor-pointer"
+                            style={{ background: "#16665a" }}
+                            title={`Chuyển ngay sang ${group.className} để xử lý lịch`}
+                          >
+                            <span>Điều chỉnh</span>
+                            <span>→</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs">
+                      {group.conflicts.map((c, idx) => (
+                        <div
+                          key={c.schedule.id || idx}
+                          onClick={() => {
+                            if (group.classId !== "unassigned") {
+                              handleJumpToClassConflict(group.classId, c.schedule);
+                            }
+                          }}
+                          className="flex items-start justify-between gap-2 p-2 rounded-control bg-white border border-line/50 hover:border-brand/40 hover:bg-brand/5 cursor-pointer transition"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-ink">
+                                {c.dayLabel} ({c.timeRange}):
+                              </span>
+                              <span className="font-bold text-brand-strong">
+                                {c.schedule.activity_name}
+                              </span>
+                              {c.schedule.room_name && (
+                                <span className="text-ink-soft text-[11px] px-1.5 py-0.5 rounded bg-sunken">
+                                  📍 {c.schedule.room_name}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[#BB4A34] text-[11px] mt-0.5 font-medium">
+                              ⚠️ {c.reason}
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-brand-strong font-semibold shrink-0 mt-0.5">
+                            Sửa ↗
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {toast && (
         <Toast message={toast.msg} tone={toast.tone} onClose={() => setToast(null)} />
