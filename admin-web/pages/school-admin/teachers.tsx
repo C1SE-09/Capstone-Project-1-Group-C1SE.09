@@ -22,7 +22,7 @@ import {
   ImportModal,
   ImportResult,
 } from "@/components/ui-school";
-import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   Teacher,
@@ -30,6 +30,7 @@ import {
   SchoolClass,
   createTeacher,
   deleteTeacher,
+  deleteTeachersBatch,
   getClasses,
   getTeachers,
   updateTeacher,
@@ -68,6 +69,9 @@ export default function SchoolAdminTeachersPage() {
   const [form, setForm] = useState<TeacherFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState<Teacher | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDel, setConfirmBulkDel] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
 
   useEffect(() => {
@@ -81,11 +85,18 @@ export default function SchoolAdminTeachersPage() {
       .catch(() => {});
   }, []);
 
-  const { data: teachers, mutate } = useSWR<Teacher[]>(
+  const { data: teachers, error: teachersError, mutate } = useSWR<Teacher[]>(
     ready ? "teachers" : null,
     () => getTeachers(),
     { refreshInterval: 30000 },
   );
+
+  useEffect(() => {
+    if (teachersError && (teachersError as any).status === 401) {
+      clearToken("schoolAdmin");
+      window.location.href = "/login";
+    }
+  }, [teachersError]);
 
   const filtered = useMemo(() => {
     let list = teachers ?? [];
@@ -150,8 +161,8 @@ export default function SchoolAdminTeachersPage() {
       const email = row[1]?.trim();
       const phone = row[2]?.trim();
       const classNameOrId = row[3]?.trim();
-      const username = row[4]?.trim() || null;
-      const password = row[5]?.trim() || null;
+      const username = row[4]?.trim() || phone || email;
+      const password = row[5]?.trim() || "123456";
 
       if (!fullName || !email || !phone) {
         failed++;
@@ -264,11 +275,53 @@ export default function SchoolAdminTeachersPage() {
     try {
       await deleteTeacher(t.id);
       setToast({ msg: `Đã xóa giáo viên ${t.full_name}`, tone: "ok" });
+      setSelectedIds((prev) => prev.filter((id) => id !== t.id));
       mutate();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
     }
     setConfirmDel(null);
+  }
+
+  const allSelected =
+    filtered.length > 0 && filtered.every((t) => selectedIds.includes(t.id));
+  const someSelected =
+    selectedIds.length > 0 && !allSelected;
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map((t) => t.id));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await deleteTeachersBatch(selectedIds);
+      setToast({
+        msg: res.message || `Đã xóa ${selectedIds.length} giáo viên`,
+        tone: "ok",
+      });
+      setSelectedIds([]);
+      mutate();
+    } catch (err: any) {
+      setToast({
+        msg: err?.message || "Không thể xóa hàng loạt giáo viên",
+        tone: "bad",
+      });
+    } finally {
+      setBulkDeleting(false);
+      setConfirmBulkDel(false);
+    }
   }
 
   function toggleClass(classId: string) {
@@ -336,9 +389,55 @@ export default function SchoolAdminTeachersPage() {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div
+          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
+          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
+        >
+          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
+              style={{ background: "#BB4A34" }}
+            >
+              {selectedIds.length}
+            </span>
+            <span>Đã chọn {selectedIds.length} giáo viên</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="kbtn kbtn-secondary text-xs"
+              disabled={bulkDeleting}
+            >
+              Bỏ chọn
+            </button>
+            <button
+              onClick={() => setConfirmBulkDel(true)}
+              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
+              style={{ background: "#BB4A34" }}
+              disabled={bulkDeleting}
+            >
+              <span>🗑️</span>
+              <span>Xóa đã chọn ({selectedIds.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="card overflow-hidden">
-        {!teachers ? (
+        {!teachers && !teachersError ? (
           <Spinner />
+        ) : teachersError ? (
+          <div className="text-center py-12">
+            <div className="text-bad font-semibold mb-2">
+              {(teachersError as any)?.status === 401
+                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
+                : `Không thể tải danh sách giáo viên (${(teachersError as any)?.detail || "Vui lòng thử lại"})`}
+            </div>
+            <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
+              Thử lại
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">👨‍🏫</div>
@@ -357,6 +456,18 @@ export default function SchoolAdminTeachersPage() {
                   style={{ background: "#EFECE5", color: "#605D57" }}
                 >
                   <tr>
+                    <th className="px-3 py-3 text-center w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                        title="Chọn tất cả giáo viên hiển thị"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
                     <th className="px-4 py-3 text-left font-semibold">Email / SĐT</th>
                     <th className="px-4 py-3 text-left font-semibold">Lớp phụ trách</th>
@@ -366,11 +477,23 @@ export default function SchoolAdminTeachersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((t, idx) => (
+                  {filtered.map((t, idx) => {
+                    const isSelected = selectedIds.includes(t.id);
+                    return (
                     <tr
                       key={t.id}
-                      className={idx > 0 ? "border-t border-line" : ""}
+                      className={`${idx > 0 ? "border-t border-line" : ""} ${
+                        isSelected ? "bg-[#FDF8F6]" : ""
+                      }`}
                     >
+                      <td className="px-3 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          className="rounded cursor-pointer"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(t.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div
@@ -424,7 +547,8 @@ export default function SchoolAdminTeachersPage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>
@@ -552,11 +676,20 @@ export default function SchoolAdminTeachersPage() {
         onCancel={() => setConfirmDel(null)}
       />
 
+      <ConfirmDialog
+        open={confirmBulkDel}
+        title={`Xóa ${selectedIds.length} giáo viên đã chọn?`}
+        message={`Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} giáo viên này? Toàn bộ tài khoản và thông tin phân công lớp sẽ được gỡ bỏ.`}
+        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} giáo viên`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
+      />
+
       <ImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách giáo viên từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường."
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường. Nếu để trống Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (giáo viên có thể đăng nhập bằng cả Email hoặc Số điện thoại)."
         templateFilename="mau_nhap_giao_vien.xlsx"
         sampleHeaders={["Họ và tên", "Email", "Số điện thoại", "Tên lớp", "Tên đăng nhập", "Mật khẩu"]}
         sampleRow={[

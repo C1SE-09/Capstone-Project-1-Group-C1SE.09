@@ -150,14 +150,14 @@ class BugReport(Base, TimestampMixin):
     )
 
     # --- Foreign keys ---
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "users.user_id",
             ondelete="SET NULL",
             name="fk_bug_report_user_id",
         ),
-        nullable=False,
+        nullable=True,
         comment="User who reported the bug – NULL if user is deleted",
     )
     teacher_id: Mapped[uuid.UUID | None] = mapped_column(

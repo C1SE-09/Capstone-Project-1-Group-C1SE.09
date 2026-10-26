@@ -7,7 +7,7 @@
  *   - Biểu đồ xu hướng 7 ngày (custom SVG).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import { KpiCard, Pill, ProgressBar, Spinner } from "@/components/ui-school";
@@ -45,12 +45,14 @@ interface ReportTrend {
 }
 
 function fmtPercent(p: number) {
-  return `${(p * 100).toFixed(p < 1 ? 1 : 0)}%`;
+  const val = p > 1 ? p : p * 100;
+  return `${val.toFixed(val < 100 && val % 1 !== 0 ? 1 : 0)}%`;
 }
 
 function toneFromRate(r: number): "ok" | "warn" | "bad" {
-  if (r >= 0.8) return "ok";
-  if (r >= 0.4) return "warn";
+  const normalized = r > 1 ? r / 100 : r;
+  if (normalized >= 0.8) return "ok";
+  if (normalized >= 0.4) return "warn";
   return "bad";
 }
 
@@ -251,7 +253,7 @@ export default function SchoolAdminOverviewPage() {
                                   : "#BB4A34",
                           }}
                         >
-                          {(c.completion_rate * 100).toFixed(0)}%
+                          {fmtPercent(c.completion_rate)}
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-xs text-ink-soft mt-2">
@@ -316,7 +318,7 @@ export default function SchoolAdminOverviewPage() {
                 </span>
               </div>
             </div>
-            <TrendChart data={trends ?? []} />
+            <TrendChart data={trends} isLoading={!trends} />
           </div>
         </>
       )}
@@ -325,11 +327,51 @@ export default function SchoolAdminOverviewPage() {
 }
 
 /* ════════ Mini SVG trend chart ════════ */
-function TrendChart({ data }: { data: ReportTrend[] }) {
-  const { w, h, padding, points, max, total } = useMemo(() => {
-    const w = 720;
-    const h = 220;
-    const padding = 32;
+function TrendChart({
+  data = [],
+  isLoading = false,
+}: {
+  data?: ReportTrend[];
+  isLoading?: boolean;
+}) {
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const roRef = useRef<ResizeObserver | null>(null);
+
+  const containerRef = useCallback((el: HTMLDivElement | null) => {
+    if (roRef.current) {
+      roRef.current.disconnect();
+      roRef.current = null;
+    }
+    if (el) {
+      const update = () => {
+        if (el.clientWidth > 0) {
+          setContainerWidth(el.clientWidth);
+        }
+      };
+      update();
+      if (typeof ResizeObserver !== "undefined") {
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        roRef.current = ro;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (roRef.current) {
+        roRef.current.disconnect();
+        roRef.current = null;
+      }
+    };
+  }, []);
+
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  const { w, h, padding, points, total } = useMemo(() => {
+    const w = containerWidth > 0 ? containerWidth : 720;
+    const h = 200;
+    const padding = 28;
     const max = Math.max(
       1,
       ...data.map((d) => Math.max(d.sent_reports, d.draft_reports)),
@@ -341,102 +383,210 @@ function TrendChart({ data }: { data: ReportTrend[] }) {
       const x = padding + (innerW * i) / Math.max(1, total - 1);
       const sentY = padding + innerH - (d.sent_reports / max) * innerH;
       const draftY = padding + innerH - (d.draft_reports / max) * innerH;
-      return { x, sentY, draftY, label: d.report_date, sent: d.sent_reports, draft: d.draft_reports };
+      return {
+        x,
+        sentY,
+        draftY,
+        label: d.report_date,
+        sent: d.sent_reports,
+        draft: d.draft_reports,
+      };
     });
-    return { w, h, padding, points, max, total };
-  }, [data]);
+    return { w, h, padding, points, total };
+  }, [data, containerWidth]);
 
-  if (data.length === 0) {
-    return (
-      <div className="text-center text-ink-soft text-sm py-12">
-        Chưa có dữ liệu xu hướng.
-      </div>
-    );
-  }
+  // Build smooth curves using bounded spline to prevent negative undershoot
+  const bottomY = h - padding;
+  const topY = padding;
+  const sentCurve = toSmoothPath(
+    points.map((p) => ({ x: p.x, y: p.sentY })),
+    topY,
+    bottomY,
+  );
+  const draftCurve = toSmoothPath(
+    points.map((p) => ({ x: p.x, y: p.draftY })),
+    topY,
+    bottomY,
+  );
 
-  const sentPath = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.sentY}`)
-    .join(" ");
-  const draftPath = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.draftY}`)
-    .join(" ");
-
-  // Build smooth curves using simple Catmull-Rom → cubic
-  const sentCurve = toSmoothPath(points.map((p) => ({ x: p.x, y: p.sentY })));
-  const draftCurve = toSmoothPath(points.map((p) => ({ x: p.x, y: p.draftY })));
+  const hoveredPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      preserveAspectRatio="none"
-      style={{ width: "100%", height: 220 }}
-    >
-      {/* Grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => {
-        const y = padding + (h - padding * 2) * (1 - p);
-        return (
-          <line
-            key={idx}
-            x1={padding}
-            x2={w - padding}
-            y1={y}
-            y2={y}
-            stroke="#E7E3DA"
-            strokeDasharray="3 3"
-          />
-        );
-      })}
+    <div ref={containerRef} className="relative w-full select-none pt-2 min-h-[236px]">
+      {isLoading ? (
+        <div className="flex items-center justify-center h-[200px]">
+          <Spinner />
+        </div>
+      ) : data.length === 0 ? (
+        <div className="flex items-center justify-center h-[200px] text-ink-soft text-sm">
+          Chưa có dữ liệu xu hướng.
+        </div>
+      ) : containerWidth === 0 ? (
+        <div className="flex items-center justify-center h-[200px]">
+          <Spinner />
+        </div>
+      ) : (
+        <>
+          {/* SVG Canvas (1:1 pixel aspect ratio, không bị méo lệch) */}
+          <svg
+            viewBox={`0 0 ${w} ${h}`}
+            className="w-full block overflow-visible"
+            style={{ height: h }}
+          >
+            {/* Grid lines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => {
+              const y = padding + (h - padding * 2) * (1 - p);
+              return (
+                <line
+                  key={idx}
+                  x1={padding}
+                  x2={w - padding}
+                  y1={y}
+                  y2={y}
+                  stroke="#E7E3DA"
+                  strokeDasharray="3 3"
+                />
+              );
+            })}
 
-      {/* Sent line */}
-      <path
-        d={sentCurve}
-        stroke="#16665a"
-        strokeWidth={2.5}
-        fill="none"
-        strokeLinecap="round"
-      />
-      <path
-        d={`${sentCurve} L ${points[points.length - 1].x} ${h - padding} L ${points[0].x} ${h - padding} Z`}
-        fill="#16665a"
-        opacity="0.10"
-      />
+            {/* Hover vertical guide line */}
+            {hoveredPoint && (
+              <line
+                x1={hoveredPoint.x}
+                x2={hoveredPoint.x}
+                y1={padding}
+                y2={h - padding}
+                stroke="#C4C0B6"
+                strokeDasharray="3 3"
+              />
+            )}
 
-      {/* Draft line */}
-      <path
-        d={draftCurve}
-        stroke="#B0791B"
-        strokeWidth={2.5}
-        fill="none"
-        strokeLinecap="round"
-        strokeDasharray="0"
-      />
+            {/* Sent line */}
+            <path
+              d={sentCurve}
+              stroke="#16665a"
+              strokeWidth={2.5}
+              fill="none"
+              strokeLinecap="round"
+            />
+            {points.length > 0 && (
+              <path
+                d={`${sentCurve} L ${points[points.length - 1].x} ${h - padding} L ${points[0].x} ${h - padding} Z`}
+                fill="#16665a"
+                opacity="0.10"
+              />
+            )}
 
-      {/* Points */}
-      {points.map((p, i) => (
-        <g key={i}>
-          <circle cx={p.x} cy={p.sentY} r={3.5} fill="#16665a" stroke="#fff" strokeWidth={1.5} />
-          <circle cx={p.x} cy={p.draftY} r={3.5} fill="#B0791B" stroke="#fff" strokeWidth={1.5} />
-        </g>
-      ))}
+            {/* Draft line */}
+            <path
+              d={draftCurve}
+              stroke="#B0791B"
+              strokeWidth={2.5}
+              fill="none"
+              strokeLinecap="round"
+            />
 
-      {/* X labels (date) */}
-      {points.map((p, i) => (
-        <text
-          key={i}
-          x={p.x}
-          y={h - 6}
-          fontSize="10"
-          fill="#757169"
-          textAnchor="middle"
-        >
-          {formatDateLabel(p.label)}
-        </text>
-      ))}
-    </svg>
+            {/* Points */}
+            {points.map((p, i) => {
+              const isHovered = hoverIndex === i;
+              return (
+                <g key={i}>
+                  <circle
+                    cx={p.x}
+                    cy={p.sentY}
+                    r={isHovered ? 5.5 : 4}
+                    fill="#16665a"
+                    stroke="#fff"
+                    strokeWidth={isHovered ? 2.5 : 2}
+                    className="transition-all duration-150"
+                  />
+                  <circle
+                    cx={p.x}
+                    cy={p.draftY}
+                    r={isHovered ? 5.5 : 4}
+                    fill="#B0791B"
+                    stroke="#fff"
+                    strokeWidth={isHovered ? 2.5 : 2}
+                    className="transition-all duration-150"
+                  />
+                </g>
+              );
+            })}
+
+            {/* Cột bắt sự kiện rê chuột */}
+            {points.map((p, i) => {
+              const colW = (w - padding * 2) / Math.max(1, total - 1);
+              return (
+                <rect
+                  key={i}
+                  x={p.x - colW / 2}
+                  y={0}
+                  width={colW}
+                  height={h}
+                  fill="transparent"
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoverIndex(i)}
+                  onMouseLeave={() => setHoverIndex(null)}
+                />
+              );
+            })}
+          </svg>
+
+          {/* Floating Tooltip khi hover */}
+          {hoveredPoint && (
+            <div
+              className="absolute pointer-events-none bg-ink text-white text-[11px] py-1.5 px-3 rounded-lg shadow-xl -translate-x-1/2 -translate-y-full z-20 whitespace-nowrap"
+              style={{
+                left: `${hoveredPoint.x}px`,
+                top: `${Math.min(hoveredPoint.sentY, hoveredPoint.draftY) + 12}px`,
+              }}
+            >
+              <div className="font-semibold text-slate-200 border-b border-white/20 pb-0.5 mb-1 text-center">
+                Ngày {formatDateLabel(hoveredPoint.label)}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-[#16665a]"></span>
+                <span>Đã gửi: <b>{hoveredPoint.sent}</b></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-[#B0791B]"></span>
+                <span>Bản nháp: <b>{hoveredPoint.draft}</b></span>
+              </div>
+            </div>
+          )}
+
+          {/* X Labels (HTML thuần font chữ hệ thống - KHÔNG BAO GIỜ bị dẹp/méo) */}
+          <div className="relative w-full h-7 mt-2">
+            {points.map((p, i) => {
+              const isHovered = hoverIndex === i;
+              return (
+                <div
+                  key={i}
+                  className={`absolute -translate-x-1/2 text-center text-xs tracking-normal transition-all cursor-pointer ${
+                    isHovered
+                      ? "font-bold text-ink scale-110"
+                      : "font-medium text-ink-soft hover:text-ink"
+                  }`}
+                  style={{ left: `${p.x}px` }}
+                  onMouseEnter={() => setHoverIndex(i)}
+                  onMouseLeave={() => setHoverIndex(null)}
+                >
+                  {formatDateLabel(p.label)}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
-function toSmoothPath(points: { x: number; y: number }[]) {
+function toSmoothPath(
+  points: { x: number; y: number }[],
+  minY?: number,
+  maxY?: number,
+) {
   if (points.length === 0) return "";
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
   let d = `M ${points[0].x} ${points[0].y}`;
@@ -445,10 +595,34 @@ function toSmoothPath(points: { x: number; y: number }[]) {
     const p1 = points[i];
     const p2 = points[i + 1];
     const p3 = points[i + 2] ?? p2;
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    // Nếu 2 điểm liên tiếp cùng giá trị y (ví dụ đều ở mốc 0), vẽ đường thẳng phẳng không uốn
+    if (Math.abs(p1.y - p2.y) < 0.001) {
+      d += ` C ${p1.x + (p2.x - p1.x) / 3} ${p1.y}, ${p2.x - (p2.x - p1.x) / 3} ${p2.y}, ${p2.x} ${p2.y}`;
+      continue;
+    }
+
+    let cp1x = p1.x + (p2.x - p0.x) / 6;
+    let cp1y = p1.y + (p2.y - p0.y) / 6;
+    let cp2x = p2.x - (p3.x - p1.x) / 6;
+    let cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    // Giữ tính đơn điệu của đoạn (không để control point võng quá đoạn [p1.y, p2.y])
+    const segMinY = Math.min(p1.y, p2.y);
+    const segMaxY = Math.max(p1.y, p2.y);
+    cp1y = Math.min(segMaxY, Math.max(segMinY, cp1y));
+    cp2y = Math.min(segMaxY, Math.max(segMinY, cp2y));
+
+    // Clamp vào vùng vẽ của biểu đồ
+    if (minY !== undefined) {
+      cp1y = Math.max(minY, cp1y);
+      cp2y = Math.max(minY, cp2y);
+    }
+    if (maxY !== undefined) {
+      cp1y = Math.min(maxY, cp1y);
+      cp2y = Math.min(maxY, cp2y);
+    }
+
     d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
   }
   return d;

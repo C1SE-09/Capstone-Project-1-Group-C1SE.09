@@ -11,6 +11,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.endpoints import admin, admin_auth, auth, bug_reports, notifications
 from app.api.endpoints.school_admin_auth import router as school_admin_router
 from app.api.endpoints.attendance import router as attendance_router
+from app.api.endpoints.leave_requests import router as leave_requests_router
 from app.api.endpoints.admin_dashboard import (
     router as admin_dashboard_router,
 )
@@ -94,6 +95,7 @@ app.include_router(stats_router)
 app.include_router(bug_reports.router)
 app.include_router(admin_dashboard_router, prefix="/api")
 app.include_router(attendance_router, prefix="/api")
+app.include_router(leave_requests_router, prefix="/api")
 
 
 @app.get("/")

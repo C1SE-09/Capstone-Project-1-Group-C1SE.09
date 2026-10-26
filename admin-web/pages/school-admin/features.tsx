@@ -177,11 +177,6 @@ export default function SchoolAdminFeaturesPage() {
 
   return (
     <SchoolAdminLayout active="features" pageTitle="Chức năng quản trị hệ thống">
-      <p className="text-sm text-ink-soft -mt-3 mb-5">
-        Quản lý giáo viên, học sinh, phụ huynh và kiểm tra xung đột thời khóa
-        biểu tự động.
-      </p>
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {tiles.map((tile) => (
           <Link
