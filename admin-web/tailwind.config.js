@@ -13,6 +13,7 @@ module.exports = {
       colors: {
         // ─── Brand (Kindergarten teal) ────────────────────────────
         brand: {
+          DEFAULT: "#16665A",
           50: "#E6EFEC",
           100: "#D1E0D9",
           200: "#A3C2B3",

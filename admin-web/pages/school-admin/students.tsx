@@ -38,6 +38,7 @@ import {
   Parent,
   SchoolClass,
   createChild,
+  createParent,
   deleteChild,
   deleteChildrenBatch,
   getChildren,
@@ -438,7 +439,22 @@ export default function SchoolAdminStudentsPage() {
       const classNameOrId = row[2]?.trim();
       const dob = row[3]?.trim() || null;
       const genderStr = (row[4]?.trim() || "").toLowerCase();
-      const note = row[5]?.trim() || "";
+      let parentContact = "";
+      let note = "";
+
+      if (row.length >= 7) {
+        parentContact = row[5]?.trim() || "";
+        note = row[6]?.trim() || "";
+      } else {
+        const col5 = row[5]?.trim() || "";
+        if (/^0\d{9}$/.test(col5) || /^0\d+$/.test(col5)) {
+          parentContact = col5;
+          note = "";
+        } else {
+          parentContact = "";
+          note = col5;
+        }
+      }
 
       if (!fullName) {
         failed++;
@@ -534,6 +550,54 @@ export default function SchoolAdminStudentsPage() {
 
       const gender = genderStr.includes("nữ") || genderStr === "female" ? "female" : "male";
 
+      // Xử lý liên kết phụ huynh
+      let matchedParentId: string | null = null;
+      if (parentContact) {
+        const foundP = (parents || []).find(
+          (p) => p.phone === parentContact || p.full_name.trim().toLowerCase() === parentContact.toLowerCase()
+        );
+        if (foundP) {
+          matchedParentId = foundP.id;
+        } else if (/^0\d{9}$/.test(parentContact)) {
+          // Tự động tạo phụ huynh mới nếu số điện thoại hợp lệ
+          try {
+            const pRes = await createParent({
+              full_name: `Phụ huynh bé ${fullName}`,
+              phone: parentContact,
+              relationship: "Phụ huynh",
+              username: parentContact,
+              password: "123456",
+              status: "active",
+            });
+            if ((pRes as any)?.id) {
+              matchedParentId = (pRes as any).id;
+              const newParent: Parent = {
+                id: matchedParentId!,
+                full_name: `Phụ huynh bé ${fullName}`,
+                phone: parentContact,
+                email: "",
+                username: parentContact,
+                relationship: "Phụ huynh",
+                status: "active",
+                children_summary: fullName,
+                child_id: null,
+                child_ids: [],
+                children: [],
+              };
+              setParents((prev) => [...prev, newParent]);
+            }
+          } catch (e: any) {
+            warnings.push(
+              `Dòng ${i + 1} (${fullName}): Không thể tự động tạo phụ huynh với SĐT ${parentContact}: ${e?.message || "Lỗi tạo phụ huynh"}`
+            );
+          }
+        } else {
+          warnings.push(
+            `Dòng ${i + 1} (${fullName}): SĐT phụ huynh "${parentContact}" không đúng định dạng 10 số bắt đầu bằng 0.`
+          );
+        }
+      }
+
       try {
         const res = await createChild({
           full_name: fullName,
@@ -541,6 +605,8 @@ export default function SchoolAdminStudentsPage() {
           class_id: matchedClassId,
           date_of_birth: isoDob,
           gender,
+          parent_id: matchedParentId || undefined,
+          parent_ids: matchedParentId ? [matchedParentId] : undefined,
           medical_allergies: note,
           status: "enrolled",
         });
@@ -560,6 +626,7 @@ export default function SchoolAdminStudentsPage() {
 
     if (success > 0) {
       mutate();
+      getParents().then(setParents).catch(() => {});
     }
     return { total: rows.length, success, failed, errors, warnings };
   }
@@ -1453,15 +1520,24 @@ export default function SchoolAdminStudentsPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách học sinh từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV. Hệ thống hỗ trợ đọc cùng lúc nhiều sheet (chia theo từng lớp) và tự động nhận diện lớp theo tên sheet."
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV. Hệ thống hỗ trợ đọc cùng lúc nhiều sheet (chia theo từng lớp), tự động nhận diện lớp theo tên sheet và tự động liên kết với phụ huynh theo số điện thoại."
         templateFilename="mau_nhap_hoc_sinh.xlsx"
-        sampleHeaders={["Họ và tên", "Biệt danh", "Tên lớp", "Ngày sinh (DD/MM/YYYY)", "Giới tính (Nam/Nữ)", "Ghi chú / Dị ứng"]}
+        sampleHeaders={[
+          "Họ và tên",
+          "Biệt danh",
+          "Tên lớp",
+          "Ngày sinh (DD/MM/YYYY)",
+          "Giới tính (Nam/Nữ)",
+          "SĐT phụ huynh",
+          "Ghi chú / Dị ứng",
+        ]}
         sampleRow={[
           "Nguyễn Bảo An",
           "Bống",
           classes[0]?.name || "Lớp Mầm 1",
           "15/05/2021",
           "Nữ",
+          "0912345678",
           "Dị ứng hải sản",
         ]}
         onImportRows={handleImportRows}
