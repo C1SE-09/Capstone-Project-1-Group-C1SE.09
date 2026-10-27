@@ -143,8 +143,8 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         role = UserRole.teacher;
       }
-      if (role == UserRole.parent) {
-        // Scope A: chỉ phụ huynh nhận push báo cáo mới.
+      if (role == UserRole.parent || role == UserRole.teacher) {
+        // Giáo viên cũng nhận push nhắc hoàn thành điểm danh.
         PushNotificationService.instance.registerCurrentDevice();
       }
       widget.onLogin(role);

@@ -83,6 +83,32 @@ void main() {
   });
 
   group('ChildOverview', () {
+    test('push chọn đúng bé qua child_id', () async {
+      final (repo, adapter) = _repo({
+        'child': {'child_id': 'child-2', 'full_name': 'Bé thứ hai'},
+        'class_name': 'Mầm B',
+        'teacher_name': 'Cô Lan',
+      });
+      final overview = await repo.getChildOverviewForParent('parent-1', 'child-2');
+      expect(adapter.lastRequest!.path, '/api/parent/parent-1/child');
+      expect(adapter.lastRequest!.queryParameters['child_id'], 'child-2');
+      expect(overview.child.childId, 'child-2');
+    });
+
+    test('push lấy báo cáo theo ID trước khi đánh dấu đã đọc', () async {
+      final (repo, adapter) = _repo({
+        'daily_report_id': 'report-old',
+        'child_id': 'child-2',
+        'report_date': '2026-09-01',
+        'status': 'sent',
+      });
+      final report = await repo.getParentReport('report-old');
+      expect(adapter.lastRequest!.method, 'GET');
+      expect(adapter.lastRequest!.path, '/api/parent/reports/report-old');
+      expect(report.dailyReportId, 'report-old');
+      expect(report.childId, 'child-2');
+    });
+
     test('getPrimaryChildOverview đọc liên hệ GVCN và phòng', () async {
       final (repo, adapter) = _repo({
         'child': {

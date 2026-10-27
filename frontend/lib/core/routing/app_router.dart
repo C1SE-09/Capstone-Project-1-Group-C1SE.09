@@ -62,10 +62,16 @@ final GoRouter appRouter = GoRouter(
                         queryParameters: {'classId': classId}).toString()))))),
     GoRoute(
         path: '/teacher',
-        builder: (context, state) => TeacherShell(
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: ValueKey(state.uri.toString()),
+          child: TeacherShell(
             onLogout: _goLogin,
             classId: state.uri.queryParameters['classId'] ??
-                'aaaaaaaa-0000-0000-0000-000000000001')),
+                'aaaaaaaa-0000-0000-0000-000000000001',
+            initialAttendanceDate: state.uri.queryParameters['attendanceDate'],
+            notificationId: state.uri.queryParameters['notification'],
+          ),
+        )),
     GoRoute(
       path: '/timetable',
       builder: (context, state) => TimetableScreen(
@@ -77,9 +83,16 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/parent',
-      builder: (context, state) => ParentFlow(
-        onLogout: _goLogin,
-        initialOpenReport: state.uri.queryParameters['report'] == 'today',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: ValueKey(state.uri.toString()),
+        child: ParentFlow(
+          onLogout: _goLogin,
+          initialOpenReport: state.uri.queryParameters['report'] == 'today',
+          initialReportId: state.uri.queryParameters['reportId'],
+          childId: state.uri.queryParameters['childId'],
+          initialAttendanceDate: state.uri.queryParameters['attendanceDate'],
+          notificationId: state.uri.queryParameters['notification'],
+        ),
       ),
     ),
     GoRoute(
@@ -135,6 +148,11 @@ class _LoginRoute extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LoginScreen(
         onLogin: (role) {
+          final target = PushNotificationService.instance.pendingLocationFor(role.name);
+          if (target != null) {
+            appRouter.go(target);
+            return;
+          }
           switch (role) {
             case UserRole.admin:
               appRouter.go('/admin');

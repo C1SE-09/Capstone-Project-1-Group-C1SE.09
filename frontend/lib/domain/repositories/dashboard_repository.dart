@@ -46,6 +46,12 @@ abstract class DashboardRepository {
   /// Đứa con (duy nhất trong MVP) kèm lớp + giáo viên — cho card con.
   Future<ChildOverview> getPrimaryChildOverview(String parentId);
 
+  /// Bé được chỉ định bởi push; backend xác minh liên kết với phụ huynh.
+  Future<ChildOverview> getChildOverviewForParent(String parentId, String childId);
+
+  /// Đọc chính xác báo cáo đã gửi, kể cả ngoài danh sách gần đây.
+  Future<DailyReport> getParentReport(String reportId);
+
   /// Phụ huynh tự cập nhật SĐT của mình — PUT /api/parent/{parentId}.
   Future<void> updateMyPhone(String parentId, String phone);
 

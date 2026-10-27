@@ -153,6 +153,21 @@ class HttpDashboardRepository implements DashboardRepository {
   @override
   Future<ChildOverview> getPrimaryChildOverview(String parentId) async {
     final data = await _get('/api/parent/$parentId/child');
+    return _parseChildOverview(data);
+  }
+
+  @override
+  Future<ChildOverview> getChildOverviewForParent(String parentId, String childId) async {
+    final data = await _get('/api/parent/$parentId/child', query: {'child_id': childId});
+    return _parseChildOverview(data);
+  }
+
+  @override
+  Future<DailyReport> getParentReport(String reportId) async {
+    return DailyReport.fromJson(await _get('/api/parent/reports/$reportId'));
+  }
+
+  ChildOverview _parseChildOverview(Map<String, dynamic> data) {
     return ChildOverview(
       child: Child.fromJson(_asMap(data['child'])),
       className: data['class_name'] as String? ?? '',
