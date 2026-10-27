@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.config import get_today
-from app.core.access import role_of, teacher_owns_class
+from app.core.access import resolve_child_for_actor, role_of, teacher_owns_class
 from app.core.database import get_db
 from app.core.security import require_any_role
 from app.models.child import Child, ChildStatus, Parent
@@ -482,16 +482,17 @@ def get_parent(
 
 @router.get(
     "/api/parent/{parent_id}/child",
-    summary="Con (duy nhất trong MVP) + lớp + giáo viên",
+    summary="Con mặc định hoặc bé được chọn + lớp + giáo viên",
 )
 def get_parent_primary_child(
     parent_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("parent", "admin")),
+    child_id: uuid.UUID | None = None,
 ):
     """
-    Trả về 1 đứa con (đầu tiên) + tên lớp + tên giáo viên,
-    khớp entity ChildOverview (frontend).
+    Không có child_id thì giữ cách chọn bé mặc định; có child_id thì chỉ trả
+    bé liên kết với phụ huynh qua N-N hoặc khóa ngoại trực tiếp.
     """
     parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
     if not parent:
@@ -504,8 +505,8 @@ def get_parent_primary_child(
         children = [
             c for c in parent.children if getattr(c, "status", None) == ChildStatus.ENROLLED
         ]
-    if not children:
-        children = (
+    if not children or child_id is not None:
+        direct_children = (
             db.query(Child)
             .filter(
                 Child.parent_id == parent_id,
@@ -514,6 +515,10 @@ def get_parent_primary_child(
             .order_by(Child.full_name)
             .all()
         )
+        children.extend(child for child in direct_children if child not in children)
+
+    if child_id is not None:
+        children = [child for child in children if child.child_id == child_id]
 
     if not children:
         raise HTTPException(status_code=404, detail="Child not found")
@@ -612,6 +617,27 @@ def get_child_reports(
         "today_report": _report_dict(today_report) if today_report else None,
         "recent_reports": [_report_dict(r) for r in recent],
     }
+
+
+@router.get(
+    "/api/parent/reports/{report_id}",
+    summary="Mở đúng báo cáo đã gửi từ thông báo phụ huynh",
+)
+def get_parent_report(
+    report_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
+):
+    """Đọc báo cáo đã gửi của gia đình hiện tại, không tự đánh dấu đã đọc."""
+    report = db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    resolve_child_for_actor(db, report.child_id, current_user)
+    if report.status not in (
+        DailyReportStatus.PUBLISHED, DailyReportStatus.SENT, DailyReportStatus.READ,
+    ):
+        raise HTTPException(status_code=404, detail="Report not found")
+    return _report_dict(report)
 
 
 @router.post(
