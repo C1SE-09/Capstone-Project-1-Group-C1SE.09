@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({
@@ -267,6 +268,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ],
           ),
+          actions: [
+            IconButton(
+              tooltip: 'Duyệt đơn xin nghỉ',
+              icon: const Icon(Icons.assignment_turned_in_outlined),
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => LeaveRequestReviewScreen(
+                      classId: widget.classId,
+                      className: widget.className,
+                    ),
+                  ),
+                );
+                // Sau khi quay lại, tự động refresh bảng điểm danh
+                _fetchLatest();
+              },
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(summaryHeight),
             child: _AttendanceSummary(

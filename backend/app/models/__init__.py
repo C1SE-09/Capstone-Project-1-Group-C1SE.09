@@ -17,6 +17,7 @@ SQLAlchemy's mapper registry is populated correctly.
 from app.models.admin_user import AdminUser
 from app.models.base import Base, TimestampMixin
 from app.models.attendance import AttendanceRecord, AttendanceStatus
+from app.models.leave_request import LeaveRequest, LeaveRequestStatus
 from app.models.bug_report import (
     BugCategory,
     BugReport,
@@ -105,4 +106,6 @@ __all__ = [
     "AttendanceStatus",
     "HealthCategory",
     "HealthExamination",
+    "LeaveRequest",
+    "LeaveRequestStatus",
 ]
