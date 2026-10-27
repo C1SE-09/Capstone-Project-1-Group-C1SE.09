@@ -42,7 +42,6 @@ def verify_admin_access(current_user: User) -> None:
 
 def to_ascii_slug(text: str) -> str:
     """Chuyển chuỗi tiếng Việt có dấu sang ASCII không dấu an toàn cho HTTP Header."""
-    import unicodedata
     normalized = unicodedata.normalize("NFD", text)
     ascii_text = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
     ascii_text = ascii_text.replace("đ", "d").replace("Đ", "D")
