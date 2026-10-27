@@ -26,9 +26,10 @@ Thumbs.db
 .idea/
 
 # Large models (tải về Network Volume trên RunPod)
-models/
+/models/
 backend/models/
 backend/models/PhoWhisper-large-ct2/
+!backend/app/models/
 
 # Cache + binary static trên RunPod Network Volume
 .pip-cache/

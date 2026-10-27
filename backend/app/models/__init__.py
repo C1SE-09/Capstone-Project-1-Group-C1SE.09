@@ -32,6 +32,7 @@ from app.models.child import (
     ParentChild,
     ParentStatus,
 )
+from app.models.health_examination import HealthCategory, HealthExamination
 from app.models.device_token import DeviceToken
 from app.models.report import (
     ActivityCategory,
@@ -102,4 +103,6 @@ __all__ = [
     "VoiceRecordStatus",
     "AttendanceRecord",
     "AttendanceStatus",
+    "HealthCategory",
+    "HealthExamination",
 ]

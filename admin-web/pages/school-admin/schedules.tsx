@@ -42,6 +42,8 @@ import {
 
 const DAY_LABELS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"];
 const DAY_SHORT = ["T2", "T3", "T4", "T5", "T6"];
+const WORKING_HOURS_START = "07:00"; // Mở cửa đón trẻ
+const WORKING_HOURS_END = "17:00"; // Hết giờ trả trẻ
 
 const SHARED_KEYWORDS = [
   "sân cỏ",
@@ -528,6 +530,31 @@ export default function SchoolAdminSchedulesPage() {
       setToast({ msg: "Vui lòng chọn khung giờ hoặc nhập giờ bắt đầu/kết thúc", tone: "bad" });
       return;
     }
+
+    // Kiểm tra giờ làm việc của trường: chỉ cho phép từ 07:00 đến lúc trả trẻ (17:00)
+    let effectiveStart = form.start_time;
+    let effectiveEnd = form.end_time;
+    if (form.slot_id) {
+      const s = timeSlots.find((ts) => ts.id === form.slot_id);
+      if (s) {
+        effectiveStart = s.start_time;
+        effectiveEnd = s.end_time;
+      }
+    }
+
+    if (effectiveStart && effectiveEnd) {
+      if (effectiveEnd <= effectiveStart) {
+        setToast({ msg: "Giờ kết thúc phải sau giờ bắt đầu", tone: "bad" });
+        return;
+      }
+      if (effectiveStart < WORKING_HOURS_START || effectiveEnd > WORKING_HOURS_END) {
+        setToast({
+          msg: `Khung giờ hoạt động (${effectiveStart} - ${effectiveEnd}) nằm ngoài giờ làm việc của trường (${WORKING_HOURS_START} - ${WORKING_HOURS_END}, từ đón trẻ đến hết giờ trả trẻ).`,
+          tone: "bad",
+        });
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload: SchedulePayload = {
@@ -937,6 +964,24 @@ export default function SchoolAdminSchedulesPage() {
         failed++;
         errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): Thiếu hoặc sai định dạng khung giờ (ví dụ: 08:10 - 08:40).`);
         continue;
+      }
+
+      // Kiểm tra khung giờ làm việc của trường (07:00 - 17:00)
+      if (startTime && endTime) {
+        if (endTime <= startTime) {
+          failed++;
+          errors.push(
+            `Dòng ${lineNum} ("${activityName.trim()}"): Giờ kết thúc (${endTime}) phải sau giờ bắt đầu (${startTime}).`
+          );
+          continue;
+        }
+        if (startTime < WORKING_HOURS_START || endTime > WORKING_HOURS_END) {
+          failed++;
+          errors.push(
+            `Dòng ${lineNum} ("${activityName.trim()}"): Khung giờ ${startTime} - ${endTime} nằm ngoài giờ làm việc của trường (${WORKING_HOURS_START} - ${WORKING_HOURS_END}, từ đón trẻ đến hết giờ trả trẻ).`
+          );
+          continue;
+        }
       }
 
       // 5. Xác định địa điểm / phòng học (nếu trống tự lấy phòng chính của lớp)
@@ -1518,22 +1563,32 @@ export default function SchoolAdminSchedulesPage() {
             <div className="text-xs text-ink-faint">Chưa có khung giờ nào.</div>
           )}
         </FormField>
-        <FormField label="Hoặc nhập giờ tự do">
+        <FormField label="Hoặc nhập giờ tự do (07:00 – 17:00)">
           <div className="grid grid-cols-2 gap-2">
-            <input
-              type="time"
-              className="kinput"
-              value={form.start_time}
-              onChange={(e) => setForm({ ...form, start_time: e.target.value, slot_id: null })}
-              placeholder="Bắt đầu"
-            />
-            <input
-              type="time"
-              className="kinput"
-              value={form.end_time}
-              onChange={(e) => setForm({ ...form, end_time: e.target.value, slot_id: null })}
-              placeholder="Kết thúc"
-            />
+            <div>
+              <input
+                type="time"
+                min={WORKING_HOURS_START}
+                max={WORKING_HOURS_END}
+                className="kinput"
+                value={form.start_time}
+                onChange={(e) => setForm({ ...form, start_time: e.target.value, slot_id: null })}
+                placeholder="Bắt đầu"
+              />
+              <span className="text-[11px] text-ink-faint mt-1 block">Từ 07:00 (Đón trẻ)</span>
+            </div>
+            <div>
+              <input
+                type="time"
+                min={WORKING_HOURS_START}
+                max={WORKING_HOURS_END}
+                className="kinput"
+                value={form.end_time}
+                onChange={(e) => setForm({ ...form, end_time: e.target.value, slot_id: null })}
+                placeholder="Kết thúc"
+              />
+              <span className="text-[11px] text-ink-faint mt-1 block">Đến 17:00 (Trả trẻ)</span>
+            </div>
           </div>
         </FormField>
         <FormField label="Địa điểm / Phòng học">
