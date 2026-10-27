@@ -535,7 +535,7 @@ export default function SchoolAdminSchedulesPage() {
     let effectiveStart = form.start_time;
     let effectiveEnd = form.end_time;
     if (form.slot_id) {
-      const s = timeSlots.find((ts) => ts.id === form.slot_id);
+      const s = timeSlots?.find((ts) => ts.id === form.slot_id);
       if (s) {
         effectiveStart = s.start_time;
         effectiveEnd = s.end_time;
