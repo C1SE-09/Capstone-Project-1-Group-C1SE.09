@@ -13,7 +13,7 @@ from app.services.health_profile_service import (
     normalize_health_values,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -142,7 +142,7 @@ class ScheduleCreate(BaseModel):
     end_time: str | None = None
     class_id: str | None = None
     teacher_id: str | None = None
-    day_of_week: int = 2
+    day_of_week: int = Field(2, ge=2, le=6, description="Ngày trong tuần (2=Thứ 2 đến 6=Thứ 6)")
 
 
 class ScheduleUpdate(BaseModel):
@@ -153,7 +153,7 @@ class ScheduleUpdate(BaseModel):
     slot_id: str | None = None
     start_time: str | None = None
     end_time: str | None = None
-    day_of_week: int | None = None
+    day_of_week: int | None = Field(None, ge=2, le=6, description="Ngày trong tuần (2=Thứ 2 đến 6=Thứ 6)")
 
 
 class RoomCreate(BaseModel):
@@ -1267,6 +1267,11 @@ def _resolve_and_validate_slot(
                 status_code=400,
                 detail=f"Khung giờ không hợp lệ: Giờ kết thúc ({et}) phải sau giờ bắt đầu ({st}).",
             )
+        if st_min < 7 * 60 or et_min > 17 * 60:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Khung giờ ({st} - {et}) nằm ngoài giờ làm việc của trường (chỉ cho phép từ 07:00 đến 17:00 - hết giờ trả trẻ).",
+            )
 
         slot = db.query(TimeSlot).filter(TimeSlot.start_time == st, TimeSlot.end_time == et).first()
         if not slot:
@@ -1291,6 +1296,12 @@ def _resolve_and_validate_slot(
 
 @router.post("/schedules", status_code=status.HTTP_201_CREATED)
 def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
+    if data.day_of_week < 2 or data.day_of_week > 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Thời khóa biểu chỉ áp dụng từ Thứ 2 đến Thứ 6 (không chấp nhận Thứ 7 và Chủ Nhật).",
+        )
+
     first_class = db.query(Class_).first()
     first_teacher = db.query(Teacher).first()
     first_subject = db.query(Subject).first()
@@ -1337,6 +1348,11 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
     if data.room_name is not None:
         s.room_name = data.room_name.strip()
     if data.day_of_week is not None:
+        if data.day_of_week < 2 or data.day_of_week > 6:
+            raise HTTPException(
+                status_code=400,
+                detail="Thời khóa biểu chỉ áp dụng từ Thứ 2 đến Thứ 6 (không chấp nhận Thứ 7 và Chủ Nhật).",
+            )
         s.day_of_week = data.day_of_week
 
     if data.slot_id is not None or (data.start_time is not None and data.end_time is not None):

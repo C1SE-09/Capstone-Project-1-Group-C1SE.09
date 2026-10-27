@@ -56,6 +56,7 @@ from app.models.base import Base, TimestampMixin
 # Forward-reference imports (avoid circular imports)
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
+    from app.models.health_examination import HealthExamination
     from app.models.report import (
         DailyReport,
         VoiceRecord,
@@ -256,6 +257,13 @@ class Child(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="select",
         order_by="DailyReport.report_date",
+    )
+    health_examinations: Mapped[list[HealthExamination]] = orm_relationship(
+        "HealthExamination",
+        back_populates="child",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="HealthExamination.examination_date.desc()",
     )
 
     # --- Dunder ---
