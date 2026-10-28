@@ -67,11 +67,15 @@ class MedicationsTodayResponse(BaseModel):
     )
 
 
-class MedicationConfirmRequest(BaseModel):
-    """Payload 1 chạm xác nhận đã cho bé uống thuốc."""
-    request_id: uuid.UUID = Field(..., description="ID đơn dặn thuốc")
+class MedicationConfirmPayload(BaseModel):
+    """Payload gửi lên từ app khi xác nhận đã cho uống thuốc."""
     session: str = Field(..., description="Buổi uống: morning, noon, afternoon")
     notes: str | None = Field(None, description="Ghi chú thêm của cô (vd: bé uống ngoan)")
+
+
+class MedicationConfirmRequest(MedicationConfirmPayload):
+    """Payload xác nhận có kèm request_id trong body."""
+    request_id: uuid.UUID | None = Field(None, description="ID đơn dặn thuốc (tuỳ chọn nếu đã truyền trên URL)")
 
 
 class MedicationConfirmResponse(BaseModel):

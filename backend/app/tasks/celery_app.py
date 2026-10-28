@@ -28,6 +28,7 @@ celery_app = Celery(
         "app.tasks.notifications",
         "app.tasks.bug_report_notifications",
         "app.tasks.attendance_notifications",
+        "app.tasks.medication_notifications",
     ],
 )
 
@@ -56,6 +57,7 @@ celery_app.conf.update(
         "send_report_notifications": {"queue": "notifications"},
         "bug_report_notify_admin": {"queue": "notifications"},
         "bug_report_notify_user": {"queue": "notifications"},
+        "send_medication_confirmed_notification": {"queue": "notifications"},
     },
 )
 

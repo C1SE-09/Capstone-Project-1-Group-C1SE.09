@@ -22,7 +22,11 @@ Khởi động worker (concurrency=1 cho PhoWhisper-large để tránh GPU OOM):
 """
 
 from app.tasks.celery_app import celery_app
-from app.tasks.process_audio import process_audio_task
+
+try:
+    from app.tasks.process_audio import process_audio_task
+except ImportError:
+    process_audio_task = None  # PhoWhisper / CTranslate2 not installed on local host
 
 __all__ = [
     "celery_app",
