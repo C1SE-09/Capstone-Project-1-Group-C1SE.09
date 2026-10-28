@@ -223,6 +223,62 @@ async function performTokenRefresh(): Promise<string | null> {
   }
 }
 
+export async function refreshAccessToken(): Promise<string | null> {
+  return performTokenRefresh();
+}
+
+/**
+ * Tải file từ API (blob) — có hỗ trợ tự động làm mới token khi gặp 401.
+ * Dùng cho các endpoint trả về file nhị phân (export Excel, tải mẫu...).
+ */
+export async function apiFetchBlob(
+  path: string,
+  opts: { method?: string; query?: Record<string, string | number | undefined | null> } = {},
+  isRetry = false,
+): Promise<{ blob: Blob; headers: Headers }> {
+  let url = `${API_BASE}${path}`;
+  if (opts.query && Object.keys(opts.query).length > 0) {
+    const params = new URLSearchParams();
+    Object.entries(opts.query).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") {
+        params.append(k, String(v));
+      }
+    });
+    const qs = params.toString();
+    if (qs) url += `?${qs}`;
+  }
+
+  const headers: Record<string, string> = {
+    "Bypass-Tunnel-Reminder": "true",
+  };
+  const token = getToken("schoolAdmin");
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, { method: opts.method || "GET", headers });
+
+  if (res.status === 401 && !isRetry) {
+    const newToken = await performTokenRefresh();
+    if (newToken) {
+      return apiFetchBlob(path, opts, true);
+    }
+  }
+
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const errJson = await res.json();
+      detail = errJson.detail || detail;
+    } catch {
+      /* ignore */
+    }
+    throw new ApiError(res.status, detail);
+  }
+
+  return { blob: await res.blob(), headers: res.headers };
+}
+
 export async function apiFetch<T = any>(
   path: string,
   opts: RequestOpts = {},
