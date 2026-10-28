@@ -13,10 +13,50 @@ export interface SchoolClass {
   name: string;
   grade_label: string;
   room_number: string;
+  capacity?: number | null;
+  student_count?: number;
+}
+
+export interface ClassPayload {
+  name: string;
+  grade_label?: string | null;
+  room_number?: string | null;
+  capacity?: number | null;
 }
 
 export function getClasses(): Promise<SchoolClass[]> {
   return apiFetch<SchoolClass[]>("/api/admin/classes", { account: "schoolAdmin" });
+}
+
+export function createClass(data: ClassPayload) {
+  return apiFetch<{ id: string; message: string }>("/api/admin/classes", {
+    method: "POST",
+    body: data,
+    account: "schoolAdmin",
+  });
+}
+
+export function updateClass(id: string, data: ClassPayload) {
+  return apiFetch<{ message: string }>(`/api/admin/classes/${id}`, {
+    method: "PUT",
+    body: data,
+    account: "schoolAdmin",
+  });
+}
+
+export function deleteClass(id: string) {
+  return apiFetch<{ message: string }>(`/api/admin/classes/${id}`, {
+    method: "DELETE",
+    account: "schoolAdmin",
+  });
+}
+
+export function deleteClassesBatch(ids: string[]) {
+  return apiFetch<{ message: string; deleted_count: number; blocked?: string[] }>(`/api/admin/classes/batch-delete`, {
+    method: "POST",
+    body: { ids },
+    account: "schoolAdmin",
+  });
 }
 
 /* ════════ Teachers ════════ */

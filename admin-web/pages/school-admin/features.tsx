@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import { getStoredSchoolAdmin, getToken } from "@/lib/api";
 import {
+  getClasses,
   getParents,
   getTeachers,
   getChildren,
@@ -63,6 +64,7 @@ export default function SchoolAdminFeaturesPage() {
     schedules: number;
     conflicts: number;
     healthExams: number;
+    classes: number;
   }>({
     teachers: 0,
     students: 0,
@@ -70,6 +72,7 @@ export default function SchoolAdminFeaturesPage() {
     schedules: 0,
     conflicts: 0,
     healthExams: 0,
+    classes: 0,
   });
 
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function SchoolAdminFeaturesPage() {
 
     (async () => {
       try {
-        const [teachers, students, parents, schedules, rooms, healthExams] =
+        const [teachers, students, parents, schedules, rooms, healthExams, classes] =
           await Promise.all([
             getTeachers().catch(() => []),
             getChildren().catch(() => []),
@@ -92,6 +95,7 @@ export default function SchoolAdminFeaturesPage() {
             getHealthExamRecords()
               .then((r) => r.total)
               .catch(() => 0),
+            getClasses().catch(() => []),
           ]);
 
         // Đếm số cặp tiết học bị xung đột trong tuần (loại trừ các khu vực sinh hoạt chung)
@@ -134,6 +138,7 @@ export default function SchoolAdminFeaturesPage() {
           schedules: schedules.length,
           conflicts,
           healthExams: typeof healthExams === "number" ? healthExams : 0,
+          classes: classes.length,
         });
       } catch (_) {
         /* swallow */
@@ -144,6 +149,15 @@ export default function SchoolAdminFeaturesPage() {
   if (!ready) return null;
 
   const tiles: Tile[] = [
+    {
+      href: "/school-admin/classes",
+      label: "Lớp học",
+      desc: "Quản lý lớp học",
+      icon: "🏫",
+      iconBg: "#E7EEF3",
+      iconColor: "#4B6F8C",
+      count: counts.classes,
+    },
     {
       href: "/school-admin/teachers",
       label: "Giáo viên",
