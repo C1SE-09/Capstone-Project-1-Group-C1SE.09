@@ -22,6 +22,8 @@ class OverviewScreen extends StatefulWidget {
     this.onSelectClass,
     this.onOpenTimetable,
     this.onOpenAttendance,
+    this.onOpenMedications,
+    this.onEmergencyAlert,
     this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
     this.repository,
     this.scheduleRepository,
@@ -32,6 +34,8 @@ class OverviewScreen extends StatefulWidget {
   final VoidCallback? onSelectClass;
   final VoidCallback? onOpenTimetable;
   final VoidCallback? onOpenAttendance;
+  final VoidCallback? onOpenMedications;
+  final VoidCallback? onEmergencyAlert;
   final String classId;
   final HttpDashboardRepository? repository;
   final ScheduleRepository? scheduleRepository;
@@ -195,6 +199,91 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 ),
                 Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
               ],
+            ),
+          ),
+        ],
+        if (widget.onOpenMedications != null) ...[
+          const SizedBox(height: 12),
+          KCard(
+            onTap: widget.onOpenMedications,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F5FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.medication_outlined, size: 20, color: Color(0xFF2F54EB)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Lịch uống thuốc hôm nay',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        'Theo dõi và xác nhận thuốc phụ huynh gửi theo buổi',
+                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+              ],
+            ),
+          ),
+        ],
+        if (widget.onEmergencyAlert != null) ...[
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: widget.onEmergencyAlert,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F0),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFFFA39E)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD32F2F),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.warning_amber_rounded, size: 20, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Báo động sự cố khẩn cấp',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFD32F2F),
+                          ),
+                        ),
+                        Text(
+                          'Phát tín hiệu còi hú tới phụ huynh & gọi nhanh 1 chạm',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF8C8C8C)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFFD32F2F)),
+                ],
+              ),
             ),
           ),
         ],
