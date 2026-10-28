@@ -15,6 +15,7 @@ import {
   getParents,
   getTeachers,
   getChildren,
+  getHealthExamRecords,
   getSchedules,
   getRooms,
   Room,
@@ -49,7 +50,7 @@ interface Tile {
   icon: string;
   iconBg: string;
   iconColor: string;
-  count: number;
+  count?: number;
   badge?: number;
 }
 
@@ -61,12 +62,14 @@ export default function SchoolAdminFeaturesPage() {
     parents: number;
     schedules: number;
     conflicts: number;
+    healthExams: number;
   }>({
     teachers: 0,
     students: 0,
     parents: 0,
     schedules: 0,
     conflicts: 0,
+    healthExams: 0,
   });
 
   useEffect(() => {
@@ -79,13 +82,17 @@ export default function SchoolAdminFeaturesPage() {
 
     (async () => {
       try {
-        const [teachers, students, parents, schedules, rooms] = await Promise.all([
-          getTeachers().catch(() => []),
-          getChildren().catch(() => []),
-          getParents().catch(() => []),
-          getSchedules().catch(() => []),
-          getRooms().catch(() => []),
-        ]);
+        const [teachers, students, parents, schedules, rooms, healthExams] =
+          await Promise.all([
+            getTeachers().catch(() => []),
+            getChildren().catch(() => []),
+            getParents().catch(() => []),
+            getSchedules().catch(() => []),
+            getRooms().catch(() => []),
+            getHealthExamRecords()
+              .then((r) => r.total)
+              .catch(() => 0),
+          ]);
 
         // Đếm số cặp tiết học bị xung đột trong tuần (loại trừ các khu vực sinh hoạt chung)
         let conflicts = 0;
@@ -126,6 +133,7 @@ export default function SchoolAdminFeaturesPage() {
           parents: parents.length,
           schedules: schedules.length,
           conflicts,
+          healthExams: typeof healthExams === "number" ? healthExams : 0,
         });
       } catch (_) {
         /* swallow */
@@ -173,11 +181,20 @@ export default function SchoolAdminFeaturesPage() {
       count: counts.schedules,
       badge: counts.conflicts,
     },
+    {
+      href: "/school-admin/health-exam",
+      label: "Sổ sức khoẻ",
+      desc: "Theo dõi sức khoẻ học sinh",
+      icon: "📒",
+      iconBg: "#E6EFEC",
+      iconColor: "#16665a",
+      count: counts.healthExams,
+    },
   ];
 
   return (
     <SchoolAdminLayout active="features" pageTitle="Chức năng quản trị hệ thống">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {tiles.map((tile) => (
           <Link
             key={tile.href}
@@ -196,7 +213,7 @@ export default function SchoolAdminFeaturesPage() {
             </div>
             <div className="flex items-center justify-between mt-2">
               <span className="text-xs text-ink-faint">
-                {tile.count} mục
+                {tile.count !== undefined ? `${tile.count} mục` : "Nhập Excel"}
               </span>
               {tile.badge ? (
                 <span
