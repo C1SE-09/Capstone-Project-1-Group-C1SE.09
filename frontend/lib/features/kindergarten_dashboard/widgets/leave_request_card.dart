@@ -12,11 +12,15 @@ class LeaveRequestCard extends StatelessWidget {
     required this.item,
     required this.onApprove,
     required this.onReject,
+    this.onAttachment,
+    this.processing = false,
   });
 
   final LeaveRequestEntity item;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+  final VoidCallback? onAttachment;
+  final bool processing;
 
   String _formatDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
@@ -26,6 +30,7 @@ class LeaveRequestCard extends StatelessWidget {
     final k = context.k;
     final isPending = item.status == LeaveStatus.pending;
     final isApproved = item.status == LeaveStatus.approved;
+    final isLate = item.requestType == LeaveRequestType.lateArrival;
 
     return Container(
       decoration: BoxDecoration(
@@ -80,7 +85,8 @@ class LeaveRequestCard extends StatelessWidget {
               ),
               if (!isPending)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: isApproved ? k.okTint : k.badTint,
                     borderRadius: BorderRadius.circular(6),
@@ -102,19 +108,26 @@ class LeaveRequestCard extends StatelessWidget {
             child: Divider(color: k.line, height: 1),
           ),
 
-          // Thời gian nghỉ
+          Text(isLate ? 'Báo đi trễ' : 'Nghỉ học',
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600, color: k.brand)),
+          const SizedBox(height: KSpace.x2),
+          // ETA chỉ là giờ dự kiến, không phải giờ điểm danh thực tế.
           Row(
             children: [
               Icon(Icons.calendar_today_outlined, size: 16, color: k.brand),
               const SizedBox(width: 8),
-              Text(
-                'Thời gian: ${_formatDate(item.fromDate)} - ${_formatDate(item.toDate)} (${item.totalDays} ngày)',
+              Expanded(
+                  child: Text(
+                isLate
+                    ? '${_formatDate(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'Chưa cập nhật'}'
+                    : 'Thời gian: ${_formatDate(item.fromDate)} - ${_formatDate(item.toDate)} (${item.totalDays} ngày)',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: k.ink,
                 ),
-              ),
+              )),
             ],
           ),
           const SizedBox(height: 8),
@@ -131,7 +144,7 @@ class LeaveRequestCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Lý do xin nghỉ:',
+                  isLate ? 'Lý do đi trễ:' : 'Lý do xin nghỉ:',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -160,6 +173,13 @@ class LeaveRequestCard extends StatelessWidget {
             ),
           ),
 
+          if (item.attachmentUrl != null && onAttachment != null)
+            TextButton.icon(
+              onPressed: onAttachment,
+              icon: const Icon(Icons.image_outlined, size: 18),
+              label: const Text('Xem ảnh đính kèm'),
+            ),
+
           // Hàng nút hành động nếu đang Chờ duyệt
           if (isPending) ...[
             const SizedBox(height: KSpace.x4),
@@ -171,11 +191,13 @@ class LeaveRequestCard extends StatelessWidget {
                       foregroundColor: k.bad,
                       side: BorderSide(color: k.bad),
                       padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: onReject,
+                    onPressed: processing ? null : onReject,
                     icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Từ chối', style: TextStyle(fontWeight: FontWeight.w600)),
+                    label: const Text('Từ chối',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: KSpace.x3),
@@ -186,11 +208,13 @@ class LeaveRequestCard extends StatelessWidget {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: onApprove,
+                    onPressed: processing ? null : onApprove,
                     icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Duyệt đơn', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text('Duyệt đơn',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],

@@ -1,35 +1,38 @@
 """
 backend/app/api/endpoints/leave_requests.py
 ===========================================
-API Quản lý Đơn xin nghỉ học (Leave Requests):
-- GET  /api/leave-requests/class/{class_id}: Danh sách đơn của lớp (lọc theo tab: pending / reviewed)
-- POST /api/leave-requests/{request_id}/approve: Duyệt đơn 1-tap & tự động đồng bộ sang bảng attendance_record
-- POST /api/leave-requests/{request_id}/reject: Từ chối đơn kèm lý do bắt buộc
-- POST /api/leave-requests: Tạo đơn xin nghỉ học mới
+API đơn nghỉ/báo trễ: lịch sử phụ huynh, danh sách lớp và xét duyệt.
 """
 
 from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import func, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.core.access import resolve_child_for_actor, role_of
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.attendance import AttendanceRecord, AttendanceStatus
-from app.models.child import Child
 from app.models.leave_request import LeaveRequest, LeaveRequestStatus
-from app.models.user import Teacher, User, UserRole
+from app.models.user import User
 from app.schemas.leave_request_schema import (
+    LeaveRequestAttachmentResponse,
     LeaveRequestBatchSummary,
     LeaveRequestCreate,
+    LeaveRequestPage,
     LeaveRequestReject,
     LeaveRequestResponse,
+)
+from app.services.leave_request_attachments import MAX_IMAGE_BYTES, read_attachment, save_attachment
+from app.services.leave_request_service import (
+    create_request,
+    require_parent,
+    review_request,
+    verify_class_access,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,38 +40,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/leave-requests", tags=["leave-requests"])
 
 
-def verify_class_access(class_id: uuid.UUID, current_user: User, db: Session) -> None:
-    """Kiểm tra quyền truy cập lớp học của người dùng."""
-    role_val = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
-    if role_val == UserRole.ADMIN.value:
-        return
-
-    if role_val == UserRole.TEACHER.value:
-        if not current_user.teacher_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Tài khoản giáo viên chưa được liên kết với hồ sơ nhân sự",
-            )
-        teacher = db.scalar(select(Teacher).where(Teacher.teacher_id == current_user.teacher_id))
-        if not teacher or teacher.class_id != class_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Bạn không có quyền truy cập dữ liệu của lớp học này",
-            )
-        return
-
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Quyền hạn không hợp lệ",
-    )
-
-
 def _to_response_dto(req: LeaveRequest) -> LeaveRequestResponse:
     """Map SQLAlchemy LeaveRequest sang LeaveRequestResponse DTO."""
     child_name = req.child.full_name if req.child else None
     child_avatar_url = req.child.avatar_url if req.child else None
-    parent_name = req.parent.user.full_name if req.parent and req.parent.user else None
-    reviewer_name = req.reviewer.user.full_name if req.reviewer and req.reviewer.user else None
+    parent_name = req.parent.full_name if req.parent else None
+    reviewer_name = req.reviewer.full_name if req.reviewer else None
 
     return LeaveRequestResponse(
         request_id=req.request_id,
@@ -79,6 +56,9 @@ def _to_response_dto(req: LeaveRequest) -> LeaveRequestResponse:
         to_date=req.to_date,
         reason=req.reason,
         attachment_url=req.attachment_url,
+        request_type=req.request_type,
+        expected_arrival_time=req.expected_arrival_time,
+        meal_warning_acknowledged=req.meal_warning_acknowledged,
         status=req.status,
         reject_reason=req.reject_reason,
         reviewed_by=req.reviewed_by,
@@ -136,72 +116,84 @@ def get_class_leave_requests(
     )
 
 
+@router.get("/mine", response_model=LeaveRequestPage)
+def get_my_leave_requests(
+    child_id: uuid.UUID,
+    status: LeaveRequestStatus | None = None,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LeaveRequestPage:
+    require_parent(current_user)
+    resolve_child_for_actor(db, child_id, current_user)
+    filters = [LeaveRequest.child_id == child_id]
+    if status is not None:
+        filters.append(LeaveRequest.status == status)
+    total = db.scalar(select(func.count(LeaveRequest.request_id)).where(*filters)) or 0
+    requests = db.scalars(
+        select(LeaveRequest).where(*filters)
+        .order_by(LeaveRequest.created_at.desc(), LeaveRequest.request_id.desc())
+        .offset(offset).limit(limit)
+    ).all()
+    return LeaveRequestPage(items=[_to_response_dto(req) for req in requests],
+                            total=total, offset=offset, limit=limit)
+
+
+@router.post("/attachments", response_model=LeaveRequestAttachmentResponse, status_code=201)
+def upload_leave_attachment(
+    child_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LeaveRequestAttachmentResponse:
+    require_parent(current_user)
+    resolve_child_for_actor(db, child_id, current_user)
+    path = save_attachment(child_id, current_user.user_id,
+                           file.file.read(MAX_IMAGE_BYTES + 1), file.content_type)
+    return LeaveRequestAttachmentResponse(attachment_url=path)
+
+
+@router.get("/attachments/{child_id}/{attachment_id}")
+def get_leave_attachment(
+    child_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    resolve_child_for_actor(db, child_id, current_user)
+    data, content_type = read_attachment(child_id, attachment_id)
+    return Response(content=data, media_type=content_type, headers={
+        "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+    })
+
+
+@router.get("/{request_id}", response_model=LeaveRequestResponse)
+def get_leave_request(
+    request_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LeaveRequestResponse:
+    req = db.scalar(select(LeaveRequest).where(LeaveRequest.request_id == request_id))
+    if req is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn xin nghỉ")
+    if role_of(current_user) == "parent":
+        resolve_child_for_actor(db, req.child_id, current_user)
+    else:
+        verify_class_access(req.class_id, current_user, db)
+    return _to_response_dto(req)
+
+
 @router.post("/{request_id}/approve", response_model=LeaveRequestResponse)
 def approve_leave_request(
     request_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> LeaveRequestResponse:
-    """
-    Giáo viên duyệt đơn xin nghỉ (1-tap Approve):
-    - Đổi status sang APPROVED
-    - Tự động Upsert điểm danh: ABSENT (note='Nghỉ có phép') cho các ngày từ from_date đến to_date
-    """
-    req = db.scalar(select(LeaveRequest).where(LeaveRequest.request_id == request_id))
-    if not req:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn xin nghỉ")
-
-    verify_class_access(req.class_id, current_user, db)
-
-    if req.status != LeaveRequestStatus.PENDING:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Đơn đã được xử lý trước đó với trạng thái: {req.status.value}",
-        )
-
-    teacher_id = current_user.teacher_id if hasattr(current_user, "teacher_id") else None
-
-    # 1. Cập nhật trạng thái đơn
-    req.status = LeaveRequestStatus.APPROVED
-    req.reviewed_by = teacher_id
-    req.reviewed_at = datetime.now(timezone.utc)
-    req.reject_reason = None
-
-    # 2. Tự động đồng bộ sang bảng attendance_record
-    # Duyệt từ from_date đến to_date (bỏ qua Chủ nhật nếu không học)
-    curr = req.from_date
-    while curr <= req.to_date:
-        # Nếu là thứ 7 hoặc Chủ nhật có thể tùy trường mầm non, ở đây điểm danh tất cả các ngày trong đơn
-        insert_stmt = insert(AttendanceRecord).values(
-            record_id=uuid.uuid4(),
-            child_id=req.child_id,
-            class_id=req.class_id,
-            date=curr,
-            status=AttendanceStatus.ABSENT,
-            note=f"Nghỉ có phép: {req.reason[:100]}",
-            teacher_id=teacher_id,
-        )
-        upsert_stmt = insert_stmt.on_conflict_do_update(
-            constraint="uq_attendance_child_date",
-            set_={
-                "status": AttendanceStatus.ABSENT,
-                "note": f"Nghỉ có phép: {req.reason[:100]}",
-                "teacher_id": teacher_id,
-                "updated_at": func.now(),
-            },
-        )
-        db.execute(upsert_stmt)
-        curr += timedelta(days=1)
-
-    db.commit()
-    db.refresh(req)
-    logger.info(
-        "Leave request approved: id=%s child=%s from=%s to=%s",
-        req.request_id,
-        req.child_id,
-        req.from_date,
-        req.to_date,
-    )
+    """Duyệt đơn; chỉ đơn nghỉ mới bổ sung điểm danh vắng, không ghi đè đã đến."""
+    req = review_request(db, request_id, current_user, LeaveRequestStatus.APPROVED,
+                         datetime.now(timezone.utc))
+    logger.info("Leave request approved: id=%s", req.request_id)
     return _to_response_dto(req)
 
 
@@ -213,80 +205,19 @@ def reject_leave_request(
     current_user: User = Depends(get_current_user),
 ) -> LeaveRequestResponse:
     """Giáo viên từ chối đơn xin nghỉ kèm lý do bắt buộc."""
-    reason = payload.reject_reason.strip()
-    if not reason:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Lý do từ chối không được để trống",
-        )
-
-    req = db.scalar(select(LeaveRequest).where(LeaveRequest.request_id == request_id))
-    if not req:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn xin nghỉ")
-
-    verify_class_access(req.class_id, current_user, db)
-
-    if req.status != LeaveRequestStatus.PENDING:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Đơn đã được xử lý trước đó với trạng thái: {req.status.value}",
-        )
-
-    teacher_id = current_user.teacher_id if hasattr(current_user, "teacher_id") else None
-
-    req.status = LeaveRequestStatus.REJECTED
-    req.reject_reason = reason
-    req.reviewed_by = teacher_id
-    req.reviewed_at = datetime.now(timezone.utc)
-
-    db.commit()
-    db.refresh(req)
-    logger.info("Leave request rejected: id=%s reason=%s", req.request_id, reason)
+    req = review_request(db, request_id, current_user, LeaveRequestStatus.REJECTED,
+                         datetime.now(timezone.utc), payload.reject_reason)
+    logger.info("Leave request rejected: id=%s", req.request_id)
     return _to_response_dto(req)
 
 
 @router.post("", response_model=LeaveRequestResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/parent", response_model=LeaveRequestResponse, status_code=status.HTTP_201_CREATED)
 def create_leave_request(
     payload: LeaveRequestCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> LeaveRequestResponse:
-    """Tạo đơn xin nghỉ học mới."""
-    if payload.to_date < payload.from_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ngày kết thúc nghỉ không thể trước ngày bắt đầu",
-        )
-
-    # Xác định parent_id từ current_user nếu là Phụ huynh, hoặc gán từ liên kết
-    parent_id = None
-    if hasattr(current_user, "parent_id") and current_user.parent_id:
-        parent_id = current_user.parent_id
-    else:
-        # Nếu là admin/teacher tạo hộ hoặc test, tìm parent đầu tiên của trẻ
-        child = db.scalar(select(Child).where(Child.child_id == payload.child_id))
-        if not child:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy học sinh")
-        if child.parents:
-            parent_id = child.parents[0].parent_id
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Học sinh chưa có thông tin phụ huynh liên kết",
-            )
-
-    new_req = LeaveRequest(
-        request_id=uuid.uuid4(),
-        child_id=payload.child_id,
-        parent_id=parent_id,
-        class_id=payload.class_id,
-        from_date=payload.from_date,
-        to_date=payload.to_date,
-        reason=payload.reason.strip(),
-        attachment_url=payload.attachment_url,
-        status=LeaveRequestStatus.PENDING,
-    )
-    db.add(new_req)
-    db.commit()
-    db.refresh(new_req)
-    return _to_response_dto(new_req)
+    """Tạo đơn cho đúng bé được liên kết; lớp và người gửi lấy từ server."""
+    req = create_request(db, payload, current_user)
+    return _to_response_dto(req)

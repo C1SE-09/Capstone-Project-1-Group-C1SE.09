@@ -7,6 +7,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,6 +80,9 @@ class _MyAppState extends State<MyApp> {
           routerConfig: appRouter,
           theme: kinderTheme(),
           darkTheme: kinderThemeDark(),
+          locale: const Locale('vi'),
+          supportedLocales: const [Locale('vi'), Locale('en')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
           themeMode: mode,
           scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
           debugShowCheckedModeBanner: false,

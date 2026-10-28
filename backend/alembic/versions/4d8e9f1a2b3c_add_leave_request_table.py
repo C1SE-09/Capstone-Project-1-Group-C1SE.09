@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.Column('attachment_url', sa.String(length=500), nullable=True, comment='Ảnh đính kèm đơn thuốc/giấy khám'),
         sa.Column(
             'status',
-            sa.Enum('pending', 'approved', 'rejected', name='leave_request_status', native_enum=True),
+            leave_status_enum,
             nullable=False,
             server_default='pending',
         ),

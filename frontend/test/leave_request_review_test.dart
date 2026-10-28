@@ -113,9 +113,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Kiểm tra UI hiển thị
-    expect(find.text('Duyệt đơn nghỉ • Lớp Mầm 1'), findsOneWidget);
+    expect(find.text('Duyệt đơn nghỉ / đi trễ • Lớp Mầm 1'), findsOneWidget);
     expect(find.text('Chờ duyệt'), findsOneWidget);
-    expect(find.text('Đã duyệt'), findsOneWidget);
+    expect(find.text('Đã xử lý'), findsOneWidget);
     expect(find.text('Nguyễn Minh An'), findsOneWidget);
     expect(find.text('Duyệt đơn'), findsOneWidget);
     expect(find.text('Từ chối'), findsOneWidget);

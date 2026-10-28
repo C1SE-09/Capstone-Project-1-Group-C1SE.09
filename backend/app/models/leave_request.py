@@ -11,16 +11,18 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     ForeignKey,
     Index,
     String,
     Text,
+    Time,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -81,6 +83,14 @@ class LeaveRequest(Base, TimestampMixin):
         Date,
         nullable=False,
         comment="Ngày kết thúc nghỉ",
+    )
+
+    request_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="absence", server_default="absence",
+    )
+    expected_arrival_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    meal_warning_acknowledged: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
     )
 
     reason: Mapped[str] = mapped_column(

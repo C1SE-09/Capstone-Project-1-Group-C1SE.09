@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
@@ -15,6 +16,9 @@ import 'package:adark_frontend/domain/entities/report/report_status.dart' as dom
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' hide Child;
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_account.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_notifications.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/parent_navigation_bar.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:dio/dio.dart';
@@ -30,10 +34,11 @@ class NoChildAssignedException implements Exception {
 
 class ParentFlow extends StatefulWidget {
   const ParentFlow({
-    super.key, this.repository, this.onLogout, this.initialOpenReport = false,
+     super.key, this.repository, this.leaveRequestRepository, this.onLogout, this.initialOpenReport = false,
     this.childId, this.initialReportId, this.initialAttendanceDate, this.notificationId,
   });
   final HttpDashboardRepository? repository;
+  final HttpLeaveRequestRepository? leaveRequestRepository;
   final VoidCallback? onLogout;
 
   /// True khi mở từ push notification: vào thẳng báo cáo hôm nay (Scope A).
@@ -50,6 +55,7 @@ class _ParentFlowState extends State<ParentFlow> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
   late Future<_ParentData> future;
   int _tab = 0;
+  bool _notificationsOpen = false;
   bool _notificationOpened = false;
 
   @override
@@ -229,22 +235,23 @@ class _ParentFlowState extends State<ParentFlow> {
 
   /// Báo cáo chưa đọc (đã gửi nhưng phụ huynh chưa mở).
   int _unreadCount(_ParentData data) {
-    // API trả báo cáo hôm nay nằm luôn trong danh sách gần đây → khử trùng theo id,
-    // nếu không badge sẽ đếm gấp đôi cùng một báo cáo.
-    final unique = <String, DailyReport>{};
-    for (final report in <DailyReport>[
-      if (data.today != null) data.today!,
-      ...data.reports,
-    ]) {
-      unique[report.dailyReportId] = report;
-    }
-    return unique.values
-        .where(
-          (r) =>
-              r.status != domain_status.ReportStatus.read &&
-              r.status != domain_status.ReportStatus.draft,
-        )
-        .length;
+    return data.notificationReports.where((r) => r.status != domain_status.ReportStatus.read).length;
+  }
+
+  void _openRequests(_ParentData data) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ParentRequestsScreen(
+      child: data.overview.child,
+      className: data.overview.className,
+      teacherName: data.overview.teacherName,
+      repository: widget.leaveRequestRepository,
+    )));
+  }
+
+  void _selectTab(int index) {
+    setState(() {
+      _tab = index;
+      _notificationsOpen = false;
+    });
   }
 
   Future<void> _handleRefresh() async {
@@ -258,10 +265,27 @@ class _ParentFlowState extends State<ParentFlow> {
 
   // Renders loading, error, empty, and fetched parent data states.
   @override
-  Widget build(BuildContext context) => FutureBuilder<_ParentData>(
+  Widget build(BuildContext context) => ColoredBox(
+        color: context.k.canvas,
+        child: Center(
+          child: ConstrainedBox(
+            key: const ValueKey('parent-mobile-frame'),
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: PopScope(
+        canPop: !_notificationsOpen,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && _notificationsOpen) setState(() => _notificationsOpen = false);
+        },
+        child: _buildContent(context),
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildContent(BuildContext context) => FutureBuilder<_ParentData>(
         future: future,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
+          if (snapshot.connectionState != ConnectionState.done && !snapshot.hasData) {
             return Scaffold(
               backgroundColor: context.k.canvas,
               body: const Center(child: CircularProgressIndicator()),
@@ -326,14 +350,25 @@ class _ParentFlowState extends State<ParentFlow> {
           }
           final unread = _unreadCount(data);
           return Scaffold(
-            backgroundColor: context.k.canvas,
+            backgroundColor: _notificationsOpen ? context.k.surface : context.k.canvas,
             body: SafeArea(
               child: RefreshIndicator(
                 onRefresh: _handleRefresh,
-                child: _tab == 0
+                child: _notificationsOpen
+                    ? ParentNotifications(
+                        reports: data.notificationReports,
+                        childName: data.overview.child.fullName,
+                        teacherName: data.overview.teacherName,
+                        onOpenReport: (report) => _openReport(data, report),
+                        onBack: () => setState(() => _notificationsOpen = false),
+                        onSettings: () => _selectTab(1),
+                      )
+                    : _tab == 0
                     ? _ParentOverview(
                         data: data,
                         onOpenReport: (report) => _openReport(data, report),
+                        onOpenNotifications: () => setState(() => _notificationsOpen = true),
+                        onOpenRequests: () => _openRequests(data),
                       )
                     : ParentAccount(
                         parent: data.parent,
@@ -349,31 +384,11 @@ class _ParentFlowState extends State<ParentFlow> {
                       ),
               ),
             ),
-            bottomNavigationBar: NavigationBar(
+            bottomNavigationBar: ParentNavigationBar(
               selectedIndex: _tab,
-              onDestinationSelected: (index) => setState(() => _tab = index),
-              destinations: [
-                NavigationDestination(
-                  icon: Badge(
-                    key: const ValueKey('parent-unread-badge'),
-                    isLabelVisible: unread > 0,
-                    label: Text('$unread'),
-                    child: const Icon(Icons.home_outlined),
-                  ),
-                  selectedIcon: Badge(
-                    key: const ValueKey('parent-unread-badge-selected'),
-                    isLabelVisible: unread > 0,
-                    label: Text('$unread'),
-                    child: const Icon(Icons.home),
-                  ),
-                  label: 'Tổng quan',
-                ),
-                const NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: 'Tài khoản',
-                ),
-              ],
+              onSelected: _selectTab,
+              unreadCount: unread,
+              backgroundColor: _notificationsOpen ? context.k.brandTint : context.k.surface,
             ),
           );
         },
@@ -402,6 +417,19 @@ class _ParentData {
   final List<DailyReport> reports;
   final DailyReport? today;
 
+  List<DailyReport> get notificationReports {
+    // Báo cáo hôm nay có thể đồng thời nằm trong lịch sử; ưu tiên dữ liệu mới nhất.
+    final unique = <String, DailyReport>{};
+    for (final report in [if (today != null) today!, ...reports]) {
+      if (report.status == domain_status.ReportStatus.published ||
+          report.status == domain_status.ReportStatus.read) {
+        unique.putIfAbsent(report.dailyReportId, () => report);
+      }
+    }
+    return unique.values.toList()
+      ..sort((a, b) => (b.publishedAt ?? b.reportDate).compareTo(a.publishedAt ?? a.reportDate));
+  }
+
   _ParentData withReport(DailyReport updated) => _ParentData(
         parent,
         overview,
@@ -415,10 +443,13 @@ class _ParentData {
 /// Tab Tổng quan: lời chào, card bé + thời khoá biểu, lưu ý sức khỏe,
 /// báo cáo hôm nay và báo cáo gần đây.
 class _ParentOverview extends StatelessWidget {
-  const _ParentOverview({required this.data, required this.onOpenReport});
+  const _ParentOverview({required this.data, required this.onOpenReport,
+    required this.onOpenNotifications, required this.onOpenRequests});
 
   final _ParentData data;
   final ValueChanged<DailyReport> onOpenReport;
+  final VoidCallback onOpenNotifications;
+  final VoidCallback onOpenRequests;
 
   void _openTimetable(BuildContext context) {
     final overview = data.overview;
@@ -432,37 +463,6 @@ class _ParentOverview extends StatelessWidget {
           className: overview.className.isNotEmpty ? 'Lớp ${overview.className}' : 'Lớp của bé',
           isReadOnly: true,
         ),
-      ),
-    );
-  }
-
-  void _showNotifications(BuildContext context) {
-    final unread = data.reports
-        .where((r) => r.status != domain_status.ReportStatus.read)
-        .toList();
-    showKSheet(
-      context,
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Thông báo', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          if (unread.isEmpty)
-            const Text('Bạn đã đọc tất cả báo cáo.')
-          else ...[
-            KCard(
-              onTap: () {
-                Navigator.pop(context);
-                onOpenReport(unread.first);
-              },
-              padding: const EdgeInsets.all(14),
-              child: Text(
-                'Bạn có ${unread.length} báo cáo chưa đọc. Báo cáo gần nhất ngày ${kDateLabel(unread.first.reportDate)}.',
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -501,7 +501,7 @@ class _ParentOverview extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: () => _showNotifications(context),
+              onPressed: onOpenNotifications,
               tooltip: 'Thông báo',
               icon: Icon(Icons.notifications_outlined, color: context.k.inkSoft),
             ),
@@ -543,14 +543,14 @@ class _ParentOverview extends StatelessWidget {
                     children: [
                       Icon(Icons.calendar_month_outlined, size: 18, color: context.k.brand),
                       const SizedBox(width: 8),
-                      Text(
+                      Expanded(child: Text(
                         'Thời khóa biểu của lớp',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: context.k.brand,
                         ),
-                      ),
+                      )),
                     ],
                   ),
                 ),
@@ -683,6 +683,29 @@ class _ParentOverview extends StatelessWidget {
               ],
             ),
           ),
+        const SizedBox(height: KSpace.x4),
+        KCard(
+          onTap: onOpenRequests,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: KSpace.x3),
+          child: Row(
+            children: [
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Xin nghỉ / Báo trễ', style: TextStyle(
+                    fontSize: 13.5, fontWeight: FontWeight.w600, color: context.k.ink,
+                  )),
+                  const SizedBox(height: 2),
+                  Text('Gửi đơn xin nghỉ hoặc báo đi trễ, giáo viên duyệt ngay trong app.',
+                    style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
+                ],
+              )),
+              const SizedBox(width: KSpace.x3),
+              Text('Tạo đơn', style: TextStyle(fontSize: 12.5,
+                fontWeight: FontWeight.w600, color: context.k.brand)),
+            ],
+          ),
+        ),
       ],
     );
   }

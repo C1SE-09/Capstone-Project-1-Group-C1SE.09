@@ -26,7 +26,8 @@ class LeaveRequestReviewScreen extends StatefulWidget {
   final HttpLeaveRequestRepository? repository;
 
   @override
-  State<LeaveRequestReviewScreen> createState() => _LeaveRequestReviewScreenState();
+  State<LeaveRequestReviewScreen> createState() =>
+      _LeaveRequestReviewScreenState();
 }
 
 class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
@@ -39,6 +40,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   int _pendingCount = 0;
   int _reviewedCount = 0;
   List<LeaveRequestEntity> _items = [];
+  final Set<String> _processing = {};
 
   @override
   void initState() {
@@ -83,24 +85,30 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Không thể tải danh sách đơn. Vui lòng kiểm tra kết nối mạng.';
+        _errorMessage =
+            'Không thể tải danh sách đơn. Vui lòng kiểm tra kết nối mạng.';
         _isLoading = false;
       });
     }
   }
 
   Future<void> _handleApprove(LeaveRequestEntity item) async {
+    if (_processing.contains(item.requestId)) return;
+    setState(() => _processing.add(item.requestId));
     try {
       await _repository.approveLeaveRequest(item.requestId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Đã duyệt đơn nghỉ học của ${item.childName ?? "bé"} và tự động đồng bộ điểm danh!'),
+          content: Text(item.requestType == LeaveRequestType.lateArrival
+              ? 'Đã duyệt báo đi trễ của ${item.childName ?? "bé"}. Giờ đến thực tế do giáo viên xác nhận.'
+              : 'Đã duyệt đơn xin nghỉ của ${item.childName ?? "bé"}.'),
           backgroundColor: KColors.ok,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      _loadRequests(tab: _tabController.index == 0 ? 'pending' : 'reviewed');
+      await _loadRequests(
+          tab: _tabController.index == 0 ? 'pending' : 'reviewed');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,40 +118,89 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _processing.remove(item.requestId));
     }
   }
 
   Future<void> _handleReject(LeaveRequestEntity item) async {
-    final confirmedReason = await RejectReasonDialog.show(
-      context,
-      childName: item.childName ?? 'Học sinh',
-    );
-
-    if (confirmedReason != null && confirmedReason.isNotEmpty) {
-      try {
-        await _repository.rejectLeaveRequest(
-          requestId: item.requestId,
-          rejectReason: confirmedReason,
-        );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã từ chối đơn xin nghỉ và gửi phản hồi cho phụ huynh.'),
-            backgroundColor: KColors.warnDeep,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        _loadRequests(tab: _tabController.index == 0 ? 'pending' : 'reviewed');
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Từ chối đơn thất bại. Vui lòng kiểm tra lại.'),
-            backgroundColor: KColors.bad,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+    if (_processing.contains(item.requestId)) return;
+    setState(() => _processing.add(item.requestId));
+    try {
+      final confirmedReason = await RejectReasonDialog.show(
+        context,
+        childName: item.childName ?? 'Học sinh',
+      );
+      if (!mounted || confirmedReason == null || confirmedReason.isEmpty) {
+        return;
       }
+      await _repository.rejectLeaveRequest(
+        requestId: item.requestId,
+        rejectReason: confirmedReason,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Đã từ chối đơn. Phụ huynh có thể xem lý do trong ứng dụng.'),
+          backgroundColor: KColors.warnDeep,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      await _loadRequests(
+          tab: _tabController.index == 0 ? 'pending' : 'reviewed');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Từ chối đơn thất bại. Vui lòng kiểm tra lại.'),
+          backgroundColor: KColors.bad,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _processing.remove(item.requestId));
+    }
+  }
+
+  Future<void> _openAttachment(LeaveRequestEntity item) async {
+    final path = item.attachmentUrl;
+    if (path == null) return;
+    try {
+      final bytes = await _repository.getAttachmentBytes(path);
+      if (!mounted) return;
+      await showDialog<void>(
+          context: context,
+          builder: (context) => Dialog(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: 480,
+                      maxHeight: MediaQuery.sizeOf(context).height * .8),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          tooltip: 'Đóng ảnh',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        )),
+                    Flexible(
+                        child: InteractiveViewer(
+                            child: Image.memory(
+                      bytes,
+                      errorBuilder: (context, error, stack) => const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text('Không thể hiển thị ảnh này.'),
+                      ),
+                    ))),
+                  ]),
+                ),
+              ));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Không tải được ảnh đính kèm. Vui lòng thử lại.'),
+      ));
     }
   }
 
@@ -156,9 +213,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       appBar: AppBar(
         title: Text(
           widget.className != null
-              ? 'Duyệt đơn nghỉ • ${widget.className}'
-              : 'Duyệt đơn xin nghỉ học',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: k.ink),
+              ? 'Duyệt đơn nghỉ / đi trễ • ${widget.className}'
+              : 'Duyệt đơn xin phép',
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 18, color: k.ink),
         ),
         backgroundColor: k.surface,
         iconTheme: IconThemeData(color: k.ink),
@@ -178,7 +236,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                   if (_pendingCount > 0) ...[
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: k.bad,
                         borderRadius: BorderRadius.circular(10),
@@ -200,11 +259,12 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Đã duyệt'),
+                  const Text('Đã xử lý'),
                   if (_reviewedCount > 0) ...[
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: k.lineStrong,
                         borderRadius: BorderRadius.circular(10),
@@ -280,7 +340,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
             Text(
               _tabController.index == 0
                   ? 'Không có đơn nào đang chờ duyệt'
-                  : 'Chưa có lịch sử đơn đã duyệt',
+                  : 'Chưa có lịch sử đơn đã xử lý',
               style: TextStyle(fontSize: 15, color: k.inkSoft),
             ),
           ],
@@ -303,6 +363,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
             item: item,
             onApprove: () => _handleApprove(item),
             onReject: () => _handleReject(item),
+            onAttachment: () => _openAttachment(item),
+            processing: _processing.contains(item.requestId),
           );
         },
       ),
