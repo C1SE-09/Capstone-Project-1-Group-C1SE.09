@@ -14,6 +14,7 @@ from app.api.endpoints.attendance import router as attendance_router
 from app.api.endpoints.leave_requests import router as leave_requests_router
 from app.api.endpoints.health_exam import router as health_exam_router
 from app.api.endpoints.medication import router as teacher_medication_router
+from app.api.endpoints.health_incident import router as health_incident_router
 from app.api.endpoints.admin_dashboard import (
     router as admin_dashboard_router,
 )
@@ -100,6 +101,7 @@ app.include_router(attendance_router, prefix="/api")
 app.include_router(leave_requests_router, prefix="/api")
 app.include_router(health_exam_router, prefix="/api")
 app.include_router(teacher_medication_router, prefix="/api")
+app.include_router(health_incident_router, prefix="/api")
 
 
 @app.get("/")

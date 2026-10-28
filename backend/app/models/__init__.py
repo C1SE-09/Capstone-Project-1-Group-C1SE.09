@@ -34,6 +34,7 @@ from app.models.child import (
     ParentStatus,
 )
 from app.models.health_examination import HealthCategory, HealthExamination
+from app.models.health_incident import HealthIncident, HealthIncidentType
 from app.models.medication import (
     MedicationLog,
     MedicationRequest,
@@ -112,6 +113,8 @@ __all__ = [
     "AttendanceStatus",
     "HealthCategory",
     "HealthExamination",
+    "HealthIncident",
+    "HealthIncidentType",
     "LeaveRequest",
     "LeaveRequestStatus",
     "MedicationLog",
