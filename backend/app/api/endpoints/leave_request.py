@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -330,9 +330,12 @@ def get_student_leave_requests(
     for req in leave_records:
         approver_name = None
         if req.approved_by:
-            approver = db.scalar(select(User).where(User.user_id == req.approved_by))
-            approver_name = approver.full_name if approver else None
-
+            approver_user = db.scalar(select(User).where(User.user_id == req.approved_by))
+            #Nếu tài khoản người duyệt là giáo viên -> lấy full_name từ bảng teacher
+            if approver_user.teacher_id:
+                teacher = db.scalar(select(Teacher).where(Teacher.teacher_id == approver_user.teacher_id))
+                approver_name = teacher.full_name if teacher else approver_user.username
+                
         items.append(
             StudentLeaveHistoryItem(
                 leave_id=req.leave_id,
