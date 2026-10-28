@@ -164,6 +164,144 @@ class RoomCreate(BaseModel):
     is_shared: bool = False
 
 
+class ClassCreate(BaseModel):
+    name: str
+    grade_label: str | None = None
+    room_number: str | None = None
+    capacity: int | None = None
+
+
+class ClassUpdate(BaseModel):
+    name: str | None = None
+    grade_label: str | None = None
+    room_number: str | None = None
+    capacity: int | None = None
+
+
+def _get_school_id(db: Session):
+    school = db.query(School).first()
+    return school.school_id if school else uuid.uuid4()
+
+
+def _serialize_class(db: Session, c: Class_):
+    student_count = db.query(Child).filter(Child.class_id == c.class_id).count()
+    return {
+        "id": str(c.class_id),
+        "name": c.name,
+        "grade_label": c.grade_label or "",
+        "room_number": c.room_number or "",
+        "capacity": c.capacity,
+        "student_count": student_count,
+    }
+
+
+def _parse_class_id(raw: str | None) -> uuid.UUID | None:
+    """Parse class_id từ payload, trả None nếu để trống. Raise 400 nếu sai định dạng."""
+    if raw is None or not raw.strip():
+        return None
+    try:
+        return uuid.UUID(raw.strip())
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="ID lớp không hợp lệ.")
+
+
+def _assert_class_accepts_student(
+    db: Session,
+    class_id: uuid.UUID,
+    *,
+    excluding_child_id: uuid.UUID | None = None,
+) -> Class_:
+    """Chặn cứng khi xếp bé vào lớp không tồn tại hoặc lớp đã đầy sĩ số."""
+    classroom = (
+        db.query(Class_)
+        .filter(Class_.class_id == class_id, Class_.is_active.is_(True))
+        .first()
+    )
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lớp học.")
+
+    if classroom.capacity is None:
+        return classroom  # Không giới hạn sĩ số.
+
+    conditions = [Child.class_id == class_id]
+    if excluding_child_id is not None:
+        # Bé đang ở lớp đó thì không tính vào sĩ số mới.
+        conditions.append(Child.child_id != excluding_child_id)
+    current_count = db.query(Child).filter(*conditions).count()
+
+    if current_count >= classroom.capacity:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Lớp '{classroom.name}' đã đầy sĩ số "
+                f"({current_count}/{classroom.capacity}). Vui lòng chuyển bé sang lớp khác "
+                f"hoặc tăng sĩ số tối đa của lớp."
+            ),
+        )
+    return classroom
+
+
+VALID_GENDERS = {"male", "female", "other"}
+VALID_CHILD_STATUSES = {"enrolled", "withdrawn", "graduated"}
+
+
+def _validate_child_status(status: str | None) -> None:
+    """Validate trạng thái học sinh theo enum ChildStatus."""
+    if status is None:
+        return
+    if status not in VALID_CHILD_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Trạng thái học sinh không hợp lệ. "
+                "Chỉ nhận: enrolled, withdrawn, graduated."
+            ),
+        )
+
+
+def _parse_uuid_list(raw_ids: list[str] | None, label: str) -> list[uuid.UUID]:
+    """Parse danh sách UUID, bỏ qua rỗng; raise 400 nếu có giá trị sai định dạng."""
+    parsed: list[uuid.UUID] = []
+    for raw in raw_ids or []:
+        if not raw or not raw.strip():
+            continue
+        try:
+            parsed.append(uuid.UUID(raw.strip()))
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail=f"ID {label} không hợp lệ.")
+    return parsed
+
+
+def _validate_child_identity(
+    *,
+    full_name: str | None = None,
+    nickname: str | None = None,
+    gender: str | None = None,
+) -> None:
+    """Validate họ tên / biệt danh / giới tính của học sinh (giống hàm của parent)."""
+    if full_name is not None:
+        name = full_name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Họ tên học sinh không được để trống.")
+        if len(name) > 150:
+            raise HTTPException(
+                status_code=400, detail="Họ tên học sinh tối đa 150 ký tự."
+            )
+    if nickname is not None:
+        nick = nickname.strip()
+        if len(nick) > 50:
+            raise HTTPException(
+                status_code=400, detail="Biệt danh học sinh tối đa 50 ký tự."
+            )
+    if gender is not None:
+        g = gender.strip().lower()
+        if g and g not in VALID_GENDERS:
+            raise HTTPException(
+                status_code=400,
+                detail="Giới tính không hợp lệ. Chỉ nhận: male, female, other.",
+            )
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Teachers Endpoints
@@ -288,13 +426,20 @@ def update_teacher(teacher_id: str, data: TeacherUpdate, db: Session = Depends(g
     _validate_phone_10_digits(data.phone)
     _validate_gmail_format(data.email)
 
-    if data.full_name is not None:
+    if "full_name" in data.model_fields_set:
+        if data.full_name is None:
+            raise HTTPException(
+                status_code=400, detail="Họ tên giáo viên không được để trống."
+            )
         t.full_name = data.full_name.strip()
-    if data.email is not None and data.email.strip():
-        existing_email = db.query(Teacher).filter(Teacher.email == data.email.strip(), Teacher.teacher_id != t.teacher_id).first()
-        if existing_email:
-            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi giáo viên khác.")
-        t.email = data.email.strip()
+    if "email" in data.model_fields_set:
+        if data.email is not None and data.email.strip():
+            existing_email = db.query(Teacher).filter(Teacher.email == data.email.strip(), Teacher.teacher_id != t.teacher_id).first()
+            if existing_email:
+                raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi giáo viên khác.")
+            t.email = data.email.strip()
+        else:
+            t.email = None
     if data.phone is not None and data.phone.strip():
         existing_phone = db.query(Teacher).filter(Teacher.phone == data.phone.strip(), Teacher.teacher_id != t.teacher_id).first()
         if existing_phone:
@@ -390,15 +535,175 @@ def delete_teacher(teacher_id: str, db: Session = Depends(get_db)):
 @router.get("/classes")
 def list_classes(db: Session = Depends(get_db)):
     classes = db.query(Class_).filter(Class_.is_active.is_(True)).order_by(Class_.name.asc()).all()
-    return [
-        {
-            "id": str(c.class_id),
-            "name": c.name,
-            "grade_label": c.grade_label or "",
-            "room_number": c.room_number or "",
-        }
-        for c in classes
-    ]
+    return [_serialize_class(db, c) for c in classes]
+
+
+@router.post("/classes", status_code=status.HTTP_201_CREATED)
+def create_class(data: ClassCreate, db: Session = Depends(get_db)):
+    name = (data.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Tên lớp không được để trống.")
+    if len(name) > 100:
+        raise HTTPException(status_code=400, detail="Tên lớp tối đa 100 ký tự.")
+    room_number = (data.room_number or "").strip() or None
+    if room_number and len(room_number) > 20:
+        raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+    grade_label = (data.grade_label or "").strip() or None
+    if data.capacity is not None and data.capacity <= 0:
+        raise HTTPException(status_code=400, detail="Sĩ số tối đa phải là số dương.")
+
+    school_id = _get_school_id(db)
+    existing = (
+        db.query(Class_)
+        .filter(Class_.school_id == school_id, Class_.name == name, Class_.is_active.is_(True))
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Lớp '{name}' đã tồn tại trong trường.")
+
+    new_class = Class_(
+        class_id=uuid.uuid4(),
+        school_id=school_id,
+        name=name,
+        grade_label=grade_label,
+        room_number=room_number,
+        capacity=data.capacity,
+        is_active=True,
+    )
+    db.add(new_class)
+    db.commit()
+    db.refresh(new_class)
+    return {"message": "Tạo lớp thành công", "id": str(new_class.class_id)}
+
+
+@router.put("/classes/{class_id}")
+def update_class(class_id: str, data: ClassUpdate, db: Session = Depends(get_db)):
+    try:
+        c_uid = uuid.UUID(class_id.strip())
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID lớp không hợp lệ")
+    c = db.query(Class_).filter(Class_.class_id == c_uid, Class_.is_active.is_(True)).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lớp")
+
+    if data.name is not None:
+        name = data.name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Tên lớp không được để trống.")
+        if len(name) > 100:
+            raise HTTPException(status_code=400, detail="Tên lớp tối đa 100 ký tự.")
+        dup = (
+            db.query(Class_)
+            .filter(
+                Class_.school_id == c.school_id,
+                Class_.name == name,
+                Class_.is_active.is_(True),
+                Class_.class_id != c.class_id,
+            )
+            .first()
+        )
+        if dup:
+            raise HTTPException(status_code=400, detail=f"Lớp '{name}' đã tồn tại trong trường.")
+        c.name = name
+    # Dùng model_fields_set để phân biệt "không gửi field" với "gửi null" (xóa giá trị).
+    if "grade_label" in data.model_fields_set:
+        c.grade_label = (data.grade_label or "").strip() or None
+    if "room_number" in data.model_fields_set:
+        room_number = (data.room_number or "").strip() or None
+        if room_number and len(room_number) > 20:
+            raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+        c.room_number = room_number
+    if "capacity" in data.model_fields_set:
+        if data.capacity is not None:
+            if data.capacity <= 0:
+                raise HTTPException(
+                    status_code=400, detail="Sĩ số tối đa phải là số dương."
+                )
+            student_count = db.query(Child).filter(Child.class_id == c.class_id).count()
+            if data.capacity < student_count:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Sĩ số tối đa ({data.capacity}) không thể nhỏ hơn số học sinh hiện tại ({student_count}).",
+                )
+        c.capacity = data.capacity
+
+    db.commit()
+    return {"message": "Cập nhật lớp thành công"}
+
+
+def _assert_class_empty(db: Session, c: Class_):
+    student_count = db.query(Child).filter(Child.class_id == c.class_id).count()
+    if student_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không thể xóa lớp '{c.name}' vì còn {student_count} học sinh. Vui lòng chuyển các bé sang lớp khác hoặc xóa hồ sơ trước.",
+        )
+
+
+@router.delete("/classes/{class_id}")
+def delete_class(class_id: str, db: Session = Depends(get_db)):
+    try:
+        c_uid = uuid.UUID(class_id.strip())
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID lớp không hợp lệ")
+    c = db.query(Class_).filter(Class_.class_id == c_uid, Class_.is_active.is_(True)).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lớp")
+
+    # Quy tắc: chỉ cho xóa khi lớp đã hết học sinh.
+    _assert_class_empty(db, c)
+
+    # Gỡ liên kết giáo viên chủ nhiệm + phân công phụ trách, gỡ phòng chuyên biệt,
+    # rồi xóa mềm lớp để giữ lịch sử (điểm danh, sức khỏe...) không bị mất.
+    db.query(Teacher).filter(Teacher.class_id == c.class_id).update(
+        {Teacher.class_id: None}, synchronize_session=False
+    )
+    try:
+        db.execute(text("DELETE FROM teacher_class WHERE class_id = :cid"), {"cid": c.class_id})
+    except Exception:
+        pass
+    db.query(Room).filter(Room.class_id == c.class_id).update(
+        {Room.class_id: None}, synchronize_session=False
+    )
+    c.is_active = False
+    db.commit()
+    return {"message": f"Đã xóa lớp '{c.name}' thành công"}
+
+
+@router.post("/classes/batch-delete")
+@router.delete("/classes/batch-delete")
+def batch_delete_classes(payload: BatchDeleteRequest, db: Session = Depends(get_db)):
+    deleted_count = 0
+    blocked: list[str] = []
+    for class_id in payload.ids:
+        try:
+            c_uid = uuid.UUID(class_id.strip())
+        except Exception:
+            continue
+        c = db.query(Class_).filter(Class_.class_id == c_uid, Class_.is_active.is_(True)).first()
+        if not c:
+            continue
+        student_count = db.query(Child).filter(Child.class_id == c.class_id).count()
+        if student_count > 0:
+            blocked.append(f"{c.name} (còn {student_count} bé)")
+            continue
+        db.query(Teacher).filter(Teacher.class_id == c.class_id).update(
+            {Teacher.class_id: None}, synchronize_session=False
+        )
+        try:
+            db.execute(text("DELETE FROM teacher_class WHERE class_id = :cid"), {"cid": c.class_id})
+        except Exception:
+            pass
+        db.query(Room).filter(Room.class_id == c.class_id).update(
+            {Room.class_id: None}, synchronize_session=False
+        )
+        c.is_active = False
+        deleted_count += 1
+    db.commit()
+    msg = f"Đã xóa thành công {deleted_count} lớp"
+    if blocked:
+        msg += f". Không xóa được {len(blocked)} lớp còn học sinh: {', '.join(blocked)}"
+    return {"message": msg, "deleted_count": deleted_count, "blocked": blocked}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -603,17 +908,22 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
     _validate_phone_10_digits(data.phone)
     _validate_gmail_format(data.email)
 
-    if data.full_name is not None:
+    if "full_name" in data.model_fields_set:
+        if data.full_name is None:
+            raise HTTPException(
+                status_code=400, detail="Họ tên phụ huynh không được để trống."
+            )
         p.full_name = data.full_name.strip()
-    if data.relationship is not None:
-        p.relationship_ = data.relationship.strip() if data.relationship.strip() else None
-    if data.email is not None and data.email.strip():
-        existing_email = db.query(Parent).filter(Parent.email == data.email.strip(), Parent.parent_id != p.parent_id).first()
-        if existing_email:
-            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi phụ huynh khác.")
-        p.email = data.email.strip()
-    elif data.email is not None and not data.email.strip():
-        p.email = None
+    if "relationship" in data.model_fields_set:
+        p.relationship_ = (data.relationship or "").strip() or None
+    if "email" in data.model_fields_set:
+        if data.email is not None and data.email.strip():
+            existing_email = db.query(Parent).filter(Parent.email == data.email.strip(), Parent.parent_id != p.parent_id).first()
+            if existing_email:
+                raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi phụ huynh khác.")
+            p.email = data.email.strip()
+        else:
+            p.email = None
 
     if data.phone is not None and data.phone.strip():
         existing_phone = db.query(Parent).filter(Parent.phone == data.phone.strip(), Parent.parent_id != p.parent_id).first()
@@ -875,10 +1185,15 @@ def create_child(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
 ):
-    class_uuid = uuid.UUID(data.class_id) if data.class_id and data.class_id.strip() else None
-    if not class_uuid:
-        first_class = db.query(Class_).first()
-        class_uuid = first_class.class_id if first_class else None
+    class_uuid = _parse_class_id(data.class_id)
+    if class_uuid is not None:
+        _assert_class_accepts_student(db, class_uuid)
+
+    _validate_child_identity(
+        full_name=data.full_name,
+        nickname=data.nickname,
+        gender=data.gender,
+    )
 
     health: dict = {}
     health_fields = {"allergy_status", "medical_allergies", "care_notes"} & data.model_fields_set
@@ -907,7 +1222,7 @@ def create_child(
         note_val = None
 
     # Xác định danh sách phụ huynh và phụ huynh chính
-    parent_uuid = uuid.UUID(data.parent_id) if data.parent_id and data.parent_id.strip() else None
+    parent_uuid = None
     p_ids: list[str] = []
     if data.parent_items:
         p_ids = [item.parent_id for item in data.parent_items if item.parent_id.strip()]
@@ -916,8 +1231,13 @@ def create_child(
     elif data.parent_id and data.parent_id.strip():
         p_ids = [data.parent_id.strip()]
 
-    if not parent_uuid and p_ids:
-        parent_uuid = uuid.UUID(p_ids[0])
+    try:
+        if data.parent_id and data.parent_id.strip():
+            parent_uuid = uuid.UUID(data.parent_id.strip())
+        elif p_ids:
+            parent_uuid = uuid.UUID(p_ids[0])
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="ID phụ huynh không hợp lệ.")
 
     parsed_dob = None
     if data.date_of_birth and data.date_of_birth.strip():
@@ -942,7 +1262,7 @@ def create_child(
         parent_id=parent_uuid,
         medical_allergies=note_val,
         date_of_birth=parsed_dob,
-        gender=data.gender.strip() if data.gender else "male",
+        gender=(data.gender.strip().lower() if data.gender and data.gender.strip() else "male"),
         status=ChildStatus.ENROLLED,
         **health,
     )
@@ -952,7 +1272,7 @@ def create_child(
     # Lưu liên kết N-N vào parent_child
     if data.parent_items:
         for item in data.parent_items:
-            p_uid = uuid.UUID(item.parent_id.strip())
+            p_uid = _parse_uuid_list([item.parent_id], "phụ huynh")[0]
             p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
             link = ParentChild(
                 id=uuid.uuid4(),
@@ -964,8 +1284,7 @@ def create_child(
             )
             db.add(link)
     elif p_ids:
-        for idx, pid in enumerate(p_ids):
-            p_uid = uuid.UUID(pid.strip())
+        for idx, p_uid in enumerate(_parse_uuid_list(p_ids, "phụ huynh")):
             p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
             link = ParentChild(
                 id=uuid.uuid4(),
@@ -989,16 +1308,48 @@ def update_child(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
 ):
-    c = db.query(Child).filter(Child.child_id == uuid.UUID(child_id)).first()
+    try:
+        c_uid = uuid.UUID(child_id.strip())
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="ID học sinh không hợp lệ")
+    c = db.query(Child).filter(Child.child_id == c_uid).first()
     if not c:
         raise HTTPException(status_code=404, detail="Không tìm thấy học sinh")
 
-    if data.full_name is not None:
+    _validate_child_identity(
+        full_name=data.full_name,
+        nickname=data.nickname,
+        gender=data.gender,
+    )
+    _validate_child_status(data.status)
+
+    # Dùng model_fields_set để phân biệt "không gửi field" với "gửi null" (xoá giá trị).
+    if "full_name" in data.model_fields_set:
+        if data.full_name is None:
+            raise HTTPException(
+                status_code=400, detail="Họ tên học sinh không được để trống."
+            )
         c.full_name = data.full_name.strip()
-    if data.nickname is not None:
+    if "nickname" in data.model_fields_set:
         c.nickname = data.nickname.strip() if data.nickname else None
-    if data.class_id is not None:
-        c.class_id = uuid.UUID(data.class_id.strip()) if data.class_id.strip() else None
+    if "gender" in data.model_fields_set:
+        c.gender = (data.gender or "").strip().lower() or None
+    if "status" in data.model_fields_set:
+        if data.status is None:
+            raise HTTPException(
+                status_code=400, detail="Trạng thái học sinh không được để trống."
+            )
+        c.status = ChildStatus(data.status)
+    if "class_id" in data.model_fields_set:
+        new_class_uuid = _parse_class_id(data.class_id)
+        if new_class_uuid is not None:
+            # Chuyển sang lớp khác → chặn nếu lớp đích đã đầy sĩ số.
+            # Giữ nguyên lớp cũ thì không cần check (bé không làm tăng sĩ số).
+            if new_class_uuid != c.class_id:
+                _assert_class_accepts_student(
+                    db, new_class_uuid, excluding_child_id=c.child_id
+                )
+        c.class_id = new_class_uuid
 
     # Admin ghi kiểu last-write-wins; chỉ chạm sức khỏe khi payload thực sự có field.
     health_fields = {"allergy_status", "medical_allergies", "care_notes"} & data.model_fields_set
@@ -1071,15 +1422,13 @@ def update_child(
                 )
         else:
             c.date_of_birth = None
-    if data.gender is not None:
-        c.gender = data.gender.strip() if data.gender.strip() else c.gender
 
     # Đồng bộ liên kết N-N trong parent_child
     if data.parent_items is not None:
         db.query(ParentChild).filter(ParentChild.child_id == c.child_id).delete(synchronize_session=False)
         primary_id = None
         for item in data.parent_items:
-            p_uid = uuid.UUID(item.parent_id.strip())
+            p_uid = _parse_uuid_list([item.parent_id], "phụ huynh")[0]
             if item.is_primary or primary_id is None:
                 primary_id = p_uid
             p_obj = db.query(Parent).filter(Parent.parent_id == p_uid).first()
@@ -1094,7 +1443,7 @@ def update_child(
             db.add(link)
         c.parent_id = primary_id
     elif data.parent_ids is not None:
-        new_uuids = [uuid.UUID(pid.strip()) for pid in data.parent_ids if pid and pid.strip()]
+        new_uuids = _parse_uuid_list(data.parent_ids, "phụ huynh")
         db.query(ParentChild).filter(
             ParentChild.child_id == c.child_id,
             ~ParentChild.parent_id.in_(new_uuids),
@@ -1116,7 +1465,7 @@ def update_child(
                 db.add(link)
         c.parent_id = new_uuids[0] if new_uuids else None
     elif data.parent_id is not None:
-        p_uid = uuid.UUID(data.parent_id.strip()) if data.parent_id.strip() else None
+        p_uid = _parse_uuid_list([data.parent_id], "phụ huynh")[0] if data.parent_id.strip() else None
         c.parent_id = p_uid
         if p_uid:
             existing = db.query(ParentChild).filter(
@@ -1166,7 +1515,11 @@ def delete_child(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
 ):
-    c = db.query(Child).filter(Child.child_id == uuid.UUID(child_id)).first()
+    try:
+        c_uid = uuid.UUID(child_id.strip())
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="ID học sinh không hợp lệ")
+    c = db.query(Child).filter(Child.child_id == c_uid).first()
     if not c:
         raise HTTPException(status_code=404, detail="Không tìm thấy học sinh")
 
@@ -1341,12 +1694,16 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
     if not s:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sinh hoạt")
 
-    if data.activity_name is not None:
+    if "activity_name" in data.model_fields_set:
+        if data.activity_name is None:
+            raise HTTPException(
+                status_code=400, detail="Tên hoạt động không được để trống."
+            )
         s.activity_name = data.activity_name.strip()
-    if data.content is not None:
-        s.content = data.content.strip()
-    if data.room_name is not None:
-        s.room_name = data.room_name.strip()
+    if "content" in data.model_fields_set:
+        s.content = data.content.strip() if data.content else None
+    if "room_name" in data.model_fields_set:
+        s.room_name = data.room_name.strip() if data.room_name else None
     if data.day_of_week is not None:
         if data.day_of_week < 2 or data.day_of_week > 6:
             raise HTTPException(
