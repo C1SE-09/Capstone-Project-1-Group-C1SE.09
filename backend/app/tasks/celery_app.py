@@ -39,11 +39,29 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    # Lịch tự động nhắc nhở điểm danh lúc 07:40 (00:40 UTC) Thứ 2 - Thứ 6
+    # Lịch tự động nhắc nhở điểm danh và dặn thuốc
     beat_schedule={
         "remind-unmarked-attendance-morning": {
             "task": "remind_unmarked_attendance",
             "schedule": crontab(hour=0, minute=40, day_of_week="1-5"),
+        },
+        # Nhắc uống thuốc buổi sáng lúc 09:00 VN (02:00 UTC) Thứ 2 - Thứ 6
+        "remind-medication-morning": {
+            "task": "remind_pending_medications",
+            "schedule": crontab(hour=2, minute=0, day_of_week="1-5"),
+            "args": ["morning"],
+        },
+        # Nhắc uống thuốc buổi trưa lúc 11:30 VN (04:30 UTC) Thứ 2 - Thứ 6
+        "remind-medication-noon": {
+            "task": "remind_pending_medications",
+            "schedule": crontab(hour=4, minute=30, day_of_week="1-5"),
+            "args": ["noon"],
+        },
+        # Nhắc uống thuốc buổi chiều lúc 14:30 VN (07:30 UTC) Thứ 2 - Thứ 6
+        "remind-medication-afternoon": {
+            "task": "remind_pending_medications",
+            "schedule": crontab(hour=7, minute=30, day_of_week="1-5"),
+            "args": ["afternoon"],
         },
     },
     task_track_started=True,
@@ -59,6 +77,7 @@ celery_app.conf.update(
         "bug_report_notify_admin": {"queue": "notifications"},
         "bug_report_notify_user": {"queue": "notifications"},
         "send_medication_confirmed_notification": {"queue": "notifications"},
+        "remind_pending_medications": {"queue": "notifications"},
         "send_health_incident_alert_task": {"queue": "notifications"},
     },
 )

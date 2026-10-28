@@ -219,5 +219,63 @@ void main() {
 
       expect(find.text('Đến Trễ'), findsWidgets);
     });
+
+    testWidgets('Displays Excused Absent badge and allows teacher manual override', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AttendanceScreen(
+            classId: 'class-1',
+            className: 'Lớp Mầm A',
+            date: '2026-10-21',
+            roster: [testChild1],
+            initialRecords: {
+              'c1': AttendanceStatus.excusedAbsent,
+            },
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Xác thực badge "Excused Absent" được hiển thị bên cạnh tên bé
+      expect(find.text('Excused Absent'), findsOneWidget);
+      expect(find.text('Có Phép'), findsWidgets);
+
+      // Giáo viên click để ghi đè / chuyển trạng thái thủ công (Excused Absent -> Late)
+      await tester.tap(find.text('Bé An'));
+      await tester.pumpAndSettle();
+
+      // Xác thực badge Excused Absent không còn hiển thị và trạng thái chuyển sang Đến Trễ
+      expect(find.text('Excused Absent'), findsNothing);
+      expect(find.text('Đến Trễ'), findsWidgets);
+    });
+
+    testWidgets('Displays Late ETA badge when expectedArrivalTime is present', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AttendanceScreen(
+            classId: 'class-1',
+            className: 'Lớp Mầm A',
+            date: '2026-10-21',
+            roster: [testChild1],
+            initialRecords: {
+              'c1': AttendanceStatus.late,
+            },
+            initialDetails: {
+              'c1': AttendanceChildRecord(
+                childId: 'c1',
+                status: AttendanceStatus.late,
+                expectedArrivalTime: '08:30:00',
+              ),
+            },
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Xác thực badge "Late (ETA: 08:30)" được format chuẩn và hiển thị
+      expect(find.text('Late (ETA: 08:30)'), findsOneWidget);
+    });
   });
 }

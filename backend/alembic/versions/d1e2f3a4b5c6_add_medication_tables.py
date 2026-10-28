@@ -42,7 +42,7 @@ def upgrade() -> None:
         sa.Column('end_date', sa.Date(), nullable=False, comment='Ngày kết thúc đợt thuốc'),
         sa.Column(
             'status',
-            sa.Enum('active', 'completed', 'cancelled', name='medication_request_status', native_enum=True),
+            postgresql.ENUM('active', 'completed', 'cancelled', name='medication_request_status', create_type=False),
             nullable=False,
             server_default='active',
         ),

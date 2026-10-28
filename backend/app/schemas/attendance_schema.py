@@ -22,11 +22,15 @@ class AttendanceItemCreate(BaseModel):
     child_id: uuid.UUID
     status: AttendanceStatus = Field(
         default=AttendanceStatus.PRESENT,
-        description="Trạng thái present (có mặt), absent (vắng mặt), late (đến muộn)"
+        description="Trạng thái present (có mặt), absent (vắng không phép), excused_absent (vắng có phép), late (đến muộn)"
     )
     check_in_time: time | None = Field(
         default=None,
         description="Giờ vào lớp thực tế (dùng khi trẻ được bố mẹ đưa đến muộn)"
+    )
+    expected_arrival_time: time | None = Field(
+        default=None,
+        description="Giờ dự kiến đến (dùng khi trẻ báo đi muộn/ETA)"
     )
     note: str | None = Field(
         default=None,
@@ -57,6 +61,7 @@ class ChildAttendanceResponse(BaseModel):
     avatar_url: str | None = None
     status: AttendanceStatus
     check_in_time: time | None = None
+    expected_arrival_time: time | None = None
     note: str | None = None
 
 class ClassAttendanceSummaryResponse(BaseModel):
@@ -66,6 +71,7 @@ class ClassAttendanceSummaryResponse(BaseModel):
     total_children: int
     present_count: int
     absent_count: int
+    excused_absent_count: int = 0
     late_count: int
     children: list[ChildAttendanceResponse]
 

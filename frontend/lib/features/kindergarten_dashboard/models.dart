@@ -1,12 +1,13 @@
 // UI model declarations for the kindergarten dashboard feature.
 enum ReportStatus { none, draft, submitted, read, attention, processing }
 enum Severity { none, mild, moderate }
-enum AttendanceStatus { arrived, absent, late }
+enum AttendanceStatus { arrived, absent, excusedAbsent, late }
 
 extension AttendanceStatusLabel on AttendanceStatus {
   String get label => switch (this) {
         AttendanceStatus.arrived => 'Có mặt',
         AttendanceStatus.absent => 'Vắng',
+        AttendanceStatus.excusedAbsent => 'Có phép',
         AttendanceStatus.late => 'Đi muộn',
       };
 }

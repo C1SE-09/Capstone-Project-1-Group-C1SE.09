@@ -44,6 +44,7 @@ class LeaveStatus(str, enum.Enum):
     PENDING = "pending"    # Chờ duyệt
     APPROVED = "approved"  # Đã duyệt
     REJECTED = "rejected"  # Bị từ chối
+    CANCELLED = "cancelled"  # Phụ huynh huỷ đơn trước 07:30
 
 
 # Compatibility alias for colleague code

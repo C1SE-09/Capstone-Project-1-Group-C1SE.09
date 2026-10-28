@@ -12,7 +12,7 @@ from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -23,10 +23,18 @@ from app.models.user import Teacher, User, UserRole
 from app.schemas.leave_request_schema import (
     ChildScheduleInput,
     LeaveBatchCreateResponse,
+    LeaveRequestBatchSummary,
+    LeaveRequestCancelResponse,
     LeaveRequestCreate,
+    LeaveRequestReject,
     LeaveRequestResponse,
+    LeaveRequestReviewResponse,
     StudentLeaveHistoryItem,
     StudentLeaveHistoryResponse,
+)
+from app.services.attendance_sync_service import (
+    cancel_leave_request as cancel_leave_request_service,
+    sync_leave_request_to_attendance,
 )
 
 logger = logging.getLogger(__name__)
@@ -366,3 +374,241 @@ def get_student_leave_requests(
         total_requests=len(items),
         data=items,
     )
+
+
+def _verify_class_review_access(db: Session, current_user: User, class_id: uuid.UUID) -> Teacher | None:
+    """Kiểm tra phân quyền duyệt đơn: Chỉ giáo viên phụ trách lớp hoặc Admin."""
+    role_val = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_val == UserRole.ADMIN.value:
+        return None
+
+    if role_val == UserRole.TEACHER.value:
+        if not current_user.teacher_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tài khoản giáo viên chưa được liên kết với hồ sơ nhân sự.",
+            )
+        teacher = db.scalar(select(Teacher).where(Teacher.teacher_id == current_user.teacher_id))
+        if not teacher or teacher.class_id != class_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bảo mật: Bạn chỉ có quyền duyệt đơn cho học sinh thuộc lớp mình phụ trách!",
+            )
+        return teacher
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Chức năng này chỉ dành cho Giáo viên phụ trách lớp và Quản trị viên.",
+    )
+
+
+@router.post(
+    "/{request_id}/approve",
+    response_model=LeaveRequestReviewResponse,
+    summary="Giáo viên duyệt đơn xin nghỉ / đi trễ & tự động đồng bộ điểm danh (Task 1: Auto-Sync Hook)",
+)
+def approve_leave_request(
+    request_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LeaveRequestReviewResponse:
+    """
+    1-Tap Approve:
+    - Chuyển status sang APPROVED
+    - Tự động kích hoạt Hook sync_leave_request_to_attendance:
+      + Đơn nghỉ -> AttendanceStatus.EXCUSED_ABSENT
+      + Đơn đi trễ -> AttendanceStatus.LATE kèm expected_arrival_time (ETA)
+    """
+    req = db.scalar(select(LeaveRequest).where(LeaveRequest.request_id == request_id))
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn xin nghỉ học.")
+
+    teacher = _verify_class_review_access(db=db, current_user=current_user, class_id=req.class_id)
+    teacher_id = teacher.teacher_id if teacher else current_user.teacher_id
+
+    if req.status != LeaveStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Đơn đã được xử lý trước đó với trạng thái: {req.status.value}",
+        )
+
+    # 1. Cập nhật trạng thái đơn
+    req.status = LeaveStatus.APPROVED
+    req.approved_by = current_user.user_id
+    req.action_at = datetime.now(VN_TZ)
+    req.reject_reason = None
+
+    # 2. Kích hoạt hook tự động đồng bộ điểm danh
+    synced_records = sync_leave_request_to_attendance(db=db, leave_request=req, teacher_id=teacher_id)
+
+    db.commit()
+    db.refresh(req)
+
+    logger.info("Duyệt đơn thành công: id=%s child=%s synced_days=%d", req.leave_id, req.child_id, len(synced_records))
+    return LeaveRequestReviewResponse(
+        success=True,
+        message=f"Đã duyệt đơn và tự động đồng bộ {len(synced_records)} ngày điểm danh.",
+        leave_id=req.leave_id,
+        status=req.status,
+        synced_attendance_count=len(synced_records),
+    )
+
+
+@router.post(
+    "/{request_id}/reject",
+    response_model=LeaveRequestReviewResponse,
+    summary="Giáo viên từ chối đơn xin nghỉ / đi trễ kèm lý do bắt buộc",
+)
+def reject_leave_request(
+    request_id: uuid.UUID,
+    payload: LeaveRequestReject,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LeaveRequestReviewResponse:
+    """Từ chối đơn xin nghỉ học kèm lý do phản hồi cho phụ huynh."""
+    req = db.scalar(select(LeaveRequest).where(LeaveRequest.request_id == request_id))
+    if not req:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy đơn xin nghỉ học.")
+
+    _verify_class_review_access(db=db, current_user=current_user, class_id=req.class_id)
+
+    if req.status != LeaveStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Đơn đã được xử lý trước đó với trạng thái: {req.status.value}",
+        )
+
+    req.status = LeaveStatus.REJECTED
+    req.approved_by = current_user.user_id
+    req.action_at = datetime.now(VN_TZ)
+    req.reject_reason = payload.reason.strip()
+
+    db.commit()
+    db.refresh(req)
+
+    logger.info("Từ chối đơn: id=%s reason=%s", req.leave_id, payload.reason)
+    return LeaveRequestReviewResponse(
+        success=True,
+        message="Đã từ chối đơn thành công.",
+        leave_id=req.leave_id,
+        status=req.status,
+        synced_attendance_count=0,
+    )
+
+
+@router.post(
+    "/{request_id}/cancel",
+    response_model=LeaveRequestCancelResponse,
+    summary="Phụ huynh huỷ đơn xin nghỉ / đi trễ (Rollback điểm danh nếu trước 07:30 AM)",
+)
+def cancel_leave_request_endpoint(
+    request_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("parent")),
+) -> LeaveRequestCancelResponse:
+    """
+    Phụ huynh huỷ đơn xin nghỉ học:
+    - Nếu đơn thuộc ngày hôm nay: Chỉ được huỷ trước 07:30 AM.
+    - Tự động Rollback điểm danh (DELETE bản ghi điểm danh đã đồng bộ).
+    """
+    if not current_user.parent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản chưa được liên kết với hồ sơ phụ huynh.",
+        )
+
+    req, rollbacked = cancel_leave_request_service(
+        db=db,
+        request_id=request_id,
+        parent_id=current_user.parent_id,
+    )
+
+    msg = "Huỷ đơn thành công"
+    if rollbacked:
+        msg += " và đã hoàn tác điểm danh của bé."
+    else:
+        msg += "."
+
+    return LeaveRequestCancelResponse(
+        success=True,
+        message=msg,
+        leave_id=req.leave_id,
+        status=req.status,
+        rollbacked_attendance=rollbacked,
+    )
+
+
+@router.get(
+    "/class/{class_id}",
+    response_model=LeaveRequestBatchSummary,
+    summary="Danh sách đơn xin nghỉ học của lớp học (dành cho Giáo viên)",
+)
+def get_class_leave_requests(
+    class_id: uuid.UUID,
+    tab: str = "pending",
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LeaveRequestBatchSummary:
+    """Lấy danh sách đơn của lớp theo tab: pending (chờ duyệt) hoặc reviewed (đã duyệt/từ chối)."""
+    _verify_class_review_access(db=db, current_user=current_user, class_id=class_id)
+
+    pending_count = db.scalar(
+        select(func.count(LeaveRequest.request_id)).where(
+            LeaveRequest.class_id == class_id,
+            LeaveRequest.status == LeaveStatus.PENDING,
+        )
+    ) or 0
+
+    reviewed_count = db.scalar(
+        select(func.count(LeaveRequest.request_id)).where(
+            LeaveRequest.class_id == class_id,
+            LeaveRequest.status.in_([LeaveStatus.APPROVED, LeaveStatus.REJECTED, LeaveStatus.CANCELLED]),
+        )
+    ) or 0
+
+    query = select(LeaveRequest).where(LeaveRequest.class_id == class_id)
+    if tab == "pending":
+        query = query.where(LeaveRequest.status == LeaveStatus.PENDING)
+    else:
+        query = query.where(LeaveRequest.status.in_([LeaveStatus.APPROVED, LeaveStatus.REJECTED, LeaveStatus.CANCELLED]))
+
+    query = query.order_by(desc(LeaveRequest.created_at)).offset(offset).limit(limit)
+    records = db.scalars(query).all()
+
+    items: list[StudentLeaveHistoryItem] = []
+    for req in records:
+        approver_name = None
+        if req.approved_by:
+            approver_user = db.scalar(select(User).where(User.user_id == req.approved_by))
+            if approver_user and approver_user.teacher_id:
+                t = db.scalar(select(Teacher).where(Teacher.teacher_id == approver_user.teacher_id))
+                approver_name = t.full_name if t else approver_user.username
+            elif approver_user:
+                approver_name = approver_user.username
+
+        items.append(
+            StudentLeaveHistoryItem(
+                leave_id=req.leave_id,
+                type=req.type,
+                from_date=req.from_date,
+                to_date=req.to_date,
+                expected_arrival_time=req.expected_arrival_time,
+                reason=req.reason,
+                attachment_url=req.attachment_url,
+                contact_phone=req.contact_phone or "",
+                status=req.status,
+                submitted_after_cutoff=req.submitted_after_cutoff,
+                approved_by_name=approver_name,
+                reject_reason=req.reject_reason,
+                action_at=req.action_at,
+                created_at=req.created_at,
+            )
+        )
+
+    return LeaveRequestBatchSummary(
+        pending_count=pending_count,
+        reviewed_count=reviewed_count,
+        items=items,
+    )

@@ -138,5 +138,28 @@ def deliver_medication_notification_sync(request_id_str: str, log_id_str: str) -
 
 @celery_app.task(name="send_medication_confirmed_notification", queue="notifications")
 def send_medication_confirmed_notification(request_id_str: str, log_id_str: str) -> dict:
-    """Task chạy nền Celery worker gửi push notification."""
+    """Task chạy nền Celery worker gửi push notification khi đã cho uống thuốc."""
     return deliver_medication_notification_sync(request_id_str, log_id_str)
+
+
+@celery_app.task(name="remind_pending_medications", queue="notifications")
+def remind_pending_medications(session_name: str | None = None, target_date_str: str | None = None) -> dict:
+    """
+    Celery background worker chạy định kỳ lúc 09:00, 11:30, 14:30 hàng ngày:
+    - Quét các đơn dặn thuốc chưa được cho uống theo từng lớp.
+    - Gửi grouped reminder push notification tới toàn bộ giáo viên phụ trách của lớp.
+    """
+    from datetime import date
+    from app.services.medication_reminder_service import send_grouped_medication_reminder
+
+    target_date = date.fromisoformat(target_date_str) if target_date_str else None
+    db: Session = SessionLocal()
+    try:
+        return send_grouped_medication_reminder(
+            db=db,
+            target_date=target_date,
+            session_name=session_name,
+        )
+    finally:
+        db.close()
+
