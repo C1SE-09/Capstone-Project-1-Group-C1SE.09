@@ -18,6 +18,8 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
 
 enum TeacherTab { overview, classList, history, account }
 
@@ -232,6 +234,17 @@ class _TeacherShellState extends State<TeacherShell> {
     if (mounted) setState(() => _initData());
   }
 
+  Future<void> openMedications() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const TeacherMedicationScreen(),
+    ));
+    if (mounted) setState(() => _initData());
+  }
+
+  void openEmergencySheet(List<Child> children) {
+    TeacherEmergencySheet.show(context, children: children);
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
         future: _initFuture,
@@ -288,6 +301,8 @@ class _TeacherShellState extends State<TeacherShell> {
                         repository: repository,
                         onOpenTimetable: () => openTimetable(className),
                         onOpenAttendance: () => openAttendance(className, children),
+                        onOpenMedications: () => openMedications(),
+                        onEmergencyAlert: () => openEmergencySheet(children),
                         onOpenReport: (name) => openReport(childByName(name, children)),
                         onHistory: () => setState(() => tab = TeacherTab.history),
                         onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; }),

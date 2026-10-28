@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.health_incident import HealthIncidentType
 
@@ -35,6 +35,13 @@ class HealthIncidentCreate(BaseModel):
         default=HealthIncidentType.HIGH_FEVER,
         description="Loại sự cố: high_fever (Sốt cao), severe_injury (Tai nạn), acute_allergy (Dị ứng), other (Khác)",
     )
+
+    @field_validator("incident_type", mode="before")
+    @classmethod
+    def normalize_incident_type(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
     description: str | None = Field(
         None,
         description="Mô tả sự cố (tuỳ chọn - nếu để trống sẽ tự động sinh câu mô tả khẩn cấp chuẩn)",

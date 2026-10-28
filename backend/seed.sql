@@ -852,6 +852,23 @@ ON CONFLICT (room_id) DO UPDATE SET
 -- ===========================================================================
 -- 8. Thêm Thời khóa biểu chi tiết (ClassSchedule) - Lớp Mầm A (Thứ 2 đến Thứ 6)
 -- ===========================================================================
+-- 8.0. DỌN DẸP BẢN GHI TRÙNG LẶP & TẠO RÀNG BUỘC DUY NHẤT (CHỐNG DOUBLE THỜI KHÓA BIỂU)
+DELETE FROM class_schedule a USING class_schedule b
+WHERE a.schedule_id < b.schedule_id
+  AND a.class_id = b.class_id
+  AND a.day_of_week = b.day_of_week
+  AND a.slot_id = b.slot_id;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_class_schedule_slot'
+    ) THEN
+        ALTER TABLE class_schedule
+        ADD CONSTRAINT uq_class_schedule_slot UNIQUE (class_id, day_of_week, slot_id);
+    END IF;
+END $$;
+
 DELETE FROM class_schedule WHERE class_id = 'aaaaaaaa-0000-0000-0000-000000000001';
 
 INSERT INTO class_schedule (
@@ -1607,3 +1624,338 @@ INSERT INTO bug_report_history (
     NOW() - INTERVAL '18 days'
 )
 ON CONFLICT (history_id) DO NOTHING;
+
+-- ===========================================================================
+-- 11. SỔ SỨC KHỎE ĐỊNH KỲ (health_examinations)
+-- ===========================================================================
+DELETE FROM health_examinations WHERE child_id IN (
+    'dddddddd-0000-0000-0000-000000000001',
+    'dddddddd-0000-0000-0000-000000000002',
+    'dddddddd-0000-0000-0000-000000000003',
+    'dddddddd-0000-0000-0000-000000000004',
+    'dddddddd-0000-0000-0000-000000000005'
+);
+
+INSERT INTO health_examinations (
+    examination_id,
+    child_id,
+    examination_date,
+    height,
+    weight,
+    bmi,
+    health_category,
+    general_conclusion,
+    created_by_user_id,
+    created_at,
+    updated_at
+) VALUES
+-- 1. Bé Trần Gia Bảo (Lớp Mầm A) - NORMAL
+(
+    '88888888-0000-0000-0000-000000000001',
+    'dddddddd-0000-0000-0000-000000000001',
+    CURRENT_DATE - INTERVAL '60 days',
+    98.5,
+    15.2,
+    ROUND((15.2 / ((98.5 / 100.0) * (98.5 / 100.0)))::numeric, 2),
+    'NORMAL',
+    'Khám đầu năm: Bé phát triển thể lực tốt, linh hoạt, thị lực 10/10.',
+    '22222222-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '60 days',
+    NOW() - INTERVAL '60 days'
+),
+(
+    '88888888-0000-0000-0000-000000000002',
+    'dddddddd-0000-0000-0000-000000000001',
+    CURRENT_DATE - INTERVAL '30 days',
+    99.5,
+    15.8,
+    ROUND((15.8 / ((99.5 / 100.0) * (99.5 / 100.0)))::numeric, 2),
+    'NORMAL',
+    'Đo định kỳ tháng trước: Chiều cao và cân nặng tăng trưởng chuẩn độ tuổi.',
+    '22222222-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '30 days',
+    NOW() - INTERVAL '30 days'
+),
+(
+    '88888888-0000-0000-0000-000000000003',
+    'dddddddd-0000-0000-0000-000000000001',
+    CURRENT_DATE - INTERVAL '3 days',
+    100.5,
+    16.2,
+    ROUND((16.2 / ((100.5 / 100.0) * (100.5 / 100.0)))::numeric, 2),
+    'NORMAL',
+    'Đợt khám sức khỏe mới nhất: Bé khỏe mạnh, vận động tích cực, không sâu răng.',
+    '22222222-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '3 days'
+),
+-- 2. Bé Lê Ngọc Ánh (Lớp Mầm A) - UNDERWEIGHT -> NORMAL
+(
+    '88888888-0000-0000-0000-000000000004',
+    'dddddddd-0000-0000-0000-000000000002',
+    CURRENT_DATE - INTERVAL '60 days',
+    95.0,
+    12.0,
+    ROUND((12.0 / ((95.0 / 100.0) * (95.0 / 100.0)))::numeric, 2),
+    'UNDERWEIGHT',
+    'Đầu năm: Thể trạng hơi nhẹ cân, cần bổ sung dinh dưỡng bữa xế.',
+    '22222222-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '60 days',
+    NOW() - INTERVAL '60 days'
+),
+(
+    '88888888-0000-0000-0000-000000000005',
+    'dddddddd-0000-0000-0000-000000000002',
+    CURRENT_DATE - INTERVAL '3 days',
+    96.5,
+    13.3,
+    ROUND((13.3 / ((96.5 / 100.0) * (96.5 / 100.0)))::numeric, 2),
+    'NORMAL',
+    'Khám mới nhất: Bé tăng 1.3kg, thể trạng đạt chuẩn bình thường.',
+    '22222222-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '3 days'
+),
+-- 3. Bé Phạm Minh Khang (Lớp Mầm A) - OVERWEIGHT
+(
+    '88888888-0000-0000-0000-000000000006',
+    'dddddddd-0000-0000-0000-000000000003',
+    CURRENT_DATE - INTERVAL '60 days',
+    97.0,
+    18.6,
+    ROUND((18.6 / ((97.0 / 100.0) * (97.0 / 100.0)))::numeric, 2),
+    'OVERWEIGHT',
+    'Đầu năm: Thừa cân nhẹ, tăng cường vận động ngoài trời.',
+    '22222222-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '60 days',
+    NOW() - INTERVAL '60 days'
+),
+(
+    '88888888-0000-0000-0000-000000000007',
+    'dddddddd-0000-0000-0000-000000000003',
+    CURRENT_DATE - INTERVAL '3 days',
+    98.8,
+    18.4,
+    ROUND((18.4 / ((98.8 / 100.0) * (98.8 / 100.0)))::numeric, 2),
+    'OVERWEIGHT',
+    'Khám mới nhất: Cân nặng duy trì ổn định, chiều cao tăng 1.8cm.',
+    '22222222-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '3 days'
+)
+ON CONFLICT (examination_id) DO UPDATE SET
+    height = EXCLUDED.height,
+    weight = EXCLUDED.weight,
+    bmi = EXCLUDED.bmi,
+    health_category = EXCLUDED.health_category,
+    general_conclusion = EXCLUDED.general_conclusion,
+    updated_at = NOW();
+
+-- ===========================================================================
+-- 12. ĐƠN DẶN THUỐC VÀ NHẬT KÝ UỐNG THUỐC (medication_request & medication_log)
+-- ===========================================================================
+DELETE FROM medication_log WHERE request_id IN (
+    '77777777-0000-0000-0000-000000000001',
+    '77777777-0000-0000-0000-000000000002',
+    '77777777-0000-0000-0000-000000000003',
+    '77777777-0000-0000-0000-000000000004'
+);
+
+DELETE FROM medication_request WHERE request_id IN (
+    '77777777-0000-0000-0000-000000000001',
+    '77777777-0000-0000-0000-000000000002',
+    '77777777-0000-0000-0000-000000000003',
+    '77777777-0000-0000-0000-000000000004'
+);
+
+INSERT INTO medication_request (
+    request_id,
+    child_id,
+    class_id,
+    parent_id,
+    medication_name,
+    dosage,
+    instructions,
+    sessions,
+    start_date,
+    end_date,
+    status,
+    notes,
+    created_at,
+    updated_at
+) VALUES
+(
+    '77777777-0000-0000-0000-000000000001',
+    'dddddddd-0000-0000-0000-000000000001',
+    'aaaaaaaa-0000-0000-0000-000000000001',
+    'cccccccc-0000-0000-0000-000000000001',
+    'Kháng sinh Cefixim 100mg',
+    '1 gói',
+    'Pha với 15ml nước ấm, cho bé uống sau khi ăn xong 15 phút.',
+    '["morning", "noon", "afternoon"]'::json,
+    CURRENT_DATE - INTERVAL '1 day',
+    CURRENT_DATE + INTERVAL '4 days',
+    'active',
+    'Bé đang điều trị viêm họng đợt 5 ngày. Thuốc mẹ để trong ngăn phụ balo bé.',
+    NOW(),
+    NOW()
+),
+(
+    '77777777-0000-0000-0000-000000000002',
+    'dddddddd-0000-0000-0000-000000000002',
+    'aaaaaaaa-0000-0000-0000-000000000001',
+    'cccccccc-0000-0000-0000-000000000002',
+    'Siro ho thảo dược Prospan',
+    '5ml',
+    'Dùng cốc đong sẵn trong hộp, cho bé uống trực tiếp sau khi ăn sáng và ăn xế.',
+    '["morning", "afternoon"]'::json,
+    CURRENT_DATE - INTERVAL '1 day',
+    CURRENT_DATE + INTERVAL '3 days',
+    'active',
+    'Bé hơi ho khan về sáng sớm.',
+    NOW(),
+    NOW()
+),
+(
+    '77777777-0000-0000-0000-000000000003',
+    'dddddddd-0000-0000-0000-000000000003',
+    'aaaaaaaa-0000-0000-0000-000000000001',
+    'cccccccc-0000-0000-0000-000000000003',
+    'Men vi sinh Enterogermina',
+    '1 ống (5ml)',
+    'Lắc kỹ trước khi uống, cho bé uống trước giờ ăn trưa khoảng 10 phút.',
+    '["noon"]'::json,
+    CURRENT_DATE,
+    CURRENT_DATE + INTERVAL '5 days',
+    'active',
+    'Hỗ trợ tiêu hóa cho bé.',
+    NOW(),
+    NOW()
+),
+(
+    '77777777-0000-0000-0000-000000000004',
+    'dddddddd-0000-0000-0000-000000000004',
+    'aaaaaaaa-0000-0000-0000-000000000001',
+    'cccccccc-0000-0000-0000-000000000004',
+    'Hạ sốt Hapacol 250mg',
+    '1 gói',
+    'CHỈ cho uống nếu bé sốt trên 38.5 độ C.',
+    '["morning", "noon"]'::json,
+    CURRENT_DATE,
+    CURRENT_DATE + INTERVAL '2 days',
+    'active',
+    'Bé vừa tiêm vắc xin hôm qua nên có thể hâm hấp sốt.',
+    NOW(),
+    NOW()
+)
+ON CONFLICT (request_id) DO UPDATE SET
+    medication_name = EXCLUDED.medication_name,
+    dosage = EXCLUDED.dosage,
+    instructions = EXCLUDED.instructions,
+    sessions = EXCLUDED.sessions,
+    start_date = EXCLUDED.start_date,
+    end_date = EXCLUDED.end_date,
+    status = EXCLUDED.status,
+    notes = EXCLUDED.notes,
+    updated_at = NOW();
+
+INSERT INTO medication_log (
+    log_id,
+    request_id,
+    log_date,
+    session,
+    is_given,
+    given_by_id,
+    given_at,
+    notes,
+    created_at,
+    updated_at
+) VALUES
+(
+    '66666666-0000-0000-0000-000000000001',
+    '77777777-0000-0000-0000-000000000001',
+    CURRENT_DATE,
+    'morning',
+    true,
+    '22222222-0000-0000-0000-000000000001',
+    (CURRENT_DATE + TIME '08:30:00')::timestamp with time zone,
+    'Bé uống ngoan, không trớ.',
+    NOW(),
+    NOW()
+),
+(
+    '66666666-0000-0000-0000-000000000002',
+    '77777777-0000-0000-0000-000000000002',
+    CURRENT_DATE,
+    'morning',
+    true,
+    '22222222-0000-0000-0000-000000000001',
+    (CURRENT_DATE + TIME '08:45:00')::timestamp with time zone,
+    'Đã cho bé uống đủ 5ml sau giờ ăn sáng.',
+    NOW(),
+    NOW()
+)
+ON CONFLICT (request_id, log_date, session) DO UPDATE SET
+    is_given = EXCLUDED.is_given,
+    given_by_id = EXCLUDED.given_by_id,
+    given_at = EXCLUDED.given_at,
+    notes = EXCLUDED.notes,
+    updated_at = NOW();
+
+-- ===========================================================================
+-- 13. SỰ CỐ SỨC KHỎE KHẨN CẤP (health_incident)
+-- ===========================================================================
+DELETE FROM health_incident WHERE child_id IN (
+    'dddddddd-0000-0000-0000-000000000001',
+    'dddddddd-0000-0000-0000-000000000002'
+);
+
+INSERT INTO health_incident (
+    incident_id,
+    child_id,
+    class_id,
+    reported_by_id,
+    incident_type,
+    reported_at,
+    temperature,
+    description,
+    action_taken,
+    status,
+    created_at,
+    updated_at
+) VALUES
+(
+    '55555555-0000-0000-0000-000000000001',
+    'dddddddd-0000-0000-0000-000000000001',
+    'aaaaaaaa-0000-0000-0000-000000000001',
+    '22222222-0000-0000-0000-000000000001',
+    'high_fever',
+    NOW() - INTERVAL '2 hours',
+    39.2,
+    'Bé Gia Bảo trán nóng ran, quấy khóc, đo nhiệt kế điện tử 39.2 độ C.',
+    'Cô đã chườm ấm trán, nách, bẹn cho bé, cởi bớt áo khoác và gọi phụ huynh đến đón.',
+    'reported',
+    NOW() - INTERVAL '2 hours',
+    NOW()
+),
+(
+    '55555555-0000-0000-0000-000000000002',
+    'dddddddd-0000-0000-0000-000000000002',
+    'aaaaaaaa-0000-0000-0000-000000000001',
+    '22222222-0000-0000-0000-000000000001',
+    'acute_allergy',
+    NOW() - INTERVAL '1 day',
+    NULL,
+    'Bé Ngọc Ánh xuất hiện mẩn đỏ ở cổ và quanh miệng sau giờ ăn xế.',
+    'Cho bé uống nước lọc, bôi kem làm dịu da dị ứng theo hướng dẫn y tế của trường.',
+    'resolved',
+    NOW() - INTERVAL '1 day',
+    NOW()
+)
+ON CONFLICT (incident_id) DO UPDATE SET
+    temperature = EXCLUDED.temperature,
+    description = EXCLUDED.description,
+    action_taken = EXCLUDED.action_taken,
+    status = EXCLUDED.status,
+    updated_at = NOW();
+
