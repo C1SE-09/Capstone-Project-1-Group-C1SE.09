@@ -9,7 +9,7 @@ Unit & Integration tests cho Task 1: [Service Attendance Auto-Sync]:
 """
 
 import uuid
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -20,11 +20,10 @@ from fastapi.testclient import TestClient
 from app.api.endpoints.attendance import router as attendance_router
 from app.api.endpoints.leave_request import router as leave_request_router
 from app.core.database import get_db
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user
 from app.models.attendance import AttendanceRecord, AttendanceStatus
-from app.models.child import Child, ChildStatus, Parent
 from app.models.leave_request import LeaveRequest, LeaveStatus, LeaveType
-from app.models.user import Class_, Teacher, User, UserRole
+from app.models.user import Teacher, User, UserRole
 from app.services.attendance_sync_service import (
     cancel_leave_request,
     rollback_leave_request_attendance,

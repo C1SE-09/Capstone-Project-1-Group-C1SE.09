@@ -15,18 +15,15 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-from app.models.attendance import AttendanceRecord, AttendanceStatus
 from app.models.child import Child
 from app.models.device_token import DeviceToken
 from app.models.medication import (
-    MedicationLog,
     MedicationRequest,
     MedicationRequestStatus,
     MedicationSession,
 )
-from app.models.user import Class_, Teacher, User, UserRole
+from app.models.user import Class_, Teacher
 from app.services.medication_reminder_service import (
     determine_current_session,
     get_unadministered_medications_by_class,

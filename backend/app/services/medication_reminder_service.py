@@ -18,7 +18,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.attendance import AttendanceRecord, AttendanceStatus
-from app.models.child import Child
 from app.models.device_token import DeviceToken
 from app.models.medication import (
     MedicationLog,
