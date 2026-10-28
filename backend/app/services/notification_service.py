@@ -12,11 +12,17 @@ import logging
 import os
 import uuid
 
-import firebase_admin
+try:
+    import firebase_admin
+    from firebase_admin import credentials, messaging
+except ImportError:
+    firebase_admin = None
+    credentials = None
+    messaging = None
+
 from app.config import settings
 from app.models.device_token import DeviceToken
 from app.models.user import User
-from firebase_admin import credentials, messaging
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -30,6 +36,8 @@ _REGISTRATION_TOKEN_ERROR_HINT = "registration token"
 
 def get_firebase_app():
     """Trả về Firebase app đang dùng, khởi tạo lần đầu từ service account."""
+    if not firebase_admin:
+        raise RuntimeError("firebase-admin package is not installed")
     try:
         return firebase_admin.get_app()
     except ValueError:
@@ -57,6 +65,8 @@ def send_push_notification(
     data: dict[str, str] | None = None,
     channel_id: str = "kinderlog_reports",
 ) -> str:
+    if not messaging:
+        raise RuntimeError("firebase-admin package is not installed")
     android_config = messaging.AndroidConfig(
         priority="high",
         notification=messaging.AndroidNotification(
