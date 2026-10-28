@@ -62,6 +62,12 @@ from app.models.user import (
     UserStatus,
 )
 
+from app.models.leave_request import (
+    LeaveRequest,
+    LeaveStatus,
+    LeaveType,
+)
+
 __all__ = [
     "ActivityCategory",
     "ActivityEntry",
@@ -102,4 +108,7 @@ __all__ = [
     "VoiceRecordStatus",
     "AttendanceRecord",
     "AttendanceStatus",
+    "LeaveRequest",
+    "LeaveStatus",
+    "LeaveType"
 ]
