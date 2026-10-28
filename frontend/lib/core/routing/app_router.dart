@@ -6,6 +6,9 @@ import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/admin_dashboard_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
+import 'package:adark_frontend/core/notifications/emergency_siren_service.dart';
+import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
@@ -94,6 +97,39 @@ final GoRouter appRouter = GoRouter(
           notificationId: state.uri.queryParameters['notification'],
         ),
       ),
+    ),
+    GoRoute(
+      path: '/parent/emergency-alert',
+      pageBuilder: (context, state) {
+        final alert = EmergencyAlertData.fromMap(state.uri.queryParameters);
+        return MaterialPage(
+          key: ValueKey(state.uri.toString()),
+          fullscreenDialog: true,
+          child: Scaffold(
+            backgroundColor: const Color(0xFFF0F2F5),
+            body: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                    child: EmergencyAlertSummaryScreen(
+                      alert: alert,
+                      onDismiss: () {
+                        EmergencySirenService.instance.stopSiren();
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/parent');
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     ),
     GoRoute(
         path: '/change-password',

@@ -17,6 +17,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:adark_frontend/core/notifications/emergency_siren_service.dart';
+import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
+
 class PushNotificationService {
   PushNotificationService._();
 
@@ -46,7 +50,7 @@ class PushNotificationService {
     if (initialMessage != null) {
       handleNotificationTap(initialMessage);
     }
-    if (SessionManagementService.instance.currentSession?.role == 'teacher') {
+    if (SessionManagementService.instance.isLoggedIn) {
       registerCurrentDevice();
     }
   }
@@ -95,12 +99,34 @@ class PushNotificationService {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
-    final title = message.notification?.title ?? 'Thông báo mới';
+    final isEmergency = message.data['type'] == 'health_incident_alert';
+    if (isEmergency) {
+      final alert = EmergencyAlertData.fromMap(message.data);
+      // Kích hoạt còi hú báo động ngay lập tức
+      EmergencySirenService.instance.playSiren();
+
+      final context = scaffoldMessengerKey.currentContext;
+      if (context != null) {
+        EmergencyAlertSummaryScreen.showModal(context, alert);
+        return;
+      }
+    }
+
+    final title = message.notification?.title ??
+        (isEmergency ? '🚨 CẢNH BÁO SỰ CỐ KHẨN CẤP!' : 'Thông báo mới');
     scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
-        content: Text(title),
+        backgroundColor: isEmergency ? const Color(0xFFD32F2F) : null,
+        duration: isEmergency ? const Duration(seconds: 30) : const Duration(seconds: 4),
+        content: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isEmergency ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
         action: SnackBarAction(
-          label: 'Xem',
+          label: isEmergency ? 'XEM & GỌI CÔ' : 'Xem',
+          textColor: isEmergency ? Colors.yellowAccent : null,
           onPressed: () => handleNotificationTap(message),
         ),
       ),
@@ -133,7 +159,9 @@ class PushNotificationService {
   String? pendingLocationFor(String role) {
     final target = _pendingLocation;
     if (target == null) return null;
-    final expectedRole = target.path == '/parent' ? 'parent' : 'teacher';
+    final isParentPath =
+        target.path == '/parent' || target.path.startsWith('/parent/');
+    final expectedRole = isParentPath ? 'parent' : 'teacher';
     if (role != expectedRole) {
       _pendingLocation = null;
       return null;
@@ -156,6 +184,14 @@ class PushNotificationService {
     }
 
     final type = text('type');
+    if (type == 'health_incident_alert') {
+      final alert = EmergencyAlertData.fromMap(data);
+      return Uri(
+        path: '/parent/emergency-alert',
+        queryParameters: alert.toQueryParameters(),
+      );
+    }
+
     final childId = text('child_id');
     if (type == 'report_sent' || type == 'report_updated') {
       final reportId = text('report_id');

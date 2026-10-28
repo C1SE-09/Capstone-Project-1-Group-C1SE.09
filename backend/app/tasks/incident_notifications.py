@@ -60,7 +60,14 @@ def deliver_health_incident_alert(
 
     child = incident.child
     child_name = child.full_name.strip() if child.full_name else (child.nickname or "bé")
-    teacher_name = incident.reported_by.full_name if incident.reported_by else "Cô giáo"
+    reporter = incident.reported_by
+    teacher = reporter.teacher if reporter and hasattr(reporter, "teacher") else None
+    teacher_name = (
+        teacher.full_name
+        if teacher and teacher.full_name
+        else (getattr(reporter, "full_name", None) or getattr(reporter, "username", None) or "Cô giáo phụ trách")
+    )
+    teacher_phone = teacher.phone if teacher and teacher.phone else ""
     incident_label = INCIDENT_LABELS.get(incident.incident_type, "Sự cố sức khỏe")
 
     # Giờ theo múi giờ Việt Nam
@@ -83,7 +90,13 @@ def deliver_health_incident_alert(
         "type": "health_incident_alert",
         "incident_id": str(incident.incident_id),
         "child_id": str(child.child_id),
-        "incident_type": incident.incident_type,
+        "child_name": child_name,
+        "incident_type": incident_label,
+        "teacher_name": teacher_name,
+        "teacher_phone": teacher_phone,
+        "created_at": reported_time.isoformat(),
+        "description": incident.description or "",
+        "temperature": str(incident.temperature) if incident.temperature is not None else "",
         "priority": "emergency",
     }
 
