@@ -89,8 +89,8 @@ class ClassScheduleBase(BaseModel):
     day_of_week: int = Field(
         ...,
         ge=2,
-        le=7,
-        description="Ngày trong tuần (2=Thứ 2, 3=Thứ 3, ..., 7=Thứ 7)",
+        le=6,
+        description="Ngày trong tuần (2=Thứ 2, 3=Thứ 3, ..., 6=Thứ 6)",
     )
     activity_name: str | None = Field(None, description="Tiêu đề/Tên ngắn hoạt động")
     content: str | None = Field(None, description="Chi tiết nội dung hoạt động")
@@ -106,7 +106,7 @@ class ClassScheduleUpdate(BaseModel):
     subject_id: uuid.UUID | None = None
     slot_id: uuid.UUID | None = None
     teacher_id: uuid.UUID | None = None
-    day_of_week: int | None = Field(None, ge=2, le=7)
+    day_of_week: int | None = Field(None, ge=2, le=6)
     activity_name: str | None = None
     content: str | None = None
     room_name: str | None = None
@@ -117,7 +117,7 @@ class ClassScheduleBulkCreateItem(BaseModel):
     subject_id: uuid.UUID
     slot_id: uuid.UUID
     teacher_id: uuid.UUID | None = None
-    day_of_week: int = Field(..., ge=2, le=7)
+    day_of_week: int = Field(..., ge=2, le=6)
     activity_name: str | None = None
     content: str | None = None
     room_name: str | None = None

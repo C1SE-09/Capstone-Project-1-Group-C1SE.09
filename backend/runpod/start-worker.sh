@@ -125,4 +125,4 @@ exec celery \
   --loglevel=info \
   --concurrency=1 \
   --pool=prefork \
-  -Q audio,notifications
+  -Q audio

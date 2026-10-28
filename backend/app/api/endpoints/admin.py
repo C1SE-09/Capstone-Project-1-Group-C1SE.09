@@ -13,11 +13,15 @@ from app.services.health_profile_service import (
     normalize_health_values,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+class BatchDeleteRequest(BaseModel):
+    ids: list[str]
 
 
 def _validate_phone_10_digits(phone: str | None) -> None:
@@ -138,7 +142,7 @@ class ScheduleCreate(BaseModel):
     end_time: str | None = None
     class_id: str | None = None
     teacher_id: str | None = None
-    day_of_week: int = 2
+    day_of_week: int = Field(2, ge=2, le=6, description="Ngày trong tuần (2=Thứ 2 đến 6=Thứ 6)")
 
 
 class ScheduleUpdate(BaseModel):
@@ -149,7 +153,7 @@ class ScheduleUpdate(BaseModel):
     slot_id: str | None = None
     start_time: str | None = None
     end_time: str | None = None
-    day_of_week: int | None = None
+    day_of_week: int | None = Field(None, ge=2, le=6, description="Ngày trong tuần (2=Thứ 2 đến 6=Thứ 6)")
 
 
 class RoomCreate(BaseModel):
@@ -207,10 +211,19 @@ def create_teacher(data: TeacherCreate, db: Session = Depends(get_db)):
     _validate_phone_10_digits(data.phone)
     _validate_gmail_format(data.email)
 
-    if data.username and data.username.strip():
-        existing_user = db.query(User).filter(User.username == data.username.strip()).first()
+    resolved_username = (
+        data.username.strip()
+        if data.username and data.username.strip()
+        else (data.phone.strip() if data.phone and data.phone.strip() else (data.email.strip() if data.email else None))
+    )
+
+    if resolved_username:
+        existing_user = db.query(User).filter(User.username == resolved_username).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tên đăng nhập / Số điện thoại '{resolved_username}' đã tồn tại trên hệ thống. Vui lòng chọn tên khác."
+            )
 
     if data.email and data.email.strip():
         existing_email = db.query(Teacher).filter(Teacher.email == data.email.strip()).first()
@@ -248,11 +261,11 @@ def create_teacher(data: TeacherCreate, db: Session = Depends(get_db)):
             {"tid": teacher.teacher_id, "cid": cid}
         )
 
-    if data.username and data.username.strip():
+    if resolved_username:
         pwd = data.password.strip() if data.password and data.password.strip() else "123456"
         user = User(
             user_id=uuid.uuid4(),
-            username=data.username.strip(),
+            username=resolved_username,
             password_hash=hash_password(pwd),
             role=UserRole.TEACHER,
             teacher_id=teacher.teacher_id,
@@ -338,6 +351,24 @@ def update_teacher(teacher_id: str, data: TeacherUpdate, db: Session = Depends(g
 
     db.commit()
     return {"message": "Cập nhật giáo viên thành công"}
+
+
+@router.post("/teachers/batch-delete")
+@router.delete("/teachers/batch-delete")
+def batch_delete_teachers(payload: BatchDeleteRequest, db: Session = Depends(get_db)):
+    deleted_count = 0
+    for teacher_id in payload.ids:
+        try:
+            t_uid = uuid.UUID(teacher_id.strip())
+        except Exception:
+            continue
+        t = db.query(Teacher).filter(Teacher.teacher_id == t_uid).first()
+        if not t:
+            continue
+        db.delete(t)
+        deleted_count += 1
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} giáo viên", "deleted_count": deleted_count}
 
 
 @router.delete("/teachers/{teacher_id}")
@@ -457,10 +488,19 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
     _validate_phone_10_digits(data.phone)
     _validate_gmail_format(data.email)
 
-    if data.username and data.username.strip():
-        existing_user = db.query(User).filter(User.username == data.username.strip()).first()
+    resolved_username = (
+        data.username.strip()
+        if data.username and data.username.strip()
+        else (data.phone.strip() if data.phone and data.phone.strip() else (data.email.strip() if data.email else None))
+    )
+
+    if resolved_username:
+        existing_user = db.query(User).filter(User.username == resolved_username).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Tên đăng nhập này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tên đăng nhập / Số điện thoại '{resolved_username}' đã tồn tại trên hệ thống. Vui lòng chọn tên khác."
+            )
 
     if data.email and data.email.strip():
         existing_email = db.query(Parent).filter(Parent.email == data.email.strip()).first()
@@ -502,11 +542,11 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
                 if child.parent_id is None:
                     child.parent_id = parent.parent_id
 
-    if data.username and data.username.strip():
+    if resolved_username:
         pwd = data.password.strip() if data.password and data.password.strip() else "123456"
         user = User(
             user_id=uuid.uuid4(),
-            username=data.username.strip(),
+            username=resolved_username,
             password_hash=hash_password(pwd),
             role=UserRole.PARENT,
             parent_id=parent.parent_id,
@@ -518,6 +558,40 @@ def create_parent(data: ParentCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(parent)
     return {"message": "Tạo phụ huynh thành công", "id": str(parent.parent_id)}
+
+
+class BatchDeleteParentsRequest(BaseModel):
+    ids: list[str]
+
+
+@router.post("/parents/batch-delete")
+@router.delete("/parents/batch-delete")
+def batch_delete_parents(payload: BatchDeleteParentsRequest, db: Session = Depends(get_db)):
+    deleted_count = 0
+    for parent_id in payload.ids:
+        try:
+            p_uid = uuid.UUID(parent_id.strip())
+        except Exception:
+            continue
+        p = db.query(Parent).filter(Parent.parent_id == p_uid).first()
+        if not p:
+            continue
+
+        links = db.query(ParentChild).filter(ParentChild.parent_id == p.parent_id).all()
+        for link in links:
+            ch = db.query(Child).filter(Child.child_id == link.child_id).first()
+            if ch and ch.parent_id == p.parent_id:
+                other = db.query(ParentChild).filter(
+                    ParentChild.child_id == ch.child_id,
+                    ParentChild.parent_id != p.parent_id,
+                ).first()
+                ch.parent_id = other.parent_id if other else None
+
+        db.delete(p)
+        deleted_count += 1
+
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} phụ huynh", "deleted_count": deleted_count}
 
 
 @router.put("/parents/{parent_id}")
@@ -613,7 +687,12 @@ def update_parent(parent_id: str, data: ParentUpdate, db: Session = Depends(get_
 
 @router.delete("/parents/{parent_id}")
 def delete_parent(parent_id: str, db: Session = Depends(get_db)):
-    p = db.query(Parent).filter(Parent.parent_id == uuid.UUID(parent_id)).first()
+    try:
+        p_uid = uuid.UUID(parent_id.strip())
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID phụ huynh không hợp lệ")
+
+    p = db.query(Parent).filter(Parent.parent_id == p_uid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Không tìm thấy phụ huynh")
 
@@ -1060,6 +1139,27 @@ def update_child(
     return {"message": "Cập nhật học sinh thành công"}
 
 
+@router.post("/children/batch-delete")
+@router.delete("/children/batch-delete")
+def batch_delete_children(
+    payload: BatchDeleteRequest,
+    db: Session = Depends(get_db),
+):
+    deleted_count = 0
+    for child_id in payload.ids:
+        try:
+            c_uid = uuid.UUID(child_id.strip())
+        except Exception:
+            continue
+        c = db.query(Child).filter(Child.child_id == c_uid).first()
+        if not c:
+            continue
+        db.delete(c)
+        deleted_count += 1
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} học sinh", "deleted_count": deleted_count}
+
+
 @router.delete("/children/{child_id}")
 def delete_child(
     child_id: str,
@@ -1167,6 +1267,11 @@ def _resolve_and_validate_slot(
                 status_code=400,
                 detail=f"Khung giờ không hợp lệ: Giờ kết thúc ({et}) phải sau giờ bắt đầu ({st}).",
             )
+        if st_min < 7 * 60 or et_min > 17 * 60:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Khung giờ ({st} - {et}) nằm ngoài giờ làm việc của trường (chỉ cho phép từ 07:00 đến 17:00 - hết giờ trả trẻ).",
+            )
 
         slot = db.query(TimeSlot).filter(TimeSlot.start_time == st, TimeSlot.end_time == et).first()
         if not slot:
@@ -1186,36 +1291,17 @@ def _resolve_and_validate_slot(
     if not slot:
         raise HTTPException(status_code=400, detail="Không tìm thấy khung giờ phù hợp.")
 
-    # Overlap / Collision Check against other schedules of THIS class on day_of_week
-    t_start = _to_minutes(slot.start_time)
-    t_end = _to_minutes(slot.end_time)
-
-    query = (
-        db.query(ClassSchedule)
-        .join(TimeSlot, ClassSchedule.slot_id == TimeSlot.slot_id)
-        .filter(ClassSchedule.day_of_week == day_of_week)
-    )
-    if class_id:
-        query = query.filter(ClassSchedule.class_id == class_id)
-    if exclude_schedule_id:
-        query = query.filter(ClassSchedule.schedule_id != exclude_schedule_id)
-
-    for other in query.all():
-        if other.time_slot:
-            o_start = _to_minutes(other.time_slot.start_time)
-            o_end = _to_minutes(other.time_slot.end_time)
-            # Overlap: t_start < o_end and t_end > o_start
-            if t_start < o_end and t_end > o_start:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Lớp này đã có hoạt động '{other.activity_name}' ({other.time_slot.name}) trong khung giờ ({slot.name}).",
-                )
-
     return slot
 
 
 @router.post("/schedules", status_code=status.HTTP_201_CREATED)
 def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
+    if data.day_of_week < 2 or data.day_of_week > 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Thời khóa biểu chỉ áp dụng từ Thứ 2 đến Thứ 6 (không chấp nhận Thứ 7 và Chủ Nhật).",
+        )
+
     first_class = db.query(Class_).first()
     first_teacher = db.query(Teacher).first()
     first_subject = db.query(Subject).first()
@@ -1262,6 +1348,11 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
     if data.room_name is not None:
         s.room_name = data.room_name.strip()
     if data.day_of_week is not None:
+        if data.day_of_week < 2 or data.day_of_week > 6:
+            raise HTTPException(
+                status_code=400,
+                detail="Thời khóa biểu chỉ áp dụng từ Thứ 2 đến Thứ 6 (không chấp nhận Thứ 7 và Chủ Nhật).",
+            )
         s.day_of_week = data.day_of_week
 
     if data.slot_id is not None or (data.start_time is not None and data.end_time is not None):
@@ -1278,6 +1369,24 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
 
     db.commit()
     return {"message": "Cập nhật lịch sinh hoạt thành công"}
+
+
+@router.post("/schedules/batch-delete")
+@router.delete("/schedules/batch-delete")
+def batch_delete_schedules(payload: BatchDeleteRequest, db: Session = Depends(get_db)):
+    deleted_count = 0
+    for schedule_id in payload.ids:
+        try:
+            s_uid = uuid.UUID(schedule_id.strip())
+        except Exception:
+            continue
+        s = db.query(ClassSchedule).filter(ClassSchedule.schedule_id == s_uid).first()
+        if not s:
+            continue
+        db.delete(s)
+        deleted_count += 1
+    db.commit()
+    return {"message": f"Đã xóa thành công {deleted_count} lịch sinh hoạt", "deleted_count": deleted_count}
 
 
 @router.delete("/schedules/{schedule_id}")

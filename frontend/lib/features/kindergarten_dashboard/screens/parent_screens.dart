@@ -4,6 +4,7 @@
 // Tab Tài khoản nằm ở parent_account.dart.
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
@@ -28,12 +29,19 @@ class NoChildAssignedException implements Exception {
 }
 
 class ParentFlow extends StatefulWidget {
-  const ParentFlow({super.key, this.repository, this.onLogout, this.initialOpenReport = false});
+  const ParentFlow({
+    super.key, this.repository, this.onLogout, this.initialOpenReport = false,
+    this.childId, this.initialReportId, this.initialAttendanceDate, this.notificationId,
+  });
   final HttpDashboardRepository? repository;
   final VoidCallback? onLogout;
 
   /// True khi mở từ push notification: vào thẳng báo cáo hôm nay (Scope A).
   final bool initialOpenReport;
+  final String? childId;
+  final String? initialReportId;
+  final String? initialAttendanceDate;
+  final String? notificationId;
   @override
   State<ParentFlow> createState() => _ParentFlowState();
 }
@@ -42,20 +50,76 @@ class _ParentFlowState extends State<ParentFlow> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
   late Future<_ParentData> future;
   int _tab = 0;
+  bool _notificationOpened = false;
 
   @override
   void initState() {
     super.initState();
+    _reload();
+  }
+
+  @override
+  void didUpdateWidget(ParentFlow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.childId != oldWidget.childId ||
+        widget.initialReportId != oldWidget.initialReportId ||
+        widget.initialAttendanceDate != oldWidget.initialAttendanceDate ||
+        widget.notificationId != oldWidget.notificationId ||
+        (widget.initialOpenReport && !oldWidget.initialOpenReport)) {
+      _notificationOpened = false;
+      _reload();
+    }
+  }
+
+  void _reload() {
     future = _load();
-    // Chạm push notification → mở thẳng sheet báo cáo hôm nay khi dữ liệu tải xong.
-    future.then(
-      (data) {
-        if (!mounted || !widget.initialOpenReport) return;
-        final today = data.today;
-        if (today == null) return;
+    _openInitialReport();
+  }
+
+  void _openInitialReport() {
+    if (_notificationOpened) return;
+    final loading = future;
+    final reportId = widget.initialReportId;
+    final attendanceDate = DateTime.tryParse(widget.initialAttendanceDate ?? '');
+    final openToday = widget.initialOpenReport;
+    if (reportId == null && attendanceDate == null && !openToday) return;
+    loading.then(
+      (data) async {
+        DailyReport? report;
+        bool failed = false;
+        if (reportId != null) {
+          try {
+            report = await repository.getParentReport(reportId);
+            failed = report.dailyReportId != reportId ||
+                report.childId != data.overview.child.childId ||
+                report.status == domain_status.ReportStatus.draft;
+          } catch (_) {
+            failed = true;
+          }
+        } else if (openToday) {
+          report = data.today;
+        }
+        if (!mounted || future != loading) return;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _openReport(data, today);
+          if (!mounted || future != loading || ModalRoute.of(context)?.isCurrent != true) return;
+          if (attendanceDate != null) {
+            _notificationOpened = true;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Thông báo bé vắng: ${data.overview.child.fullName}, '
+                  'ngày ${kDateLabel(attendanceDate)}. Vui lòng liên hệ giáo viên để xác nhận.'),
+            ));
+            PushNotificationService.instance.completePendingNotification(widget.notificationId);
+          } else if (failed) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Không thể mở báo cáo này. Vui lòng thử lại sau.'),
+            ));
+          } else if (report != null) {
+            _notificationOpened = true;
+            _openReport(data, report);
+            PushNotificationService.instance.completePendingNotification(widget.notificationId);
+          }
         });
+        WidgetsBinding.instance.ensureVisualUpdate();
       },
       onError: (_) {},
     );
@@ -63,9 +127,12 @@ class _ParentFlowState extends State<ParentFlow> {
 
   // Loads parent-linked child and report history from existing endpoints.
   Future<_ParentData> _load() async {
+    final childId = widget.childId;
     final parent = await repository.getCurrentParent();
     try {
-      final overview = await repository.getPrimaryChildOverview(parent.parentId);
+      final overview = childId == null
+          ? await repository.getPrimaryChildOverview(parent.parentId)
+          : await repository.getChildOverviewForParent(parent.parentId, childId);
       final reports = await repository.getRecentReports(
         overview.child.childId,
         includeDraft: false,
@@ -99,9 +166,12 @@ class _ParentFlowState extends State<ParentFlow> {
       childName: data.overview.child.fullName,
       teacherName: data.overview.teacherName,
       repository: repository,
-      onReportRead: (updated) => setState(() {
-        future = future.then((current) => current.withReport(updated));
-      }),
+      onReportRead: (updated) {
+        if (!mounted) return;
+        setState(() {
+          future = future.then((current) => current.withReport(updated));
+        });
+      },
     );
   }
 
@@ -177,6 +247,15 @@ class _ParentFlowState extends State<ParentFlow> {
         .length;
   }
 
+  Future<void> _handleRefresh() async {
+    setState(_reload);
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder hiện lỗi và giữ nguyên đích thông báo cho lần thử lại.
+    }
+  }
+
   // Renders loading, error, empty, and fetched parent data states.
   @override
   Widget build(BuildContext context) => FutureBuilder<_ParentData>(
@@ -209,37 +288,66 @@ class _ParentFlowState extends State<ParentFlow> {
             }
             return Scaffold(
               backgroundColor: context.k.canvas,
-              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+              body: SafeArea(
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: _loadError(() => setState(_reload)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             );
           }
           final data = snapshot.data;
           if (data == null) {
             return Scaffold(
               backgroundColor: context.k.canvas,
-              body: SafeArea(child: _loadError(() => setState(() => future = _load()))),
+              body: SafeArea(
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: _loadError(() => setState(_reload)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             );
           }
           final unread = _unreadCount(data);
           return Scaffold(
             backgroundColor: context.k.canvas,
             body: SafeArea(
-              child: _tab == 0
-                  ? _ParentOverview(
-                      data: data,
-                      onOpenReport: (report) => _openReport(data, report),
-                    )
-                  : ParentAccount(
-                      parent: data.parent,
-                      overview: data.overview,
-                      reports: data.reports,
-                      repository: repository,
-                      onOpenReport: (report) => _openReport(data, report),
-                      onPhoneUpdated: _onPhoneUpdated,
-                      onHealthUpdated: _onHealthUpdated,
-                      onParentUpdated: _onParentUpdated,
-                      onChildUpdated: _onChildUpdated,
-                      onLogout: widget.onLogout,
-                    ),
+              child: RefreshIndicator(
+                onRefresh: _handleRefresh,
+                child: _tab == 0
+                    ? _ParentOverview(
+                        data: data,
+                        onOpenReport: (report) => _openReport(data, report),
+                      )
+                    : ParentAccount(
+                        parent: data.parent,
+                        overview: data.overview,
+                        reports: data.reports,
+                        repository: repository,
+                        onOpenReport: (report) => _openReport(data, report),
+                        onPhoneUpdated: _onPhoneUpdated,
+                        onHealthUpdated: _onHealthUpdated,
+                        onParentUpdated: _onParentUpdated,
+                        onChildUpdated: _onChildUpdated,
+                        onLogout: widget.onLogout,
+                      ),
+              ),
             ),
             bottomNavigationBar: NavigationBar(
               selectedIndex: _tab,
@@ -368,6 +476,7 @@ class _ParentOverview extends StatelessWidget {
     final allergy = child.allergy; // đã bỏ "Không có" + tiền tố "Dị ứng"
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
         Row(
@@ -655,13 +764,20 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
     final report = _currentReport;
     final date = kDateLabel(report?.reportDate ?? DateTime.now());
 
-    // Dùng giá trị đã trích xuất, thiếu thì lấy mặc định để báo cáo luôn đủ mục.
-    final eating = _nonEmpty(report?.eating) ?? 'Ăn hết suất cơm trưa, uống đủ nước.';
-    final sleeping = _nonEmpty(report?.sleeping) ?? 'Ngủ ngon giấc, đúng giờ.';
-    final activities = _nonEmpty(report?.activitiesText) ?? 'Tham gia tích cực các hoạt động học tập và vui chơi.';
-    final mood = _nonEmpty(report?.mood) ?? 'Vui vẻ, hào hứng, hòa đồng với bạn bè.';
+    // Chỉ hiển thị các mục có dữ liệu thực tế được giáo viên nhập/ghi âm
+    final eating = _nonEmpty(report?.eating);
+    final sleeping = _nonEmpty(report?.sleeping);
+    final activities = _nonEmpty(report?.activitiesText);
+    final mood = _nonEmpty(report?.mood);
     final health = _nonEmpty(report?.health);
     final note = _nonEmpty(report?.summaryText);
+
+    final hasAnyData = eating != null ||
+        sleeping != null ||
+        activities != null ||
+        mood != null ||
+        health != null ||
+        note != null;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
@@ -700,12 +816,28 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
-                  _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
-                  _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
-                  _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
-                  if (health != null) _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
-                  if (note != null) _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
+                  if (eating != null)
+                    _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
+                  if (sleeping != null)
+                    _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
+                  if (activities != null)
+                    _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
+                  if (mood != null)
+                    _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
+                  if (health != null)
+                    _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
+                  if (note != null)
+                    _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
+                  if (!hasAnyData)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'Chưa có thông tin ghi nhận cho ngày này.',
+                          style: TextStyle(color: context.k.inkFaint, fontSize: 13),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

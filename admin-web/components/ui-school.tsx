@@ -5,7 +5,11 @@
  */
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { downloadExcelTemplate, parseExcelOrCsv } from "@/lib/excel-helper";
+import {
+  downloadExcelTemplate,
+  parseExcelOrCsvDetailed,
+  DetectedSheetInfo,
+} from "@/lib/excel-helper";
 
 /* ════════ Spinner ════════ */
 export function Spinner({ className = "" }: { className?: string }) {
@@ -107,11 +111,12 @@ export function ProgressBar({
   tone = "brand",
   height = 8,
 }: {
-  value: number; // 0..1
+  value: number; // 0..1 hoặc 0..100
   tone?: "brand" | "ok" | "warn" | "bad";
   height?: number;
 }) {
-  const clamped = Math.max(0, Math.min(1, value));
+  const normalized = value > 1 ? value / 100 : value;
+  const clamped = Math.max(0, Math.min(1, normalized));
   const color = TONE_COLOR[tone === "ok" ? "ok" : tone === "warn" ? "warn" : tone === "bad" ? "bad" : "brand"].ring;
   return (
     <div
@@ -497,6 +502,7 @@ export interface ImportResult {
   success: number;
   failed: number;
   errors: string[];
+  warnings?: string[];
 }
 
 export function ImportModal({
@@ -507,6 +513,9 @@ export function ImportModal({
   sampleHeaders,
   sampleRow,
   templateFilename,
+  allowOverwrite = false,
+  overwriteLabel,
+  overwriteHint,
   onImportRows,
   onSuccess,
 }: {
@@ -517,12 +526,17 @@ export function ImportModal({
   sampleHeaders: string[];
   sampleRow: string[];
   templateFilename: string;
-  onImportRows: (rows: string[][]) => Promise<ImportResult>;
+  allowOverwrite?: boolean;
+  overwriteLabel?: string;
+  overwriteHint?: string;
+  onImportRows: (rows: string[][], options?: { overwrite?: boolean }) => Promise<ImportResult>;
   onSuccess?: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [overwrite, setOverwrite] = useState(true);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
+  const [detectedSheets, setDetectedSheets] = useState<DetectedSheetInfo[]>([]);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -532,7 +546,9 @@ export function ImportModal({
   useEffect(() => {
     if (open) {
       setFile(null);
+      setOverwrite(true);
       setParsedRows([]);
+      setDetectedSheets([]);
       setParsing(false);
       setImporting(false);
       setResult(null);
@@ -550,16 +566,19 @@ export function ImportModal({
     setResult(null);
     setParsing(true);
     try {
-      const rows = await parseExcelOrCsv(selected);
-      if (rows.length === 0) {
+      const parseRes = await parseExcelOrCsvDetailed(selected, sampleHeaders);
+      if (parseRes.rows.length === 0) {
         setErrorMsg("Không tìm thấy dòng dữ liệu nào trong file được chọn.");
         setParsedRows([]);
+        setDetectedSheets([]);
       } else {
-        setParsedRows(rows);
+        setParsedRows(parseRes.rows);
+        setDetectedSheets(parseRes.sheets);
       }
     } catch (err: any) {
       setErrorMsg(err?.message || "Không thể đọc file. Vui lòng kiểm tra định dạng.");
       setParsedRows([]);
+      setDetectedSheets([]);
     } finally {
       setParsing(false);
     }
@@ -574,7 +593,7 @@ export function ImportModal({
     setImporting(true);
     setErrorMsg(null);
     try {
-      const res = await onImportRows(parsedRows);
+      const res = await onImportRows(parsedRows, { overwrite });
       setResult(res);
       if (res.success > 0 && onSuccess) {
         onSuccess();
@@ -678,6 +697,27 @@ export function ImportModal({
           </label>
         </div>
 
+        {/* Overwrite option */}
+        {allowOverwrite && (
+          <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-1.5 transition-colors">
+            <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-ink select-none">
+              <input
+                type="checkbox"
+                checked={overwrite}
+                onChange={(e) => setOverwrite(e.target.checked)}
+                className="w-4 h-4 rounded border-line text-brand focus:ring-brand accent-brand cursor-pointer"
+              />
+              <span>{overwriteLabel || "Ghi đè dữ liệu nếu đã tồn tại"}</span>
+            </label>
+            <p className="text-[11px] text-ink-soft pl-6.5 leading-relaxed">
+              {overwriteHint ||
+                (overwrite
+                  ? "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới từ file Excel sẽ cập nhật thay thế dữ liệu cũ."
+                  : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng trong file Excel.")}
+            </p>
+          </div>
+        )}
+
         {/* Parsing state */}
         {parsing && (
           <div className="flex items-center justify-center py-4 text-xs text-ink-soft gap-2">
@@ -696,10 +736,32 @@ export function ImportModal({
         {/* Preview parsed data */}
         {parsedRows.length > 0 && !result && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-ink">
+            <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-ink">
               <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
               <span className="text-ink-soft font-normal">Hiển thị trước tối đa 5 dòng</span>
             </div>
+
+            {detectedSheets.length > 1 && (
+              <div className="p-2.5 rounded-control bg-sunken/60 border border-line space-y-1.5 text-xs">
+                <div className="font-semibold text-ink flex items-center justify-between">
+                  <span>📄 Tự động nhận diện dữ liệu từ {detectedSheets.length} sheet:</span>
+                  <span className="text-ink-soft text-[11px] font-normal">Mỗi sheet được chia theo lớp</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {detectedSheets.map((s, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 rounded-control bg-white border border-line-strong text-ink font-semibold text-[11px] shadow-sm flex items-center gap-1.5"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                      <span>{s.name}:</span>
+                      <span className="text-brand-strong">{s.count} dòng</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="border border-line rounded-control overflow-x-auto max-h-48">
               <table className="w-full text-xs text-left">
                 <thead className="bg-sunken font-semibold text-ink border-b border-line sticky top-0">
@@ -763,9 +825,24 @@ export function ImportModal({
                 </div>
               </div>
             </div>
+            {result.warnings && result.warnings.length > 0 && (
+              <div className="text-xs space-y-1">
+                <div className="font-semibold text-warn flex items-center gap-1">
+                  <span>⚠️</span>
+                  <span>Cảnh báo & Ghi chú ({result.warnings.length}):</span>
+                </div>
+                <div className="max-h-36 overflow-y-auto bg-warn/10 border border-warn/30 rounded p-2 text-ink space-y-1">
+                  {result.warnings.map((warn, i) => (
+                    <div key={i} className="text-xs">
+                      • {warn}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {result.errors.length > 0 && (
               <div className="text-xs space-y-1">
-                <div className="font-semibold text-bad">Chi tiết lỗi:</div>
+                <div className="font-semibold text-bad">Chi tiết lỗi ({result.errors.length}):</div>
                 <div className="max-h-32 overflow-y-auto bg-bad/5 border border-bad/20 rounded p-2 text-bad space-y-1">
                   {result.errors.map((err, i) => (
                     <div key={i}>• {err}</div>

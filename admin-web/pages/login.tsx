@@ -22,6 +22,7 @@ import {
   setStoredAdmin,
   setStoredSchoolAdmin,
   setRefreshToken,
+  setSessionId,
   setToken,
   schoolAdminLoginRequest,
 } from "@/lib/api";
@@ -63,6 +64,7 @@ export default function LoginPage() {
             });
             setToken(res.access_token, "schoolAdmin");
             setRefreshToken(res.refresh_token);
+            setSessionId(res.session_id);
             setStoredSchoolAdmin({
               user_id: res.user_id,
               username: res.username,
@@ -86,6 +88,7 @@ export default function LoginPage() {
           });
           setToken(res.access_token, "schoolAdmin");
           setRefreshToken(res.refresh_token);
+          setSessionId(res.session_id);
           setStoredSchoolAdmin({
             user_id: res.user_id,
             username: res.username,

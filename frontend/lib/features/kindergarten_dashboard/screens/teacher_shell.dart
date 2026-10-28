@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
@@ -21,11 +22,13 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assign
 enum TeacherTab { overview, classList, history, account }
 
 class TeacherShell extends StatefulWidget {
-  const TeacherShell({super.key, required this.onLogout, this.classId, this.repository, this.classRepository});
+  const TeacherShell({super.key, required this.onLogout, this.classId, this.repository, this.classRepository, this.initialAttendanceDate, this.notificationId});
   final VoidCallback onLogout;
   final String? classId;
   final HttpDashboardRepository? repository;
   final HttpClassDataRepository? classRepository;
+  final String? initialAttendanceDate;
+  final String? notificationId;
 
   @override
   State<TeacherShell> createState() => _TeacherShellState();
@@ -40,6 +43,7 @@ class _TeacherShellState extends State<TeacherShell> {
   late Future<void> _initFuture;
   String? _activeClassId;
   bool _hasNoClass = false;
+  bool _notificationOpened = false;
 
   @override
   void initState() {
@@ -48,15 +52,51 @@ class _TeacherShellState extends State<TeacherShell> {
     _initData();
   }
 
+  @override
+  void didUpdateWidget(TeacherShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.classId != oldWidget.classId ||
+        widget.initialAttendanceDate != oldWidget.initialAttendanceDate ||
+        widget.notificationId != oldWidget.notificationId) {
+      _activeClassId = widget.classId;
+      _notificationOpened = false;
+      _initData();
+    }
+  }
+
+  Future<void> _openInitialAttendance() async {
+    final date = widget.initialAttendanceDate;
+    if (_notificationOpened || date == null || DateTime.tryParse(date) == null) return;
+    final loading = _initFuture;
+    try {
+      await loading;
+      if (!mounted || _initFuture != loading || _hasNoClass) return;
+      final values = await Future.wait([classNameFuture, childrenFuture]);
+      if (!mounted || _initFuture != loading) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _initFuture == loading && ModalRoute.of(context)?.isCurrent == true) {
+          _notificationOpened = true;
+          openAttendance(values[0] as String, values[1] as List<Child>, date: date);
+          PushNotificationService.instance.completePendingNotification(widget.notificationId);
+        }
+      });
+      WidgetsBinding.instance.ensureVisualUpdate();
+    } catch (_) {
+      // Màn tổng quan giữ trạng thái lỗi/thử lại, không đẩy route với dữ liệu thiếu.
+    }
+  }
+
   void _initData() {
-    _initFuture = _resolveClassId().then((_) {
+    _initFuture = _resolveClassId().then((_) async {
       if (_hasNoClass || _activeClassId == null || _activeClassId!.isEmpty) {
         _hasNoClass = true;
         return;
       }
       childrenFuture = _loadChildren();
       classNameFuture = _loadClassName();
+      await Future.wait([childrenFuture, classNameFuture]);
     });
+    _openInitialAttendance();
   }
 
   Future<void> _resolveClassId() async {
@@ -92,34 +132,26 @@ class _TeacherShellState extends State<TeacherShell> {
 
   Future<String> _loadClassName() async {
     if (_activeClassId == null || _activeClassId!.isEmpty) return 'Lớp học';
-    try {
-      final info = await classRepository.getClassInfo(_activeClassId!);
-      return info.name;
-    } catch (_) {
-      return 'Lớp học';
-    }
+    final info = await classRepository.getClassInfo(_activeClassId!);
+    return info.name;
   }
 
   // Loads roster and maps report status with existing adapters.
   Future<List<Child>> _loadChildren() async {
     if (_activeClassId == null || _activeClassId!.isEmpty) return [];
-    try {
-      final values = await Future.wait([
-        repository.getClassChildren(_activeClassId!),
-        repository.getClassDashboard(_activeClassId!, DateTime.now()),
-      ]);
-      final roster = values[0] as List<domain_child.Child>;
-      final dashboard = values[1] as ClassDashboardSummary;
-      final statuses = {for (final item in dashboard.pendingChildren) item.child.childId: item};
-      return roster.map((child) {
-        final item = statuses[child.childId];
-        return item == null
-            ? uiChildFromDomain(child: child, reportStatus: ReportStatus.none, severity: severityFromDescription(null))
-            : uiChildFromDomainWithReport(child: child, reportStatus: item.status, severity: severityFromDescription(null), updatedAt: item.updatedAt);
-      }).toList();
-    } catch (_) {
-      return [];
-    }
+    final values = await Future.wait([
+      repository.getClassChildren(_activeClassId!),
+      repository.getClassDashboard(_activeClassId!, DateTime.now()),
+    ]);
+    final roster = values[0] as List<domain_child.Child>;
+    final dashboard = values[1] as ClassDashboardSummary;
+    final statuses = {for (final item in dashboard.pendingChildren) item.child.childId: item};
+    return roster.map((child) {
+      final item = statuses[child.childId];
+      return item == null
+          ? uiChildFromDomain(child: child, reportStatus: ReportStatus.none, severity: severityFromDescription(null))
+          : uiChildFromDomainWithReport(child: child, reportStatus: item.status, severity: severityFromDescription(null), updatedAt: item.updatedAt);
+    }).toList();
   }
   bool healthOnly = false;
 
@@ -184,9 +216,9 @@ class _TeacherShellState extends State<TeacherShell> {
     if (mounted) setState(() {});
   }
 
-  Future<void> openAttendance(String className, List<Child> children) async {
+  Future<void> openAttendance(String className, List<Child> children, {String? date}) async {
     final now = DateTime.now();
-    final dateStr = '${now.year.toString().padLeft(4, '0')}-'
+    final dateStr = date ?? '${now.year.toString().padLeft(4, '0')}-'
         '${now.month.toString().padLeft(2, '0')}-'
         '${now.day.toString().padLeft(2, '0')}';
     await Navigator.of(context).push(MaterialPageRoute(
@@ -226,7 +258,7 @@ class _TeacherShellState extends State<TeacherShell> {
                 return Scaffold(
                   body: Center(
                     child: TextButton(
-                      onPressed: () => setState(() => childrenFuture = _loadChildren()),
+                      onPressed: () => setState(_initData),
                       child: const Text('Không tải được danh sách lớp · Thử lại'),
                     ),
                   ),
@@ -266,6 +298,18 @@ class _TeacherShellState extends State<TeacherShell> {
                         classId: currentClassId,
                         className: className,
                         schoolName: 'Chưa có thông tin trường',
+                        onRefresh: () async {
+                          try {
+                            final c = await _loadChildren();
+                            if (mounted) setState(() => childrenFuture = Future.value(c));
+                          } catch (_) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(
+                                content: Text('Không tải được danh sách lớp. Vui lòng thử lại.'),
+                              ));
+                            }
+                          }
+                        },
                         onOpenTimetable: () => openTimetable(className),
                         onOpenAttendance: () => openAttendance(className, children),
                         onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: currentClassId, className: className, repository: repository))),

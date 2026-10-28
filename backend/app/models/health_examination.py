@@ -1,0 +1,122 @@
+"""
+app/models/health_examination.py
+================================
+SQLAlchemy 2.0 ORM Model: HealthExamination
+-------------------------------------------
+Ghi nhận kết quả khám sức khỏe định kỳ của học sinh (chiều cao, cân nặng, BMI, phân loại thể trạng).
+"""
+
+from __future__ import annotations
+
+import enum
+import uuid
+from datetime import date
+from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    Date,
+    Float,
+    ForeignKey,
+    Index,
+    Text,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.child import Child
+    from app.models.user import User
+
+
+class HealthCategory(str, enum.Enum):
+    """Phân loại thể trạng của trẻ theo chỉ số BMI."""
+    NORMAL = "NORMAL"
+    UNDERWEIGHT = "UNDERWEIGHT"
+    OVERWEIGHT = "OVERWEIGHT"
+
+
+class HealthExamination(Base, TimestampMixin):
+    """Kết quả khám sức khỏe định kỳ của học sinh."""
+
+    __tablename__ = "health_examinations"
+
+    examination_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    child_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("child.child_id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Học sinh được khám sức khỏe",
+    )
+
+    examination_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        default=date.today,
+        comment="Ngày thực hiện khám sức khỏe",
+    )
+
+    height: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        comment="Chiều cao (cm)",
+    )
+
+    weight: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        comment="Cân nặng (kg)",
+    )
+
+    bmi: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+        comment="Chỉ số khối cơ thể BMI (kg/m^2)",
+    )
+
+    health_category: Mapped[HealthCategory] = mapped_column(
+        SAEnum(
+            HealthCategory,
+            name="health_category_enum",
+            native_enum=True,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=False,
+        default=HealthCategory.NORMAL,
+        comment="Phân loại thể trạng (NORMAL / UNDERWEIGHT / OVERWEIGHT)",
+    )
+
+    general_conclusion: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Kết luận chung của đợt khám sức khỏe",
+    )
+
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Tài khoản giáo viên / y tế thực hiện ghi nhận",
+    )
+
+    # Relationships
+    child: Mapped[Child] = relationship(
+        "Child",
+        back_populates="health_examinations",
+    )
+    created_by_user: Mapped[User | None] = relationship(
+        "User",
+    )
+
+    __table_args__ = (
+        Index("ix_health_examinations_child_date", "child_id", "examination_date"),
+    )

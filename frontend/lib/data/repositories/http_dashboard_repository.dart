@@ -33,12 +33,8 @@ class HttpDashboardRepository implements DashboardRepository {
     String? baseUrl,
     String? teacherId,
     String? parentId,
-  })  : teacherId = teacherId ??
-            AuthRepository.currentUser?.teacherId ??
-            'bbbbbbbb-0000-0000-0000-000000000001',
-        parentId = parentId ??
-            AuthRepository.currentUser?.parentId ??
-            'cccccccc-0000-0000-0000-000000000001',
+  })  : _teacherIdOverride = teacherId,
+        _parentIdOverride = parentId,
         _classData =
             classDataRepository ?? HttpClassDataRepository(dio: dio, baseUrl: baseUrl),
         _dio = dio ??
@@ -59,12 +55,22 @@ class HttpDashboardRepository implements DashboardRepository {
 
   final ClassDataRepository _classData;
   final Dio _dio;
+  final String? _teacherIdOverride;
+  final String? _parentIdOverride;
 
-  /// Id giáo viên hiện tại (seed: Cô Nguyễn Thị Mai — Lớp Mầm A).
-  final String teacherId;
+  /// Id giáo viên hiện tại (ưu tiên lấy động theo tài khoản đang đăng nhập).
+  String get teacherId =>
+      _teacherIdOverride ??
+      AuthRepository.currentUser?.teacherId ??
+      SessionManagementService.instance.currentSession?.teacherId ??
+      'bbbbbbbb-0000-0000-0000-000000000001';
 
-  /// Id phụ huynh hiện tại (seed: Trần Văn Tuấn — bé Bảo Bảo).
-  final String parentId;
+  /// Id phụ huynh hiện tại (ưu tiên lấy động theo tài khoản đang đăng nhập).
+  String get parentId =>
+      _parentIdOverride ??
+      AuthRepository.currentUser?.parentId ??
+      SessionManagementService.instance.currentSession?.parentId ??
+      'cccccccc-0000-0000-0000-000000000001';
 
   // ══════════════════════════════════════════════════════════
   // Teacher
@@ -147,6 +153,21 @@ class HttpDashboardRepository implements DashboardRepository {
   @override
   Future<ChildOverview> getPrimaryChildOverview(String parentId) async {
     final data = await _get('/api/parent/$parentId/child');
+    return _parseChildOverview(data);
+  }
+
+  @override
+  Future<ChildOverview> getChildOverviewForParent(String parentId, String childId) async {
+    final data = await _get('/api/parent/$parentId/child', query: {'child_id': childId});
+    return _parseChildOverview(data);
+  }
+
+  @override
+  Future<DailyReport> getParentReport(String reportId) async {
+    return DailyReport.fromJson(await _get('/api/parent/reports/$reportId'));
+  }
+
+  ChildOverview _parseChildOverview(Map<String, dynamic> data) {
     return ChildOverview(
       child: Child.fromJson(_asMap(data['child'])),
       className: data['class_name'] as String? ?? '',

@@ -7,6 +7,9 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_repor
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/admin_trend_painter.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/admin_search_pickers.dart';
+export 'package:adark_frontend/features/kindergarten_dashboard/widgets/admin_search_pickers.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 1. DESIGN SYSTEM COLORS (100% FIDELITY FROM admin_UI/app_theme.dart)
@@ -67,358 +70,7 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-Future<String?> showChildSearchPicker(
-  BuildContext context,
-  List<AdminChildDto> students, {
-  String? currentSelectedId,
-  bool allowNone = true,
-  String title = 'Chọn học sinh liên kết',
-}) {
-  return showModalBottomSheet<String>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      String query = '';
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          final q = query.toLowerCase().trim();
-          final filtered = students.where((c) {
-            if (q.isEmpty) return true;
-            final matchName = c.fullName.toLowerCase().contains(q);
-            final matchNick = c.nickname.toLowerCase().contains(q);
-            final matchClass = c.className.toLowerCase().contains(q);
-            return matchName || matchNick || matchClass;
-          }).toList();
 
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.75,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                            ),
-                            Text(
-                              'Tìm theo họ tên, biệt danh hoặc lớp (${filtered.length}/${students.length})',
-                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: TextField(
-                    autofocus: false,
-                    onChanged: (val) => setModalState(() => query = val),
-                    decoration: InputDecoration(
-                      hintText: 'Nhập tên bé, biệt danh (vd: Bắp, Miu) hoặc lớp...',
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      suffixIcon: query.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () => setModalState(() => query = ''),
-                            )
-                          : null,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    children: [
-                      if (allowNone)
-                        ListTile(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          leading: const CircleAvatar(
-                            backgroundColor: Colors.black12,
-                            child: Icon(Icons.person_off_outlined, size: 20),
-                          ),
-                          title: const Text('Chưa liên kết / Không chọn bé'),
-                          trailing: currentSelectedId == null || currentSelectedId.isEmpty
-                              ? const Icon(Icons.check_circle, color: AppColors.brand)
-                              : null,
-                          onTap: () => Navigator.pop(ctx, '__none__'),
-                        ),
-                      if (filtered.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Center(
-                            child: Text(
-                              'Không tìm thấy học sinh phù hợp với "$query"',
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                          ),
-                        )
-                      else
-                        ...filtered.map((c) {
-                          final isSelected = c.id == currentSelectedId;
-                          final hasNick = c.nickname.isNotEmpty;
-                          final hasClass = c.className.isNotEmpty;
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: ListTile(
-                              tileColor: isSelected
-                                  ? AppColors.brand.withAlpha(25)
-                                  : Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(
-                                  color: isSelected ? AppColors.brand : Theme.of(context).dividerColor,
-                                ),
-                              ),
-                              leading: CircleAvatar(
-                                backgroundColor: AppColors.brand.withAlpha(30),
-                                child: const Icon(Icons.child_care_rounded, color: AppColors.brand),
-                              ),
-                              title: Text(
-                                c.fullName,
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                              ),
-                              subtitle: Text(
-                                [
-                                  if (hasNick) 'Biệt danh: ${c.nickname}',
-                                  if (hasClass) 'Lớp: ${c.className}',
-                                ].join(' · '),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              trailing: isSelected
-                                  ? const Icon(Icons.check_circle, color: AppColors.brand)
-                                  : const Icon(Icons.arrow_forward_ios, size: 14),
-                              onTap: () => Navigator.pop(ctx, c.id),
-                            ),
-                          );
-                        }),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
-Future<List<String>?> showParentSearchMultiPicker(
-  BuildContext context,
-  List<AdminParentDto> parents, {
-  List<String> currentSelectedIds = const [],
-  String title = 'Chọn phụ huynh liên kết (N - N)',
-}) {
-  final selectedIds = Set<String>.from(currentSelectedIds);
-  return showModalBottomSheet<List<String>>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      String query = '';
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          final q = query.toLowerCase().trim();
-          final filtered = parents.where((p) {
-            if (q.isEmpty) return true;
-            final matchName = p.fullName.toLowerCase().contains(q);
-            final matchPhone = p.phone.toLowerCase().contains(q);
-            final matchEmail = p.email.toLowerCase().contains(q);
-            final matchUser = (p.username ?? '').toLowerCase().contains(q);
-            return matchName || matchPhone || matchEmail || matchUser;
-          }).toList();
-
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.75,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                            ),
-                            Text(
-                              'Đã chọn ${selectedIds.length} phụ huynh · Tìm theo tên, SĐT (${filtered.length}/${parents.length})',
-                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, selectedIds.toList()),
-                        child: const Text('Xong', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: TextField(
-                    autofocus: false,
-                    onChanged: (val) => setModalState(() => query = val),
-                    decoration: InputDecoration(
-                      hintText: 'Nhập tên phụ huynh hoặc số điện thoại...',
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      suffixIcon: query.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () => setModalState(() => query = ''),
-                            )
-                          : null,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    children: [
-                      if (filtered.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Center(
-                            child: Text(
-                              'Không tìm thấy phụ huynh phù hợp với "$query"',
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                          ),
-                        )
-                      else
-                        ...filtered.map((p) {
-                          final isSelected = selectedIds.contains(p.id);
-                          final role = p.relationship != null && p.relationship!.isNotEmpty
-                              ? ' (${p.relationship})'
-                              : '';
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: ListTile(
-                              tileColor: isSelected
-                                  ? AppColors.brand.withAlpha(25)
-                                  : Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(
-                                  color: isSelected ? AppColors.brand : Theme.of(context).dividerColor,
-                                ),
-                              ),
-                              leading: CircleAvatar(
-                                backgroundColor: isSelected
-                                    ? AppColors.brand
-                                    : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                child: Icon(
-                                  Icons.person,
-                                  color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              title: Text(
-                                '${p.fullName}$role',
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                              ),
-                              subtitle: Text(
-                                [
-                                  if (p.phone.isNotEmpty) 'SĐT: ${p.phone}',
-                                  if (p.childrenSummary.isNotEmpty) 'Con: ${p.childrenSummary}',
-                                ].join(' · '),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              trailing: Checkbox(
-                                value: isSelected,
-                                activeColor: AppColors.brand,
-                                onChanged: (val) {
-                                  setModalState(() {
-                                    if (val == true) {
-                                      selectedIds.add(p.id);
-                                    } else {
-                                      selectedIds.remove(p.id);
-                                    }
-                                  });
-                                },
-                              ),
-                              onTap: () {
-                                setModalState(() {
-                                  if (isSelected) {
-                                    selectedIds.remove(p.id);
-                                  } else {
-                                    selectedIds.add(p.id);
-                                  }
-                                });
-                              },
-                            ),
-                          );
-                        }),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late final HttpAdminRepository _repo = widget.repository ?? HttpAdminRepository();
@@ -700,13 +352,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             Expanded(
               child: SelectionArea(
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 800),
-                      child: _content(),
+                child: RefreshIndicator(
+                  onRefresh: _loadInitialData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 800),
+                        child: _content(),
+                      ),
                     ),
                   ),
                 ),
@@ -1081,9 +737,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required int sentCount,
     required int draftCount,
   }) {
-    final rateColor = completionRate >= 0.8
+    final normRate = completionRate > 1.0 ? completionRate / 100.0 : completionRate;
+    final rateColor = normRate >= 0.8
         ? AppColors.success
-        : completionRate >= 0.5
+        : normRate >= 0.5
             ? AppColors.warning
             : AppColors.danger;
 
@@ -1443,17 +1100,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 ],
                               ),
                             ),
-                            Text(
-                              '${(item.completionRate * 100).round()}%',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                                color: item.completionRate >= 0.8
+                            Builder(
+                              builder: (context) {
+                                final normRate = item.completionRate > 1.0
+                                    ? item.completionRate / 100.0
+                                    : item.completionRate;
+                                final displayPercent = item.completionRate > 1.0
+                                    ? item.completionRate.round()
+                                    : (item.completionRate * 100).round();
+                                final color = normRate >= 0.8
                                     ? AppColors.success
-                                    : item.completionRate >= 0.4
+                                    : normRate >= 0.4
                                         ? AppColors.warning
-                                        : AppColors.danger,
-                              ),
+                                        : AppColors.danger;
+                                return Text(
+                                  '$displayPercent%',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    color: color,
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -1480,15 +1148,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: item.completionRate.clamp(0.0, 1.0),
-                          minHeight: 6,
-                          borderRadius: BorderRadius.circular(8),
-                          color: item.completionRate >= 0.8
-                              ? AppColors.success
-                              : item.completionRate >= 0.4
-                                  ? AppColors.warning
-                                  : AppColors.danger,
+                        Builder(
+                          builder: (context) {
+                            final normRate = item.completionRate > 1.0
+                                ? item.completionRate / 100.0
+                                : item.completionRate;
+                            final color = normRate >= 0.8
+                                ? AppColors.success
+                                : normRate >= 0.4
+                                    ? AppColors.warning
+                                    : AppColors.danger;
+                            return LinearProgressIndicator(
+                              value: normRate.clamp(0.0, 1.0),
+                              minHeight: 6,
+                              borderRadius: BorderRadius.circular(8),
+                              color: color,
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -2763,7 +2439,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
               parentIds: studentParentIds,
               dateOfBirth: studentDob != null
-                  ? '${studentDob.year}-${studentDob.month.toString().padLeft(2, '0')}-${studentDob.day.toString().padLeft(2, '0')}'
+                  ? '${studentDob!.year}-${studentDob!.month.toString().padLeft(2, '0')}-${studentDob!.day.toString().padLeft(2, '0')}'
                   : null,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );
@@ -2821,7 +2497,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               parentId: studentParentIds.isNotEmpty ? studentParentIds.first : null,
               parentIds: studentParentIds,
               dateOfBirth: studentDob != null
-                  ? '${studentDob.year}-${studentDob.month.toString().padLeft(2, '0')}-${studentDob.day.toString().padLeft(2, '0')}'
+                  ? '${studentDob!.year}-${studentDob!.month.toString().padLeft(2, '0')}-${studentDob!.day.toString().padLeft(2, '0')}'
                   : null,
               note: fourthCtrl.text.trim().isNotEmpty ? fourthCtrl.text.trim() : null,
             );
@@ -3008,182 +2684,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 10. TREND PAINTER (VẼ BIỂU ĐỒ XU HƯỚNG 7 NGÀY TỪ DATA API THẬT)
+// 10. TREND PAINTER (DELEGATE SANG WIDGETS/ADMIN_TREND_PAINTER.DART)
 // ═════════════════════════════════════════════════════════════════════════════
 
-class _TrendPainter extends CustomPainter {
-  _TrendPainter({required this.dark, required this.trends});
-
-  final bool dark;
-  final List<AdminReportTrendDto> trends;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const bottomPadding = 30.0;
-    const topPadding = 24.0;
-    const horizontalPadding = 24.0;
-    final chartHeight = size.height - bottomPadding - topPadding;
-    final chartWidth = size.width - horizontalPadding * 2;
-
-    final grid = Paint()
-      ..color = dark ? Colors.white12 : const Color(0xFFE3E9E6)
-      ..strokeWidth = 1;
-
-    for (var i = 0; i <= 4; i++) {
-      final y = topPadding + chartHeight * i / 4;
-      canvas.drawLine(Offset(horizontalPadding, y), Offset(size.width - horizontalPadding, y), grid);
-    }
-
-    final int count = trends.isNotEmpty ? trends.length : 7;
-    final sentData = trends.isNotEmpty
-        ? trends.map((t) => t.sentReports.toDouble()).toList()
-        : <double>[12.0, 18.0, 15.0, 22.0, 20.0, 25.0, 28.0];
-
-    final draftData = trends.isNotEmpty
-        ? trends.map((t) => t.draftReports.toDouble()).toList()
-        : <double>[3.0, 2.0, 4.0, 1.0, 3.0, 2.0, 2.0];
-
-    final maxVal = [
-      ...sentData,
-      ...draftData,
-      5.0,
-    ].reduce((a, b) => a > b ? a : b);
-
-    // Vẽ đường đã gửi (xanh) và bản nháp (vàng)
-    _drawTrendLine(
-      canvas: canvas,
-      data: sentData,
-      color: AppColors.brand,
-      min: 0,
-      max: maxVal * 1.25,
-      chartHeight: chartHeight,
-      chartWidth: chartWidth,
-      topPadding: topPadding,
-      horizontalPadding: horizontalPadding,
-      isSent: true,
-    );
-
-    _drawTrendLine(
-      canvas: canvas,
-      data: draftData,
-      color: AppColors.warning,
-      min: 0,
-      max: maxVal * 1.25,
-      chartHeight: chartHeight,
-      chartWidth: chartWidth,
-      topPadding: topPadding,
-      horizontalPadding: horizontalPadding,
-      isSent: false,
-    );
-
-    // Vẽ nhãn ngày ở trục X
-    final textStyle = TextStyle(
-      color: dark ? Colors.white70 : const Color(0xFF6B7280),
-      fontSize: 10,
-      fontWeight: FontWeight.w600,
-    );
-
-    for (var i = 0; i < count; i++) {
-      final x = count > 1
-          ? horizontalPadding + i * chartWidth / (count - 1)
-          : horizontalPadding + chartWidth / 2;
-
-      String dateLabel;
-      if (trends.isNotEmpty && i < trends.length) {
-        final raw = trends[i].reportDate;
-        final parts = raw.split('-');
-        if (parts.length >= 3) {
-          dateLabel = '${parts[2]}/${parts[1]}';
-        } else {
-          dateLabel = raw;
-        }
-      } else {
-        final d = DateTime.now().subtract(Duration(days: count - 1 - i));
-        dateLabel = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
-      }
-
-      final textSpan = TextSpan(text: dateLabel, style: textStyle);
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      textPainter.paint(
-        canvas,
-        Offset(x - textPainter.width / 2, size.height - bottomPadding + 8),
-      );
-    }
-  }
-
-  void _drawTrendLine({
-    required Canvas canvas,
-    required List<double> data,
-    required Color color,
-    required double min,
-    required double max,
-    required double chartHeight,
-    required double chartWidth,
-    required double topPadding,
-    required double horizontalPadding,
-    required bool isSent,
-  }) {
-    if (data.isEmpty) return;
-    final path = Path();
-    final dot = Paint()..color = color;
-    final range = max - min == 0 ? 1.0 : (max - min);
-
-    for (var i = 0; i < data.length; i++) {
-      final x = data.length > 1
-          ? horizontalPadding + i * chartWidth / (data.length - 1)
-          : horizontalPadding + chartWidth / 2;
-      final y = topPadding + chartHeight - ((data[i] - min) / range) * chartHeight;
-
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-
-      // Vẽ điểm tròn 2 lớp
-      canvas.drawCircle(Offset(x, y), 4.5, dot);
-      canvas.drawCircle(
-        Offset(x, y),
-        2,
-        Paint()..color = Colors.white,
-      );
-
-      // Vẽ nhãn số lượng đã báo cáo ở từng điểm
-      final valInt = data[i].toInt();
-      final labelSpan = TextSpan(
-        text: '$valInt',
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
-      );
-      final labelPainter = TextPainter(
-        text: labelSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      // Nếu là sent: vẽ phía trên; nếu là draft: vẽ phía dưới
-      final labelY = isSent ? y - 16 : y + 6;
-      labelPainter.paint(canvas, Offset(x - labelPainter.width / 2, labelY));
-    }
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _TrendPainter oldDelegate) =>
-      oldDelegate.dark != dark || oldDelegate.trends != trends;
-}
+typedef _TrendPainter = AdminTrendPainter;
