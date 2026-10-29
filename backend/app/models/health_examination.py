@@ -65,16 +65,16 @@ class HealthExamination(Base, TimestampMixin):
         comment="Ngày ghi nhận số liệu",
     )
 
-    height: Mapped[float] = mapped_column(
+    height: Mapped[float | None] = mapped_column(
         Float,
-        nullable=False,
-        comment="Chiều cao (cm)",
+        nullable=True,
+        comment="Chiều cao (cm) — có thể để trống nếu chỉ ghi kết luận chung",
     )
 
-    weight: Mapped[float] = mapped_column(
+    weight: Mapped[float | None] = mapped_column(
         Float,
-        nullable=False,
-        comment="Cân nặng (kg)",
+        nullable=True,
+        comment="Cân nặng (kg) — có thể để trống nếu chỉ ghi kết luận chung",
     )
 
     bmi: Mapped[float | None] = mapped_column(
@@ -83,16 +83,15 @@ class HealthExamination(Base, TimestampMixin):
         comment="Chỉ số khối cơ thể BMI (kg/m^2)",
     )
 
-    health_category: Mapped[HealthCategory] = mapped_column(
+    health_category: Mapped[HealthCategory | None] = mapped_column(
         SAEnum(
             HealthCategory,
             name="health_category_enum",
             native_enum=True,
             values_callable=lambda obj: [e.value for e in obj],
         ),
-        nullable=False,
-        default=HealthCategory.NORMAL,
-        comment="Phân loại thể trạng (NORMAL / UNDERWEIGHT / OVERWEIGHT)",
+        nullable=True,
+        comment="Phân loại thể trạng (NORMAL / UNDERWEIGHT / OVERWEIGHT) — chỉ có khi đủ cao + nặng",
     )
 
     general_conclusion: Mapped[str | None] = mapped_column(

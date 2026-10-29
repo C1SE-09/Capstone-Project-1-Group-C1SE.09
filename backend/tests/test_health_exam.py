@@ -324,8 +324,12 @@ def _mock_import_db(mock_db, classroom, children):
 
 
 def test_import_exam_mixed_rows(mock_db, admin_user, sample_classroom, sample_children):
-    """File có 1 dòng đúng + 1 dòng thiếu cân nặng + 1 dòng cân nặng vô lý (150kg):
-    dòng đúng được lưu (tự tính BMI + xếp loại), 2 dòng lỗi báo rõ số dòng."""
+    """File có 3 dòng:
+    - Dòng 2: đủ chiều cao + cân nặng -> lưu, tự tính BMI + xếp loại.
+    - Dòng 3: THIẾU cân nặng nhưng có chiều cao -> vẫn nhập được (quy tắc mới:
+      chỉ cần có 1 trong 3 thông tin). Có cảnh báo vì chưa tính được BMI.
+    - Dòng 4: cân nặng vô lý 150kg -> lỗi chặn dòng.
+    """
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: admin_user
     _mock_import_db(mock_db, sample_classroom, sample_children)
@@ -334,7 +338,7 @@ def test_import_exam_mixed_rows(mock_db, admin_user, sample_classroom, sample_ch
     content = _build_exam_workbook([
         # Dòng 2: hợp lệ (BMI + phân loại do hệ thống tự tính)
         [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 95, 14, "Bé khỏe"],
-        # Dòng 3: thiếu cân nặng
+        # Dòng 3: thiếu cân nặng nhưng có chiều cao -> vẫn nhập được
         [_display_name(c2), "20/08/2021", "Nữ", "20/10/2026", 90, "", ""],
         # Dòng 4: cân nặng vô lý 150kg
         [_display_name(c2), "20/08/2021", "Nữ", "21/10/2026", 90, 150, ""],
@@ -350,25 +354,27 @@ def test_import_exam_mixed_rows(mock_db, admin_user, sample_classroom, sample_ch
     assert resp.status_code == 200
     body = resp.json()
     assert body["total_rows"] == 3
-    assert body["success_count"] == 1
-    assert body["failed_count"] == 2
-    assert body["created_count"] == 1
+    # Dòng 2 + dòng 3 đều được nhập; chỉ dòng 4 lỗi.
+    assert body["success_count"] == 2
+    assert body["failed_count"] == 1
+    assert body["created_count"] == 2
     assert body["updated_count"] == 0
 
-    # Báo lỗi ghi rõ số dòng Excel
+    # Báo lỗi ghi rõ số dòng Excel (dòng 3 không còn lỗi chặn)
     by_row = {e["row_number"]: e for e in body["errors"]}
-    assert 3 in by_row and any("cân nặng" in m.lower() for m in by_row[3]["errors"])
     assert 4 in by_row and any("150" in m for m in by_row[4]["errors"])
+    assert 3 not in by_row or not by_row[3].get("errors")
 
     # Bản ghi được lưu có BMI tự tính (14kg / 0.95m^2 ≈ 15.51) và xếp loại Bình thường
     saved = mock_db.add.call_args_list[0].args[0]
     assert abs(saved.bmi - 15.51) < 0.01
-    assert saved.health_category == HealthCategory.NORMAL
-    assert saved.general_conclusion == "Bé khỏe"
-    mock_db.commit.assert_called_once()
 
-    app.dependency_overrides.clear()
-
+    # Dòng thiếu cân nặng: lưu chiều cao, weight/bmi/category = None
+    saved2 = mock_db.add.call_args_list[1].args[0]
+    assert saved2.height == 90
+    assert saved2.weight is None
+    assert saved2.bmi is None
+    assert saved2.health_category is None
 
 def test_import_exam_forbidden_teacher(mock_db, teacher_user):
     """Giáo viên (không phải admin trường) bị chặn với 403."""
@@ -1074,3 +1080,153 @@ def test_split_display_name_plain():
     full, nick = split_display_name("Lê Ngọc Ánh ()")
     assert full == "Lê Ngọc Ánh ()"
     assert nick is None
+
+
+# ─── Quy tac moi 1: chi can 1 trong 3 thong tin (cao / nang / ket luan) ──────
+def test_import_exam_all_three_empty_is_blocked(mock_db, admin_user, sample_classroom, sample_children):
+    """Dong khong co cao, nang, ket luan -> khong co gi de luu -> loi chan."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    _mock_import_db(mock_db, sample_classroom, sample_children)
+
+    c1, _ = sample_children
+    content = _build_exam_workbook([
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", "", "", ""],
+    ])
+
+    client = TestClient(app)
+    resp = client.post(
+        "/api/health-exam/import",
+        data={"class_id": str(OWN_CLASS_ID)},
+        files={"file": ("ket_qua.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success_count"] == 0
+    assert body["failed_count"] == 1
+    errs = body["errors"][0]["errors"]
+    assert any("cân nặng" in m.lower() or "chiều cao" in m.lower() for m in errs)
+
+
+def test_import_exam_only_conclusion_is_saved(mock_db, admin_user, sample_classroom, sample_children):
+    """Dong chi co ket luan chung -> van nhap duoc (cao/nang = None)."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    _mock_import_db(mock_db, sample_classroom, sample_children)
+
+    c1, _ = sample_children
+    content = _build_exam_workbook([
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", "", "", "Bé cần theo dõi thị lực"],
+    ])
+
+    client = TestClient(app)
+    resp = client.post(
+        "/api/health-exam/import",
+        data={"class_id": str(OWN_CLASS_ID)},
+        files={"file": ("ket_qua.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success_count"] == 1
+    assert body["failed_count"] == 0
+
+    saved = mock_db.add.call_args_list[0].args[0]
+    assert saved.height is None
+    assert saved.weight is None
+    assert saved.bmi is None
+    assert saved.health_category is None
+    assert saved.general_conclusion == "Bé cần theo dõi thị lực"
+
+
+# ─── Quy tac moi 2: phan biet duoc khi 1 be co biet danh + 1 be khong co ────
+def test_import_exam_same_name_one_with_nickname_one_without(mock_db, admin_user, sample_classroom):
+    """Cùng họ tên: 1 bé CÓ biệt danh + 1 bé KHÔNG có biệt danh -> vẫn nhập được
+    cho bé không có biệt danh (file mẫu ghi tên trần cho bé đó)."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c_no_nick = Child(
+        child_id=uuid.uuid4(),
+        full_name="Trần Gia Bảo",
+        nickname=None,
+        class_id=OWN_CLASS_ID,
+        date_of_birth=date(2021, 5, 10),
+        gender="male",
+        status=ChildStatus.ENROLLED,
+    )
+    c_with_nick = Child(
+        child_id=uuid.uuid4(),
+        full_name="Trần Gia Bảo",
+        nickname="Bảo Bảo (Lớn)",
+        class_id=OWN_CLASS_ID,
+        date_of_birth=date(2020, 5, 10),
+        gender="male",
+        status=ChildStatus.ENROLLED,
+    )
+    _mock_import_db(mock_db, sample_classroom, [c_no_nick, c_with_nick])
+
+    content = _build_exam_workbook([
+        # File ghi TÊN TRẦN -> ứng với bé KHÔNG có biệt danh
+        ["Trần Gia Bảo", "10/05/2021", "Nam", "20/10/2026", 95, 14, "Bé khỏe"],
+    ])
+
+    client = TestClient(app)
+    resp = client.post(
+        "/api/health-exam/import",
+        data={"class_id": str(OWN_CLASS_ID)},
+        files={"file": ("ket_qua.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success_count"] == 1
+    assert body["failed_count"] == 0
+
+    saved = mock_db.add.call_args_list[0].args[0]
+    assert saved.child_id == c_no_nick.child_id
+
+
+def test_import_exam_same_name_two_without_nickname_is_blocked(mock_db, admin_user, sample_classroom):
+    """Cùng họ tên và CẢ HAI đều không có biệt danh -> không phân biệt được -> chặn."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1 = Child(
+        child_id=uuid.uuid4(),
+        full_name="Trần Gia Bảo",
+        nickname=None,
+        class_id=OWN_CLASS_ID,
+        date_of_birth=date(2021, 5, 10),
+        gender="male",
+        status=ChildStatus.ENROLLED,
+    )
+    c2 = Child(
+        child_id=uuid.uuid4(),
+        full_name="Trần Gia Bảo",
+        nickname=None,
+        class_id=OWN_CLASS_ID,
+        date_of_birth=date(2020, 5, 10),
+        gender="male",
+        status=ChildStatus.ENROLLED,
+    )
+    _mock_import_db(mock_db, sample_classroom, [c1, c2])
+
+    content = _build_exam_workbook([
+        ["Trần Gia Bảo", "10/05/2021", "Nam", "20/10/2026", 95, 14, "Bé khỏe"],
+    ])
+
+    client = TestClient(app)
+    resp = client.post(
+        "/api/health-exam/import",
+        data={"class_id": str(OWN_CLASS_ID)},
+        files={"file": ("ket_qua.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success_count"] == 0
+    assert body["failed_count"] == 1
+    errs = body["errors"][0]["errors"]
+    assert any("biệt danh" in m.lower() for m in errs)

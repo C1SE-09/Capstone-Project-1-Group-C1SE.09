@@ -512,10 +512,15 @@ export function importHealthExamFile(classId: string | null, file: File) {
   });
 }
 
-/** Sửa số liệu 1 dòng sổ sức khoẻ (chiều cao, cân nặng, kết luận chung). */
+/** Sửa số liệu 1 dòng sổ sức khoẻ (chiều cao, cân nặng, kết luận chung).
+ *  Cho phép bỏ trống chiều cao hoặc cân nặng — chỉ cần có 1 trong 3 thông tin. */
 export function updateHealthExamRecord(
   id: string,
-  data: { height: number; weight: number; general_conclusion?: string | null },
+  data: {
+    height?: number | null;
+    weight?: number | null;
+    general_conclusion?: string | null;
+  },
 ) {
   return apiFetch<HealthExamRecord>(`/api/health-exam/records/${id}`, {
     method: "PUT",
@@ -524,11 +529,12 @@ export function updateHealthExamRecord(
   });
 }
 
-/** Tạo mới bản ghi sức khoẻ cho bé chưa có số liệu. */
+/** Tạo mới bản ghi sức khoẻ cho bé chưa có số liệu.
+ *  Cho phép bỏ trống chiều cao hoặc cân nặng — chỉ cần có 1 trong 3 thông tin. */
 export function createHealthExamRecord(data: {
   child_id: string;
-  height: number;
-  weight: number;
+  height?: number | null;
+  weight?: number | null;
   general_conclusion?: string | null;
   examination_date?: string | null;
 }) {

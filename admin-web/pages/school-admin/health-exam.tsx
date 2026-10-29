@@ -258,25 +258,38 @@ export default function HealthExamPage() {
 
   async function handleSaveEdit() {
     if (!editing) return;
-    const height = Number(editHeight);
-    const weight = Number(editWeight);
-    if (!editHeight.trim() || !editWeight.trim()) {
-      setToast({ msg: "Vui lòng nhập đầy đủ chiều cao và cân nặng", tone: "bad" });
-      return;
-    }
-    if (!Number.isFinite(height) || height <= 0 || height > 200) {
+    // Chỉ cần có 1 trong 3 thông tin: chiều cao, cân nặng, kết luận chung.
+    const hasHeight = editHeight.trim() !== "";
+    const hasWeight = editWeight.trim() !== "";
+    const hasConclusion = editConclusion.trim() !== "";
+    if (!hasHeight && !hasWeight && !hasConclusion) {
       setToast({
-        msg: "Chiều cao phải là số lớn hơn 0 và không vượt quá 200 cm",
+        msg: "Vui lòng nhập ít nhất 1 thông tin: chiều cao, cân nặng hoặc kết luận chung",
         tone: "bad",
       });
       return;
     }
-    if (!Number.isFinite(weight) || weight <= 0 || weight > 100) {
-      setToast({
-        msg: "Cân nặng phải là số lớn hơn 0 và không vượt quá 100 kg",
-        tone: "bad",
-      });
-      return;
+    let height: number | null = null;
+    if (hasHeight) {
+      height = Number(editHeight);
+      if (!Number.isFinite(height) || height <= 0 || height > 200) {
+        setToast({
+          msg: "Chiều cao phải là số lớn hơn 0 và không vượt quá 200 cm",
+          tone: "bad",
+        });
+        return;
+      }
+    }
+    let weight: number | null = null;
+    if (hasWeight) {
+      weight = Number(editWeight);
+      if (!Number.isFinite(weight) || weight <= 0 || weight > 100) {
+        setToast({
+          msg: "Cân nặng phải là số lớn hơn 0 và không vượt quá 100 kg",
+          tone: "bad",
+        });
+        return;
+      }
     }
 
     setEditBusy(true);
@@ -285,14 +298,14 @@ export default function HealthExamPage() {
         await updateHealthExamRecord(editing.id, {
           height,
           weight,
-          general_conclusion: editConclusion.trim() || null,
+          general_conclusion: hasConclusion ? editConclusion.trim() : null,
         });
       } else {
         await createHealthExamRecord({
           child_id: editing.child_id,
           height,
           weight,
-          general_conclusion: editConclusion.trim() || null,
+          general_conclusion: hasConclusion ? editConclusion.trim() : null,
           examination_date: editDate || null,
         });
       }
@@ -921,7 +934,7 @@ export default function HealthExamPage() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Chiều cao (cm)" required>
+              <FormField label="Chiều cao (cm)" hint="Có thể để trống nếu chỉ nhập kết luận">
                 <input
                   className="kinput"
                   type="number"
@@ -933,7 +946,7 @@ export default function HealthExamPage() {
                   placeholder="95.5"
                 />
               </FormField>
-              <FormField label="Cân nặng (kg)" required>
+              <FormField label="Cân nặng (kg)" hint="Có thể để trống nếu chỉ nhập kết luận">
                 <input
                   className="kinput"
                   type="number"
@@ -947,7 +960,7 @@ export default function HealthExamPage() {
               </FormField>
             </div>
 
-            <FormField label="Kết luận chung" hint="Không bắt buộc">
+            <FormField label="Kết luận chung" hint="Có thể để trống nếu đã nhập chiều cao và cân nặng">
               <textarea
                 className="kinput resize-y"
                 value={editConclusion}

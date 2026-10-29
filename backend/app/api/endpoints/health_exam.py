@@ -136,12 +136,15 @@ def list_health_exam_records(
         category_label: str | None = None
         if exam is not None:
             category = exam.health_category
-            category_key = (
-                category.value.lower() if hasattr(category, "value") else str(category).lower()
-            )
-            if category_key in stats:
-                stats[category_key] += 1
-            category_label = CATEGORY_VI_LABEL.get(category, "Bình thường")
+            if category is not None:
+                category_key = (
+                    category.value.lower()
+                    if hasattr(category, "value")
+                    else str(category).lower()
+                )
+                if category_key in stats:
+                    stats[category_key] += 1
+                category_label = CATEGORY_VI_LABEL.get(category, "Bình thường")
 
         records.append(
             HealthExamRecord(
@@ -228,19 +231,28 @@ def create_health_exam_record(
         )
         db.add(existing)
 
-    bmi = calc_bmi(payload.height, payload.weight)
-    existing.height = payload.height
-    existing.weight = payload.weight
-    existing.bmi = bmi
-    existing.health_category = classify_bmi_who(
-        bmi,
-        birth_date=child.date_of_birth,
-        exam_date=exam_date,
-        gender=child.gender,
-    )
-    existing.general_conclusion = (
-        payload.general_conclusion.strip() if payload.general_conclusion else None
-    )
+    # Ô trống = "không ghi nhận" -> giữ giá trị cũ nếu bản ghi đã có.
+    if payload.height is not None:
+        existing.height = payload.height
+    if payload.weight is not None:
+        existing.weight = payload.weight
+
+    # BMI + phân loại chỉ tính khi có ĐỦ chiều cao và cân nặng.
+    if existing.height is not None and existing.weight is not None:
+        bmi = calc_bmi(existing.height, existing.weight)
+        existing.bmi = bmi
+        existing.health_category = classify_bmi_who(
+            bmi,
+            birth_date=child.date_of_birth,
+            exam_date=exam_date,
+            gender=child.gender,
+        )
+    else:
+        existing.bmi = None
+        existing.health_category = None
+
+    if payload.general_conclusion is not None:
+        existing.general_conclusion = payload.general_conclusion.strip() or None
     db.commit()
     db.refresh(existing)
 
@@ -266,8 +278,10 @@ def create_health_exam_record(
         height=existing.height,
         weight=existing.weight,
         bmi=existing.bmi,
-        health_category=category_key.upper(),
-        health_category_label=CATEGORY_VI_LABEL.get(category, "Bình thường"),
+        health_category=category_key.upper() if category_key else None,
+        health_category_label=(
+            CATEGORY_VI_LABEL.get(category, "Bình thường") if category is not None else None
+        ),
         general_conclusion=existing.general_conclusion,
         created_by_name=current_user.username,
         has_record=True,
@@ -308,20 +322,29 @@ def update_health_exam_record(
             detail="Không tìm thấy hồ sơ học sinh của bản ghi này.",
         )
 
-    # Tính lại BMI + xếp loại thể trạng theo WHO (server luôn tự tính).
-    bmi = calc_bmi(payload.height, payload.weight)
-    exam.height = payload.height
-    exam.weight = payload.weight
-    exam.bmi = bmi
-    exam.health_category = classify_bmi_who(
-        bmi,
-        birth_date=child.date_of_birth,
-        exam_date=exam.examination_date,
-        gender=child.gender,
-    )
-    exam.general_conclusion = (
-        payload.general_conclusion.strip() if payload.general_conclusion else None
-    )
+    # Ô trống = "không ghi nhận" -> giữ giá trị cũ nếu bản ghi đã có.
+    if payload.height is not None:
+        exam.height = payload.height
+    if payload.weight is not None:
+        exam.weight = payload.weight
+
+    # Tính lại BMI + xếp loại thể trạng theo WHO (server luôn tự tính),
+    # chỉ khi có ĐỦ chiều cao và cân nặng.
+    if exam.height is not None and exam.weight is not None:
+        bmi = calc_bmi(exam.height, exam.weight)
+        exam.bmi = bmi
+        exam.health_category = classify_bmi_who(
+            bmi,
+            birth_date=child.date_of_birth,
+            exam_date=exam.examination_date,
+            gender=child.gender,
+        )
+    else:
+        exam.bmi = None
+        exam.health_category = None
+
+    if payload.general_conclusion is not None:
+        exam.general_conclusion = payload.general_conclusion.strip() or None
     db.commit()
     db.refresh(exam)
 
@@ -347,8 +370,10 @@ def update_health_exam_record(
         height=exam.height,
         weight=exam.weight,
         bmi=exam.bmi,
-        health_category=category_key.upper(),
-        health_category_label=CATEGORY_VI_LABEL.get(category, "Bình thường"),
+        health_category=category_key.upper() if category_key else None,
+        health_category_label=(
+            CATEGORY_VI_LABEL.get(category, "Bình thường") if category is not None else None
+        ),
         general_conclusion=exam.general_conclusion,
         created_by_name=(
             exam.created_by_user.username
