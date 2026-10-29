@@ -371,15 +371,32 @@ class HttpMedicationRepository {
       if (actionTaken?.trim().isNotEmpty == true)
         'action_taken': actionTaken!.trim()
     });
-    return _map(response.data);
+    final body = _map(response.data);
+    if (body['incident_id'] is! String ||
+        (body['incident_id'] as String).isEmpty ||
+        body['child_id'] != childId ||
+        body['child_name'] is! String ||
+        body['incident_type'] != incidentType ||
+        DateTime.tryParse(body['reported_at']?.toString() ?? '') == null) {
+      throw const MedicationRequestException(
+          'Chưa xác minh được biên bản đã lưu. Vui lòng kiểm tra trạng thái, không gửi lại tự động.',
+          code: 'invalid_response');
+    }
+    return body;
   }
 
   Future<List<Map<String, dynamic>>> getEmergencyContacts(
       String childId) async {
     final response = await _request('GET',
         '/api/teacher/health-incidents/emergency-contacts/${Uri.encodeComponent(childId)}');
-    final rows = _map(response.data)['emergency_contacts'];
-    if (rows is! List || rows.any((row) => row is! Map<String, dynamic>)) {
+    final body = _map(response.data);
+    if (body['child_id'] != childId) {
+      throw const MedicationRequestException('Danh bạ không khớp bé đang xem.');
+    }
+    final rows = body['emergency_contacts'];
+    if (rows is! List ||
+        rows.any(
+            (row) => row is! Map<String, dynamic> || row['phone'] is! String)) {
       throw const MedicationRequestException(
           'Danh bạ máy chủ trả về không hợp lệ.');
     }

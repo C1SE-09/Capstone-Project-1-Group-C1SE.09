@@ -1,17 +1,23 @@
 // M6–M7: cữ/giờ/actor thật từ máy chủ, không tự suy ra đã uống từ thao tác bấm.
 import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
+import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../theme.dart';
+import '../models.dart' as ui;
+import '../adapters/child_adapter.dart';
+import '../widgets/teacher_emergency_sheet.dart';
 import 'parent_medication_widgets.dart';
 import 'parent_requests_widgets.dart';
 
 class TeacherMedicationScreen extends StatefulWidget {
-  const TeacherMedicationScreen({super.key, this.repository, this.initialDate});
+  const TeacherMedicationScreen(
+      {super.key, this.repository, this.initialDate, this.dashboardRepository});
   final HttpMedicationRepository? repository;
   final String? initialDate;
+  final HttpDashboardRepository? dashboardRepository;
   @override
   State<TeacherMedicationScreen> createState() =>
       _TeacherMedicationScreenState();
@@ -23,6 +29,7 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
   final _processing = <String>{};
   int _version = 0;
   String _filter = 'all';
+  bool _openingEmergency = false;
   static const _labels = {
     'all': 'Tất cả',
     'morning': 'Buổi Sáng',
@@ -43,6 +50,7 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
   void _reset() {
     _version++;
     _processing.clear();
+    _openingEmergency = false;
     _repo = widget.repository ?? HttpMedicationRepository();
     _future = _repo.getTodayMedications(date: widget.initialDate);
   }
@@ -72,6 +80,36 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
 
   void _message(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _emergency(String classId) async {
+    if (_openingEmergency) return;
+    final version = _version;
+    setState(() => _openingEmergency = true);
+    try {
+      final roster =
+          await (widget.dashboardRepository ?? HttpDashboardRepository())
+              .getClassChildren(classId);
+      if (!mounted || version != _version) return;
+      await TeacherEmergencySheet.show(context,
+          repository: _repo,
+          children: roster
+              .map((child) => uiChildFromDomain(
+                  child: child,
+                  reportStatus: ui.ReportStatus.none,
+                  severity: ui.Severity.none))
+              .toList());
+    } catch (_) {
+      if (mounted && version == _version) {
+        _message(
+            'Không tải được danh sách lớp. Vui lòng thử lại hoặc mở báo cáo sự cố từ trang lớp.');
+      }
+    } finally {
+      if (mounted && version == _version) {
+        setState(() => _openingEmergency = false);
+      }
+    }
+  }
+
   String _key(MedicationItem item, String date) =>
       '${item.requestId}|$date|${item.session}';
   Future<void> _confirm(MedicationItem item, String date) async {
@@ -204,6 +242,19 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                             const SizedBox(height: 13),
                           ],
                         ],
+                      const SizedBox(height: 13),
+                      OutlinedButton(
+                          onPressed: _openingEmergency
+                              ? null
+                              : () => _emergency(data.classId),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: context.k.bad,
+                              side: BorderSide(color: context.k.bad),
+                              shape: const StadiumBorder(),
+                              minimumSize: const Size(0, 48)),
+                          child: Text(_openingEmergency
+                              ? 'Đang tải danh sách lớp...'
+                              : 'Báo cáo sự cố khẩn cấp')),
                     ]));
           }));
   Widget _card(MedicationItem item, String date) {

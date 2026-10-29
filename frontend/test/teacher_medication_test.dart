@@ -279,6 +279,7 @@ void main() {
           home: Scaffold(
             body: TeacherEmergencySheet(
               children: sampleChildren,
+              initialChildId: 'c-1',
               repository: mockRepo,
             ),
           ),
@@ -287,19 +288,21 @@ void main() {
       await tester.pumpAndSettle();
 
       // Kiểm tra Header
-      expect(find.text('Báo Động Sự Cố Khẩn Cấp'), findsOneWidget);
-      expect(find.text('🚨 PHÁT CẢNH BÁO KHẨN CẤP'), findsOneWidget);
+      expect(find.text('Báo cáo sự cố khẩn cấp'), findsOneWidget);
+      expect(find.text('Phát cảnh báo khẩn cấp'), findsOneWidget);
 
       // Bấm nút phát cảnh báo
-      await tester.tap(find.text('🚨 PHÁT CẢNH BÁO KHẨN CẤP'));
+      await tester.ensureVisible(find.text('Phát cảnh báo khẩn cấp'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Phát cảnh báo khẩn cấp'));
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(mockRepo.emergencyCalls, 1);
       // Hiện màn hình danh bạ gọi nhanh bố mẹ
-      expect(find.text('Đã Phát Cảnh Báo Khẩn Cấp!'), findsOneWidget);
-      expect(find.text('Bố: Nguyễn Văn Bố'), findsOneWidget);
-      expect(find.text('Mẹ: Trần Thị Mẹ'), findsOneWidget);
+      expect(find.text('Đã ghi nhận sự cố khẩn cấp'), findsOneWidget);
+      expect(find.text('Bố · Nguyễn Văn Bố'), findsOneWidget);
+      expect(find.text('Mẹ · Trần Thị Mẹ'), findsOneWidget);
       expect(find.text('0911222333'), findsOneWidget);
       expect(find.text('Gọi ngay'), findsNWidgets(2));
     });
