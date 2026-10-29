@@ -26,32 +26,33 @@ jobs:
             # Tự động tìm thư mục dự án trên VPS
             PROJECT_DIR=""
             
-            # Cách 1: Tìm qua mount volume của container api đang chạy
-            API_CID=$(docker ps -q --filter "name=api" 2>/dev/null | head -n 1)
-            if [ -n "$API_CID" ]; then
-              MOUNT_SRC=$(docker inspect --format '{{ range .Mounts }}{{ if or (eq .Destination "/app") (eq .Destination "/app/backend") }}{{ .Source }}{{ end }}{{ end }}' "$API_CID" 2>/dev/null || true)
-              if [ -n "$MOUNT_SRC" ]; then
-                if [ -f "$MOUNT_SRC/docker-compose.yml" ]; then
-                  PROJECT_DIR="$MOUNT_SRC"
-                elif [ -f "$(dirname "$MOUNT_SRC")/docker-compose.yml" ]; then
-                  PROJECT_DIR="$(dirname "$MOUNT_SRC")"
+            # Cách 1: Kiểm tra các thư mục phổ biến (ưu tiên vị trí chuẩn /var/www/kinderlog)
+            for candidate in \
+              "/var/www/kinderlog" \
+              "$HOME/kinderlog" \
+              "/root/kinderlog" \
+              "$HOME/Capstone-Project-1-Group-C1SE.09" \
+              "/root/Capstone-Project-1-Group-C1SE.09" \
+              "/var/www/Capstone-Project-1-Group-C1SE.09"; do
+              if [ -d "$candidate" ] && [ -f "$candidate/docker-compose.yml" ]; then
+                PROJECT_DIR="$candidate"
+                break
+              fi
+            done
+            
+            # Cách 2: Tìm qua mount volume của container api đang chạy
+            if [ -z "$PROJECT_DIR" ]; then
+              API_CID=$(docker ps -q --filter "name=api" 2>/dev/null | head -n 1)
+              if [ -n "$API_CID" ]; then
+                MOUNT_SRC=$(docker inspect --format '{{ range .Mounts }}{{ if or (eq .Destination "/app") (eq .Destination "/app/backend") }}{{ .Source }}{{ end }}{{ end }}' "$API_CID" 2>/dev/null || true)
+                if [ -n "$MOUNT_SRC" ]; then
+                  if [ -f "$MOUNT_SRC/docker-compose.yml" ]; then
+                    PROJECT_DIR="$MOUNT_SRC"
+                  elif [ -f "$(dirname "$MOUNT_SRC")/docker-compose.yml" ]; then
+                    PROJECT_DIR="$(dirname "$MOUNT_SRC")"
+                  fi
                 fi
               fi
-            fi
-
-            # Cách 2: Kiểm tra các thư mục phổ biến
-            if [ -z "$PROJECT_DIR" ]; then
-              for candidate in \
-                "$HOME/Capstone-Project-1-Group-C1SE.09" \
-                "/root/Capstone-Project-1-Group-C1SE.09" \
-                "$HOME/kinderlog" \
-                "/root/kinderlog" \
-                "/var/www/Capstone-Project-1-Group-C1SE.09"; do
-                if [ -d "$candidate" ]; then
-                  PROJECT_DIR="$candidate"
-                  break
-                fi
-              done
             fi
 
             # Cách 3: Dò tìm toàn diện qua docker-compose.yml
@@ -73,11 +74,29 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git checkout "$TARGET_BRANCH" 2>/dev/null || git checkout -b "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
+            CURRENT_COMMIT=$(git rev-parse --short HEAD)
+            echo "📌 Commit hiện tại: $CURRENT_COMMIT"
 
-            echo "📦 Chạy migration cơ sở dữ liệu (nếu có)..."
-            docker compose exec -T api alembic upgrade head || echo "⚠️ Bỏ qua migration hoặc api chưa sẵn sàng"
+            echo "📦 Chạy migration cơ sở dữ liệu (Alembic)..."
+            # Nâng cấp toàn bộ các heads. KHÔNG nuốt lỗi để tránh deploy code mới trên database cũ!
+            if ! docker compose exec -T api alembic upgrade heads; then
+              echo "❌ LỖI NGHIÊM TRỌNG: Alembic migration thất bại!"
+              echo "📋 Trạng thái Alembic hiện tại:"
+              docker compose exec -T api alembic current || true
+              docker compose exec -T api alembic heads || true
+              echo "🛑 Hủy deploy để bảo vệ an toàn dữ liệu!"
+              exit 1
+            fi
 
             echo "🔄 Khởi động lại container API & Celery Worker..."
             docker compose restart api worker
 
-            echo "✅ Deploy nhánh '$TARGET_BRANCH' hoàn tất thành công!"
+            echo "⏳ Chờ API sẵn sàng..."
+            sleep 4
+            if curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
+              echo "🟢 API Backend phản hồi tốt (HTTP 200)!"
+            else
+              echo "⚠️ API chưa phản hồi ngay, có thể đang reload models. Vui lòng kiểm tra lại log nếu cần."
+            fi
+
+            echo "✅ Deploy nhánh '$TARGET_BRANCH' (commit $CURRENT_COMMIT) hoàn tất thành công!"

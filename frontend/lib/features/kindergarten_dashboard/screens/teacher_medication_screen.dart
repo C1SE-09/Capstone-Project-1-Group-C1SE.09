@@ -149,6 +149,29 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen>
     setState(() {});
   }
 
+  String _friendlyErrorMessage(Object? error) {
+    if (error == null) {
+      return 'Không thể tải lịch uống thuốc. Vui lòng thử lại sau.';
+    }
+    final errStr = error.toString().toLowerCase();
+    if (errStr.contains('500') || errStr.contains('internal server error')) {
+      return 'Máy chủ đang gặp sự cố khi xử lý dữ liệu dặn thuốc. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
+    }
+    if (errStr.contains('socketexception') ||
+        errStr.contains('connection') ||
+        errStr.contains('timeout') ||
+        errStr.contains('network')) {
+      return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.';
+    }
+    if (errStr.contains('403') || errStr.contains('không có quyền')) {
+      return 'Bạn không có quyền truy cập dữ liệu dặn thuốc của lớp này.';
+    }
+    if (errStr.contains('401') || errStr.contains('unauthorized')) {
+      return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+    }
+    return 'Không thể tải lịch uống thuốc của lớp. Vui lòng nhấn "Thử lại".';
+  }
+
   @override
   Widget build(BuildContext context) {
     final k = context.k;
@@ -195,7 +218,14 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen>
                 children: [
                   Icon(Icons.error_outline, size: 48, color: k.bad),
                   const SizedBox(height: 12),
-                  Text('Không tải được lịch uống thuốc: ${snapshot.error}', style: TextStyle(color: k.inkSoft)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      _friendlyErrorMessage(snapshot.error),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: k.inkSoft, fontSize: 14),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _loadData,
