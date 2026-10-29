@@ -42,7 +42,10 @@ from app.models.leave_request import (
     LeaveType,
 )
 from app.models.medication import (
+    MedicationLog,
     MedicationRequest,
+    MedicationRequestStatus,
+    MedicationSession,
     MedicationStatus,
     MedicineCategory,
 )
@@ -106,7 +109,10 @@ __all__ = [
     "LeaveRequestStatus",
     "LeaveStatus",
     "LeaveType",
+    "MedicationLog",
     "MedicationRequest",
+    "MedicationRequestStatus",
+    "MedicationSession",
     "MedicationStatus",
     "MedicineCategory",
     "Parent",
