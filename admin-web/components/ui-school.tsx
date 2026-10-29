@@ -367,34 +367,53 @@ export function DateInput({
   onInvalid?: (msg: string) => void;
 }) {
   const [text, setText] = useState(value ? toDmy(value) : "");
+  const [isError, setIsError] = useState(false);
   const pickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setText(value ? toDmy(value) : "");
+    setIsError(false);
   }, [value]);
 
   const commit = (rawDmy: string) => {
     if (!rawDmy.trim()) {
+      setIsError(false);
       onChange("");
       return;
     }
     const iso = parseDmyToIso(rawDmy);
     if (!iso) {
+      setIsError(true);
       onInvalid?.("Ngày không hợp lệ hoặc không tồn tại, vui lòng nhập dd/mm/yyyy");
+      setText(value ? toDmy(value) : "");
+      onChange("");
       return;
     }
     if (max && iso > max) {
-      onInvalid?.(`Không thể chọn ngày sau ${toDmy(max)}`);
+      setIsError(true);
+      const isToday = max === todayIsoStr();
+      onInvalid?.(
+        isToday
+          ? `Ngày không thể lớn hơn ngày hiện tại (${toDmy(max)}). Đã chặn nhập.`
+          : `Không thể chọn ngày sau ${toDmy(max)}. Đã chặn nhập.`
+      );
+      setText(value ? toDmy(value) : "");
+      onChange("");
       return;
     }
     if (min && iso < min) {
-      onInvalid?.(`Không thể chọn ngày trước ${toDmy(min)}`);
+      setIsError(true);
+      onInvalid?.(`Không thể chọn ngày trước ${toDmy(min)}. Đã chặn nhập.`);
+      setText(value ? toDmy(value) : "");
+      onChange("");
       return;
     }
+    setIsError(false);
     onChange(iso);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsError(false);
     const raw = e.target.value;
     const isDeleting = (e.nativeEvent as any)?.inputType?.startsWith("delete") || raw.length < text.length;
 
@@ -466,7 +485,9 @@ export function DateInput({
         placeholder={placeholder}
         onChange={handleChange}
         onBlur={handleBlur}
-        className="kinput w-full pr-9 font-medium"
+        className={`kinput w-full pr-9 font-medium transition-colors ${
+          isError ? "border-bad focus:border-bad focus:ring-bad/30 bg-bad/5" : ""
+        }`}
       />
       <button
         type="button"
@@ -502,6 +523,26 @@ export function DateInput({
         onChange={(e) => {
           const iso = e.target.value;
           if (iso) {
+            if (max && iso > max) {
+              setIsError(true);
+              const isToday = max === todayIsoStr();
+              onInvalid?.(
+                isToday
+                  ? `Ngày không thể lớn hơn ngày hiện tại (${toDmy(max)}). Đã chặn nhập.`
+                  : `Không thể chọn ngày sau ${toDmy(max)}. Đã chặn nhập.`
+              );
+              setText(value ? toDmy(value) : "");
+              onChange("");
+              return;
+            }
+            if (min && iso < min) {
+              setIsError(true);
+              onInvalid?.(`Không thể chọn ngày trước ${toDmy(min)}. Đã chặn nhập.`);
+              setText(value ? toDmy(value) : "");
+              onChange("");
+              return;
+            }
+            setIsError(false);
             setText(toDmy(iso));
             onChange(iso);
           }
