@@ -1,0 +1,90 @@
+name: Diagnose VPS Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "develop" ]
+
+jobs:
+  diagnose:
+    name: Inspect VPS project dir & git state
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and inspect
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set +e
+            echo "=== HOSTNAME / USER ==="
+            hostname; whoami; echo
+
+            echo "=== CANDIDATE PROJECT DIRS ==="
+            for candidate in \
+              "/var/www/kinderlog" \
+              "$HOME/kinderlog" \
+              "/root/kinderlog" \
+              "$HOME/Capstone-Project-1-Group-C1SE.09" \
+              "/root/Capstone-Project-1-Group-C1SE.09" \
+              "/var/www/Capstone-Project-1-Group-C1SE.09"; do
+              if [ -d "$candidate" ]; then
+                echo "  [EXISTS] $candidate"
+                if [ -f "$candidate/docker-compose.yml" ]; then echo "     -> has docker-compose.yml"; fi
+                if [ -d "$candidate/.git" ]; then echo "     -> is a git repo"; fi
+              fi
+            done
+            echo
+
+            echo "=== ALL docker-compose.yml ON BOX ==="
+            find /root /home /var/www /opt -maxdepth 4 -name "docker-compose.yml" 2>/dev/null | while read -r f; do
+              echo "  $f"
+            done
+            echo
+
+            for d in $(find /root /home /var/www /opt -maxdepth 4 -name "docker-compose.yml" 2>/dev/null | xargs -r -n1 dirname); do
+              echo "=============================================="
+              echo "DIR: $d"
+              echo "=============================================="
+              echo "--- git remote -v ---"
+              git -C "$d" remote -v 2>&1
+              echo "--- git branch ---"
+              git -C "$d" branch -vv 2>&1 | head -20
+              echo "--- git rev-parse HEAD ---"
+              git -C "$d" rev-parse HEAD 2>&1
+              echo "--- git log -3 ---"
+              git -C "$d" log --oneline -3 2>&1
+              echo "--- ls backend/app/schemas/health_exam_schema.py ---"
+              ls -la "$d/backend/app/schemas/health_exam_schema.py" 2>&1
+              echo "--- HealthExamUpdate required? ---"
+              grep -n "class HealthExamUpdate" -A 12 "$d/backend/app/schemas/health_exam_schema.py" 2>&1 | head -20
+              echo
+            done
+
+            echo "=== DOCKER CONTAINERS ==="
+            docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}' 2>&1
+            echo
+
+            echo "=== API CONTAINER MOUNTS ==="
+            API_CID=$(docker ps -q --filter "name=kinderlog_api" 2>/dev/null | head -n 1)
+            [ -z "$API_CID" ] && API_CID=$(docker ps -q --filter "name=api" 2>/dev/null | head -n 1)
+            echo "cid=$API_CID"
+            if [ -n "$API_CID" ]; then
+              docker inspect --format '{{ range .Mounts }}{{ .Source }} -> {{ .Destination }}{{ "\n" }}{{ end }}' "$API_CID" 2>&1
+              echo "--- alembic current in container ---"
+              docker exec "$API_CID" alembic current 2>&1 | tail -5
+              echo "--- schema file inside container ---"
+              docker exec "$API_CID" sh -c 'grep -n "class HealthExamUpdate" -A 12 /app/app/schemas/health_exam_schema.py' 2>&1 | head -20
+            fi
+            echo
+
+            echo "=== GIT FETCH ORIGIN DEVELOP (dry check) ==="
+            for d in $(find /root /home /var/www /opt -maxdepth 4 -name "docker-compose.yml" 2>/dev/null | xargs -r -n1 dirname); do
+              echo "--- $d ---"
+              git -C "$d" fetch origin develop 2>&1 | tail -3
+              echo "  origin/develop = $(git -C "$d" rev-parse --short origin/develop 2>&1)"
+              echo "  HEAD          = $(git -C "$d" rev-parse --short HEAD 2>&1)"
+              git -C "$d" log --oneline -2 origin/develop 2>&1
+            done
