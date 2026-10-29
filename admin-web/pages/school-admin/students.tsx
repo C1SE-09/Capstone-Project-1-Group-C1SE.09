@@ -207,6 +207,41 @@ function cleanNickname(nick?: string | null, fullName?: string): string {
 }
 
 /**
+ * Kiểm tra xem 2 học sinh có bị trùng cả họ tên LẪN biệt danh trong cùng lớp hay không.
+ * - Khác họ tên -> false
+ * - Khác biệt danh (ví dụ 1 bé "Bống", 1 bé "Bắp") -> false (không cần Lớn/Nhỏ)
+ * - Một bé có biệt danh riêng khác biệt hoàn toàn với bé kia -> false
+ * - Trùng cả họ tên VÀ (cả 2 đều chưa có biệt danh, hoặc cả 2 có biệt danh gốc giống nhau) -> true (cần Lớn/Nhỏ)
+ */
+function hasDuplicateNickname(
+  name1: string,
+  nick1: string | null | undefined,
+  name2: string,
+  nick2: string | null | undefined
+): boolean {
+  if (name1.trim().toLowerCase() !== name2.trim().toLowerCase()) {
+    return false;
+  }
+  const clean1 = (nick1 || "").trim();
+  const clean2 = (nick2 || "").trim();
+
+  // Nếu cả 2 đều bỏ trống biệt danh -> trùng hoàn toàn họ tên mà không có biệt danh phân biệt -> Cần Lớn/Nhỏ
+  if (!clean1 && !clean2) {
+    return true;
+  }
+
+  // Nếu cả 2 đều có biệt danh -> so sánh biệt danh gốc (sau khi đã bỏ hậu tố (Lớn), (Nhỏ), (1), (2))
+  if (clean1 && clean2) {
+    const base1 = cleanNickname(clean1, name1).toLowerCase().trim();
+    const base2 = cleanNickname(clean2, name2).toLowerCase().trim();
+    return base1 === base2;
+  }
+
+  // Một bé có biệt danh (VD: "Bống"), một bé không có biệt danh -> khác biệt danh -> Không cần Lớn/Nhỏ
+  return false;
+}
+
+/**
  * Tìm lớp học linh hoạt dựa trên ID, tên lớp hoặc tên sheet (hỗ trợ cả có hoặc không có tiền tố "Lớp")
  */
 function findClassFlexible(classNameOrId: string, classes: SchoolClass[]): SchoolClass | undefined {
@@ -558,12 +593,12 @@ export default function SchoolAdminStudentsPage() {
         }
       }
 
-      // Phát hiện trùng họ tên trong cùng lớp học
+      // Phát hiện trùng cả họ tên VÀ biệt danh trong cùng lớp học
       if (matchedClassId) {
         const existingMatch = workingChildren.find(
           (c) =>
             c.class_id === matchedClassId &&
-            c.full_name.trim().toLowerCase() === fullName.toLowerCase()
+            hasDuplicateNickname(fullName, nickname, c.full_name, c.nickname)
         );
 
         if (existingMatch) {
@@ -580,8 +615,9 @@ export default function SchoolAdminStudentsPage() {
             newSuffix = "(Nhỏ)";
             existSuffix = "(Lớn)";
           } else {
-            newSuffix = "(1)";
-            existSuffix = "(2)";
+            // Trùng cả ngày sinh: bé có sẵn trước là Lớn, bé thêm sau là Nhỏ
+            newSuffix = "(Nhỏ)";
+            existSuffix = "(Lớn)";
           }
 
           nickname = `${baseNewNick} ${newSuffix}`.trim();
@@ -605,7 +641,9 @@ export default function SchoolAdminStudentsPage() {
           const ageExist = getAgeDetail(existingMatch.date_of_birth);
 
           warnings.push(
-            `Dòng ${i + 1} (${fullName}): Trùng tên trong lớp "${targetClassName}". Tự động tính tuổi theo năm & ngày sinh để gán biệt danh: bé sinh trước (${cmp <= 0 ? nickname : updatedExistNick} - sinh ${cmp <= 0 ? ageNew.formattedDob : ageExist.formattedDob}${cmp <= 0 ? (ageNew.birthYear !== "—" ? `, năm ${ageNew.birthYear}` : "") : (ageExist.birthYear !== "—" ? `, năm ${ageExist.birthYear}` : "")} · ${cmp <= 0 ? ageNew.years : ageExist.years} tuổi) và bé sinh sau (${cmp > 0 ? nickname : updatedExistNick} - sinh ${cmp > 0 ? ageNew.formattedDob : ageExist.formattedDob}${cmp > 0 ? (ageNew.birthYear !== "—" ? `, năm ${ageNew.birthYear}` : "") : (ageExist.birthYear !== "—" ? `, năm ${ageExist.birthYear}` : "")} · ${cmp > 0 ? ageNew.years : ageExist.years} tuổi).`
+            cmp === 0
+              ? `Dòng ${i + 1} (${fullName}): Trùng họ tên và biệt danh trong lớp "${targetClassName}" (cùng ngày sinh ${ageNew.formattedDob}). Tự động gán: bé trước (${updatedExistNick}) và bé sau (${nickname}).`
+              : `Dòng ${i + 1} (${fullName}): Trùng họ tên và biệt danh trong lớp "${targetClassName}". Tự động tính tuổi theo năm & ngày sinh để gán biệt danh: bé sinh trước (${cmp < 0 ? nickname : updatedExistNick} - sinh ${cmp < 0 ? ageNew.formattedDob : ageExist.formattedDob} · ${cmp < 0 ? ageNew.years : ageExist.years} tuổi) và bé sinh sau (${cmp > 0 ? nickname : updatedExistNick} - sinh ${cmp > 0 ? ageNew.formattedDob : ageExist.formattedDob} · ${cmp > 0 ? ageNew.years : ageExist.years} tuổi).`
           );
         }
       }
@@ -773,14 +811,13 @@ export default function SchoolAdminStudentsPage() {
         care_notes: form.care_notes.trim() || null,
         status: form.status,
       };
-      // Cảnh báo trùng họ tên trong cùng một lớp (áp dụng cho cả tạo mới lẫn sửa đổi/chuyển lớp)
+      // Cảnh báo trùng cả họ tên VÀ biệt danh trong cùng một lớp (áp dụng cho cả tạo mới lẫn sửa đổi/chuyển lớp)
       if (form.class_id) {
-        const trimmedName = form.full_name.trim().toLowerCase();
         const existingMatch = (children || []).find(
           (c) =>
             c.id !== (editing?.id ?? "") &&
             c.class_id === form.class_id &&
-            c.full_name.trim().toLowerCase() === trimmedName
+            hasDuplicateNickname(form.full_name, form.nickname, c.full_name, c.nickname)
         );
 
         if (existingMatch) {
@@ -799,8 +836,9 @@ export default function SchoolAdminStudentsPage() {
             newSuffix = "(Nhỏ)";
             existSuffix = "(Lớn)";
           } else {
-            newSuffix = "(1)";
-            existSuffix = "(2)";
+            // Khi trùng cả ngày sinh: bé có sẵn là Lớn, bé mới thêm là Nhỏ
+            newSuffix = "(Nhỏ)";
+            existSuffix = "(Lớn)";
           }
 
           const suggestedNew = `${baseNewNick} ${newSuffix}`.trim();
@@ -1013,41 +1051,6 @@ export default function SchoolAdminStudentsPage() {
         </div>
       </div>
 
-      {selectedIds.length > 0 && (
-        <div
-          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
-          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
-        >
-          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
-              style={{ background: "#BB4A34" }}
-            >
-              {selectedIds.length}
-            </span>
-            <span>Đã chọn {selectedIds.length} học sinh</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedIds([])}
-              className="kbtn kbtn-secondary text-xs"
-              disabled={bulkDeleting}
-            >
-              Bỏ chọn
-            </button>
-            <button
-              onClick={() => setConfirmBulkDel(true)}
-              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
-              style={{ background: "#BB4A34" }}
-              disabled={bulkDeleting}
-            >
-              <span>🗑️</span>
-              <span>Xóa đã chọn ({selectedIds.length})</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="card overflow-hidden">
         {!children && !childrenError ? (
           <Spinner />
@@ -1070,8 +1073,69 @@ export default function SchoolAdminStudentsPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div>
+            <div
+              className={`px-4 py-2 flex items-center justify-between border-b text-xs font-semibold transition-colors duration-200 ${
+                selectedIds.length > 0
+                  ? "bg-[#FDF8F6] border-[#F2D5CE]"
+                  : "border-line"
+              }`}
+              style={selectedIds.length > 0 ? undefined : { background: "#EFECE5", color: "#605D57" }}
+            >
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="rounded cursor-pointer"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    title="Chọn tất cả học sinh hiển thị"
+                  />
+                  <span>Chọn tất cả ({filtered.length})</span>
+                </label>
+
+                {selectedIds.length > 0 && (
+                  <>
+                    <span className="text-line-strong">|</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-[#BB4A34]">
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
+                        {selectedIds.length}
+                      </span>
+                      <span>Đã chọn {selectedIds.length} học sinh</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {selectedIds.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedIds([])}
+                      className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
+                      disabled={bulkDeleting}
+                    >
+                      Bỏ chọn
+                    </button>
+                    <button
+                      onClick={() => setConfirmBulkDel(true)}
+                      className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
+                      style={{ background: "#BB4A34" }}
+                      disabled={bulkDeleting}
+                    >
+                      <span>🗑️</span>
+                      <span>Xóa đã chọn ({selectedIds.length})</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
               <thead
                 className="text-xs uppercase tracking-wider"
                 style={{ background: "#EFECE5", color: "#605D57" }}
@@ -1174,6 +1238,7 @@ export default function SchoolAdminStudentsPage() {
               })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
@@ -1421,15 +1486,18 @@ export default function SchoolAdminStudentsPage() {
               <div className="font-bold text-ink text-sm flex items-center gap-2">
                 <span className="text-base">⚠️</span>
                 <span>
-                  Phát hiện học sinh trùng họ tên trong lớp{" "}
+                  Phát hiện học sinh trùng cả họ tên và biệt danh trong lớp{" "}
                   <strong className="text-brand-strong">{duplicateAlert.targetClassName}</strong>
                 </span>
               </div>
               <p className="text-ink-soft leading-relaxed">
                 {duplicateAlert.editingChildId
-                  ? `Khi chuyển hoặc cập nhật học sinh "${duplicateAlert.payload.full_name}" vào lớp "${duplicateAlert.targetClassName}", phát hiện trùng hoàn toàn họ và tên với một học sinh đã có sẵn trong lớp này.`
-                  : `Học sinh mới "${duplicateAlert.payload.full_name}" trùng hoàn toàn họ và tên với một học sinh đã có sẵn trong lớp "${duplicateAlert.targetClassName}".`}
-                {" "}Hệ thống đã tự động tính tuổi theo cả năm, tháng và ngày sinh để đề xuất biệt danh phân biệt <strong>(Lớn)</strong> và <strong>(Nhỏ)</strong> giúp giáo viên không bị nhầm lẫn khi điểm danh và theo dõi.
+                  ? `Khi chuyển hoặc cập nhật học sinh "${duplicateAlert.payload.full_name}" vào lớp "${duplicateAlert.targetClassName}", phát hiện trùng cả họ và tên lẫn biệt danh với một học sinh đã có sẵn trong lớp này.`
+                  : `Học sinh mới "${duplicateAlert.payload.full_name}" trùng cả họ và tên lẫn biệt danh với một học sinh đã có sẵn trong lớp "${duplicateAlert.targetClassName}".`}
+                {" "}
+                {duplicateAlert.isSameAge
+                  ? "Hai bé có cùng ngày sinh, hệ thống đề xuất bé đã có sẵn trong lớp nhận biệt danh (Lớn), bé mới thêm nhận biệt danh (Nhỏ). Dữ liệu vẫn được lưu bình thường và bạn có thể tùy chỉnh lại ở 2 ô bên dưới."
+                  : "Hệ thống đã tự động tính tuổi theo năm, tháng và ngày sinh để đề xuất biệt danh phân biệt (Lớn) và (Nhỏ) giúp giáo viên không bị nhầm lẫn khi điểm danh và theo dõi."}
               </p>
             </div>
 
@@ -1441,7 +1509,7 @@ export default function SchoolAdminStudentsPage() {
                   <span className="font-bold text-ink">Bé đã có trong lớp</span>
                   <Pill tone={duplicateAlert.isNewOlder ? "info" : "ok"}>
                     {duplicateAlert.isSameAge
-                      ? "Cùng tuổi"
+                      ? "Cùng ngày sinh · Đề xuất (Lớn)"
                       : duplicateAlert.isNewOlder
                       ? "Sinh sau · Nhỏ hơn"
                       : "Sinh trước · Lớn hơn"}
@@ -1503,7 +1571,7 @@ export default function SchoolAdminStudentsPage() {
                   </span>
                   <Pill tone={duplicateAlert.isNewOlder ? "ok" : "info"}>
                     {duplicateAlert.isSameAge
-                      ? "Cùng tuổi"
+                      ? "Cùng ngày sinh · Đề xuất (Nhỏ)"
                       : duplicateAlert.isNewOlder
                       ? "Sinh trước · Lớn hơn"
                       : "Sinh sau · Nhỏ hơn"}
