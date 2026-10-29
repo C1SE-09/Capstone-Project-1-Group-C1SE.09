@@ -3,7 +3,6 @@
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
 from threading import Barrier
 from types import SimpleNamespace
 
@@ -15,6 +14,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 
 from app.api.endpoints import medication as routes
+from app.config import get_today
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.base import Base
@@ -61,7 +61,7 @@ def pg(monkeypatch):
             db.add_all([*users, owner])
             db.flush()
             req = MedicationRequest(child_id=child.child_id, parent_id=parent.parent_id, class_id=class_.class_id,
-                batch_id=uuid.uuid4(), start_date=date.today(), end_date=date.today(), request_date=date.today(),
+                batch_id=uuid.uuid4(), start_date=get_today(), end_date=get_today(), request_date=get_today(),
                 time_slot="08:30", medication_name="Thuốc theo đơn", dosage="5ml", status=State.PENDING,
                 created_by_user_id=owner.user_id, created_by_role="parent")
             db.add(req)
@@ -79,7 +79,7 @@ def pg(monkeypatch):
         app.dependency_overrides[get_db] = request_db
         app.dependency_overrides[get_current_user] = actor
         yield SimpleNamespace(app=app, factory=factory, request_id=req.request_id,
-                              teachers=[user.user_id for user in users], parent=owner.user_id,
+                              teachers=[user.user_id for user in users], parent=owner.user_id, child_id=child.child_id,
                               notifications=notifications, statements=statements)
     finally:
         engine.dispose()
@@ -98,7 +98,7 @@ def race(pg, second_action):
             headers = {"x-test-actor": str(actor)}
             if action == "legacy":
                 return client.put(f"/api/teacher/medications/{pg.request_id}/confirm",
-                    params={"date": str(date.today())}, json={"session": "morning"}, headers=headers)
+                    params={"date": str(get_today())}, json={"session": "morning"}, headers=headers)
             return client.post(f"/api/medication-requests/{pg.request_id}/{action}", headers=headers)
 
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -129,3 +129,32 @@ def test_confirmation_and_cancellation_cannot_both_succeed(pg):
         count = db.scalar(select(func.count()).select_from(MedicationLog))
         assert count == (1 if req.status == State.GIVEN else 0)
         assert len(pg.notifications) == count
+
+
+def test_duplicate_batch_creation_has_one_atomic_winner(pg, monkeypatch):
+    from app.core import storage
+
+    image_id = uuid.uuid4()
+    key = f"{pg.child_id}/{image_id}"
+
+    def stat(bucket, object_name):
+        assert bucket.endswith("-medication-requests") and object_name == key
+        return SimpleNamespace(size=16, content_type="image/png", metadata={
+            "x-amz-meta-child-id": str(pg.child_id), "x-amz-meta-uploader-id": str(pg.parent)})
+
+    monkeypatch.setattr(storage, "minio_client", SimpleNamespace(stat_object=stat))
+    barrier = Barrier(2)
+
+    def create():
+        with TestClient(pg.app) as client:
+            barrier.wait(timeout=10)
+            return client.post("/api/medication-requests", headers={"x-test-actor": str(pg.parent)}, json={
+                "child_id": str(pg.child_id), "from_date": str(get_today()), "time_slots": ["09:30", "11:30"],
+                "dosage": "5ml", "prescription_image_url": f"/api/medication-requests/attachments/{key}"})
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first, second = pool.submit(create), pool.submit(create)
+        responses = first.result(timeout=20), second.result(timeout=20)
+    assert sorted(response.status_code for response in responses) == [201, 409]
+    with pg.factory() as db:
+        assert db.scalar(select(func.count()).select_from(MedicationRequest)) == 3

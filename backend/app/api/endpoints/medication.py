@@ -11,10 +11,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import date
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -29,7 +28,6 @@ from app.models.medication import (
     MedicationRequestStatus,
     MedicationSession,
     MedicationStatus,
-    MedicineCategory,
 )
 from app.models.user import Class_, Teacher, User, UserRole
 from app.schemas.medication_schema import (
@@ -38,21 +36,27 @@ from app.schemas.medication_schema import (
     MedicationConfirmRequest,
     MedicationConfirmResponse,
     MedicationItemResponse,
+    MedicationPrescriptionResponse,
+    MedicationRequestConfirmInput,
     MedicationRequestCreate,
     MedicationRequestResponse,
     MedicationsTodayResponse,
 )
 from app.services.medication_service import (
+    MEDICATION_BUCKET_SUFFIX,
+    MEDICATION_IMAGE_PREFIX,
     aware_timestamp,
     cancel_medication,
     cancel_medication_batch as cancel_batch,
     confirm_medication,
+    create_medication_requests,
     dose_audit,
     medication_session,
     resolve_class_access,
     resolve_medication_child,
     verify_medication_access,
 )
+from app.services.private_medical_attachments import MAX_IMAGE_BYTES, read_private_image, save_private_image
 from app.tasks.medication_notifications import (
     deliver_medication_notification_sync,
     send_medication_confirmed_notification,
@@ -301,10 +305,6 @@ def confirm_medication_post(
 # ===========================================================================
 # 4. USER STORY 3.1: DẶN THUỐC & THEO DÕI HỒ SƠ Y TẾ
 # ===========================================================================
-def _verify_child_access(db: Session, current_user: User, child_id: uuid.UUID) -> Child:
-    return resolve_medication_child(db, current_user, child_id, require_enrolled=True)
-
-
 def _to_response(req: MedicationRequest, db: Session) -> MedicationRequestResponse:
     child = req.child or db.scalar(select(Child).where(Child.child_id == req.child_id))
     child_name = child.full_name if child else "Học sinh"
@@ -354,7 +354,7 @@ def _to_response(req: MedicationRequest, db: Session) -> MedicationRequestRespon
         start_date=req.start_date,
         end_date=req.end_date,
         sessions=req.sessions or [],
-        medicine_category=req.medicine_category or MedicineCategory.PRESCRIPTION,
+        medicine_category=req.medicine_category,
         medicine_name=req.medication_name,
         dosage=req.dosage,
         notes=req.notes,
@@ -382,95 +382,13 @@ def create_medication_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    child = _verify_child_access(db, current_user, data.child_id)
-
-    if current_user.role == UserRole.PARENT:
-        parent_id = current_user.parent_id
-        created_by_role = "parent"
-    else:
-        parent_id = child.parent_id
-        if not parent_id:
-            parent_link = db.scalar(
-                select(ParentChild.parent_id).where(ParentChild.child_id == child.child_id)
-            )
-            parent_id = parent_link
-        if not parent_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Học sinh chưa có thông tin phụ huynh liên kết để đối soát đơn thuốc.",
-            )
-        created_by_role = "teacher"
-
-    start_date = data.from_date
-    end_date = data.to_date or data.from_date
-    if end_date < start_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ngày kết thúc không được trước ngày bắt đầu.",
-        )
-    if (end_date - start_date).days > 7:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Đợt dặn thuốc tối đa không được vượt quá 7 ngày.",
-        )
-
-    date_list: list[date] = []
-    curr = start_date
-    while curr <= end_date:
-        date_list.append(curr)
-        curr += timedelta(days=1)
-
-    batch_id = uuid.uuid4()
-    created_items: list[MedicationRequest] = []
-
-    for req_date in date_list:
-        for slot in data.time_slots:
-            existing = db.scalar(
-                select(MedicationRequest).where(
-                    MedicationRequest.child_id == child.child_id,
-                    MedicationRequest.request_date == req_date,
-                    MedicationRequest.time_slot == slot,
-                    MedicationRequest.status != MedicationRequestStatus.CANCELLED,
-                )
-            )
-            if existing:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Bé {child.full_name} đã có đơn thuốc lúc {slot} ngày {req_date.strftime('%d/%m/%Y')}.",
-                )
-
-            req = MedicationRequest(
-                request_id=uuid.uuid4(),
-                batch_id=batch_id,
-                child_id=child.child_id,
-                parent_id=parent_id,
-                class_id=child.class_id,
-                start_date=req_date,
-                end_date=req_date,
-                request_date=req_date,
-                time_slot=slot,
-                medicine_category=data.medicine_category,
-                medication_name=data.medicine_name.strip() if data.medicine_name else "Thuốc theo đơn",
-                dosage=data.dosage.strip(),
-                notes=data.notes.strip() if data.notes else None,
-                prescription_image_url=data.prescription_image_url.strip(),
-                status=MedicationRequestStatus.PENDING,
-                created_by_user_id=current_user.user_id,
-                created_by_role=created_by_role,
-            )
-            db.add(req)
-            created_items.append(req)
-
-    db.commit()
-    for item in created_items:
-        db.refresh(item)
-
+    created_items = create_medication_requests(db, data, current_user)
     responses = [_to_response(item, db) for item in created_items]
     return MedicationBatchCreateResponse(
-        batch_id=batch_id,
+        batch_id=created_items[0].batch_id,
         total_slots=len(created_items),
         items=responses,
-        message=f"Đã tạo thành công {len(created_items)} cữ uống thuốc cho bé {child.full_name}.",
+        message=f"Đã tạo thành công {len(created_items)} cữ uống thuốc",
     )
 
 
@@ -484,6 +402,8 @@ def list_medication_requests(
     class_id: uuid.UUID | None = None,
     target_date: date | None = Query(None, alias="date"),
     status_filter: MedicationStatus | None = Query(None, alias="status"),
+    batch_id: uuid.UUID | None = None,
+    offset: int = Query(0, ge=0), limit: int | None = Query(None, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -522,12 +442,41 @@ def list_medication_requests(
         )
     if status_filter:
         stmt = stmt.where(MedicationRequest.status == status_filter)
+    if batch_id:
+        stmt = stmt.where(MedicationRequest.batch_id == batch_id)
 
     stmt = stmt.order_by(
         desc(MedicationRequest.created_at),
-    )
+        MedicationRequest.request_id.desc(),
+    ).offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
     records = db.scalars(stmt).all()
     return [_to_response(r, db) for r in records]
+
+
+@router.post("/medication-requests/attachments", response_model=MedicationPrescriptionResponse, status_code=201)
+def upload_medication_prescription(
+    child_id: uuid.UUID, file: UploadFile = File(...),
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    resolve_medication_child(db, current_user, child_id, require_enrolled=True)
+    path = save_private_image(child_id=child_id, user_id=current_user.user_id,
+        data=file.file.read(MAX_IMAGE_BYTES + 1), content_type=file.content_type,
+        bucket_suffix=MEDICATION_BUCKET_SUFFIX, url_prefix=MEDICATION_IMAGE_PREFIX)
+    return MedicationPrescriptionResponse(prescription_image_url=path)
+
+
+@router.get("/medication-requests/attachments/{child_id}/{attachment_id}")
+def read_medication_prescription(
+    child_id: uuid.UUID, attachment_id: uuid.UUID,
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    resolve_medication_child(db, current_user, child_id)
+    data, mime = read_private_image(child_id=child_id, attachment_id=attachment_id,
+                                    bucket_suffix=MEDICATION_BUCKET_SUFFIX)
+    return Response(content=data, media_type=mime,
+                    headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.get(
@@ -548,11 +497,6 @@ def get_medication_request(
         )
     verify_medication_access(db, req, current_user)
     return _to_response(req, db)
-
-
-class MedicationRequestConfirmInput(BaseModel):
-    session: str | None = None
-    notes: str | None = None
 
 
 @router.post(

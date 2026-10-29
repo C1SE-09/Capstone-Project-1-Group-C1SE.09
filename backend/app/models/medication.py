@@ -65,6 +65,8 @@ class MedicineCategory(str, enum.Enum):
     """Danh mục thuốc phổ biến (US 3.1)."""
 
     PRESCRIPTION = "prescription"      # Thuốc theo đơn bác sĩ / Đã chia liều
+    NON_PRESCRIPTION = "non_prescription"
+    SUPPLEMENT = "supplement"
     FEVER_REDUCER = "fever_reducer"    # Thuốc hạ sốt
     COUGH_THROAT = "cough_throat"      # Thuốc ho / đau họng / siro ho
     LOZENGE = "lozenge"                # Viên ngậm
@@ -122,7 +124,7 @@ class MedicationRequest(Base, TimestampMixin):
     )
 
     dosage: Mapped[str] = mapped_column(
-        String(100),
+        String(255),
         nullable=False,
         comment="Liều lượng (vd: 5ml, 1 gói, 1/2 viên)",
     )

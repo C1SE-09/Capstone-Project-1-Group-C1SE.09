@@ -77,3 +77,32 @@ def test_reconcile_postgresql_extends_the_table_used_by_both_medication_apis():
     assert "REFERENCES users (user_id)" in sql
     assert "REFERENCES teacher (teacher_id)" in sql
     assert "CREATE TYPE" not in sql and "RENAME" not in sql and "DROP " not in sql
+
+
+def test_complete_medication_contract_expands_category_and_dosage_without_dropping_audit():
+    migration = load_migration("f2c3d4e5f6a7_complete_medication_contract.py")
+    output = io.StringIO()
+    context = MigrationContext.configure(dialect_name="postgresql", opts={"as_sql": True, "output_buffer": output})
+    with Operations.context(context):
+        migration.upgrade()
+        migration.downgrade()
+    sql = output.getvalue()
+    assert "ADD VALUE IF NOT EXISTS 'non_prescription'" in sql
+    assert "ADD VALUE IF NOT EXISTS 'supplement'" in sql
+    assert "ALTER TABLE medication_request ALTER COLUMN dosage TYPE VARCHAR(255)" in sql
+    assert "DROP " not in sql and "RENAME" not in sql and "VARCHAR(100)" not in sql
+
+
+def test_dosage_migration_preserves_long_legacy_data_through_downgrade():
+    migration = load_migration("f2c3d4e5f6a7_complete_medication_contract.py")
+    engine = sa.create_engine("sqlite://")
+    with engine.begin() as connection:
+        connection.execute(sa.text("CREATE TABLE medication_request (request_id TEXT PRIMARY KEY, dosage VARCHAR(100), notes TEXT)"))
+        connection.execute(sa.text("INSERT INTO medication_request VALUES ('old', :dosage, 'Giữ audit')"), {"dosage": "x" * 255})
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+            migration.downgrade()
+        assert connection.execute(sa.text("SELECT * FROM medication_request")).one() == ('old', 'x' * 255, 'Giữ audit')
+        columns = {column["name"]: column["type"] for column in sa.inspect(connection).get_columns("medication_request")}
+        assert columns["dosage"].length == 255
+    engine.dispose()

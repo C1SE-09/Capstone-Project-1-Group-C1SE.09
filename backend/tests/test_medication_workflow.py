@@ -209,6 +209,15 @@ def test_legacy_dto_does_not_fabricate_exact_time_or_creator(env):
     assert data["sessions"] == ["morning", "noon"]
 
 
+def test_legacy_missing_category_is_not_fabricated_as_prescription(env):
+    req = dose(env, request_date=None, time_slot=None, status=State.ACTIVE, sessions=["morning"])
+    req.medicine_category = None
+    env.db.commit()
+    response = env.client(env.seed["user_parent"]).get(f"/api/medication-requests/{req.request_id}")
+    assert response.status_code == 200, response.text
+    assert response.json()["medicine_category"] is None
+
+
 def test_existing_legacy_log_for_new_slot_is_respected_without_read_side_effects(env):
     req = dose(env)
     env.db.add(MedicationLog(request_id=req.request_id, log_date=req.request_date,
