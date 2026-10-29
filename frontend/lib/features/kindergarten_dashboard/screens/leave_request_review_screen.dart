@@ -266,6 +266,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
 
     return ParentRequestLayout(
       title: 'Duyệt đơn xin nghỉ',
@@ -283,6 +284,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
             ])),
         TabBar(
             controller: _tabController,
+            isScrollable: largeText,
+            tabAlignment: largeText ? TabAlignment.start : TabAlignment.fill,
             labelColor: k.brand,
             unselectedLabelColor: k.inkSoft,
             tabs: const [Tab(text: 'Chờ duyệt'), Tab(text: 'Đã xử lý')]),

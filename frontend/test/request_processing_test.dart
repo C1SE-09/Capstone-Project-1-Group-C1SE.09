@@ -5,6 +5,7 @@ import 'package:adark_frontend/data/repositories/http_leave_request_repository.d
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_detail_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
 
@@ -28,6 +29,44 @@ Map<String, dynamic> cancellable({bool allowed = true}) => {
     };
 
 void main() {
+  testWidgets(
+      'review and rejection remain scrollable with long Vietnamese reason at320 dark text2',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = RequestTransport((_) => jsonBody({
+          'pending_count': 1,
+          'reviewed_count': 0,
+          'items': [
+            {
+              ...requestJson(),
+              'reason':
+                  List.filled(25, 'Gia đình xin phép cho bé nghỉ.').join(' ')
+            }
+          ]
+        }));
+    await tester.pumpWidget(app(
+        LeaveRequestReviewScreen(
+            classId: 'class-1',
+            className: 'Lớp minh họa dài',
+            repository: repo(transport)),
+        dark: true,
+        textScale: 2));
+    await tester.pumpAndSettle();
+    final tabLabel = find.text('Chờ duyệt');
+    final paragraph = tester.renderObject<RenderParagraph>(tabLabel);
+    expect(tester.getSize(tabLabel).width,
+        greaterThanOrEqualTo(paragraph.getMaxIntrinsicWidth(double.infinity)));
+    await tester.scrollUntilVisible(find.text('Từ chối'), 200,
+        scrollable: find.byType(Scrollable).last);
+    await tapVisible(tester, find.text('Từ chối'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Bổ sung thông tin');
+    await tester.ensureVisible(find.text('Gửi từ chối'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
       'cancel locks rapid taps and confirmed result needs no follow-up read',
       (tester) async {

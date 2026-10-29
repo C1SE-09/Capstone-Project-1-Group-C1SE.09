@@ -174,7 +174,8 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
   Widget build(BuildContext context) => Align(
       alignment: Alignment.bottomCenter,
       child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
+          constraints: BoxConstraints(
+              maxWidth: 480, minHeight: MediaQuery.sizeOf(context).height),
           child: Material(
               color: context.k.canvas,
               borderRadius:

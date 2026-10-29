@@ -53,6 +53,23 @@ class RosterFixture extends HttpDashboardRepository {
 }
 
 void main() {
+  testWidgets(
+      'recorded incident keeps Figma heading at top rather than a bottom-only card',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = RequestTransport((_) => jsonBody(incidentJson(), 201));
+    await tester.pumpWidget(app(Scaffold(
+        body: TeacherEmergencySheet(
+            children: const [pupil],
+            initialChildId: 'child-1',
+            repository: medicationRepository(transport)))));
+    await tapVisible(tester, find.text('Phát cảnh báo khẩn cấp'));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('Đã ghi nhận sự cố khẩn cấp')).dy,
+        lessThan(60));
+  });
   WidgetController.hitTestWarningShouldBeFatal = true;
   final launched = <String>[];
   var launchWorks = true;
