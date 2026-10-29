@@ -1,4 +1,4 @@
-"""Đồng bộ nghỉ có phép và hoàn tác đúng bản ghi do đơn tạo, giữ điểm danh thực."""
+"""Đồng bộ nghỉ có phép và đi trễ, hoàn tác đúng bản ghi do đơn tạo, giữ điểm danh thực."""
 
 import logging
 import uuid
@@ -19,18 +19,34 @@ logger = logging.getLogger(__name__)
 def sync_leave_request_to_attendance(
     db: Session, leave_request: LeaveRequest, teacher_id: uuid.UUID | None = None,
 ) -> list[AttendanceRecord]:
-    if leave_request.status != LeaveStatus.APPROVED or leave_request.type == LeaveType.LATE:
-        # ETA là dự kiến; duyệt báo trễ không chứng minh bé đã đến lớp.
+    if leave_request.status != LeaveStatus.APPROVED:
         return []
     days = (leave_request.to_date - leave_request.from_date).days
     if not 0 <= days < 366:
         raise HTTPException(status_code=422, detail="Khoảng ngày không hợp lệ hoặc vượt quá 366 ngày")
+
+    is_late = leave_request.type == LeaveType.LATE
+    target_status = AttendanceStatus.LATE if is_late else AttendanceStatus.EXCUSED_ABSENT
+    eta = leave_request.expected_arrival_time if is_late else None
+    if is_late:
+        eta_str = eta.strftime("%H:%M") if eta else ""
+        if eta_str and leave_request.reason:
+            note = f"Đi trễ (ETA: {eta_str}): {leave_request.reason}"[:255]
+        elif eta_str:
+            note = f"Đi trễ (ETA: {eta_str})"[:255]
+        elif leave_request.reason:
+            note = f"Đi trễ: {leave_request.reason}"[:255]
+        else:
+            note = "Đi trễ"
+    else:
+        note = "Nghỉ có phép"
+
     records = []
     for day in range(days + 1):
         date = leave_request.from_date + timedelta(days=day)
         stmt = insert(AttendanceRecord).values(
             record_id=uuid.uuid4(), child_id=leave_request.child_id, class_id=leave_request.class_id,
-            date=date, status=AttendanceStatus.EXCUSED_ABSENT, note="Nghỉ có phép",
+            date=date, status=target_status, expected_arrival_time=eta, note=note,
             source_leave_id=leave_request.leave_id, teacher_id=teacher_id,
         ).on_conflict_do_nothing(index_elements=["child_id", "date"])
         # Không ghi đè kể cả bản ghi vắng do giáo viên đã lưu; hủy đơn không được xóa nó.
@@ -49,7 +65,7 @@ def rollback_leave_request_attendance(db: Session, leave_request: LeaveRequest) 
         AttendanceRecord.child_id == leave_request.child_id,
         AttendanceRecord.class_id == leave_request.class_id,
         AttendanceRecord.date >= leave_request.from_date, AttendanceRecord.date <= leave_request.to_date,
-        AttendanceRecord.status == AttendanceStatus.EXCUSED_ABSENT,
+        AttendanceRecord.status.in_([AttendanceStatus.EXCUSED_ABSENT, AttendanceStatus.LATE]),
         AttendanceRecord.check_in_time.is_(None),
     ))
     return result.rowcount

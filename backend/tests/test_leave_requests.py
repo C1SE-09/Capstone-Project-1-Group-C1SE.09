@@ -563,14 +563,20 @@ def test_approval_refuses_oversized_legacy_date_range(env):
         assert db.scalar(select(func.count()).select_from(AttendanceRecord)) == 0
 
 
-def test_late_approval_never_creates_actual_attendance(env):
+def test_late_approval_syncs_late_attendance_with_eta_and_no_actual_checkin(env):
     response = create(env, request_type="late_arrival", expected_arrival_time="09:00:00")
     assert response.status_code == 201, response.text
     env.actor = env.teacher
     approved = env.client.post(f"/api/leave-requests/{response.json()['request_id']}/approve")
     assert approved.status_code == 200, approved.text
+    assert approved.json()["synced_attendance_count"] == 1
     with env.factory() as db:
-        assert db.scalar(select(func.count()).select_from(AttendanceRecord)) == 0
+        record = db.scalar(select(AttendanceRecord))
+        assert record is not None
+        assert record.status == AttendanceStatus.LATE
+        assert record.expected_arrival_time == time(9, 0)
+        assert record.check_in_time is None
+        assert record.source_leave_id == uuid.UUID(response.json()["request_id"])
 
 
 def test_teacher_list_and_parent_history_carry_type_eta_and_decision(env):

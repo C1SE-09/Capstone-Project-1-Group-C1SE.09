@@ -16,12 +16,12 @@ import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 
-import '../theme.dart';
-import '../widgets.dart';
-import 'bug_report_sheet.dart';
-import 'change_password_screen.dart';
-import 'parent_health_profile_screen.dart';
-import '../widgets/parent_profile_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_health_profile_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/parent_profile_sheet.dart';
 export '../widgets/parent_profile_sheet.dart' show
     kRelationshipOptions,
     isValidParentPhone,

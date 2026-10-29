@@ -110,12 +110,14 @@ def test_sync_late_approved_with_eta(sample_ids):
         status=AttendanceStatus.LATE,
         expected_arrival_time=time(8, 30),
         note="Đi trễ (ETA: 08:30): Kẹt xe",
+        source_leave_id=req.leave_id,
     )
 
     synced = sync_leave_request_to_attendance(db, req, teacher_id=sample_ids["teacher_id"])
-    assert synced == []
-    assert req.expected_arrival_time == time(8, 30)
-    db.execute.assert_not_called()
+    assert len(synced) == 1
+    assert db.execute.called
+    assert synced[0].status == AttendanceStatus.LATE
+    assert synced[0].expected_arrival_time == time(8, 30)
 
 
 def test_sync_pending_does_not_execute(sample_ids):
