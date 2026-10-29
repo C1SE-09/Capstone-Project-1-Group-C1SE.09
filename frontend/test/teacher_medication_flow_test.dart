@@ -45,6 +45,21 @@ Map<String, dynamic> todayJson(
     };
 
 void main() {
+  testWidgets(
+      'server500 uses friendly error copy and retry without losing the new layout',
+      (tester) async {
+    final transport = RequestTransport(
+        (_) => jsonBody({'detail': 'Internal Server Error'}, 500));
+    await tester.pumpWidget(app(
+        TeacherMedicationScreen(repository: medicationRepository(transport))));
+    await tester.pumpAndSettle();
+    expect(
+        find.textContaining(
+            'Máy chủ đang gặp sự cố khi xử lý dữ liệu dặn thuốc'),
+        findsOneWidget);
+    expect(find.text('Thử lại'), findsOneWidget);
+    expect(find.text('Uống thuốc hôm nay'), findsOneWidget);
+  });
   testWidgets('empty selected session has a truthful empty state',
       (tester) async {
     final transport = RequestTransport((_) => jsonBody(todayJson()));

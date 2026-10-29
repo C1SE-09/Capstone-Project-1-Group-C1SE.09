@@ -174,7 +174,9 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
     if (errStr.contains('401') || errStr.contains('unauthorized')) {
       return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     }
-    return 'Không thể tải lịch uống thuốc của lớp. Vui lòng nhấn "Thử lại".';
+    return error is MedicationRequestException
+        ? error.message
+        : 'Không thể tải lịch uống thuốc của lớp. Vui lòng nhấn "Thử lại".';
   }
 
   @override
@@ -198,9 +200,7 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
               return SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: ParentRequestError(
-                      snapshot.error == null
-                          ? 'Không tải được lịch thuốc.'
-                          : medicationError(snapshot.error!),
+                      _friendlyErrorMessage(snapshot.error),
                       onRetry: _refresh));
             }
             final data = snapshot.data!;

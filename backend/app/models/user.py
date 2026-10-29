@@ -273,7 +273,7 @@ class School(Base, TimestampMixin):
         SAEnum(SchoolStatus, name="school_status_enum", create_type=True),
         nullable=False,
         default=SchoolStatus.ACTIVE,
-        server_default=SchoolStatus.ACTIVE.value,
+        server_default=SchoolStatus.ACTIVE.name,
         comment="Lifecycle status of the school",
     )
     logo_url: Mapped[str | None] = mapped_column(
@@ -513,7 +513,7 @@ class Teacher(Base, TimestampMixin):
         SAEnum(TeacherStatus, name="teacher_status_enum", create_type=True),
         nullable=False,
         default=TeacherStatus.ACTIVE,
-        server_default=TeacherStatus.ACTIVE.value,
+        server_default=TeacherStatus.ACTIVE.name,
         comment="Employment / account status",
     )
     is_verified: Mapped[bool] = mapped_column(
