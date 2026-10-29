@@ -48,16 +48,21 @@ class ParentRequestLayout extends StatelessWidget {
                       title: Text(title!,
                           style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: context.k.ink)),
-                      titleSpacing: 0,
+                      titleSpacing: 8,
+                      leadingWidth: 32,
                       toolbarHeight: 56 +
                           (MediaQuery.textScalerOf(context).scale(16) - 16) * 2,
                       backgroundColor: context.k.canvas,
                       foregroundColor: context.k.ink,
                       elevation: 0,
                       scrolledUnderElevation: 0,
-                      leading: const BackButton(),
+                      leading: IconButton(
+                          tooltip: MaterialLocalizations.of(context)
+                              .backButtonTooltip,
+                          onPressed: () => Navigator.maybePop(context),
+                          icon: const Icon(Icons.chevron_left, size: 28)),
                       actions: actions,
                     ),
               body: SafeArea(
