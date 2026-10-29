@@ -231,7 +231,7 @@ void main() {
       expect(find.text('Đến Trễ'), findsWidgets);
     });
 
-    testWidgets('Displays Excused Absent badge and locks status from being changed', (tester) async {
+    testWidgets('Locks status from being changed when excused absent', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: AttendanceScreen(
@@ -248,16 +248,21 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Xác thực badge "Excused Absent" được hiển thị bên cạnh tên bé
-      expect(find.text('Excused Absent'), findsOneWidget);
+      // Xác thực badge "Excused Absent" không hiển thị, Dropdown hiển thị "Có Phép"
+      expect(find.text('Excused Absent'), findsNothing);
       expect(find.text('Có Phép'), findsWidgets);
 
       // Giáo viên click vào dòng bé có đơn xin nghỉ (đã bị khóa)
       await tester.tap(find.text('Bé An'));
       await tester.pumpAndSettle();
 
+      // Dropdown bị khóa không thể chọn
+      final dropdown = tester.widget<DropdownButton<AttendanceStatus>>(
+        find.byType(DropdownButton<AttendanceStatus>),
+      );
+      expect(dropdown.onChanged, isNull);
+
       // Xác thực trạng thái được khóa, không bị chuyển sang Đến Trễ hay Đến
-      expect(find.text('Excused Absent'), findsOneWidget);
       expect(find.text('Có Phép'), findsWidgets);
       expect(find.text('Đến Trễ'), findsNothing);
     });

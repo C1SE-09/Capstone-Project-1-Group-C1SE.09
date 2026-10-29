@@ -639,39 +639,6 @@ class _AttendanceRow extends StatelessWidget {
 
   Widget? _buildBadge(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    if (status == AttendanceStatus.excusedAbsent) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: dark ? const Color(0xFF152A38) : KColors.infoTint,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: (dark ? const Color(0xFF64B5F6) : KColors.info)
-                .withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.lock_outline,
-              size: 11,
-              color: dark ? const Color(0xFF64B5F6) : KColors.info,
-            ),
-            const SizedBox(width: 3),
-            Text(
-              'Excused Absent',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: dark ? const Color(0xFF64B5F6) : KColors.info,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     if (status == AttendanceStatus.late) {
       String label = 'Late';
       if (detail?.expectedArrivalTime != null &&
