@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.endpoints.medication import router as medication_router
+from app.config import get_today
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.base import Base
@@ -41,6 +42,11 @@ from app.models.user import Class_, School, Teacher, User, UserRole
 # ---------------------------------------------------------------------------
 # Test Database Engine (SQLite In-Memory with StaticPool)
 # ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def no_external_notifications(monkeypatch):
+    monkeypatch.setattr("app.api.endpoints.medication.send_medication_confirmed_notification.delay", lambda *args: None)
+
+
 @pytest.fixture(scope="session")
 def engine():
     engine = create_engine(
@@ -187,21 +193,40 @@ def get_test_client(db_session: Session, user: User) -> TestClient:
     return TestClient(app)
 
 
+@pytest.fixture()
+def prescription_url(monkeypatch, db_session, seed_data):
+    from app.core import storage
+    from medication_image_storage import PrescriptionMinio
+    from test_leave_requests import PNG
+
+    monkeypatch.setattr(storage, "minio_client", PrescriptionMinio())
+
+    def upload(user=None):
+        client = get_test_client(db_session, user or seed_data["user_parent"])
+        response = client.post("/api/medication-requests/attachments",
+            params={"child_id": str(seed_data["child"].child_id)},
+            files={"file": ("prescription.png", PNG, "image/png")})
+        assert response.status_code == 201, response.text
+        return response.json()["prescription_image_url"]
+    return upload
+
+
 # ---------------------------------------------------------------------------
 # 10 TEST CASES
 # ---------------------------------------------------------------------------
-def test_tc_med_01_parent_create_multi_slot_today(db_session, seed_data):
+def test_tc_med_01_parent_create_multi_slot_today(db_session, seed_data, prescription_url):
     """TC-MED-01: Phụ huynh tạo đơn dặn thuốc nhiều cữ trong ngày (08:30 và 11:30)."""
     client = get_test_client(db_session, seed_data["user_parent"])
+    image = prescription_url()
     payload = {
         "child_id": str(seed_data["child"].child_id),
-        "from_date": str(date.today()),
+        "from_date": str(get_today()),
         "time_slots": ["08:30", "11:30"],
         "medicine_category": MedicineCategory.PRESCRIPTION.value,
         "medicine_name": "Thuốc hạ sốt & Kháng sinh",
         "dosage": "1 gói chia sẵn theo cữ",
         "notes": "Cho bé uống sau khi ăn no 15 phút",
-        "prescription_image_url": "https://storage.kinderlog.vn/prescriptions/don1.jpg",
+        "prescription_image_url": image,
     }
 
     res = client.post("/api/medication-requests", json=payload)
@@ -219,15 +244,15 @@ def test_tc_med_01_parent_create_multi_slot_today(db_session, seed_data):
         assert item["creator_name"] == seed_data["parent"].full_name
         assert item["created_by_role"] == "parent"
         assert item["status"] == MedicationStatus.PENDING.value
-        assert item["prescription_image_url"] == "https://storage.kinderlog.vn/prescriptions/don1.jpg"
+        assert item["prescription_image_url"] == image
 
     assert {item["time_slot"] for item in data["items"]} == {"08:30", "11:30"}
 
 
-def test_tc_med_02_multi_day_range(db_session, seed_data):
+def test_tc_med_02_multi_day_range(db_session, seed_data, prescription_url):
     """TC-MED-02: Đơn thuốc dài ngày (from_date đến to_date = 3 ngày liên tiếp)."""
     client = get_test_client(db_session, seed_data["user_parent"])
-    today = date.today()
+    today = get_today()
     to_date = today + timedelta(days=2)  # 3 ngày: today, today+1, today+2
 
     payload = {
@@ -237,7 +262,7 @@ def test_tc_med_02_multi_day_range(db_session, seed_data):
         "time_slots": ["11:30"],
         "medicine_category": MedicineCategory.FEVER_REDUCER.value,
         "dosage": "5ml siro Hapacol",
-        "prescription_image_url": "https://storage.kinderlog.vn/prescriptions/siro.jpg",
+        "prescription_image_url": prescription_url(),
     }
 
     res = client.post("/api/medication-requests", json=payload)
@@ -256,7 +281,7 @@ def test_tc_med_03_missing_prescription_image(db_session, seed_data):
     client = get_test_client(db_session, seed_data["user_parent"])
     payload = {
         "child_id": str(seed_data["child"].child_id),
-        "from_date": str(date.today()),
+        "from_date": str(get_today()),
         "time_slots": ["08:30"],
         "dosage": "1 gói",
         "prescription_image_url": "   ",  # Trống
@@ -266,15 +291,15 @@ def test_tc_med_03_missing_prescription_image(db_session, seed_data):
     assert res.status_code == 422
 
 
-def test_tc_med_04_duplicate_prevention(db_session, seed_data):
+def test_tc_med_04_duplicate_prevention(db_session, seed_data, prescription_url):
     """TC-MED-04: Chống gửi trùng đơn cho cùng cữ uống của bé (409 Conflict)."""
     client = get_test_client(db_session, seed_data["user_parent"])
     payload = {
         "child_id": str(seed_data["child"].child_id),
-        "from_date": str(date.today() + timedelta(days=10)),
+        "from_date": str(get_today() + timedelta(days=10)),
         "time_slots": ["09:00"],
         "dosage": "1 gói chia sẵn",
-        "prescription_image_url": "https://storage.kinderlog.vn/prescriptions/don2.jpg",
+        "prescription_image_url": prescription_url(),
     }
 
     # Lần 1: Thành công
@@ -287,17 +312,17 @@ def test_tc_med_04_duplicate_prevention(db_session, seed_data):
     assert "đã có đơn thuốc lúc 09:00" in res2.json()["detail"]
 
 
-def test_tc_med_05_teacher_intake_at_door(db_session, seed_data):
+def test_tc_med_05_teacher_intake_at_door(db_session, seed_data, prescription_url):
     """TC-MED-05: Giáo viên tạo hộ tại cửa lớp (parent_id tự động gán từ bé, không bị NULL)."""
     client = get_test_client(db_session, seed_data["user_teacher_mai"])
     payload = {
         "child_id": str(seed_data["child"].child_id),
-        "from_date": str(date.today() + timedelta(days=15)),
+        "from_date": str(get_today() + timedelta(days=15)),
         "time_slots": ["14:00"],
         "medicine_category": MedicineCategory.PRESCRIPTION.value,
         "dosage": "1 gói thuốc túi zip",
         "notes": "Phụ huynh gửi trực tiếp tại cửa lớp lúc 7:50",
-        "prescription_image_url": "https://storage.kinderlog.vn/prescriptions/tui_zip.jpg",
+        "prescription_image_url": prescription_url(seed_data["user_teacher_mai"]),
     }
 
     res = client.post("/api/medication-requests", json=payload)
@@ -319,7 +344,7 @@ def test_tc_med_06_teacher_list_today_medications(db_session, seed_data):
         child_id=seed_data["child"].child_id,
         parent_id=seed_data["parent"].parent_id,
         class_id=seed_data["class"].class_id,
-        request_date=date.today(),
+        request_date=get_today(),
         time_slot="10:00",
         medicine_category=MedicineCategory.PRESCRIPTION,
         dosage="1 gói chia sẵn",
@@ -332,7 +357,7 @@ def test_tc_med_06_teacher_list_today_medications(db_session, seed_data):
     db_session.commit()
 
     client = get_test_client(db_session, seed_data["user_teacher_mai"])
-    res = client.get(f"/api/medication-requests?date={date.today()}")
+    res = client.get(f"/api/medication-requests?date={get_today()}")
     assert res.status_code == 200
     items = res.json()
     assert any(i["id"] == str(req.id) for i in items)
@@ -346,7 +371,7 @@ def test_tc_med_07_teacher_confirm_intake(db_session, seed_data):
         child_id=seed_data["child"].child_id,
         parent_id=seed_data["parent"].parent_id,
         class_id=seed_data["class"].class_id,
-        request_date=date.today(),
+        request_date=get_today(),
         time_slot="11:30",
         medicine_category=MedicineCategory.PRESCRIPTION,
         dosage="1 gói chia sẵn",
@@ -377,7 +402,7 @@ def test_tc_med_08_atomic_concurrency_lock_second_teacher(db_session, seed_data)
         child_id=seed_data["child"].child_id,
         parent_id=seed_data["parent"].parent_id,
         class_id=seed_data["class"].class_id,
-        request_date=date.today(),
+        request_date=get_today(),
         time_slot="11:30",
         medicine_category=MedicineCategory.PRESCRIPTION,
         dosage="1 gói chia sẵn",
@@ -409,7 +434,7 @@ def test_tc_med_09_parent_cancel_pending(db_session, seed_data):
         child_id=seed_data["child"].child_id,
         parent_id=seed_data["parent"].parent_id,
         class_id=seed_data["class"].class_id,
-        request_date=date.today() + timedelta(days=5),
+        request_date=get_today() + timedelta(days=5),
         time_slot="15:00",
         medicine_category=MedicineCategory.LOZENGE,
         dosage="1 viên ngậm",
@@ -435,7 +460,7 @@ def test_tc_med_10_parent_cannot_cancel_given(db_session, seed_data):
         child_id=seed_data["child"].child_id,
         parent_id=seed_data["parent"].parent_id,
         class_id=seed_data["class"].class_id,
-        request_date=date.today(),
+        request_date=get_today(),
         time_slot="08:30",
         medicine_category=MedicineCategory.PRESCRIPTION,
         dosage="1 gói",
@@ -462,7 +487,7 @@ def test_tc_med_11_parent_cancel_batch(db_session, seed_data):
         child_id=seed_data["child"].child_id,
         parent_id=seed_data["parent"].parent_id,
         class_id=seed_data["class"].class_id,
-        request_date=date.today(),
+        request_date=get_today(),
         time_slot="08:30",
         medicine_category=MedicineCategory.PRESCRIPTION,
         dosage="1 gói",
@@ -477,7 +502,7 @@ def test_tc_med_11_parent_cancel_batch(db_session, seed_data):
         child_id=seed_data["child"].child_id,
         parent_id=seed_data["parent"].parent_id,
         class_id=seed_data["class"].class_id,
-        request_date=date.today() + timedelta(days=1),
+        request_date=get_today() + timedelta(days=1),
         time_slot="08:30",
         medicine_category=MedicineCategory.PRESCRIPTION,
         dosage="1 gói",

@@ -427,23 +427,25 @@ export interface HealthExamImportResult {
   errors: HealthExamRowIssue[];
 }
 
-/** Một bản ghi sức khoẻ đã ghi nhận trong sổ sức khoẻ. */
+/** Một dòng trong bảng sổ sức khoẻ — theo học sinh (có thể chưa có số liệu). */
 export interface HealthExamRecord {
-  id: string;
+  id?: string | null;
   child_id: string;
   full_name: string;
+  nickname?: string | null;
   class_id?: string | null;
   class_name?: string | null;
   date_of_birth?: string | null;
   gender?: string | null;
-  examination_date: string;
-  height: number;
-  weight: number;
+  examination_date?: string | null;
+  height?: number | null;
+  weight?: number | null;
   bmi?: number | null;
-  health_category: string;
-  health_category_label: string;
+  health_category?: string | null;
+  health_category_label?: string | null;
   general_conclusion?: string | null;
   created_by_name?: string | null;
+  has_record?: boolean;
 }
 
 export interface HealthExamRecordsResult {
@@ -506,6 +508,33 @@ export function importHealthExamFile(classId: string | null, file: File) {
     method: "POST",
     body: form,
     isFormData: true,
+    account: "schoolAdmin",
+  });
+}
+
+/** Sửa số liệu 1 dòng sổ sức khoẻ (chiều cao, cân nặng, kết luận chung). */
+export function updateHealthExamRecord(
+  id: string,
+  data: { height: number; weight: number; general_conclusion?: string | null },
+) {
+  return apiFetch<HealthExamRecord>(`/api/health-exam/records/${id}`, {
+    method: "PUT",
+    body: data,
+    account: "schoolAdmin",
+  });
+}
+
+/** Tạo mới bản ghi sức khoẻ cho bé chưa có số liệu. */
+export function createHealthExamRecord(data: {
+  child_id: string;
+  height: number;
+  weight: number;
+  general_conclusion?: string | null;
+  examination_date?: string | null;
+}) {
+  return apiFetch<HealthExamRecord>("/api/health-exam/records", {
+    method: "POST",
+    body: data,
     account: "schoolAdmin",
   });
 }

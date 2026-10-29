@@ -1,186 +1,190 @@
-"""
-app/schemas/leave_request_schema.py
-===================================
-Hỗ trợ tạo đơn cho 1 hoặc nhiều bé (áp dụng chung hoặc riêng lịch nghỉ).
-"""
+"""Hợp đồng chung cho API batch mới và giao diện phụ huynh một bé."""
 
 from __future__ import annotations
 
 import re
 import uuid
 from datetime import date, datetime, time
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.leave_request import LeaveStatus, LeaveType
+from app.config import get_today
 
-ALLOWED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".pdf")
+
+class ParentLeaveRequestCreate(BaseModel):
+    """Adapter đầu vào một bé; nghiệp vụ ghi dữ liệu dùng chung với batch."""
+    child_id: uuid.UUID
+    class_id: uuid.UUID | None = None
+    from_date: date
+    to_date: date
+    reason: str = Field(min_length=3, max_length=1000)
+    attachment_url: str | None = Field(default=None, max_length=500)
+    request_type: Literal["absence", "late_arrival"] = "absence"
+    expected_arrival_time: time | None = None
+    meal_warning_acknowledged: bool = False
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def trim_reason(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("from_date", "to_date", mode="before")
+    @classmethod
+    def validate_date_format(cls, value):
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return value
+        if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError("Ngày phải có định dạng YYYY-MM-DD")
+        return value
+
+    @field_validator("expected_arrival_time", mode="before")
+    @classmethod
+    def validate_time_format(cls, value):
+        if value is not None and (
+            not isinstance(value, str) or not re.fullmatch(r"\d{2}:\d{2}:\d{2}", value)
+        ):
+            raise ValueError("Giờ đến dự kiến phải có định dạng HH:mm:ss")
+        return value
+
+    @model_validator(mode="after")
+    def validate_range(self):
+        if not 0 <= (self.to_date - self.from_date).days < 366:
+            raise ValueError("Khoảng ngày không hợp lệ hoặc vượt quá 366 ngày")
+        if self.request_type == "late_arrival":
+            if self.from_date != self.to_date or self.expected_arrival_time is None:
+                raise ValueError("Báo trễ chỉ cho một ngày và phải có giờ đến dự kiến")
+        elif self.expected_arrival_time is not None:
+            raise ValueError("Đơn xin nghỉ không có giờ đến dự kiến")
+        return self
 
 
 class ChildScheduleInput(BaseModel):
-    """Lịch nghỉ của từng bé (được gán chung nếu bật nút gạt, hoặc riêng nếu tắt nút gạt)."""
-
-    child_id: uuid.UUID = Field(..., description="ID học sinh")
-    type: LeaveType = Field(default=LeaveType.SINGLE_DAY, description="single_day | multi_day | late")
-    from_date: date = Field(default_factory=date.today, description="Ngày bắt đầu (mặc định hôm nay)")
-    to_date: date | None = Field(None, description="Ngày kết thúc")
-    expected_arrival_time: time | None = Field(None, description="Giờ dự kiến đến (chỉ dùng khi type = late)")
+    child_id: uuid.UUID
+    type: LeaveType = LeaveType.SINGLE_DAY
+    from_date: date = Field(default_factory=get_today)
+    to_date: date | None = None
+    expected_arrival_time: time | None = None
 
     @model_validator(mode="after")
-    def validate_schedule(self) -> ChildScheduleInput:
-        today = date.today()
-        if self.from_date < today:
-            raise ValueError("Không thể gửi đơn xin phép cho ngày trong quá khứ.")
-
-        # Tự động gán to_date = from_date cho đơn 1 ngày và đi trễ
+    def validate_schedule(self):
         if self.type in (LeaveType.SINGLE_DAY, LeaveType.LATE):
+            if self.to_date is not None and self.to_date != self.from_date:
+                raise ValueError("Đơn một ngày hoặc đi trễ chỉ áp dụng một ngày")
             self.to_date = self.from_date
-
+        if self.to_date is None or not 0 <= (self.to_date - self.from_date).days < 366:
+            raise ValueError("Khoảng ngày không hợp lệ hoặc vượt quá 366 ngày")
+        if self.type == LeaveType.MULTI_DAY and self.from_date == self.to_date:
+            raise ValueError("Nghỉ nhiều ngày cần ngày kết thúc sau ngày bắt đầu")
         if self.type == LeaveType.LATE:
-            if self.expected_arrival_time is None:
-                raise ValueError("Vui lòng chọn thời gian dự kiến đến lớp khi báo đi trễ.")
-        else:
-            self.expected_arrival_time = None
-
-        if self.type == LeaveType.MULTI_DAY:
-            if self.to_date is None or self.to_date <= self.from_date:
-                raise ValueError("Đơn nghỉ nhiều ngày yêu cầu ngày kết thúc phải sau ngày bắt đầu.")
-
+            if self.expected_arrival_time is None or self.expected_arrival_time.tzinfo is not None:
+                raise ValueError("Báo trễ cần giờ đến dự kiến theo giờ Việt Nam")
+        elif self.expected_arrival_time is not None:
+            raise ValueError("Đơn xin nghỉ không có giờ đến dự kiến")
         return self
 
 
 class LeaveRequestCreate(BaseModel):
-    """Payload tạo đơn chính - Gom chung Lý do, SĐT và Ảnh."""
+    """Giữ API batch cho nhiều bé; thời gian thực được kiểm tra tại service."""
+    children: list[ChildScheduleInput] = Field(min_length=1, max_length=50)
+    reason: str = Field(min_length=3, max_length=1000)
+    attachment_url: str | None = Field(default=None, max_length=500)
+    contact_phone: str | None = Field(default=None, max_length=20)
+    meal_warning_acknowledged: bool = False
 
-    children: list[ChildScheduleInput] = Field(
-        ...,
-        min_length=1,
-        description="Danh sách bé kèm lịch nghỉ (chọn 1 bé hoặc nhiều bé)",
-    )
-    reason: str = Field(..., description="Lý do xin phép chung")
-    attachment_url: str | None = Field(None, description="URL ảnh minh chứng")
-    contact_phone: str | None = Field(
-        None,
-        description="SĐT 10 số. Nếu bỏ trống backend sẽ tự điền từ tài khoản phụ huynh.",
-    )
+    @field_validator("reason", mode="before")
+    @classmethod
+    def trim_reason(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
     @field_validator("children")
     @classmethod
-    def validate_unique_children(cls, v: list[ChildScheduleInput]) -> list[ChildScheduleInput]:
-        ids = [item.child_id for item in v]
-        if len(ids) != len(set(ids)):
-            raise ValueError("Danh sách học sinh có ID bị trùng lặp.")
-        return v
-
-    @field_validator("reason")
-    @classmethod
-    def validate_reason(cls, v: str) -> str:
-        cleaned = v.strip()
-        if len(cleaned) < 3:
-            raise ValueError("Lý do xin phép quá ngắn, vui lòng nhập tối thiểu 3 ký tự.")
-        if len(cleaned) > 500:
-            raise ValueError(f"Lý do xin phép dài {len(cleaned)} ký tự, vượt quá giới hạn 500 ký tự.")
-        return cleaned
-
-    @field_validator("attachment_url")
-    @classmethod
-    def validate_attachment(cls, v: str | None) -> str | None:
-        if v and v.strip():
-            url_clean = v.strip().lower().split("?")[0]
-            if not any(url_clean.endswith(ext) for ext in ALLOWED_EXTENSIONS):
-                raise ValueError("Tệp đính kèm không hợp lệ. Chỉ chấp nhận JPG, JPEG, PNG, WEBP, HEIC hoặc PDF.")
-            return v.strip()
-        return None
+    def unique_children(cls, value):
+        if len({item.child_id for item in value}) != len(value):
+            raise ValueError("Danh sách học sinh có ID bị trùng lặp")
+        return value
 
     @field_validator("contact_phone")
     @classmethod
-    def validate_phone(cls, v: str | None) -> str | None:
-        if v and v.strip():
-            phone = v.strip()
-            if not re.match(r"^0\d{9}$", phone):
-                raise ValueError("Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0.")
-            return phone
-        return None
+    def validate_phone(cls, value):
+        if value is None or not value.strip():
+            return None
+        if not re.fullmatch(r"0\d{9}", value.strip()):
+            raise ValueError("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0")
+        return value.strip()
+
+
+class LeaveRequestReject(BaseModel):
+    reason: str = Field(min_length=2, max_length=500,
+                        validation_alias=AliasChoices("reason", "reject_reason"))
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def trim_reason(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 
 class LeaveRequestResponse(BaseModel):
-    """Thông tin đơn của 1 bé sau khi tạo."""
-
+    """Superset cộng thêm: giữ cả tên trường API mới và client UI đã phát hành."""
+    model_config = ConfigDict(from_attributes=True)
+    request_id: uuid.UUID
     leave_id: uuid.UUID
     child_id: uuid.UUID
-    child_name: str
+    parent_id: uuid.UUID
     class_id: uuid.UUID
     type: LeaveType
+    request_type: Literal["absence", "late_arrival"]
     from_date: date
     to_date: date
-    expected_arrival_time: time | None = None
     reason: str
     attachment_url: str | None = None
-    contact_phone: str
+    expected_arrival_time: time | None = None
+    meal_warning_acknowledged: bool = False
+    submitted_after_cutoff: bool = False
+    contact_phone: str = ""
+    can_cancel: bool = False
+    cancel_before: datetime | None = None
+    cancel_block_reason: str | None = None
     status: LeaveStatus
-    submitted_after_cutoff: bool
-    warning_message: str | None = None
+    reject_reason: str | None = None
+    reviewed_by: uuid.UUID | None = None
+    reviewed_at: datetime | None = None
+    action_at: datetime | None = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    updated_at: datetime
+    child_name: str | None = None
+    child_avatar_url: str | None = None
+    parent_name: str | None = None
+    reviewer_name: str | None = None
+    approved_by_name: str | None = None
+    warning_message: str | None = None
 
 
 class LeaveBatchCreateResponse(BaseModel):
-    """Response trả về khi tạo xong cho 1 hoặc nhiều bé."""
-
     total_created: int
     requests: list[LeaveRequestResponse]
 
-class StudentLeaveHistoryItem(BaseModel):
-    """Thông tin chi tiết một đơn trong lịch sử của bé."""
 
-    leave_id: uuid.UUID
-    type: LeaveType
-    from_date: date
-    to_date: date
-    expected_arrival_time: time | None = None
-    reason: str
-    attachment_url: str | None = None
-    contact_phone: str
-    status: LeaveStatus
-    submitted_after_cutoff: bool
-    approved_by_name: str | None = None
-    reject_reason: str | None = None
-    action_at: datetime | None = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+StudentLeaveHistoryItem = LeaveRequestResponse
 
 
 class StudentLeaveHistoryResponse(BaseModel):
-    """Response trả về cho màn hình lịch sử đơn của bé."""
-
     child_id: uuid.UUID
     child_name: str
-    class_id: uuid.UUID
+    class_id: uuid.UUID | None
     class_name: str | None = None
     total_requests: int
     data: list[StudentLeaveHistoryItem]
 
 
-class LeaveRequestReject(BaseModel):
-    """Payload từ chối đơn."""
-    reason: str = Field(..., min_length=3, max_length=500, description="Lý do từ chối đơn")
-
-
-class LeaveRequestReviewResponse(BaseModel):
-    """Kết quả duyệt hoặc từ chối đơn từ giáo viên."""
+class LeaveRequestReviewResponse(LeaveRequestResponse):
     success: bool
     message: str
-    leave_id: uuid.UUID
-    status: LeaveStatus
     synced_attendance_count: int = 0
 
 
 class LeaveRequestCancelResponse(BaseModel):
-    """Kết quả huỷ đơn từ phụ huynh."""
     success: bool
     message: str
     leave_id: uuid.UUID
@@ -189,8 +193,17 @@ class LeaveRequestCancelResponse(BaseModel):
 
 
 class LeaveRequestBatchSummary(BaseModel):
-    """Tổng hợp danh sách đơn theo lớp cho giáo viên."""
     pending_count: int
     reviewed_count: int
-    items: list[StudentLeaveHistoryItem]
+    items: list[LeaveRequestResponse]
 
+
+class LeaveRequestPage(BaseModel):
+    items: list[LeaveRequestResponse]
+    total: int
+    offset: int
+    limit: int
+
+
+class LeaveRequestAttachmentResponse(BaseModel):
+    attachment_url: str

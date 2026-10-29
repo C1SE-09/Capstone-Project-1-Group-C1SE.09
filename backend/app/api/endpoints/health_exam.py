@@ -33,14 +33,18 @@ from app.schemas.health_exam_schema import (
     HealthExamImportRowIssue,
     HealthExamRecord,
     HealthExamRecordsResponse,
+    HealthExamCreate,
+    HealthExamUpdate,
 )
 from app.services.health_exam_import_service import (
     ALLOWED_EXAM_EXTENSIONS,
     CATEGORY_VI_LABEL,
     MAX_EXAM_FILE_SIZE_BYTES,
     HealthExamFileError,
+    calc_bmi,
     import_health_exam_file,
 )
+from app.services.who_growth import classify_bmi_who
 from app.services.health_exam_service import (
     generate_health_exam_template,
     generate_health_exam_templates_all,
@@ -73,11 +77,14 @@ def to_ascii_slug(text: str) -> str:
 @router.get(
     "/records",
     response_model=HealthExamRecordsResponse,
-    summary="Danh sách bản ghi sổ sức khoẻ",
+    summary="Danh sách học sinh kèm số liệu sức khoẻ",
     description=(
-        "Trả về các bản ghi đã ghi nhận trong sổ sức khoẻ (học sinh, lớp, ngày ghi nhận, "
-        "chiều cao, cân nặng, BMI, phân loại thể trạng, kết luận chung) kèm thống kê nhanh. "
-        "Có thể lọc theo class_id và ngày ghi nhận."
+        "Trả về TOÀN BỘ học sinh đang theo học kèm số liệu sức khoẻ gần nhất "
+        "(chiều cao, cân nặng, BMI, phân loại thể trạng, kết luận chung). "
+        "Bé chưa có số liệu vẫn xuất hiện trong danh sách (has_record = false) "
+        "để quản trị viên nhập số liệu ngay trên web. "
+        "Nếu truyền examination_date thì chỉ trả về những bé CÓ bản ghi "
+        "đúng ngày ghi nhận đó (bé không có bản ghi trong ngày sẽ không xuất hiện)."
     ),
 )
 def list_health_exam_records(
@@ -88,57 +95,305 @@ def list_health_exam_records(
 ) -> HealthExamRecordsResponse:
     verify_admin_access(current_user=current_user)
 
-    stmt = (
-        select(HealthExamination, Child, Class_)
-        .join(Child, HealthExamination.child_id == Child.child_id)
+    # Lấy toàn bộ học sinh đang theo học (kể cả bé chưa có số liệu sức khoẻ).
+    children_stmt = (
+        select(Child, Class_)
         .outerjoin(Class_, Child.class_id == Class_.class_id)
-        .options(joinedload(HealthExamination.created_by_user))
+        .where(Child.status == ChildStatus.ENROLLED)
     )
     if class_id is not None:
-        stmt = stmt.where(Child.class_id == class_id)
-    if examination_date is not None:
-        stmt = stmt.where(HealthExamination.examination_date == examination_date)
+        children_stmt = children_stmt.where(Child.class_id == class_id)
+    children_stmt = children_stmt.order_by(Class_.name.asc(), Child.full_name.asc())
+    children_rows = db.execute(children_stmt).all()
 
-    stmt = stmt.order_by(
-        HealthExamination.examination_date.desc(),
-        Child.full_name.asc(),
-    )
+    children = [child for child, _ in children_rows]
+    child_ids = [str(c.child_id) for c in children]
+
+    # Lấy bản ghi sức khoẻ của các bé trong danh sách.
+    exams_by_child: dict[str, HealthExamination] = {}
+    if child_ids:
+        exam_stmt = select(HealthExamination).where(
+            HealthExamination.child_id.in_(child_ids)
+        )
+        if examination_date is not None:
+            exam_stmt = exam_stmt.where(
+                HealthExamination.examination_date == examination_date
+            )
+        exam_stmt = exam_stmt.order_by(HealthExamination.examination_date.desc())
+        for exam in db.scalars(exam_stmt).all():
+            key = str(exam.child_id)
+            if key not in exams_by_child:
+                exams_by_child[key] = exam  # đã sort desc → bản ghi mới nhất
 
     records: list[HealthExamRecord] = []
     stats = {"normal": 0, "underweight": 0, "overweight": 0}
-    for exam, child, classroom in db.execute(stmt).all():
-        category = exam.health_category
-        category_key = category.value.lower() if hasattr(category, "value") else str(category).lower()
-        if category_key in stats:
-            stats[category_key] += 1
+    for child, classroom in children_rows:
+        exam = exams_by_child.get(str(child.child_id))
+        # Khi lọc theo ngày ghi nhận: chỉ hiện những bé CÓ bản ghi đúng ngày đó.
+        if examination_date is not None and exam is None:
+            continue
+        category_key: str | None = None
+        category_label: str | None = None
+        if exam is not None:
+            category = exam.health_category
+            category_key = (
+                category.value.lower() if hasattr(category, "value") else str(category).lower()
+            )
+            if category_key in stats:
+                stats[category_key] += 1
+            category_label = CATEGORY_VI_LABEL.get(category, "Bình thường")
 
         records.append(
             HealthExamRecord(
-                id=str(exam.examination_id),
+                id=str(exam.examination_id) if exam is not None else None,
                 child_id=str(child.child_id),
                 full_name=child.full_name,
+                nickname=child.nickname,
                 class_id=str(child.class_id) if child.class_id else None,
                 class_name=classroom.name if classroom else None,
                 date_of_birth=(
                     child.date_of_birth.strftime("%d/%m/%Y") if child.date_of_birth else None
                 ),
                 gender=child.gender,
-                examination_date=exam.examination_date.strftime("%d/%m/%Y"),
-                height=exam.height,
-                weight=exam.weight,
-                bmi=exam.bmi,
-                health_category=category_key.upper(),
-                health_category_label=CATEGORY_VI_LABEL.get(category, "Bình thường"),
-                general_conclusion=exam.general_conclusion,
+                examination_date=(
+                    exam.examination_date.strftime("%d/%m/%Y") if exam is not None else None
+                ),
+                height=exam.height if exam is not None else None,
+                weight=exam.weight if exam is not None else None,
+                bmi=exam.bmi if exam is not None else None,
+                health_category=category_key.upper() if category_key else None,
+                health_category_label=category_label,
+                general_conclusion=exam.general_conclusion if exam is not None else None,
                 created_by_name=(
                     exam.created_by_user.username
-                    if exam.created_by_user_id and exam.created_by_user
+                    if exam is not None
+                    and exam.created_by_user_id
+                    and exam.created_by_user
                     else None
                 ),
+                has_record=exam is not None,
             )
         )
 
     return HealthExamRecordsResponse(total=len(records), records=records, stats=stats)
+
+
+@router.post(
+    "/records",
+    status_code=status.HTTP_201_CREATED,
+    summary="Tạo mới bản ghi sức khoẻ cho học sinh",
+    description=(
+        "Ghi nhận số liệu sức khoẻ cho một học sinh chưa có bản ghi nào. "
+        "Hệ thống tự tính BMI và xếp loại thể trạng theo WHO."
+    ),
+)
+def create_health_exam_record(
+    payload: HealthExamCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HealthExamRecord:
+    verify_admin_access(current_user=current_user)
+
+    child = db.scalar(select(Child).where(Child.child_id == payload.child_id))
+    if child is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy học sinh.",
+        )
+
+    exam_date = payload.examination_date or date.today()
+    if exam_date > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ngày ghi nhận không thể là ngày trong tương lai.",
+        )
+    if child.date_of_birth and exam_date < child.date_of_birth:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ngày ghi nhận không được trước ngày sinh của học sinh.",
+        )
+
+    # Nếu đã có bản ghi đúng ngày này thì cập nhật luôn (upsert theo ngày).
+    existing = db.scalar(
+        select(HealthExamination).where(
+            HealthExamination.child_id == child.child_id,
+            HealthExamination.examination_date == exam_date,
+        )
+    )
+    if existing is None:
+        existing = HealthExamination(
+            child_id=child.child_id,
+            examination_date=exam_date,
+            created_by_user_id=current_user.user_id,
+        )
+        db.add(existing)
+
+    bmi = calc_bmi(payload.height, payload.weight)
+    existing.height = payload.height
+    existing.weight = payload.weight
+    existing.bmi = bmi
+    existing.health_category = classify_bmi_who(
+        bmi,
+        birth_date=child.date_of_birth,
+        exam_date=exam_date,
+        gender=child.gender,
+    )
+    existing.general_conclusion = (
+        payload.general_conclusion.strip() if payload.general_conclusion else None
+    )
+    db.commit()
+    db.refresh(existing)
+
+    classroom = (
+        db.scalar(select(Class_).where(Class_.class_id == child.class_id))
+        if child.class_id
+        else None
+    )
+    category = existing.health_category
+    category_key = category.value.lower() if hasattr(category, "value") else str(category).lower()
+    return HealthExamRecord(
+        id=str(existing.examination_id),
+        child_id=str(child.child_id),
+        full_name=child.full_name,
+        nickname=child.nickname,
+        class_id=str(child.class_id) if child.class_id else None,
+        class_name=classroom.name if classroom else None,
+        date_of_birth=(
+            child.date_of_birth.strftime("%d/%m/%Y") if child.date_of_birth else None
+        ),
+        gender=child.gender,
+        examination_date=existing.examination_date.strftime("%d/%m/%Y"),
+        height=existing.height,
+        weight=existing.weight,
+        bmi=existing.bmi,
+        health_category=category_key.upper(),
+        health_category_label=CATEGORY_VI_LABEL.get(category, "Bình thường"),
+        general_conclusion=existing.general_conclusion,
+        created_by_name=current_user.username,
+        has_record=True,
+    )
+
+
+@router.put(
+    "/records/{examination_id}",
+    summary="Sửa số liệu 1 bản ghi sổ sức khoẻ",
+    description=(
+        "Cập nhật chiều cao, cân nặng và kết luận chung của một bản ghi. "
+        "Hệ thống tự tính lại BMI và xếp loại thể trạng theo WHO."
+    ),
+)
+def update_health_exam_record(
+    examination_id: uuid.UUID,
+    payload: HealthExamUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HealthExamRecord:
+    verify_admin_access(current_user=current_user)
+
+    exam = db.scalar(
+        select(HealthExamination)
+        .options(joinedload(HealthExamination.created_by_user))
+        .where(HealthExamination.examination_id == examination_id)
+    )
+    if exam is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy bản ghi sức khoẻ cần sửa.",
+        )
+
+    child = db.scalar(select(Child).where(Child.child_id == exam.child_id))
+    if child is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy hồ sơ học sinh của bản ghi này.",
+        )
+
+    # Tính lại BMI + xếp loại thể trạng theo WHO (server luôn tự tính).
+    bmi = calc_bmi(payload.height, payload.weight)
+    exam.height = payload.height
+    exam.weight = payload.weight
+    exam.bmi = bmi
+    exam.health_category = classify_bmi_who(
+        bmi,
+        birth_date=child.date_of_birth,
+        exam_date=exam.examination_date,
+        gender=child.gender,
+    )
+    exam.general_conclusion = (
+        payload.general_conclusion.strip() if payload.general_conclusion else None
+    )
+    db.commit()
+    db.refresh(exam)
+
+    classroom = (
+        db.scalar(select(Class_).where(Class_.class_id == child.class_id))
+        if child.class_id
+        else None
+    )
+    category = exam.health_category
+    category_key = category.value.lower() if hasattr(category, "value") else str(category).lower()
+    return HealthExamRecord(
+        id=str(exam.examination_id),
+        child_id=str(child.child_id),
+        full_name=child.full_name,
+        nickname=child.nickname,
+        class_id=str(child.class_id) if child.class_id else None,
+        class_name=classroom.name if classroom else None,
+        date_of_birth=(
+            child.date_of_birth.strftime("%d/%m/%Y") if child.date_of_birth else None
+        ),
+        gender=child.gender,
+        examination_date=exam.examination_date.strftime("%d/%m/%Y"),
+        height=exam.height,
+        weight=exam.weight,
+        bmi=exam.bmi,
+        health_category=category_key.upper(),
+        health_category_label=CATEGORY_VI_LABEL.get(category, "Bình thường"),
+        general_conclusion=exam.general_conclusion,
+        created_by_name=(
+            exam.created_by_user.username
+            if exam.created_by_user_id and exam.created_by_user
+            else None
+        ),
+        has_record=True,
+    )
+
+
+def load_existing_exams(
+    db: Session,
+    children: list[Child],
+    default_date: Optional[date] = None,
+) -> dict[str, HealthExamination]:
+    """Lấy bản ghi sức khoẻ đã có của các học sinh để điền sẵn vào file mẫu.
+
+    Ưu tiên bản ghi đúng ngày `default_date` (nếu có), nếu không thì lấy bản ghi
+    mới nhất của mỗi bé. Trả về dict {child_id (str) -> HealthExamination}.
+    """
+    if not children:
+        return {}
+
+    child_ids = [str(c.child_id) for c in children]
+    records = db.scalars(
+        select(HealthExamination)
+        .where(HealthExamination.child_id.in_(child_ids))
+        .order_by(HealthExamination.examination_date.desc())
+    ).all()
+    if not records:
+        return {}
+
+    latest: dict[str, HealthExamination] = {}
+    for rec in records:
+        key = str(rec.child_id)
+        if key not in latest:
+            latest[key] = rec  # đã sort desc nên bản ghi đầu là bản ghi mới nhất
+    if default_date is not None:
+        exact = {
+            str(rec.child_id): rec
+            for rec in records
+            if rec.examination_date == default_date
+        }
+        latest.update(exact)
+    return latest
 
 
 @router.get(
@@ -146,7 +401,8 @@ def list_health_exam_records(
     summary="Tải file Excel mẫu sổ sức khoẻ",
     description=(
         "Xuất file Excel (.xlsx) mẫu sổ sức khoẻ điền sẵn danh sách học sinh "
-        "(Mã học sinh, Họ và tên, Ngày sinh, Giới tính). "
+        "(Họ và tên kèm biệt danh, Ngày sinh, Giới tính) và số liệu đã có sẵn "
+        "(Chiều cao, Cân nặng, Kết luận chung) nếu bé đã có bản ghi sức khoẻ. "
         "Bỏ trống class_id để tải tất cả lớp (mỗi lớp 1 sheet). "
         "File format cơ bản, không khóa — tự do sửa, xóa hoặc thêm dòng trước khi tải lên."
     ),
@@ -167,6 +423,7 @@ def get_health_exam_template(
             select(Class_).where(Class_.is_active.is_(True)).order_by(Class_.name.asc())
         ).all()
         payload: list[tuple[Class_, list]] = []
+        all_children: list[Child] = []
         for classroom in classrooms:
             children = db.scalars(
                 select(Child)
@@ -174,7 +431,11 @@ def get_health_exam_template(
                 .order_by(Child.full_name.asc())
             ).all()
             payload.append((classroom, list(children)))
-        content = generate_health_exam_templates_all(payload, default_date=examination_date)
+            all_children.extend(children)
+        existing_exams = load_existing_exams(db, all_children, examination_date)
+        content = generate_health_exam_templates_all(
+            payload, default_date=examination_date, existing_exams=existing_exams
+        )
         ascii_filename = f"Mau_So_Suc_Khoe_toan_truong_{date_str}.xlsx"
         utf8_filename = f"Mau_So_Suc_Khoe_toan_truong_{date_str}.xlsx"
         encoded_filename = urllib.parse.quote(utf8_filename)
@@ -205,6 +466,7 @@ def get_health_exam_template(
         classroom=classroom,
         children=list(children),
         default_date=examination_date,
+        existing_exams=load_existing_exams(db, list(children), examination_date),
     )
 
     date_str = (examination_date or date.today()).strftime("%Y%m%d")

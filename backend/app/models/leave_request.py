@@ -19,6 +19,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Text,
     Time,
 )
 from sqlalchemy import Enum as SAEnum
@@ -29,7 +30,7 @@ from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.child import Child, Parent
-    from app.models.user import Class_, Teacher
+    from app.models.user import Class_, User
 
 
 class LeaveType(str, enum.Enum):
@@ -57,6 +58,7 @@ class LeaveRequest(Base, TimestampMixin):
     __tablename__ = "leave_request"
 
     leave_id: Mapped[uuid.UUID] = mapped_column(
+        "request_id",
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
@@ -112,8 +114,12 @@ class LeaveRequest(Base, TimestampMixin):
         comment="Giờ dự kiến đến lớp (bắt buộc khi type = late)",
     )
 
+    meal_warning_acknowledged: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+    )
+
     reason: Mapped[str] = mapped_column(
-        String(500),
+        Text,
         nullable=False,
         comment="Lý do xin nghỉ hoặc đi trễ",
     )
@@ -140,7 +146,7 @@ class LeaveRequest(Base, TimestampMixin):
     status: Mapped[LeaveStatus] = mapped_column(
         SAEnum(
             LeaveStatus,
-            name="leave_status",
+            name="leave_request_status",
             native_enum=True,
             values_callable=lambda obj: [e.value for e in obj],
         ),
@@ -162,6 +168,7 @@ class LeaveRequest(Base, TimestampMixin):
     )
 
     action_at: Mapped[datetime | None] = mapped_column(
+        "reviewed_at",
         DateTime(timezone=True),
         nullable=True,
         comment="Thời điểm duyệt hoặc từ chối",
@@ -176,11 +183,8 @@ class LeaveRequest(Base, TimestampMixin):
     child: Mapped[Child] = relationship("Child", foreign_keys=[child_id], lazy="joined")
     parent: Mapped[Parent] = relationship("Parent", foreign_keys=[parent_id], lazy="select")
     class_: Mapped[Class_] = relationship("Class_", foreign_keys=[class_id], lazy="select")
-    reviewer: Mapped[Teacher | None] = relationship(
-        "Teacher",
-        primaryjoin="LeaveRequest.approved_by == foreign(Teacher.teacher_id)",
-        lazy="select",
-        viewonly=True,
+    reviewer: Mapped[User | None] = relationship(
+        "User", foreign_keys=[approved_by], lazy="joined",
     )
 
     __table_args__ = (

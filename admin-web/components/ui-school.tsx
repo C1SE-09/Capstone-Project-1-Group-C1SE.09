@@ -11,6 +11,43 @@ import {
   DetectedSheetInfo,
 } from "@/lib/excel-helper";
 
+/* ════════ Helpers cho DateInput (dd/mm/yyyy) ════════ */
+
+/** Hôm nay theo giờ địa phương → ISO "YYYY-MM-DD" (không dùng toISOString vì lệch UTC+7). */
+export function todayIsoStr(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/** ISO "YYYY-MM-DD" → "dd/mm/yyyy". */
+export function toDmy(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/**
+ * "ddmmyyyy" hoặc "dd/mm/yyyy" → ISO "YYYY-MM-DD".
+ * Trả về "" nếu ngày không tồn tại trong lịch (vd 31/02).
+ */
+export function parseDmyToIso(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length !== 8) return "";
+  const dd = digits.slice(0, 2);
+  const mm = digits.slice(2, 4);
+  const yyyy = digits.slice(4, 8);
+  const d = Number(dd);
+  const m = Number(mm);
+  const y = Number(yyyy);
+  if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900) return "";
+  // Kiểm tra ngày có thực sự tồn tại (vd 31/02, 30/02).
+  const probe = new Date(y, m - 1, d);
+  if (probe.getFullYear() !== y || probe.getMonth() !== m - 1 || probe.getDate() !== d) return "";
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 /* ════════ Spinner ════════ */
 export function Spinner({ className = "" }: { className?: string }) {
   return (
@@ -301,6 +338,80 @@ export function Toast({
         ✕
       </button>
     </div>
+  );
+}
+
+/* ════════ DateInput (dd/mm/yyyy — không phụ thuộc locale trình duyệt) ════════ */
+/**
+ * Input nhập ngày theo định dạng Việt Nam dd/mm/yyyy.
+ * `type="date"` hiển thị theo locale của trình duyệt (thường mm/dd/yyyy) và
+ * không đổi được bằng CSS/attribute → dùng text input có mask.
+ *
+ * - Giá trị nội bộ luôn là ISO "YYYY-MM-DD" (để gửi API).
+ * - onChange chỉ được gọi khi ngày hợp lệ & không phải ngày tương lai.
+ */
+export function DateInput({
+  value,
+  onChange,
+  max,
+  min,
+  placeholder = "dd/mm/yyyy",
+  className = "",
+  onInvalid,
+}: {
+  value: string; // ISO YYYY-MM-DD
+  onChange: (iso: string) => void;
+  max?: string; // ISO YYYY-MM-DD
+  min?: string; // ISO YYYY-MM-DD
+  placeholder?: string;
+  className?: string;
+  onInvalid?: (msg: string) => void;
+}) {
+  const [text, setText] = useState(value ? toDmy(value) : "");
+
+  useEffect(() => {
+    setText(value ? toDmy(value) : "");
+  }, [value]);
+
+  const commit = (raw: string) => {
+    const iso = parseDmyToIso(raw);
+    if (!iso) {
+      if (raw.trim() !== "") {
+        onInvalid?.("Ngày không hợp lệ, vui lòng nhập dd/mm/yyyy");
+      }
+      return;
+    }
+    if (max && iso > max) {
+      onInvalid?.(`Không thể chọn ngày sau ${toDmy(max)}`);
+      return;
+    }
+    if (min && iso < min) {
+      onInvalid?.(`Không thể chọn ngày trước ${toDmy(min)}`);
+      return;
+    }
+    onChange(iso);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+    setText(digits);
+    if (digits.length === 8) commit(digits);
+  };
+
+  const handleBlur = () => {
+    if (text.length === 8) commit(text);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={text}
+      placeholder={placeholder}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={`kinput ${className}`}
+    />
   );
 }
 

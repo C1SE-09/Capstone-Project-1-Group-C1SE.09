@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
+import 'package:dio/dio.dart';
+import 'parent_request_repository_test.dart'
+    show RequestTransport, jsonBody, requestJson;
 
 class MockLeaveRequestRepository extends HttpLeaveRequestRepository {
   List<LeaveRequestEntity> pendingList = [
@@ -29,6 +32,8 @@ class MockLeaveRequestRepository extends HttpLeaveRequestRepository {
   Future<LeaveRequestBatchResult> getLeaveRequests({
     required String classId,
     required String tab,
+    int offset = 0,
+    int limit = 50,
   }) async {
     if (tab == 'pending') {
       return LeaveRequestBatchResult(
@@ -97,7 +102,64 @@ class MockLeaveRequestRepository extends HttpLeaveRequestRepository {
 }
 
 void main() {
-  testWidgets('LeaveRequestReviewScreen renders tabs and cards correctly', (tester) async {
+  testWidgets('giáo viên tải tiếp được đơn đã xử lý thứ 51', (tester) async {
+    var failNextPage = true;
+    final transport = RequestTransport((options) {
+      final tab = options.queryParameters['tab'];
+      final offset = options.queryParameters['offset'] as int? ?? 0;
+      if (tab == 'reviewed' && offset == 50 && failNextPage) {
+        failNextPage = false;
+        return jsonBody({'detail': 'Tạm thời gián đoạn'}, 503);
+      }
+      return jsonBody({
+        'pending_count': 0,
+        'reviewed_count': 51,
+        'items': tab != 'reviewed'
+            ? []
+            : [
+                for (var index = offset;
+                    index < (offset == 0 ? 50 : 51);
+                    index++)
+                  {
+                    ...requestJson(status: 'approved'),
+                    'request_id': 'request-$index',
+                    'child_name': 'Bé thứ ${index + 1}'
+                  },
+              ]
+      });
+    });
+    final repository = HttpLeaveRequestRepository(
+        dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
+          ..httpClientAdapter = transport);
+    await tester.pumpWidget(MaterialApp(
+        home: LeaveRequestReviewScreen(
+            classId: 'class-1', repository: repository)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đã xử lý'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -25000));
+    await tester.pumpAndSettle();
+    expect(find.text('Tải thêm'), findsOneWidget);
+    await tester.tap(find.text('Tải thêm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bé thứ 50'), findsOneWidget);
+    expect(find.text('Thử lại tải thêm'), findsOneWidget);
+    await tester.ensureVisible(find.text('Thử lại tải thêm'));
+    await tester.tap(find.text('Thử lại tải thêm'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -25000));
+    await tester.pumpAndSettle();
+    expect(find.text('Bé thứ 51'), findsOneWidget);
+    expect(
+        transport.requests
+            .where((request) => request.queryParameters['tab'] == 'reviewed')
+            .map((request) => request.queryParameters['offset']),
+        [0, 50, 50]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('LeaveRequestReviewScreen renders tabs and cards correctly',
+      (tester) async {
     final mockRepo = MockLeaveRequestRepository();
 
     await tester.pumpWidget(
@@ -113,9 +175,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Kiểm tra UI hiển thị
-    expect(find.text('Duyệt đơn nghỉ • Lớp Mầm 1'), findsOneWidget);
+    expect(find.text('Duyệt đơn xin nghỉ'), findsOneWidget);
+    expect(find.text('Lớp Mầm 1'), findsOneWidget);
     expect(find.text('Chờ duyệt'), findsOneWidget);
-    expect(find.text('Đã duyệt'), findsOneWidget);
+    expect(find.text('Đã xử lý'), findsOneWidget);
     expect(find.text('Nguyễn Minh An'), findsOneWidget);
     expect(find.text('Duyệt đơn'), findsOneWidget);
     expect(find.text('Từ chối'), findsOneWidget);
@@ -143,7 +206,8 @@ void main() {
     expect(find.text('Không có đơn nào đang chờ duyệt'), findsOneWidget);
   });
 
-  testWidgets('Reject action opens dialog with mandatory reason validation', (tester) async {
+  testWidgets('Reject action opens dialog with mandatory reason validation',
+      (tester) async {
     final mockRepo = MockLeaveRequestRepository();
 
     await tester.pumpWidget(
@@ -162,20 +226,22 @@ void main() {
     await tester.pumpAndSettle();
 
     // Kiểm tra Dialog hiển thị
-    expect(find.text('Từ chối đơn xin nghỉ'), findsOneWidget);
-    final confirmButtonFinder = find.widgetWithText(ElevatedButton, 'Xác nhận từ chối');
+    expect(find.text('Từ chối đơn'), findsOneWidget);
+    final confirmButtonFinder =
+        find.widgetWithText(FilledButton, 'Gửi từ chối');
     expect(confirmButtonFinder, findsOneWidget);
 
     // Khi ô nhập đang trống, nút không được kích hoạt (onPressed là null)
-    final initialButton = tester.widget<ElevatedButton>(confirmButtonFinder);
+    final initialButton = tester.widget<FilledButton>(confirmButtonFinder);
     expect(initialButton.onPressed, isNull);
 
     // Nhập lý do từ chối
-    await tester.enterText(find.byType(TextField), 'Trùng lịch thi bé cần có mặt');
+    await tester.enterText(
+        find.byType(TextField), 'Trùng lịch thi bé cần có mặt');
     await tester.pumpAndSettle();
 
     // Nút đã sẵn sàng
-    final enabledButton = tester.widget<ElevatedButton>(confirmButtonFinder);
+    final enabledButton = tester.widget<FilledButton>(confirmButtonFinder);
     expect(enabledButton.onPressed, isNotNull);
 
     // Xác nhận từ chối

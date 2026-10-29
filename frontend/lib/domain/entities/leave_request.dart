@@ -6,7 +6,10 @@ enum LeaveStatus {
   pending,
   approved,
   rejected,
+  cancelled,
 }
+
+enum LeaveRequestType { absence, lateArrival }
 
 class LeaveRequestEntity {
   const LeaveRequestEntity({
@@ -27,6 +30,13 @@ class LeaveRequestEntity {
     this.childAvatarUrl,
     this.parentName,
     this.reviewerName,
+    this.requestType = LeaveRequestType.absence,
+    this.expectedArrivalTime,
+    this.mealWarningAcknowledged = false,
+    this.contactPhone = '',
+    this.canCancel = false,
+    this.cancelBefore,
+    this.cancelBlockReason,
   });
 
   final String requestId;
@@ -46,6 +56,13 @@ class LeaveRequestEntity {
   final String? childAvatarUrl;
   final String? parentName;
   final String? reviewerName;
+  final LeaveRequestType requestType;
+  final String? expectedArrivalTime;
+  final bool mealWarningAcknowledged;
+  final String contactPhone;
+  final bool canCancel;
+  final DateTime? cancelBefore;
+  final String? cancelBlockReason;
 
   int get totalDays {
     final diff = toDate.difference(fromDate).inDays;
@@ -59,6 +76,8 @@ class LeaveRequestEntity {
           return LeaveStatus.approved;
         case 'rejected':
           return LeaveStatus.rejected;
+        case 'cancelled':
+          return LeaveStatus.cancelled;
         case 'pending':
         default:
           return LeaveStatus.pending;
@@ -66,23 +85,40 @@ class LeaveRequestEntity {
     }
 
     return LeaveRequestEntity(
-      requestId: json['request_id'] as String? ?? '',
+      requestId:
+          json['request_id'] as String? ?? json['leave_id'] as String? ?? '',
       childId: json['child_id'] as String? ?? '',
       parentId: json['parent_id'] as String? ?? '',
       classId: json['class_id'] as String? ?? '',
-      fromDate: DateTime.tryParse(json['from_date'] as String? ?? '') ?? DateTime.now(),
-      toDate: DateTime.tryParse(json['to_date'] as String? ?? '') ?? DateTime.now(),
+      fromDate: DateTime.tryParse(json['from_date'] as String? ?? '') ??
+          DateTime.now(),
+      toDate:
+          DateTime.tryParse(json['to_date'] as String? ?? '') ?? DateTime.now(),
       reason: json['reason'] as String? ?? '',
       status: parseStatus(json['status'] as String?),
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
       attachmentUrl: json['attachment_url'] as String?,
       rejectReason: json['reject_reason'] as String?,
       reviewedBy: json['reviewed_by'] as String?,
-      reviewedAt: json['reviewed_at'] != null ? DateTime.tryParse(json['reviewed_at'] as String) : null,
+      reviewedAt: DateTime.tryParse(
+          (json['reviewed_at'] ?? json['action_at']) as String? ?? ''),
       childName: json['child_name'] as String?,
       childAvatarUrl: json['child_avatar_url'] as String?,
       parentName: json['parent_name'] as String?,
-      reviewerName: json['reviewer_name'] as String?,
+      reviewerName: json['reviewer_name'] as String? ??
+          json['approved_by_name'] as String?,
+      requestType:
+          json['request_type'] == 'late_arrival' || json['type'] == 'late'
+              ? LeaveRequestType.lateArrival
+              : LeaveRequestType.absence,
+      expectedArrivalTime: json['expected_arrival_time'] as String?,
+      mealWarningAcknowledged:
+          json['meal_warning_acknowledged'] as bool? ?? false,
+      contactPhone: json['contact_phone'] as String? ?? '',
+      canCancel: json['can_cancel'] == true,
+      cancelBefore: DateTime.tryParse(json['cancel_before'] as String? ?? ''),
+      cancelBlockReason: json['cancel_block_reason'] as String?,
     );
   }
 }

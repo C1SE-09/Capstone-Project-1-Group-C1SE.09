@@ -1,490 +1,382 @@
-// frontend/lib/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart
-// =================================================================================
-// Bottom sheet / Dialog cho Giáo viên phát cảnh báo khẩn cấp 1 chạm tại lớp (Task #285 / Story #74).
-// - Zero typing: chọn bé và loại sự cố là phát cảnh báo ngay.
-// - Trả về danh bạ Bố/Mẹ để cô giáo bấm gọi trực tiếp qua SIM.
-
-import 'package:dio/dio.dart';
+// M8–M9: biên bản từ server không chứng minh phụ huynh đã nhận FCM.
+import 'package:adark_frontend/core/utils/phone_utils.dart';
+import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
+import '../models.dart';
+import '../screens/parent_medication_widgets.dart';
+import '../screens/parent_requests_widgets.dart';
+import '../theme.dart';
 
 class TeacherEmergencySheet extends StatefulWidget {
-  const TeacherEmergencySheet({
-    super.key,
-    required this.children,
-    this.initialChildId,
-    this.repository,
-  });
-
+  const TeacherEmergencySheet(
+      {super.key,
+      required this.children,
+      this.initialChildId,
+      this.repository});
   final List<Child> children;
   final String? initialChildId;
   final HttpMedicationRepository? repository;
-
-  static Future<void> show(
-    BuildContext context, {
-    required List<Child> children,
-    String? initialChildId,
-    HttpMedicationRepository? repository,
-  }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => TeacherEmergencySheet(
-        children: children,
-        initialChildId: initialChildId,
-        repository: repository,
-      ),
-    );
-  }
-
+  static Future<void> show(BuildContext context,
+          {required List<Child> children,
+          String? initialChildId,
+          HttpMedicationRepository? repository}) =>
+      showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          useSafeArea: true,
+          constraints: const BoxConstraints(maxWidth: 480),
+          builder: (_) => TeacherEmergencySheet(
+              children: children,
+              initialChildId: initialChildId,
+              repository: repository));
   @override
   State<TeacherEmergencySheet> createState() => _TeacherEmergencySheetState();
 }
 
 class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
-  late final HttpMedicationRepository _repository =
+  late HttpMedicationRepository _repo =
       widget.repository ?? HttpMedicationRepository();
-
-  String? _selectedChildId;
-  String _selectedIncidentType = 'high_fever';
-  final TextEditingController _tempController = TextEditingController();
-  final TextEditingController _noteController = TextEditingController();
-
-  bool _isSubmitting = false;
-  List<Map<String, dynamic>>? _emergencyContacts;
-  String? _successChildName;
-
-  final Map<String, String> _incidentLabels = {
-    'high_fever': 'Sốt cao co giật',
+  final _temperature = TextEditingController(),
+      _notes = TextEditingController();
+  String? _childId, _error, _contactsError;
+  String _type = 'high_fever';
+  bool _busy = false, _loadingContacts = false;
+  int _version = 0;
+  Map<String, dynamic>? _result;
+  List<Map<String, dynamic>> _contacts = [];
+  static const _types = {
+    'high_fever': 'Sốt cao',
     'severe_injury': 'Tai nạn / Té ngã',
     'acute_allergy': 'Dị ứng cấp tính',
-    'other': 'Sự cố sức khỏe khác',
+    'other': 'Khác'
   };
-
   @override
   void initState() {
     super.initState();
-    if (widget.initialChildId != null &&
-        widget.children.any((c) => c.id == widget.initialChildId)) {
-      _selectedChildId = widget.initialChildId;
-    } else if (widget.children.isNotEmpty) {
-      _selectedChildId = widget.children.first.id;
+    if (widget.children.any((c) => c.id == widget.initialChildId)) {
+      _childId = widget.initialChildId;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TeacherEmergencySheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.repository != widget.repository ||
+        !widget.children.any((c) => c.id == _childId)) {
+      _version++;
+      _repo = widget.repository ?? HttpMedicationRepository();
+      _busy = false;
+      _result = null;
+      _childId = null;
+      _contacts = [];
     }
   }
 
   @override
   void dispose() {
-    _tempController.dispose();
-    _noteController.dispose();
+    _temperature.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
-  Future<void> _submitEmergency() async {
-    if (_selectedChildId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn học sinh gặp sự cố.')),
-      );
+  Future<void> _submit() async {
+    if (_busy || _result != null) return;
+    final id = _childId, version = _version;
+    if (id == null || !widget.children.any((c) => c.id == id)) {
+      setState(() => _error = 'Vui lòng chọn học sinh gặp sự cố.');
       return;
     }
-
-    final tempRaw = _tempController.text.trim().replaceAll(',', '.');
-    final tempVal = tempRaw.isNotEmpty ? double.tryParse(tempRaw) : null;
-    if (tempVal != null && (tempVal < 34.0 || tempVal > 44.0)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nhiệt độ cơ thể không hợp lệ (từ 34°C đến 44°C).'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+    final raw = _temperature.text.trim().replaceAll(',', '.');
+    final temperature = raw.isEmpty ? null : double.tryParse(raw);
+    if (raw.isNotEmpty &&
+        (temperature == null ||
+            !temperature.isFinite ||
+            temperature < 34 ||
+            temperature > 44)) {
+      setState(() => _error = 'Nhiệt độ phải là số từ 34°C đến 44°C.');
       return;
     }
-
-    setState(() => _isSubmitting = true);
-
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    FocusScope.of(context).unfocus();
     try {
-      final res = await _repository.createHealthIncident(
-        childId: _selectedChildId!,
-        incidentType: _selectedIncidentType,
-        description: _noteController.text.trim().isNotEmpty
-            ? _noteController.text.trim()
-            : null,
-        temperature: tempVal,
-      );
-
-      final child = widget.children.cast<Child?>().firstWhere(
-        (c) => c?.id == _selectedChildId,
-        orElse: () => null,
-      );
-
-      final contactsRaw = res['emergency_contacts'];
-      final contacts = contactsRaw is List
-          ? contactsRaw.cast<Map<String, dynamic>>()
-          : <Map<String, dynamic>>[];
-
+      final result = await _repo.createHealthIncident(
+          childId: id,
+          incidentType: _type,
+          description: _notes.text.trim(),
+          temperature: temperature);
+      if (!mounted || version != _version) return;
       setState(() {
-        _isSubmitting = false;
-        _emergencyContacts = contacts;
-        _successChildName = child?.name ?? 'Bé';
-      });
-    } catch (e) {
-      setState(() => _isSubmitting = false);
-      if (mounted) {
-        String errorMsg = 'Gửi cảnh báo thất bại';
-        if (e is DioException) {
-          final data = e.response?.data;
-          if (data is Map && data['detail'] != null) {
-            final detail = data['detail'];
-            if (detail is String) {
-              errorMsg = detail;
-            } else if (detail is List && detail.isNotEmpty) {
-              final firstErr = detail.first;
-              errorMsg = firstErr is Map && firstErr['msg'] != null
-                  ? firstErr['msg'].toString()
-                  : detail.toString();
-            }
-          } else {
-            errorMsg = e.message ?? 'Lỗi kết nối máy chủ';
-          }
+        _result = result;
+        final contacts = result['emergency_contacts'];
+        if (contacts is List &&
+            contacts.every((row) =>
+                row is Map<String, dynamic> && row['phone'] is String)) {
+          _contacts = contacts.cast<Map<String, dynamic>>();
         } else {
-          errorMsg = e.toString();
+          _contactsError =
+              'Đã lưu sự cố nhưng danh bạ chưa hợp lệ. Hãy tải lại danh bạ, không gửi lại biên bản.';
         }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+      });
+    } catch (error) {
+      if (mounted && version == _version) {
+        setState(() => _error = medicationError(error));
+      }
+    } finally {
+      if (mounted && version == _version) {
+        setState(() => _busy = false);
       }
     }
   }
 
-  Future<void> _callPhone(String phone) async {
-    final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '');
-    final uri = Uri(scheme: 'tel', path: cleanPhone);
+  Future<void> _reloadContacts() async {
+    if (_loadingContacts || _result == null) return;
+    final id = _result!['child_id'] as String, version = _version;
+    setState(() {
+      _loadingContacts = true;
+    });
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final contacts = await _repo.getEmergencyContacts(id);
+      if (!mounted || version != _version) return;
+      setState(() {
+        _contacts = contacts;
+        _contactsError = null;
+      });
+    } catch (error) {
+      if (mounted && version == _version) {
+        setState(() => _contactsError = medicationError(error));
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể tự động gọi tới $cleanPhone')),
-        );
+    } finally {
+      if (mounted && version == _version) {
+        setState(() => _loadingContacts = false);
       }
+    }
+  }
+
+  Future<void> _call(String phone) async {
+    final uri = phoneCallUri(phone);
+    if (uri == null) return;
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {/* Danh bạ vẫn hiển thị để liên hệ qua cách khác. */}
+    if (mounted) {
+      setState(() => _contactsError =
+          'Không mở được ứng dụng gọi điện. Vui lòng dùng số trong danh bạ để liên hệ trực tiếp.');
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        20,
-        16,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: _emergencyContacts != null ? _buildSuccessView() : _buildFormView(),
-    );
-  }
+  Widget build(BuildContext context) => Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxWidth: 480, minHeight: MediaQuery.sizeOf(context).height),
+          child: Material(
+              color: context.k.canvas,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              clipBehavior: Clip.antiAlias,
+              child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(20, 20, 20,
+                          MediaQuery.viewInsetsOf(context).bottom + 20),
+                      child: _result == null ? _form() : _success())))));
 
-  Widget _buildFormView() {
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBE6),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Color(0xFFD32F2F),
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
+  Widget _form() => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              Expanded(
+                  child: Text('Báo cáo sự cố khẩn cấp',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: context.k.bad))),
+              IconButton(
+                  tooltip: 'Đóng',
+                  onPressed: () => Navigator.maybePop(context),
+                  icon: const Icon(Icons.close))
+            ]),
+            const SizedBox(height: 13),
+            MedicationCard(
                 child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                  const Text('Chọn bé gặp sự cố',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  DropdownButton<String>(
+                      value: _childId,
+                      isExpanded: true,
+                      hint: const Text('Chọn học sinh...'),
+                      items: widget.children
+                          .map((child) => DropdownMenuItem(
+                              value: child.id, child: Text(child.name)))
+                          .toList(),
+                      onChanged:
+                          _busy ? null : (id) => setState(() => _childId = id)),
+                  const SizedBox(height: 9),
+                  const Text('Loại sự cố',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  Wrap(spacing: 7, runSpacing: 6, children: [
+                    for (final type in _types.entries)
+                      ChoiceChip(
+                          label: Text(type.value,
+                              style: const TextStyle(fontSize: 11)),
+                          selected: _type == type.key,
+                          showCheckmark: false,
+                          selectedColor: context.k.bad,
+                          backgroundColor: context.k.surfaceSunken,
+                          labelStyle: TextStyle(
+                              color: _type == type.key
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : context.k.ink),
+                          onSelected: _busy
+                              ? null
+                              : (_) => setState(() => _type = type.key))
+                  ]),
+                ])),
+            const SizedBox(height: 13),
+            TextField(
+                controller: _temperature,
+                enabled: !_busy,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                    labelText: 'Nhiệt độ (không bắt buộc)',
+                    suffixText: '°C',
+                    border: OutlineInputBorder())),
+            const SizedBox(height: 13),
+            TextField(
+                controller: _notes,
+                enabled: !_busy,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                    labelText: 'Mô tả / biện pháp đã thực hiện (tùy chọn)',
+                    border: OutlineInputBorder())),
+            const SizedBox(height: 13),
+            Text(
+                'Lưu biên bản và yêu cầu hệ thống gửi cảnh báo. Không cần nhập mô tả để gửi; hãy gọi trực tiếp gia đình khi cần.',
+                style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
+            if (_error != null) ...[
+              const SizedBox(height: 13),
+              Semantics(
+                  liveRegion: true,
+                  child: Text(_error!, style: TextStyle(color: context.k.bad)))
+            ],
+            const SizedBox(height: 13),
+            MedicationAction(
+                label: 'Phát cảnh báo khẩn cấp',
+                danger: true,
+                busy: _busy,
+                onPressed: _submit),
+          ]);
+  Widget _success() {
+    final result = _result!;
+    final stamp = DateTime.tryParse(result['reported_at']?.toString() ?? '');
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                  color: context.k.badTint,
+                  borderRadius: BorderRadius.circular(18)),
+              child: Column(children: [
+                Text('Đã ghi nhận sự cố khẩn cấp',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: context.k.bad)),
+                const SizedBox(height: 5),
+                Text(
+                    '${result['child_name']} · ${result['incident_type_label'] ?? _types[result['incident_type']] ?? 'Sự cố sức khỏe'}'
+                    '${result['temperature'] == null ? '' : ' ${result['temperature']}°C'}${stamp == null ? '' : ' · ${requestTimestamp(stamp)}'}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12.5)),
+                const SizedBox(height: 5),
+                Text(
+                    'Chưa có xác nhận giao thông báo. Vui lòng liên hệ trực tiếp.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
+              ])),
+          const SizedBox(height: 13),
+          const Text('Liên hệ trực tiếp với gia đình',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+          if (_contacts.isEmpty && _contactsError == null) ...[
+            const SizedBox(height: 13),
+            const Text('Chưa cập nhật số điện thoại phụ huynh của bé này.')
+          ],
+          if (_contactsError != null) ...[
+            const SizedBox(height: 13),
+            Semantics(
+                liveRegion: true,
+                child: Text(_contactsError!,
+                    style: TextStyle(color: context.k.bad)))
+          ],
+          for (final contact in _contacts) ...[
+            const SizedBox(height: 13),
+            MedicationCard(
+                child: LayoutBuilder(builder: (context, constraints) {
+              final phone = contact['phone'] as String? ?? '';
+              final info = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Báo Động Sự Cố Khẩn Cấp',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFD32F2F),
-                      ),
-                    ),
+                        '${contact['relationship'] ?? 'Phụ huynh'} · ${contact['name'] ?? 'Chưa rõ tên'}',
+                        style: const TextStyle(
+                            fontSize: 13.5, fontWeight: FontWeight.w700)),
                     Text(
-                      'Phát tín hiệu chuông còi hú ngay tới máy phụ huynh',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-
-          // 1. Chọn bé gặp sự cố
-          const Text(
-            'Học sinh gặp sự cố:',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedChildId,
-                isExpanded: true,
-                hint: const Text('Chọn học sinh...'),
-                items: widget.children.map((c) {
-                  return DropdownMenuItem<String>(
-                    value: c.id,
-                    child: Text(
-                      c.name,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedChildId = val),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // 2. Chọn loại sự cố (1-chạm)
-          const Text(
-            'Loại sự cố khẩn cấp (1-chạm):',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _incidentLabels.entries.map((entry) {
-              final isSelected = _selectedIncidentType == entry.key;
-              return ChoiceChip(
-                label: Text(entry.value),
-                selected: isSelected,
-                selectedColor: const Color(0xFFFF4D4F),
-                backgroundColor: const Color(0xFFF5F5F5),
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black87,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-                onSelected: (_) =>
-                    setState(() => _selectedIncidentType = entry.key),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // 3. Nhiệt độ (nếu có, không bắt buộc)
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _tempController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'Nhiệt độ (nếu sốt)',
-                    hintText: 'Vd: 39.5',
-                    suffixText: '°C',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // 4. Ghi chú nhanh (tùy chọn)
-          TextField(
-            controller: _noteController,
-            maxLines: 2,
-            decoration: InputDecoration(
-              labelText: 'Ghi chú / Biện pháp sơ cứu (tùy chọn)',
-              hintText: 'Vd: Đã chườm ấm trán, bé đang nằm nghỉ...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              contentPadding: const EdgeInsets.all(12),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // 5. Nút bấm phát cảnh báo
-          ElevatedButton.icon(
-            onPressed: _isSubmitting ? null : _submitEmergency,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD32F2F),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            icon: _isSubmitting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.notifications_active, size: 22),
-            label: Text(
-              _isSubmitting
-                  ? 'ĐANG GỬI CẢNH BÁO...'
-                  : '🚨 PHÁT CẢNH BÁO KHẨN CẤP',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuccessView() {
-    final contacts = _emergencyContacts ?? [];
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 10),
-        const Icon(Icons.check_circle_outline, color: Colors.green, size: 54),
-        const SizedBox(height: 8),
-        Text(
-          'Đã Phát Cảnh Báo Khẩn Cấp!',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Còi báo động đã được gửi tới thiết bị phụ huynh của ${_successChildName ?? "bé"}.',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.black54, fontSize: 13),
-        ),
-        const SizedBox(height: 20),
-
-        const Text(
-          'Danh bạ khẩn cấp gọi trực tiếp bố/mẹ:',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-
-        if (contacts.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              'Chưa cập nhật số điện thoại phụ huynh của bé này.',
-              style: TextStyle(color: Colors.grey),
-            ),
-          )
-        else
-          for (final contact in contacts)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6FFED),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFB7EB8F)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.green.shade100,
-                    child: const Icon(Icons.person, color: Colors.green),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${contact["relationship"] ?? "Phụ huynh"}: ${contact["name"] ?? "Bố/Mẹ"}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          contact["phone"] ?? "",
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => _callPhone(contact["phone"] ?? ""),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    icon: const Icon(Icons.phone, size: 18),
-                    label: const Text('Gọi ngay'),
-                  ),
-                ],
-              ),
-            ),
-
-        const SizedBox(height: 16),
-        OutlinedButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Đóng'),
-        ),
-      ],
-    );
+                        phoneCallUri(phone) == null
+                            ? 'Chưa có số điện thoại hợp lệ'
+                            : phone,
+                        style:
+                            TextStyle(fontSize: 12, color: context.k.inkSoft)),
+                  ]);
+              final button = FilledButton(
+                  onPressed:
+                      phoneCallUri(phone) == null ? null : () => _call(phone),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: context.k.brand,
+                      minimumSize: const Size(0, 48),
+                      shape: const StadiumBorder()),
+                  child: const Text('Gọi ngay'));
+              return constraints.maxWidth < 300 ||
+                      MediaQuery.textScalerOf(context).scale(1) > 1.3
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [info, const SizedBox(height: 9), button])
+                  : Row(children: [
+                      Expanded(child: info),
+                      const SizedBox(width: 10),
+                      button
+                    ]);
+            }))
+          ],
+          TextButton(
+              onPressed: _loadingContacts ? null : _reloadContacts,
+              child: Text(_loadingContacts
+                  ? 'Đang tải danh bạ...'
+                  : 'Tải lại danh bạ')),
+          const SizedBox(height: 13),
+          MedicationCard(
+              child: Text(
+                  '${result['reported_by_name'] ?? 'Chưa rõ người báo cáo'}'
+                  '${stamp == null ? '' : ' · ${requestTimestamp(stamp)}'}\n${result['description'] ?? ''}',
+                  style: const TextStyle(fontSize: 12.5))),
+          const SizedBox(height: 13),
+          MedicationAction(
+              label: 'Hoàn tất', onPressed: () => Navigator.maybePop(context)),
+        ]);
   }
 }

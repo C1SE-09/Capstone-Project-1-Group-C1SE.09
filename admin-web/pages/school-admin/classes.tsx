@@ -35,6 +35,7 @@ import {
 interface ClassFormState {
   name: string;
   grade_label: string;
+  grade_custom: boolean;
   room_number: string;
   capacity: string;
 }
@@ -42,11 +43,13 @@ interface ClassFormState {
 const EMPTY_FORM: ClassFormState = {
   name: "",
   grade_label: "",
+  grade_custom: false,
   room_number: "",
   capacity: "",
 };
 
-const GRADE_OPTIONS = ["Nhà trẻ", "Mầm", "Chồi", "Lá", "Mẫu giáo", "Khác"];
+const GRADE_OPTIONS = ["Nhà trẻ", "Mầm", "Chồi", "Lá", "Mẫu giáo"];
+const GRADE_OTHER = "Khác";
 
 export default function SchoolAdminClassesPage() {
   const [ready, setReady] = useState(false);
@@ -94,6 +97,18 @@ export default function SchoolAdminClassesPage() {
     );
   }, [classes, query]);
 
+  /** Danh sách phòng đã có ở lớp khác (trừ lớp đang sửa) — để user tránh nhập trùng. */
+  const usedRooms = useMemo(() => {
+    const list = classes ?? [];
+    return Array.from(
+      new Set(
+        list
+          .filter((c) => c.id !== editing?.id && (c.room_number || "").trim())
+          .map((c) => (c.room_number || "").trim())
+      )
+    ).sort();
+  }, [classes, editing]);
+
   function handleExportExcel() {
     if (!filtered || filtered.length === 0) {
       setToast({ msg: "Không có dữ liệu lớp để xuất", tone: "warn" });
@@ -119,9 +134,11 @@ export default function SchoolAdminClassesPage() {
 
   function openEdit(c: SchoolClass) {
     setEditing(c);
+    const gl = c.grade_label || "";
     setForm({
       name: c.name,
-      grade_label: c.grade_label || "",
+      grade_label: gl,
+      grade_custom: !!gl && !GRADE_OPTIONS.includes(gl),
       room_number: c.room_number || "",
       capacity: c.capacity != null ? String(c.capacity) : "",
     });
@@ -155,6 +172,16 @@ export default function SchoolAdminClassesPage() {
       capacity = Number(form.capacity.trim());
       if (!Number.isInteger(capacity) || capacity <= 0) {
         setToast({ msg: "Sĩ số tối đa phải là số nguyên dương", tone: "bad" });
+        return null;
+      }
+    }
+    const room = form.room_number.trim();
+    if (room) {
+      const dup = (classes ?? []).find(
+        (c) => c.id !== editing?.id && (c.room_number || "").trim() === room
+      );
+      if (dup) {
+        setToast({ msg: `Phòng '${room}' đã được dùng cho lớp '${dup.name}'`, tone: "bad" });
         return null;
       }
     }
@@ -464,27 +491,45 @@ export default function SchoolAdminClassesPage() {
         <FormField label="Khối">
           <select
             className="kinput"
-            value={GRADE_OPTIONS.includes(form.grade_label) ? form.grade_label : form.grade_label ? "Khác" : ""}
+            value={
+              form.grade_custom
+                ? GRADE_OTHER
+                : GRADE_OPTIONS.includes(form.grade_label)
+                ? form.grade_label
+                : ""
+            }
             onChange={(e) => {
               const v = e.target.value;
-              setForm({ ...form, grade_label: v === "Khác" ? form.grade_label : v });
+              if (v === GRADE_OTHER) {
+                setForm({ ...form, grade_custom: true, grade_label: "" });
+              } else {
+                setForm({ ...form, grade_custom: false, grade_label: v });
+              }
             }}
           >
             <option value="">— Chọn khối —</option>
             {GRADE_OPTIONS.map((g) => (
               <option key={g} value={g}>{g}</option>
             ))}
+            <option value={GRADE_OTHER}>{GRADE_OTHER}</option>
           </select>
-          {(!GRADE_OPTIONS.includes(form.grade_label) || form.grade_label === "Khác") && (
+          {form.grade_custom && (
             <input
               className="kinput mt-2"
-              value={form.grade_label === "Khác" ? "" : form.grade_label}
+              value={form.grade_label}
               onChange={(e) => setForm({ ...form, grade_label: e.target.value })}
               placeholder="Nhập tên khối..."
             />
           )}
         </FormField>
-        <FormField label="Phòng" hint="Mỗi lớp học 1 phòng riêng, không được trùng nhau">
+        <FormField
+          label="Phòng"
+          hint={
+            usedRooms.length > 0
+              ? `Phòng đã dùng: ${usedRooms.join(", ")}`
+              : undefined
+          }
+        >
           <input
             className="kinput"
             value={form.room_number}

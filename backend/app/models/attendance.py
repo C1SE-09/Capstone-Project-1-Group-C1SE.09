@@ -125,3 +125,8 @@ class AttendanceRecord(Base, TimestampMixin):
             "date",
         ),
     )
+
+    source_leave_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leave_request.request_id", ondelete="SET NULL"),
+        nullable=True, comment="Chỉ bản ghi do đơn tạo mới mới được hoàn tác khi hủy",
+    )

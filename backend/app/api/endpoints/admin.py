@@ -538,6 +538,28 @@ def list_classes(db: Session = Depends(get_db)):
     return [_serialize_class(db, c) for c in classes]
 
 
+def _assert_room_available(
+    db: Session, school_id, room_number: str | None, exclude_class_id=None
+) -> None:
+    """Chặn nhập trùng số phòng đã có ở lớp khác trong cùng trường."""
+    if not room_number:
+        return
+    dup = (
+        db.query(Class_)
+        .filter(
+            Class_.school_id == school_id,
+            Class_.room_number == room_number,
+            Class_.is_active.is_(True),
+        )
+        .first()
+    )
+    if dup is not None and (exclude_class_id is None or dup.class_id != exclude_class_id):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Phòng '{room_number}' đã được dùng cho lớp '{dup.name}'.",
+        )
+
+
 @router.post("/classes", status_code=status.HTTP_201_CREATED)
 def create_class(data: ClassCreate, db: Session = Depends(get_db)):
     name = (data.name or "").strip()
@@ -577,6 +599,8 @@ def create_class(data: ClassCreate, db: Session = Depends(get_db)):
     )
     if existing:
         raise HTTPException(status_code=400, detail=f"Lớp '{name}' đã tồn tại trong trường.")
+
+    _assert_room_available(db, school_id, room_number)
 
     new_class = Class_(
         class_id=uuid.uuid4(),
@@ -645,6 +669,9 @@ def update_class(class_id: str, data: ClassUpdate, db: Session = Depends(get_db)
                     status_code=400,
                     detail=f"Phòng '{room_number}' đã được sử dụng cho lớp '{existing_room.name}'. Vui lòng chọn phòng khác.",
                 )
+        if room_number and len(room_number) > 20:
+            raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+        _assert_room_available(db, c.school_id, room_number, exclude_class_id=c.class_id)
         c.room_number = room_number
     if "capacity" in data.model_fields_set:
         if data.capacity is not None:

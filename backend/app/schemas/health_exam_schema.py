@@ -8,27 +8,31 @@ Pydantic schemas cho API Sổ sức khoẻ học sinh:
 
 from __future__ import annotations
 
+from datetime import date
+
 from pydantic import BaseModel, Field
 
 
 class HealthExamRecord(BaseModel):
-    """Một bản ghi sức khoẻ của học sinh trong sổ sức khoẻ."""
+    """Một dòng trong bảng sổ sức khoẻ — theo học sinh (có thể chưa có số liệu)."""
 
-    id: str = Field(..., description="ID bản ghi")
+    id: str | None = Field(default=None, description="ID bản ghi (None = bé chưa có số liệu)")
     child_id: str = Field(..., description="Mã học sinh")
     full_name: str = Field(..., description="Họ tên học sinh")
+    nickname: str | None = Field(default=None, description="Biệt danh học sinh")
     class_id: str | None = Field(default=None, description="ID lớp")
     class_name: str | None = Field(default=None, description="Tên lớp")
     date_of_birth: str | None = Field(default=None, description="Ngày sinh (DD/MM/YYYY)")
     gender: str | None = Field(default=None, description="Giới tính")
-    examination_date: str = Field(..., description="Ngày ghi nhận (DD/MM/YYYY)")
-    height: float = Field(..., description="Chiều cao (cm)")
-    weight: float = Field(..., description="Cân nặng (kg)")
+    examination_date: str | None = Field(default=None, description="Ngày ghi nhận (DD/MM/YYYY)")
+    height: float | None = Field(default=None, description="Chiều cao (cm)")
+    weight: float | None = Field(default=None, description="Cân nặng (kg)")
     bmi: float | None = Field(default=None, description="Chỉ số BMI")
-    health_category: str = Field(..., description="Phân loại thể trạng (NORMAL/UNDERWEIGHT/OVERWEIGHT)")
-    health_category_label: str = Field(..., description="Phân loại thể trạng tiếng Việt")
+    health_category: str | None = Field(default=None, description="Phân loại thể trạng (NORMAL/UNDERWEIGHT/OVERWEIGHT)")
+    health_category_label: str | None = Field(default=None, description="Phân loại thể trạng tiếng Việt")
     general_conclusion: str | None = Field(default=None, description="Kết luận chung")
     created_by_name: str | None = Field(default=None, description="Người thực hiện ghi nhận")
+    has_record: bool = Field(default=False, description="Bé đã có số liệu sức khoẻ hay chưa")
 
 
 class HealthExamRecordsResponse(BaseModel):
@@ -42,12 +46,34 @@ class HealthExamRecordsResponse(BaseModel):
     )
 
 
+class HealthExamUpdate(BaseModel):
+    """Payload sửa 1 bản ghi sức khoẻ (chỉ số đo + kết luận chung)."""
+
+    height: float = Field(..., gt=0, le=200, description="Chiều cao (cm)")
+    weight: float = Field(..., gt=0, le=100, description="Cân nặng (kg)")
+    general_conclusion: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Kết luận chung của đợt ghi nhận",
+    )
+
+
+class HealthExamCreate(HealthExamUpdate):
+    """Payload tạo mới bản ghi sức khoẻ cho một học sinh."""
+
+    child_id: str = Field(..., description="Mã học sinh")
+    examination_date: date | None = Field(
+        default=None,
+        description="Ngày ghi nhận (mặc định hôm nay)",
+    )
+
+
 class HealthExamImportRowIssue(BaseModel):
     """Mô tả lỗi/cảnh báo của một dòng trong file Excel tải lên."""
 
     row_number: int = Field(..., description="Số dòng trong sheet Excel (dòng 1 là tiêu đề)")
     sheet_name: str | None = Field(default=None, description="Tên sheet chứa dòng lỗi (file nhiều sheet)")
-    child_id: str | None = Field(default=None, description="Mã học sinh ở cột A (nếu đọc được)")
+    child_id: str | None = Field(default=None, description="Mã học sinh đã đối chiếu được (nếu có)")
     full_name: str | None = Field(default=None, description="Họ tên học sinh (nếu xác định được)")
     errors: list[str] = Field(default_factory=list, description="Các lỗi khiến dòng này không được lưu")
     warnings: list[str] = Field(default_factory=list, description="Cảnh báo không chặn việc lưu")

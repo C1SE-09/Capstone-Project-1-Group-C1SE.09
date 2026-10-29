@@ -1,136 +1,132 @@
-// frontend/lib/features/kindergarten_dashboard/widgets/reject_reason_dialog.dart
-// ==============================================================================
-// Dialog nhập lý do từ chối đơn xin nghỉ học (Bắt buộc nhập lý do).
-
-import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+// Màn23 giữ hợp đồng trả lý do; không tự điền lý do mẫu của thiết kế.
+import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
 
+import '../screens/parent_medication_widgets.dart';
+import '../screens/parent_requests_widgets.dart';
+import '../theme.dart';
+
 class RejectReasonDialog extends StatefulWidget {
-  const RejectReasonDialog({
-    super.key,
-    required this.childName,
-  });
-
-  final String childName;
-
-  static Future<String?> show(BuildContext context, {required String childName}) {
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => RejectReasonDialog(childName: childName),
-    );
-  }
-
+  const RejectReasonDialog(
+      {super.key,
+      required this.childName,
+      this.initialReason = '',
+      this.request});
+  final String childName, initialReason;
+  final LeaveRequestEntity? request;
+  static Future<String?> show(BuildContext context,
+          {required String childName,
+          String initialReason = '',
+          LeaveRequestEntity? request}) =>
+      showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => RejectReasonDialog(
+              childName: childName,
+              initialReason: initialReason,
+              request: request));
   @override
   State<RejectReasonDialog> createState() => _RejectReasonDialogState();
 }
 
 class _RejectReasonDialogState extends State<RejectReasonDialog> {
-  late final TextEditingController _reasonController;
-  bool _isSubmitting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _reasonController = TextEditingController();
-  }
-
+  late final _reason = TextEditingController(text: widget.initialReason);
+  bool _closed = false;
   @override
   void dispose() {
-    _reasonController.dispose();
+    _reason.dispose();
     super.dispose();
+  }
+
+  void _close(String? result) {
+    if (_closed) return;
+    _closed = true;
+    Navigator.pop(context, result);
   }
 
   @override
   Widget build(BuildContext context) {
-    final k = context.k;
-    final isValid = _reasonController.text.trim().isNotEmpty;
-
-    return AlertDialog(
-      backgroundColor: k.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(KRadii.card),
-      ),
-      title: Row(
-        children: [
-          Icon(Icons.cancel_outlined, color: k.bad, size: 24),
-          const SizedBox(width: 8),
-          Text(
-            'Từ chối đơn xin nghỉ',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: k.ink),
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Bé: ${widget.childName}',
-              style: TextStyle(fontWeight: FontWeight.w600, color: k.ink),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Vui lòng nhập lý do từ chối để gửi phản hồi giải thích đến phụ huynh (Bắt buộc):',
-              style: TextStyle(fontSize: 13, color: k.inkSoft),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _reasonController,
-              maxLines: 3,
-              autofocus: true,
-              style: TextStyle(color: k.ink),
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Nhập lý do từ chối cụ thể...',
-                hintStyle: TextStyle(fontSize: 13, color: k.inkFaint),
-                filled: true,
-                fillColor: k.surfaceSunken,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: k.line),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: k.bad),
-                ),
-                contentPadding: const EdgeInsets.all(12),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(null),
-          child: Text('Hủy bỏ', style: TextStyle(color: k.inkSoft)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: k.bad,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: k.line,
-            disabledForegroundColor: k.inkFaint,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onPressed: (!isValid || _isSubmitting)
-              ? null
-              : () {
-                  setState(() => _isSubmitting = true);
-                  Navigator.of(context).pop(_reasonController.text.trim());
-                },
-          child: _isSubmitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : const Text('Xác nhận từ chối'),
-        ),
-      ],
-    );
+    final count = _reason.text.trim().runes.length;
+    return Dialog.fullscreen(
+        backgroundColor: context.k.canvas,
+        child: ParentRequestLayout(
+            title: 'Từ chối đơn',
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      MedicationCard(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text(widget.childName,
+                                style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700)),
+                            if (widget.request != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                  '${requestTypeLabel(widget.request!.requestType)} · ${requestRange(widget.request!)}',
+                                  style: TextStyle(
+                                      fontSize: 11, color: context.k.inkSoft))
+                            ],
+                          ])),
+                      const SizedBox(height: 14),
+                      const Text('Lý do từ chối *',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 14),
+                      TextField(
+                          controller: _reason,
+                          maxLines: 3,
+                          enabled: !_closed,
+                          autofocus: true,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                              hintText:
+                                  'Nhập lý do cụ thể để phụ huynh nắm thông tin',
+                              filled: true,
+                              fillColor: context.k.surface,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: context.k.bad)),
+                              focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide:
+                                      BorderSide(color: context.k.bad)))),
+                      const SizedBox(height: 6),
+                      Text('$count/500',
+                          textAlign: TextAlign.end,
+                          style: TextStyle(
+                              fontSize: 10.5, color: context.k.inkFaint)),
+                      const SizedBox(height: 14),
+                      Text(
+                          'Bắt buộc nhập lý do (2–500 ký tự). Phụ huynh xem lý do trong chi tiết đơn của bé.',
+                          style: TextStyle(
+                              fontSize: 11.5, color: context.k.warnDeep)),
+                      const SizedBox(height: 14),
+                      Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton(
+                                onPressed: () => _close(null),
+                                style: OutlinedButton.styleFrom(
+                                    shape: const StadiumBorder(),
+                                    minimumSize: const Size(140, 48)),
+                                child: const Text('Quay lại')),
+                            FilledButton(
+                                onPressed: count < 2 || count > 500 || _closed
+                                    ? null
+                                    : () => _close(_reason.text.trim()),
+                                style: FilledButton.styleFrom(
+                                    backgroundColor: context.k.bad,
+                                    shape: const StadiumBorder(),
+                                    minimumSize: const Size(140, 48)),
+                                child: const Text('Gửi từ chối')),
+                          ]),
+                    ]))));
   }
 }

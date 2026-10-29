@@ -35,11 +35,34 @@ class MockMedicationRepository extends HttpMedicationRepository {
   Future<Map<String, dynamic>> confirmMedication({
     required String requestId,
     required String session,
+    String? date,
     String? notes,
   }) async {
     confirmCalls++;
+    final actor = throwConflictOnConfirm ? 'Cô Lan' : 'Cô Thu Hà';
+    final givenAt = DateTime.parse('2026-10-28T04:30:00Z');
+    List<MedicationItem> updated(List<MedicationItem> rows) => rows
+        .map((item) => item.requestId == requestId && item.session == session
+            ? item.copyWith(isGiven: true, givenByName: actor, givenAt: givenAt)
+            : item)
+        .toList();
+    final morning = updated(mockData.morning),
+        noon = updated(mockData.noon),
+        afternoon = updated(mockData.afternoon);
+    final all = [...morning, ...noon, ...afternoon];
+    mockData = MedicationsTodayData(
+        date: mockData.date,
+        classId: mockData.classId,
+        className: mockData.className,
+        totalRequests: all.length,
+        completedCount: all.where((d) => d.isGiven).length,
+        pendingCount: all.where((d) => !d.isGiven).length,
+        morning: morning,
+        noon: noon,
+        afternoon: afternoon);
     if (throwConflictOnConfirm) {
-      throw MedicationAlreadyConfirmedException('Cô Lan đã cho uống lúc 11:30 rồi.');
+      throw MedicationAlreadyConfirmedException(
+          'Cô Lan đã cho uống lúc 11:30 rồi.');
     }
     return {
       'success': true,
@@ -48,8 +71,8 @@ class MockMedicationRepository extends HttpMedicationRepository {
       'request_id': requestId,
       'session': session,
       'is_given': true,
-      'given_by_name': 'Cô Thu Hà',
-      'given_at': '2026-10-28T11:45:00Z',
+      'given_by_name': actor,
+      'given_at': givenAt.toIso8601String(),
     };
   }
 
@@ -158,24 +181,28 @@ void main() {
       await tester.pumpAndSettle();
 
       // Kiểm tra tiêu đề và tabs
-      expect(find.text('Lịch Uống Thuốc Của Lớp'), findsOneWidget);
+      expect(find.text('Uống thuốc hôm nay'), findsOneWidget);
       expect(find.text('Tất cả'), findsOneWidget);
-      expect(find.text('Buổi Sáng'), findsNWidgets(2)); // Tab + Thẻ thuốc sáng
-      expect(find.text('Buổi Trưa'), findsNWidgets(2)); // Tab + Thẻ thuốc trưa
-      expect(find.text('Buổi Chiều'), findsOneWidget); // Tab (chưa có thuốc buổi chiều)
+      expect(find.text('Buổi Sáng'), findsOneWidget); // Bộ lọc
+      expect(find.text('Buổi sáng'), findsOneWidget); // Nhóm theo Figma
+      expect(find.text('Buổi Trưa'), findsOneWidget);
+      expect(find.text('Buổi trưa'), findsOneWidget);
+      expect(find.text('Buổi Chiều'),
+          findsOneWidget); // Tab (chưa có thuốc buổi chiều)
 
       // Thẻ bé chưa uống: có nút ĐÃ CHO UỐNG THUỐC
       expect(find.text('Bé Gia Bảo'), findsOneWidget);
-      expect(find.text('Hapacol 250mg'), findsOneWidget);
-      expect(find.text('1 gói'), findsOneWidget);
-      expect(find.text('ĐÃ CHO UỐNG THUỐC'), findsOneWidget);
+      expect(find.textContaining('Hapacol 250mg'), findsOneWidget);
+      expect(find.textContaining('1 gói'), findsOneWidget);
+      expect(find.text('Đã cho uống thuốc'), findsOneWidget);
 
       // Thẻ bé đã uống: nút xám hiển thị "Cô Mai đã cho uống..."
       expect(find.text('Bé Minh Anh'), findsOneWidget);
       expect(find.textContaining('Cô Mai đã cho uống lúc'), findsOneWidget);
     });
 
-    testWidgets('Bấm 1-chạm xác nhận gọi API và cập nhật trạng thái', (tester) async {
+    testWidgets('Bấm 1-chạm xác nhận gọi API và cập nhật trạng thái',
+        (tester) async {
       final mockRepo = MockMedicationRepository(mockData: sampleMockData);
 
       await tester.pumpWidget(
@@ -186,18 +213,20 @@ void main() {
       await tester.pumpAndSettle();
 
       // Bấm nút ĐÃ CHO UỐNG THUỐC
-      await tester.tap(find.text('ĐÃ CHO UỐNG THUỐC'));
+      await tester.tap(find.text('Đã cho uống thuốc'));
       await tester.pump(); // Start async call
       await tester.pumpAndSettle(); // Settle response
 
       expect(mockRepo.confirmCalls, 1);
       // SnackBar thành công
-      expect(find.text('Đã xác nhận cho bé Bé Gia Bảo uống thuốc thành công!'), findsOneWidget);
+      expect(
+          find.text('Đã ghi nhận xác nhận cho bé Bé Gia Bảo.'), findsOneWidget);
       // Nút chuyển sang trạng thái đã uống
       expect(find.textContaining('Cô Thu Hà đã cho uống lúc'), findsOneWidget);
     });
 
-    testWidgets('Xử lý xung đột (Cô khác đã cho uống) khóa nút và báo lỗi', (tester) async {
+    testWidgets('Xử lý xung đột (Cô khác đã cho uống) khóa nút và báo lỗi',
+        (tester) async {
       final mockRepo = MockMedicationRepository(
         mockData: sampleMockData,
         throwConflictOnConfirm: true,
@@ -211,7 +240,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Bấm xác nhận
-      await tester.tap(find.text('ĐÃ CHO UỐNG THUỐC'));
+      await tester.tap(find.text('Đã cho uống thuốc'));
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -241,7 +270,8 @@ void main() {
       ),
     ];
 
-    testWidgets('Hiển thị form báo sự cố và phát cảnh báo thành công', (tester) async {
+    testWidgets('Hiển thị form báo sự cố và phát cảnh báo thành công',
+        (tester) async {
       final mockRepo = MockMedicationRepository(mockData: sampleMockData);
 
       await tester.pumpWidget(
@@ -249,6 +279,7 @@ void main() {
           home: Scaffold(
             body: TeacherEmergencySheet(
               children: sampleChildren,
+              initialChildId: 'c-1',
               repository: mockRepo,
             ),
           ),
@@ -257,19 +288,21 @@ void main() {
       await tester.pumpAndSettle();
 
       // Kiểm tra Header
-      expect(find.text('Báo Động Sự Cố Khẩn Cấp'), findsOneWidget);
-      expect(find.text('🚨 PHÁT CẢNH BÁO KHẨN CẤP'), findsOneWidget);
+      expect(find.text('Báo cáo sự cố khẩn cấp'), findsOneWidget);
+      expect(find.text('Phát cảnh báo khẩn cấp'), findsOneWidget);
 
       // Bấm nút phát cảnh báo
-      await tester.tap(find.text('🚨 PHÁT CẢNH BÁO KHẨN CẤP'));
+      await tester.ensureVisible(find.text('Phát cảnh báo khẩn cấp'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Phát cảnh báo khẩn cấp'));
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(mockRepo.emergencyCalls, 1);
       // Hiện màn hình danh bạ gọi nhanh bố mẹ
-      expect(find.text('Đã Phát Cảnh Báo Khẩn Cấp!'), findsOneWidget);
-      expect(find.text('Bố: Nguyễn Văn Bố'), findsOneWidget);
-      expect(find.text('Mẹ: Trần Thị Mẹ'), findsOneWidget);
+      expect(find.text('Đã ghi nhận sự cố khẩn cấp'), findsOneWidget);
+      expect(find.text('Bố · Nguyễn Văn Bố'), findsOneWidget);
+      expect(find.text('Mẹ · Trần Thị Mẹ'), findsOneWidget);
       expect(find.text('0911222333'), findsOneWidget);
       expect(find.text('Gọi ngay'), findsNWidgets(2));
     });

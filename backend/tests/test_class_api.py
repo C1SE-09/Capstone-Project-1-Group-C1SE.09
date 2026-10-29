@@ -154,6 +154,19 @@ def test_create_class_duplicate_room_rejected(admin_client, mock_db):
         q = MagicMock()
         if model is Class_:
             q.filter.return_value.first.return_value = existing
+    """Nhập số phòng đã có ở lớp khác -> bị chặn."""
+    existing = _make_class("Lớp Mầm 1")  # đang dùng phòng P.101
+    school = School(school_id=SCHOOL_ID, name="Trường Mầm Non", code="MN01")
+    calls = {"n": 0}
+
+    def _query(model, *args, **kwargs):
+        q = MagicMock()
+        if model is School:
+            q.first.return_value = school
+        elif model is Class_:
+            # Lần 1: check trùng tên -> None. Lần 2: check trùng phòng -> existing.
+            calls["n"] += 1
+            q.filter.return_value.first.return_value = None if calls["n"] == 1 else existing
         else:
             q.filter.return_value.first.return_value = None
         return q
@@ -162,6 +175,33 @@ def test_create_class_duplicate_room_rejected(admin_client, mock_db):
     resp = admin_client.post("/api/admin/classes", json={"name": "Lớp Mầm 2", "room_number": "Room 101"})
     assert resp.status_code == 400, resp.text
     assert "đã được sử dụng" in resp.json()["detail"]
+    resp = admin_client.post(
+        "/api/admin/classes", json={"name": "Lớp Chồi 1", "room_number": "P.101"}
+    )
+    assert resp.status_code == 400, resp.text
+    assert "P.101" in resp.json()["detail"]
+    assert "Lớp Mầm 1" in resp.json()["detail"]
+    assert not mock_db.add.called
+
+
+def test_create_class_same_room_ok_when_no_conflict(admin_client, mock_db):
+    """Số phòng khác với các lớp đã có -> tạo được."""
+    school = School(school_id=SCHOOL_ID, name="Trường Mầm Non", code="MN01")
+
+    def _query(model, *args, **kwargs):
+        q = MagicMock()
+        if model is School:
+            q.first.return_value = school
+        else:
+            q.filter.return_value.first.return_value = None
+        return q
+
+    mock_db.query.side_effect = _query
+    resp = admin_client.post(
+        "/api/admin/classes", json={"name": "Lớp Chồi 1", "room_number": "P.202"}
+    )
+    assert resp.status_code == 201, resp.text
+    assert mock_db.add.called
 
 
 # ── PUT /classes/{id} ─────────────────────────────────────────────────────
@@ -223,6 +263,51 @@ def test_update_class_capacity_below_students_rejected(admin_client, mock_db):
     mock_db.query.side_effect = _query
     resp = admin_client.put(f"/api/admin/classes/{CLASS_ID}", json={"capacity": 10})
     assert resp.status_code == 400, resp.text
+
+
+def test_update_class_duplicate_room_rejected(admin_client, mock_db):
+    """Sửa lớp sang phòng đã có ở lớp khác -> bị chặn, không ghi đè."""
+    c = _make_class("Lớp Mầm 1")  # đang dùng phòng P.101
+    # Lớp KHÁC (class_id khác) cũng dùng phòng P.101.
+    other = _make_class("Lớp Chồi 1")
+    other.class_id = uuid.uuid4()
+    calls = {"n": 0}
+
+    def _query(model, *args, **kwargs):
+        q = MagicMock()
+        if model is Class_:
+            calls["n"] += 1
+            # Lần 1: lookup lớp theo id -> c. Lần 2: check trùng phòng -> other.
+            q.filter.return_value.first.return_value = c if calls["n"] == 1 else other
+        elif model is Child:
+            q.filter.return_value.count.return_value = 0
+        return q
+
+    mock_db.query.side_effect = _query
+    resp = admin_client.put(f"/api/admin/classes/{CLASS_ID}", json={"room_number": "P.101"})
+    assert resp.status_code == 400, resp.text
+    assert "P.101" in resp.json()["detail"]
+
+
+def test_update_class_keep_own_room_ok(admin_client, mock_db):
+    """Sửa lớp mà giữ nguyên phòng của chính nó -> không bị chặn trùng."""
+    c = _make_class("Lớp Mầm 1")  # đang dùng phòng P.101
+    calls = {"n": 0}
+
+    def _query(model, *args, **kwargs):
+        q = MagicMock()
+        if model is Class_:
+            calls["n"] += 1
+            # Lần 1: lookup lớp -> c. Lần 2: check trùng phòng -> chính nó (bị bỏ qua).
+            q.filter.return_value.first.return_value = c
+        elif model is Child:
+            q.filter.return_value.count.return_value = 0
+        return q
+
+    mock_db.query.side_effect = _query
+    resp = admin_client.put(f"/api/admin/classes/{CLASS_ID}", json={"room_number": "P.101"})
+    assert resp.status_code == 200, resp.text
+    assert c.room_number == "P.101"
 
 
 def test_update_class_can_clear_capacity(admin_client, mock_db):

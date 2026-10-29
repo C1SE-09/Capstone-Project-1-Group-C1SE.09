@@ -25,6 +25,11 @@ import {
   SelectOption,
   Spinner,
   Toast,
+  ClassFilterSelect,
+  ImportModal,
+  ImportResult,
+  DateInput,
+  todayIsoStr,
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import {
@@ -1237,29 +1242,15 @@ export default function SchoolAdminStudentsPage() {
           label="Ngày sinh"
           hint={
             form.date_of_birth
-              ? `Đã chọn: ${formatDate(form.date_of_birth)}`
-              : "Bấm để chọn ngày sinh (dd/mm/yyyy)"
+              ? `Đã chọn: ${formatDateToDmy(form.date_of_birth)}`
+              : "Nhập theo định dạng dd/mm/yyyy"
           }
         >
-          <input
-            type="date"
-            className="kinput cursor-pointer"
-            max={new Date().toISOString().split("T")[0]}
+          <DateInput
             value={form.date_of_birth}
-            onKeyDown={(e) => e.preventDefault()}
-            onClick={(e) => (e.target as any).showPicker?.()}
-            onChange={(e) => {
-              const val = e.target.value;
-              const today = new Date().toISOString().split("T")[0];
-              if (val && val > today) {
-                setToast({
-                  msg: "Không thể chọn ngày trong tương lai",
-                  tone: "warn",
-                });
-                return;
-              }
-              setForm({ ...form, date_of_birth: val });
-            }}
+            max={todayIsoStr()}
+            onChange={(val) => setForm({ ...form, date_of_birth: val })}
+            onInvalid={(msg) => setToast({ msg, tone: "warn" })}
           />
         </FormField>
         <FormField label="Giới tính">

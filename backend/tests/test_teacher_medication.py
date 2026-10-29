@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from app.api.endpoints.medication import router as medication_router
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.child import Child, Parent
+from app.models.child import Child, ChildStatus, Parent
 from app.models.medication import (
     MedicationLog,
     MedicationRequest,
@@ -40,12 +40,13 @@ def mock_db():
 
 
 @pytest.fixture()
-def teacher_user():
+def teacher_user(teacher_profile):
     user = User(
         user_id=TEACHER_USER_ID,
         username="teacher_lan",
         role=UserRole.TEACHER,
         teacher_id=TEACHER_ID,
+        teacher=teacher_profile,
     )
     return user
 
@@ -68,7 +69,7 @@ def sample_class():
 
 
 @pytest.fixture()
-def sample_child_and_parent():
+def sample_child_and_parent(mock_db):
     parent = Parent(
         parent_id=uuid.uuid4(),
         full_name="Nguyễn Văn Phụ Huynh",
@@ -81,7 +82,9 @@ def sample_child_and_parent():
         nickname="Bé Bo",
         avatar_url="https://example.com/avatar.jpg",
         parent=parent,
+        status=ChildStatus.ENROLLED,
     )
+    mock_db.query.return_value.filter.return_value.first.return_value = child
     return child, parent
 
 
@@ -251,6 +254,8 @@ def test_confirm_medication_put_success(
         q_str = str(q).lower()
         if "from medication_log" in q_str:
             return None  # Chưa có ai cho uống
+        if "from child" in q_str:
+            return child
         if "from medication_request" in q_str:
             return req
         if "from teacher" in q_str:
@@ -324,6 +329,8 @@ def test_confirm_medication_duplicate_lock_conflict(
         q_str = str(q).lower()
         if "from medication_log" in q_str:
             return existing_log  # Đã có bản ghi cho uống
+        if "from child" in q_str:
+            return child
         if "from medication_request" in q_str:
             return req
         if "from teacher" in q_str:

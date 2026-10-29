@@ -289,7 +289,7 @@ class VoiceRecord(Base, TimestampMixin):
         SAEnum(VoiceRecordStatus, name="voice_record_status_enum", create_type=True),
         nullable=False,
         default=VoiceRecordStatus.PENDING,
-        server_default=VoiceRecordStatus.PENDING.value,
+        server_default=VoiceRecordStatus.PENDING.name,
         comment="Processing lifecycle status of the voice record",
     )
     error_message: Mapped[str | None] = mapped_column(
@@ -674,7 +674,7 @@ class DailyReport(Base, TimestampMixin):
         SAEnum(DailyReportStatus, name="daily_report_status_enum", create_type=True),
         nullable=False,
         default=DailyReportStatus.DRAFT,
-        server_default=DailyReportStatus.DRAFT.value,
+        server_default=DailyReportStatus.DRAFT.name,
         comment="Publication lifecycle: draft → sent → read → archived",
     )
     published_at: Mapped[date | None] = mapped_column(
@@ -794,7 +794,7 @@ class ActivityEntry(Base, TimestampMixin):
         SAEnum(ActivityCategory, name="activity_category_enum", create_type=True),
         nullable=False,
         default=ActivityCategory.OTHER,
-        server_default=ActivityCategory.OTHER.value,
+        server_default=ActivityCategory.OTHER.name,
         comment="Broad activity type (meal | nap | learning | play | health | behavior | other)",
     )
     title: Mapped[str] = mapped_column(
