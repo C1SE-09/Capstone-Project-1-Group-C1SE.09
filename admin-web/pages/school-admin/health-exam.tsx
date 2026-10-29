@@ -497,7 +497,7 @@ export default function HealthExamPage() {
             value={examDate}
             onChange={setExamDate}
             max={todayIso()}
-            onInvalid={(msg) => setToast({ msg, tone: "warn" })}
+            onInvalid={(msg) => setToast({ msg, tone: "bad" })}
           />
         </div>
         {examDate && (
@@ -717,7 +717,7 @@ export default function HealthExamPage() {
                   value={importDate}
                   max={todayIso()}
                   onChange={setImportDate}
-                  onInvalid={(msg) => setToast({ msg, tone: "warn" })}
+                  onInvalid={(msg) => setToast({ msg, tone: "bad" })}
                 />
               </div>
             </div>
@@ -915,7 +915,7 @@ export default function HealthExamPage() {
                   value={editDate}
                   max={todayIso()}
                   onChange={setEditDate}
-                  onInvalid={(msg) => setToast({ msg, tone: "warn" })}
+                  onInvalid={(msg) => setToast({ msg, tone: "bad" })}
                 />
               </FormField>
             )}

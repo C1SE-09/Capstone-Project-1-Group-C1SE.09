@@ -767,10 +767,10 @@ export default function SchoolAdminStudentsPage() {
       return;
     }
     if (form.date_of_birth) {
-      const today = new Date().toISOString().split("T")[0];
+      const today = todayIsoStr();
       if (form.date_of_birth > today) {
         setToast({
-          msg: "Ngày sinh không thể là ngày trong tương lai",
+          msg: `Ngày sinh không thể là ngày trong tương lai (tối đa ${formatDateToDmy(today)})`,
           tone: "bad",
         });
         return;
@@ -1300,7 +1300,7 @@ export default function SchoolAdminStudentsPage() {
             value={form.date_of_birth}
             max={todayIsoStr()}
             onChange={(val) => setForm({ ...form, date_of_birth: val })}
-            onInvalid={(msg) => setToast({ msg, tone: "warn" })}
+            onInvalid={(msg) => setToast({ msg, tone: "bad" })}
           />
         </FormField>
         <FormField label="Giới tính">
