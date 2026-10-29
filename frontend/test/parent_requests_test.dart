@@ -198,12 +198,12 @@ void main() {
     await tester.enterText(find.byType(TextFormField), '  Khám sức khỏe  ');
     await tapVisible(tester, find.text('GỬI ĐƠN'));
     expect(find.text(warning), findsOneWidget);
-    await tapVisible(tester, find.text('Hủy'));
+    await tapVisible(tester, find.text('Quay lại'));
     expect(posts, hasLength(1));
     expect(find.text('  Khám sức khỏe  '), findsOneWidget);
     expect(find.text('Đã gửi đơn thành công'), findsNothing);
     await tapVisible(tester, find.text('GỬI ĐƠN'));
-    await tester.tap(find.text('Đồng ý'));
+    await tester.tap(find.text('Đồng ý, gửi đơn'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(posts, hasLength(3));
@@ -289,7 +289,7 @@ void main() {
     await tapVisible(tester, find.text('OK'));
     await tapVisible(tester, find.text('09:00'));
     await tester.enterText(find.byType(TextFormField), 'Khám buổi sáng');
-    await tapVisible(tester, find.text('GỬI ĐƠN'));
+    await tapVisible(tester, find.text('GỬI THÔNG BÁO'));
     await tester.pumpAndSettle();
     final body = transport.requests.single.data as Map;
     expect(body['request_type'], 'late_arrival');

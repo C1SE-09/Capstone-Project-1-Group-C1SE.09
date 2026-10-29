@@ -25,7 +25,7 @@ class ParentRequestSubmittedScreen extends StatelessWidget {
                     radius: 36,
                     backgroundColor: context.k.brand,
                     child: Icon(Icons.check,
-                        size: 44,
+                        size: 32,
                         color: Theme.of(context).colorScheme.onPrimary))),
             const SizedBox(height: 16),
             const Text('Đã gửi đơn thành công',
@@ -53,7 +53,7 @@ class ParentRequestSubmittedScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
                 request.status == LeaveStatus.pending
-                    ? 'Đơn đã được gửi, chưa được duyệt. Bạn có thể xem kết quả mới nhất trong lịch sử đơn.'
+                    ? 'Đơn đã được gửi, chưa được duyệt. Bạn sẽ nhận được thông báo khi giáo viên duyệt đơn.'
                     : 'Đơn đã được gửi. Xem lịch sử đơn để theo dõi kết quả xử lý mới nhất.',
                 style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
             const SizedBox(height: 12),

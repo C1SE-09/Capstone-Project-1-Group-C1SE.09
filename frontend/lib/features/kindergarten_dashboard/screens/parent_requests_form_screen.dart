@@ -253,21 +253,15 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
         } on LeaveRequestException catch (e) {
           if (e.code != 'meal_warning_required' || acknowledged) rethrow;
           if (!mounted) return;
-          final agreed = await showDialog<bool>(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => AlertDialog(
-                      title: const Text('Xác nhận tiền ăn'),
-                      content: Text(e.message),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Hủy')),
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Đồng ý')),
-                      ]));
-          if (!mounted || agreed != true) return;
+          final agreed = await showParentRequestDialog(context,
+              title: 'Gửi đơn sau 7:30 sáng',
+              message: e.message,
+              cancelLabel: 'Quay lại',
+              confirmLabel: 'Đồng ý, gửi đơn',
+              icon: Icons.priority_high,
+              accent: context.k.warn,
+              tint: context.k.warnTint);
+          if (!mounted || !agreed) return;
           acknowledged = true;
         }
       }
