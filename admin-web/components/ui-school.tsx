@@ -341,14 +341,13 @@ export function Toast({
   );
 }
 
-/* ════════ DateInput (dd/mm/yyyy — không phụ thuộc locale trình duyệt) ════════ */
+/* ════════ DateInput (dd/mm/yyyy — hỗ trợ auto-mask và nút lịch native) ════════ */
 /**
  * Input nhập ngày theo định dạng Việt Nam dd/mm/yyyy.
- * `type="date"` hiển thị theo locale của trình duyệt (thường mm/dd/yyyy) và
- * không đổi được bằng CSS/attribute → dùng text input có mask.
- *
- * - Giá trị nội bộ luôn là ISO "YYYY-MM-DD" (để gửi API).
- * - onChange chỉ được gọi khi ngày hợp lệ & không phải ngày tương lai.
+ * - Tự động format thêm dấu gạch chéo '/' khi gõ số (vd: gõ 11 -> 11/, gõ 05 -> 11/05/).
+ * - Hỗ trợ cả phím xóa Backspace mượt mà không bị kẹt dấu gạch.
+ * - Tích hợp nút lịch 📅 bên phải: click mở date picker trực quan của trình duyệt.
+ * - Giá trị lưu truyền ra ngoài luôn là ISO "YYYY-MM-DD".
  */
 export function DateInput({
   value,
@@ -368,17 +367,20 @@ export function DateInput({
   onInvalid?: (msg: string) => void;
 }) {
   const [text, setText] = useState(value ? toDmy(value) : "");
+  const pickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setText(value ? toDmy(value) : "");
   }, [value]);
 
-  const commit = (raw: string) => {
-    const iso = parseDmyToIso(raw);
+  const commit = (rawDmy: string) => {
+    if (!rawDmy.trim()) {
+      onChange("");
+      return;
+    }
+    const iso = parseDmyToIso(rawDmy);
     if (!iso) {
-      if (raw.trim() !== "") {
-        onInvalid?.("Ngày không hợp lệ, vui lòng nhập dd/mm/yyyy");
-      }
+      onInvalid?.("Ngày không hợp lệ hoặc không tồn tại, vui lòng nhập dd/mm/yyyy");
       return;
     }
     if (max && iso > max) {
@@ -393,25 +395,131 @@ export function DateInput({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
-    setText(digits);
-    if (digits.length === 8) commit(digits);
+    const raw = e.target.value;
+    const isDeleting = (e.nativeEvent as any)?.inputType?.startsWith("delete") || raw.length < text.length;
+
+    // Nếu người dùng xóa hết
+    if (!raw.trim()) {
+      setText("");
+      onChange("");
+      return;
+    }
+
+    // Xử lý auto-pad khi người dùng chủ động gõ dấu '/'
+    let digits = raw.replace(/\D/g, "").slice(0, 8);
+    if (!isDeleting && raw.endsWith("/") && !text.endsWith("/")) {
+      if (digits.length === 1) {
+        digits = "0" + digits;
+      } else if (digits.length === 3) {
+        digits = digits.slice(0, 2) + "0" + digits.slice(2);
+      }
+    }
+
+    // Áp dụng mask dd/mm/yyyy
+    let formatted = "";
+    if (digits.length < 2) {
+      formatted = digits;
+    } else if (digits.length === 2) {
+      formatted = isDeleting ? digits : `${digits}/`;
+    } else if (digits.length < 4) {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    } else if (digits.length === 4) {
+      formatted = isDeleting ? `${digits.slice(0, 2)}/${digits.slice(2)}` : `${digits.slice(0, 2)}/${digits.slice(2)}/`;
+    } else {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    }
+
+    setText(formatted);
+
+    // Khi đã nhập đủ 8 chữ số ngày/tháng/năm
+    if (digits.length === 8) {
+      commit(formatted);
+    }
   };
 
   const handleBlur = () => {
-    if (text.length === 8) commit(text);
+    if (text.trim()) {
+      commit(text);
+    }
+  };
+
+  const handleOpenPicker = () => {
+    if (!pickerRef.current) return;
+    try {
+      if (typeof pickerRef.current.showPicker === "function") {
+        pickerRef.current.showPicker();
+      } else {
+        pickerRef.current.focus();
+        pickerRef.current.click();
+      }
+    } catch {
+      pickerRef.current.focus();
+    }
   };
 
   return (
-    <input
-      type="text"
-      inputMode="numeric"
-      value={text}
-      placeholder={placeholder}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      className={`kinput ${className}`}
-    />
+    <div className={`relative flex items-center ${className}`}>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={text}
+        placeholder={placeholder}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        className="kinput w-full pr-9 font-medium"
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={handleOpenPicker}
+        title="Chọn ngày từ lịch"
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink w-7 h-7 flex items-center justify-center rounded-control hover:bg-black/5 transition-colors cursor-pointer"
+      >
+        <svg
+          className="w-4 h-4 text-ink-soft hover:text-brand"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      </button>
+
+      {/* Hidden native date input để mở picker của trình duyệt */}
+      <input
+        ref={pickerRef}
+        type="date"
+        tabIndex={-1}
+        aria-hidden="true"
+        value={value || ""}
+        max={max}
+        min={min}
+        onChange={(e) => {
+          const iso = e.target.value;
+          if (iso) {
+            setText(toDmy(iso));
+            onChange(iso);
+          }
+        }}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          right: 0,
+          width: 0,
+          height: 0,
+          opacity: 0,
+          pointerEvents: "none",
+          border: "none",
+          padding: 0,
+          margin: 0,
+        }}
+      />
+    </div>
   );
 }
 
