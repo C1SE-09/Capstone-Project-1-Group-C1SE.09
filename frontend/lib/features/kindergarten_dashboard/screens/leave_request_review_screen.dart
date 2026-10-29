@@ -12,6 +12,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/leave_request_card.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/reject_reason_dialog.dart';
 import 'package:flutter/material.dart';
+import 'parent_requests_widgets.dart';
 
 class LeaveRequestReviewScreen extends StatefulWidget {
   const LeaveRequestReviewScreen({
@@ -33,7 +34,7 @@ class LeaveRequestReviewScreen extends StatefulWidget {
 class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  late final HttpLeaveRequestRepository _repository;
+  late HttpLeaveRequestRepository _repository;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -41,11 +42,13 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   int _reviewedCount = 0;
   List<LeaveRequestEntity> _items = [];
   final Set<String> _processing = {};
+  final Map<String, String> _rejectionDrafts = {};
   bool _loadingMore = false;
   bool _hasMore = false;
   String? _moreError;
   int _nextOffset = 0;
   int _loadVersion = 0;
+  int _scopeVersion = 0;
 
   @override
   void initState() {
@@ -61,6 +64,21 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant LeaveRequestReviewScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.classId != widget.classId ||
+        oldWidget.repository != widget.repository) {
+      _scopeVersion++;
+      _pendingCount = 0;
+      _reviewedCount = 0;
+      _repository = widget.repository ?? HttpLeaveRequestRepository();
+      _processing.clear();
+      _rejectionDrafts.clear();
+      _loadRequests(tab: _tabController.index == 0 ? 'pending' : 'reviewed');
+    }
   }
 
   void _handleTabChange() {
@@ -122,9 +140,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   Future<void> _handleApprove(LeaveRequestEntity item) async {
     if (_processing.contains(item.requestId)) return;
     setState(() => _processing.add(item.requestId));
+    final scope = _scopeVersion;
     try {
       await _repository.approveLeaveRequest(item.requestId);
-      if (!mounted) return;
+      if (!mounted || scope != _scopeVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(item.requestType == LeaveRequestType.lateArrival
@@ -137,7 +156,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       await _loadRequests(
           tab: _tabController.index == 0 ? 'pending' : 'reviewed');
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || scope != _scopeVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Phê duyệt đơn thất bại. Vui lòng thử lại sau.'),
@@ -146,26 +165,36 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         ),
       );
     } finally {
-      if (mounted) setState(() => _processing.remove(item.requestId));
+      if (mounted && scope == _scopeVersion) {
+        setState(() => _processing.remove(item.requestId));
+      }
     }
   }
 
   Future<void> _handleReject(LeaveRequestEntity item) async {
     if (_processing.contains(item.requestId)) return;
     setState(() => _processing.add(item.requestId));
+    final scope = _scopeVersion;
     try {
       final confirmedReason = await RejectReasonDialog.show(
         context,
         childName: item.childName ?? 'Học sinh',
+        initialReason: _rejectionDrafts[item.requestId] ?? '',
+        request: item,
       );
-      if (!mounted || confirmedReason == null || confirmedReason.isEmpty) {
+      if (!mounted ||
+          scope != _scopeVersion ||
+          confirmedReason == null ||
+          confirmedReason.isEmpty) {
         return;
       }
+      _rejectionDrafts[item.requestId] = confirmedReason;
       await _repository.rejectLeaveRequest(
         requestId: item.requestId,
         rejectReason: confirmedReason,
       );
-      if (!mounted) return;
+      if (!mounted || scope != _scopeVersion) return;
+      _rejectionDrafts.remove(item.requestId);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -177,7 +206,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       await _loadRequests(
           tab: _tabController.index == 0 ? 'pending' : 'reviewed');
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || scope != _scopeVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Từ chối đơn thất bại. Vui lòng kiểm tra lại.'),
@@ -186,16 +215,19 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         ),
       );
     } finally {
-      if (mounted) setState(() => _processing.remove(item.requestId));
+      if (mounted && scope == _scopeVersion) {
+        setState(() => _processing.remove(item.requestId));
+      }
     }
   }
 
   Future<void> _openAttachment(LeaveRequestEntity item) async {
     final path = item.attachmentUrl;
     if (path == null) return;
+    final version = _loadVersion;
     try {
       final bytes = await _repository.getAttachmentBytes(path);
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       await showDialog<void>(
           context: context,
           builder: (context) => Dialog(
@@ -224,7 +256,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                 ),
               ));
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Không tải được ảnh đính kèm. Vui lòng thử lại.'),
       ));
@@ -235,84 +267,27 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   Widget build(BuildContext context) {
     final k = context.k;
 
-    return Scaffold(
-      backgroundColor: k.canvas,
-      appBar: AppBar(
-        title: Text(
-          widget.className != null
-              ? 'Duyệt đơn nghỉ / đi trễ • ${widget.className}'
-              : 'Duyệt đơn xin phép',
-          style: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 18, color: k.ink),
-        ),
-        backgroundColor: k.surface,
-        iconTheme: IconThemeData(color: k.ink),
-        elevation: 0.5,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: k.brand,
-          unselectedLabelColor: k.inkSoft,
-          indicatorColor: k.brand,
-          indicatorWeight: 3,
-          tabs: [
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Chờ duyệt'),
-                  if (_pendingCount > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: k.bad,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '$_pendingCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Đã xử lý'),
-                  if (_reviewedCount > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: k.lineStrong,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '$_reviewedCount',
-                        style: TextStyle(
-                          color: k.ink,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: _buildBody(k),
+    return ParentRequestLayout(
+      title: 'Duyệt đơn xin nghỉ',
+      child: Column(children: [
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(children: [
+              Expanded(
+                  child: Text(widget.className ?? 'Lớp phụ trách',
+                      style: TextStyle(fontSize: 11, color: k.inkSoft))),
+              Flexible(
+                  child: Text(
+                      '$_pendingCount chờ duyệt · $_reviewedCount đã xử lý',
+                      style: TextStyle(fontSize: 11, color: k.warnDeep))),
+            ])),
+        TabBar(
+            controller: _tabController,
+            labelColor: k.brand,
+            unselectedLabelColor: k.inkSoft,
+            tabs: const [Tab(text: 'Chờ duyệt'), Tab(text: 'Đã xử lý')]),
+        Expanded(child: _buildBody(k)),
+      ]),
     );
   }
 
@@ -406,7 +381,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
           }
           final item = _items[index];
           return LeaveRequestCard(
+            key: ValueKey(item.requestId),
             item: item,
+            initiallyExpanded: index == 0,
+            className: widget.className,
             onApprove: () => _handleApprove(item),
             onReject: () => _handleReject(item),
             onAttachment: () => _openAttachment(item),

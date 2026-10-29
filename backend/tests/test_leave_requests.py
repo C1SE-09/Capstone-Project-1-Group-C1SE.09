@@ -178,6 +178,40 @@ def test_serializer_uses_profile_full_names(env):
     assert dto["meal_warning_acknowledged"] is False
 
 
+@pytest.mark.parametrize("hour,minute,state,allowed", [
+    (7, 29, LeaveRequestStatus.PENDING, True), (7, 30, LeaveRequestStatus.PENDING, False),
+    (7, 29, LeaveRequestStatus.APPROVED, True), (7, 29, LeaveRequestStatus.REJECTED, False),
+    (7, 29, LeaveRequestStatus.CANCELLED, False),
+])
+def test_cancel_metadata_uses_server_cutoff_and_status(env, hour, minute, state, allowed):
+    env.now = datetime(2030, 1, 5, hour, minute, tzinfo=VN)
+    req = seed_request(env, status=state)
+    response = env.client.get(f"/api/leave-requests/{req.request_id}")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["can_cancel"] is allowed
+    assert datetime.fromisoformat(body["cancel_before"]) == datetime(2030, 1, 5, 7, 30, tzinfo=VN)
+    assert (body["cancel_block_reason"] is None) is allowed
+
+
+def test_future_request_can_cancel_after_today_cutoff_but_readonly_family_member_cannot(env):
+    env.now = datetime(2030, 1, 5, 15, 0, tzinfo=VN)
+    req = seed_request(env, from_date=TODAY + timedelta(days=1), to_date=TODAY + timedelta(days=1))
+    assert env.client.get(f"/api/leave-requests/{req.request_id}").json()["can_cancel"] is True
+    env.actor = env.parents[1]
+    body = env.client.get(f"/api/leave-requests/{req.request_id}").json()
+    assert body["can_cancel"] is False
+    assert body["cancel_block_reason"]
+    assert env.client.post(f"/api/leave-requests/{req.request_id}/cancel").status_code == 403
+
+
+def test_cancellation_eligibility_normalizes_utc_to_vietnam_cutoff(env):
+    from app.services.attendance_sync_service import cancellation_eligibility
+    req = seed_request(env)
+    assert cancellation_eligibility(req, datetime(2030, 1, 5, 0, 29, tzinfo=timezone.utc))[0] is True
+    assert cancellation_eligibility(req, datetime(2030, 1, 5, 0, 30, tzinfo=timezone.utc))[0] is False
+
+
 @pytest.mark.parametrize("parent_index", [0, 1])
 def test_parent_create_supports_legacy_and_many_to_many_links(env, parent_index):
     env.actor = env.parents[parent_index]

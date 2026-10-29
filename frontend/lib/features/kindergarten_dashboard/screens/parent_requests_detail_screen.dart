@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'parent_requests_attachment.dart';
 import 'parent_requests_widgets.dart';
+import 'parent_medication_widgets.dart';
+import 'parent_requests_cancelled_screen.dart';
 
 class ParentRequestDetailScreen extends StatefulWidget {
   const ParentRequestDetailScreen(
@@ -27,6 +29,9 @@ class ParentRequestDetailScreen extends StatefulWidget {
 class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
   late HttpLeaveRequestRepository _repository;
   late Future<LeaveRequestEntity> _request;
+  bool _cancelling = false, _dialog = false;
+  int _version = 0;
+  String? _cancelError;
 
   @override
   void initState() {
@@ -41,18 +46,74 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
     if (oldWidget.requestId != widget.requestId ||
         oldWidget.child.childId != widget.child.childId ||
         oldWidget.repository != widget.repository) {
+      _version++;
+      _cancelling = false;
+      _cancelError = null;
       _repository = widget.repository ?? HttpLeaveRequestRepository();
       _request = _fetch();
     }
   }
 
   Future<LeaveRequestEntity> _fetch() async {
-    final request = await _repository.getRequest(widget.requestId);
-    if (request.childId != widget.child.childId) {
+    final childId = widget.child.childId, requestId = widget.requestId;
+    final request = await _repository.getRequest(requestId);
+    if (request.childId != childId || request.requestId != requestId) {
       throw const LeaveRequestException(
           'Không thể xác minh đơn của bé. Vui lòng tải lại.');
     }
     return request;
+  }
+
+  Future<void> _cancel(LeaveRequestEntity request) async {
+    if (_cancelling || _dialog || !request.canCancel) return;
+    final version = _version,
+        child = widget.child,
+        className = widget.className;
+    final repository = _repository;
+    _dialog = true;
+    final agreed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: const Text('Hủy đơn xin phép?'),
+                content: Text(
+                    'Hủy ${requestTypeLabel(request.requestType).toLowerCase()} của bé ${child.fullName}, ${requestRange(request)}? Điểm danh thực tế được giữ nguyên.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Giữ đơn')),
+                  FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: context.k.bad),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Hủy đơn'))
+                ]));
+    _dialog = false;
+    if (!mounted || version != _version || agreed != true) return;
+    setState(() {
+      _cancelling = true;
+      _cancelError = null;
+    });
+    try {
+      final result = await repository.cancelRequest(request.requestId);
+      if (!mounted || version != _version) return;
+      await Navigator.of(context).pushReplacement<void, void>(MaterialPageRoute(
+          builder: (_) => ParentRequestsCancelledScreen(
+              result: result,
+              request: request,
+              child: child,
+              className: className)));
+    } catch (error) {
+      if (!mounted || version != _version) return;
+      setState(() => _cancelError = error is LeaveRequestException
+          ? error.message
+          : 'Chưa xác nhận hủy. Hãy tải lại trạng thái trước khi thử lại.');
+      if (error is LeaveRequestException &&
+          {400, 409}.contains(error.statusCode)) {
+        await _reload();
+      }
+    } finally {
+      if (mounted && version == _version) setState(() => _cancelling = false);
+    }
   }
 
   Future<void> _reload() async {
@@ -147,6 +208,29 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
                       ],
                       const SizedBox(height: 12),
                       _Timeline(request),
+                      if (_cancelError != null) ...[
+                        const SizedBox(height: 12),
+                        Semantics(
+                            liveRegion: true,
+                            child: Text(_cancelError!,
+                                style: TextStyle(color: context.k.bad)))
+                      ],
+                      const SizedBox(height: 12),
+                      MedicationAction(
+                          label: 'Hủy đơn này',
+                          danger: true,
+                          busy: _cancelling,
+                          onPressed: request.canCancel && !_cancelling
+                              ? () => _cancel(request)
+                              : null),
+                      const SizedBox(height: 8),
+                      Text(
+                          request.canCancel
+                              ? 'Có thể hủy trước ${request.cancelBefore == null ? 'thời hạn máy chủ' : requestTimestamp(request.cancelBefore!)}. Máy chủ kiểm tra lại khi hủy.'
+                              : request.cancelBlockReason ??
+                                  'Đơn hiện không thể hủy. Vui lòng liên hệ giáo viên.',
+                          style: TextStyle(
+                              fontSize: 11, color: context.k.inkSoft)),
                       const SizedBox(height: 12),
                       ParentRequestCard(
                           color: context.k.brandTint,
@@ -187,7 +271,9 @@ class _ReviewStatus extends StatelessWidget {
           Text(
               request.status == LeaveStatus.pending
                   ? 'Đơn đã gửi, đang chờ giáo viên duyệt.'
-                  : '${request.status == LeaveStatus.cancelled ? 'Phụ huynh đã hủy đơn' : request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}',
+                  : request.status == LeaveStatus.cancelled
+                      ? 'Phụ huynh đã hủy đơn'
+                      : '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}',
               style: TextStyle(fontSize: 11, color: ink)),
         ]));
   }
@@ -216,7 +302,8 @@ class _Timeline extends StatelessWidget {
               LeaveStatus.cancelled => 'Phụ huynh đã hủy đơn',
             },
             [
-              if (request.reviewedAt != null)
+              if (request.status != LeaveStatus.cancelled &&
+                  request.reviewedAt != null)
                 requestTimestamp(request.reviewedAt!),
               if (request.status != LeaveStatus.cancelled &&
                   request.reviewerName != null)
@@ -228,7 +315,11 @@ class _Timeline extends StatelessWidget {
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
             padding: const EdgeInsets.only(top: 5),
-            child: Icon(Icons.circle, size: 10, color: context.k.brand)),
+            child: Image.asset(
+                'assets/request_timeline/${title == 'Đã gửi đơn' ? 'complete' : request.status == LeaveStatus.pending ? 'waiting' : 'complete'}.png',
+                width: 11,
+                height: 11,
+                excludeFromSemantics: true)),
         const SizedBox(width: 10),
         Expanded(
             child:

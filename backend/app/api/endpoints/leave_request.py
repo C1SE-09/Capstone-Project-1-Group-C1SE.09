@@ -18,6 +18,7 @@ from app.schemas.leave_request_schema import (
     LeaveRequestResponse, LeaveRequestReviewResponse, ParentLeaveRequestCreate, StudentLeaveHistoryResponse,
 )
 from app.services.attendance_sync_service import cancel_leave_request as cancel_request
+from app.services.attendance_sync_service import cancellation_metadata
 from app.services.leave_request_attachments import MAX_IMAGE_BYTES, read_attachment, save_attachment
 from app.services.leave_request_service import create_request, create_requests, require_parent, review_request, verify_class_access
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/leave-requests", tags=["leave-requests"])
 
 
-def _to_response_dto(req: LeaveRequest) -> LeaveRequestResponse:
+def _to_response_dto(req: LeaveRequest, actor: User | None = None) -> LeaveRequestResponse:
     reviewer = req.reviewer
     reviewer_name = (reviewer.teacher.full_name if reviewer.teacher else reviewer.username) if reviewer else None
     kind = req.type or LeaveType.SINGLE_DAY
@@ -43,6 +44,7 @@ def _to_response_dto(req: LeaveRequest) -> LeaveRequestResponse:
         child_avatar_url=req.child.avatar_url if req.child else None,
         parent_name=req.parent.full_name if req.parent else None,
         reviewer_name=reviewer_name, approved_by_name=reviewer_name,
+        **cancellation_metadata(req, actor.parent_id if actor is not None and role_of(actor) == "parent" else None),
     )
 
 
@@ -52,9 +54,9 @@ def create_leave_request(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
 ):
     if isinstance(payload, ParentLeaveRequestCreate):
-        return _to_response_dto(create_request(db, payload, current_user))
+        return _to_response_dto(create_request(db, payload, current_user), current_user)
     requests = create_requests(db, payload, current_user)
-    return LeaveBatchCreateResponse(total_created=len(requests), requests=[_to_response_dto(req) for req in requests])
+    return LeaveBatchCreateResponse(total_created=len(requests), requests=[_to_response_dto(req, current_user) for req in requests])
 
 
 @router.post("/parent", response_model=LeaveRequestResponse, status_code=201)
@@ -62,7 +64,7 @@ def create_parent_request(
     payload: ParentLeaveRequestCreate,
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
 ):
-    return _to_response_dto(create_request(db, payload, current_user))
+    return _to_response_dto(create_request(db, payload, current_user), current_user)
 
 
 @router.get("/class/{class_id}", response_model=LeaveRequestBatchSummary)
@@ -80,7 +82,7 @@ def get_class_leave_requests(
         LeaveRequest.status.in_(states)).order_by(LeaveRequest.created_at.desc(), LeaveRequest.leave_id.desc())
         .offset(offset).limit(limit)).all()
     return LeaveRequestBatchSummary(pending_count=counts[LeaveRequestStatus.PENDING],
-        reviewed_count=sum(counts[state] for state in reviewed), items=[_to_response_dto(req) for req in requests])
+        reviewed_count=sum(counts[state] for state in reviewed), items=[_to_response_dto(req, current_user) for req in requests])
 
 
 @router.get("/mine", response_model=LeaveRequestPage)
@@ -97,7 +99,7 @@ def get_my_leave_requests(
     total = db.scalar(select(func.count(LeaveRequest.leave_id)).where(*filters)) or 0
     requests = db.scalars(select(LeaveRequest).where(*filters)
         .order_by(LeaveRequest.created_at.desc(), LeaveRequest.leave_id.desc()).offset(offset).limit(limit)).all()
-    return LeaveRequestPage(items=[_to_response_dto(req) for req in requests], total=total, offset=offset, limit=limit)
+    return LeaveRequestPage(items=[_to_response_dto(req, current_user) for req in requests], total=total, offset=offset, limit=limit)
 
 
 @router.get("/student/{child_id}", response_model=StudentLeaveHistoryResponse)
@@ -115,7 +117,7 @@ def get_student_leave_requests(
         .order_by(LeaveRequest.created_at.desc(), LeaveRequest.leave_id.desc()).offset(offset).limit(limit)).all()
     return StudentLeaveHistoryResponse(child_id=child_id, child_name=child.full_name, class_id=child.class_id,
         class_name=child.class_.name if child.class_ else None, total_requests=total,
-        data=[_to_response_dto(req) for req in requests])
+        data=[_to_response_dto(req, current_user) for req in requests])
 
 
 @router.post("/attachments", response_model=LeaveRequestAttachmentResponse, status_code=201)
@@ -151,7 +153,7 @@ def get_leave_request(
         resolve_child_for_actor(db, req.child_id, current_user)
     else:
         verify_class_access(req.class_id, current_user, db)
-    return _to_response_dto(req)
+    return _to_response_dto(req, current_user)
 
 
 @router.post("/{request_id}/approve", response_model=LeaveRequestReviewResponse)
@@ -160,7 +162,7 @@ def approve_leave_request(
 ):
     req, synced = review_request(db, request_id, current_user, LeaveRequestStatus.APPROVED)
     logger.info("Duyệt đơn: id=%s", req.leave_id)
-    return LeaveRequestReviewResponse(**_to_response_dto(req).model_dump(), success=True,
+    return LeaveRequestReviewResponse(**_to_response_dto(req, current_user).model_dump(), success=True,
         message="Đã duyệt đơn xin phép", synced_attendance_count=synced)
 
 
@@ -171,7 +173,7 @@ def reject_leave_request(
 ):
     req, _ = review_request(db, request_id, current_user, LeaveRequestStatus.REJECTED, reject_reason=payload.reason)
     logger.info("Từ chối đơn: id=%s", req.leave_id)
-    return LeaveRequestReviewResponse(**_to_response_dto(req).model_dump(), success=True,
+    return LeaveRequestReviewResponse(**_to_response_dto(req, current_user).model_dump(), success=True,
         message="Đã từ chối đơn", synced_attendance_count=0)
 
 

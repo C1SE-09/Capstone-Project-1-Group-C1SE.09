@@ -56,6 +56,71 @@ Map<String, dynamic> requestJson({String status = 'pending'}) => {
     };
 
 void main() {
+  test(
+      'approve reject and cancel 401 each make one mutation attempt without replay',
+      () async {
+    for (final action in ['approve', 'reject', 'cancel']) {
+      final transport =
+          RequestTransport((_) => jsonBody({'detail': 'Phiên hết hạn'}, 401));
+      final repository = HttpLeaveRequestRepository(
+          dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
+            ..httpClientAdapter = transport);
+      await expectLater(
+          switch (action) {
+            'approve' => repository.approveLeaveRequest('request-1'),
+            'reject' => repository.rejectLeaveRequest(
+                requestId: 'request-1', rejectReason: 'Bổ sung thông tin'),
+            _ => repository.cancelRequest('request-1'),
+          },
+          throwsA(isA<LeaveRequestException>()));
+      expect(transport.requests, hasLength(1));
+    }
+  });
+  test(
+      'cancellation parses server proof and eligibility without assuming old server capabilities',
+      () async {
+    final transport = RequestTransport((_) => jsonBody({
+          'success': true,
+          'leave_id': 'request-1',
+          'status': 'cancelled',
+          'rollbacked_attendance': false
+        }));
+    final repo = HttpLeaveRequestRepository(
+        dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
+          ..httpClientAdapter = transport);
+    final result = await repo.cancelRequest('request-1');
+    expect(result.status, LeaveStatus.cancelled);
+    expect(result.rollbackedAttendance, isFalse);
+    expect(
+        transport.requests.single.path, '/api/leave-requests/request-1/cancel');
+    expect(LeaveRequestEntity.fromJson(requestJson()).canCancel, isFalse);
+    final current = LeaveRequestEntity.fromJson({
+      ...requestJson(),
+      'can_cancel': true,
+      'cancel_before': '2030-01-05T07:30:00+07:00',
+      'contact_phone': '0905123123'
+    });
+    expect(current.canCancel, isTrue);
+    expect(current.cancelBefore, isNotNull);
+    expect(current.contactPhone, '0905123123');
+  });
+
+  test('invalid or unconfirmed cancellation response does not become success',
+      () async {
+    for (final body in [
+      {'success': false, 'leave_id': 'request-1', 'status': 'cancelled'},
+      {'success': true, 'leave_id': 'other-request', 'status': 'cancelled'},
+      {'success': true, 'leave_id': 'request-1', 'status': 'pending'}
+    ]) {
+      final transport = RequestTransport((_) => jsonBody(body));
+      final repo = HttpLeaveRequestRepository(
+          dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
+            ..httpClientAdapter = transport);
+      await expectLater(repo.cancelRequest('request-1'),
+          throwsA(isA<LeaveRequestException>()));
+      expect(transport.requests, hasLength(1));
+    }
+  });
   test('đọc contract mới và trạng thái cancelled không thành chờ duyệt', () {
     final data = {
       ...requestJson(status: 'cancelled'),

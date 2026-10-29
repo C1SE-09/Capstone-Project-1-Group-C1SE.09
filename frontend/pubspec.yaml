@@ -119,6 +119,7 @@ flutter:
   # https://flutter.dev/to/asset-from-package
 
   assets:
+    - assets/request_timeline/
     - assets/audio/
 
   fonts:

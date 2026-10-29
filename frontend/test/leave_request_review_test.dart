@@ -175,7 +175,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Kiểm tra UI hiển thị
-    expect(find.text('Duyệt đơn nghỉ / đi trễ • Lớp Mầm 1'), findsOneWidget);
+    expect(find.text('Duyệt đơn xin nghỉ'), findsOneWidget);
+    expect(find.text('Lớp Mầm 1'), findsOneWidget);
     expect(find.text('Chờ duyệt'), findsOneWidget);
     expect(find.text('Đã xử lý'), findsOneWidget);
     expect(find.text('Nguyễn Minh An'), findsOneWidget);
@@ -225,13 +226,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // Kiểm tra Dialog hiển thị
-    expect(find.text('Từ chối đơn xin nghỉ'), findsOneWidget);
+    expect(find.text('Từ chối đơn'), findsOneWidget);
     final confirmButtonFinder =
-        find.widgetWithText(ElevatedButton, 'Xác nhận từ chối');
+        find.widgetWithText(FilledButton, 'Gửi từ chối');
     expect(confirmButtonFinder, findsOneWidget);
 
     // Khi ô nhập đang trống, nút không được kích hoạt (onPressed là null)
-    final initialButton = tester.widget<ElevatedButton>(confirmButtonFinder);
+    final initialButton = tester.widget<FilledButton>(confirmButtonFinder);
     expect(initialButton.onPressed, isNull);
 
     // Nhập lý do từ chối
@@ -240,7 +241,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Nút đã sẵn sàng
-    final enabledButton = tester.widget<ElevatedButton>(confirmButtonFinder);
+    final enabledButton = tester.widget<FilledButton>(confirmButtonFinder);
     expect(enabledButton.onPressed, isNotNull);
 
     // Xác nhận từ chối

@@ -553,6 +553,8 @@ void main() {
     expect(find.text('Báo đi trễ'), findsOneWidget);
     expect(find.text('08:30'), findsOneWidget);
     expect(find.text('Tiến trình xử lý'), findsOneWidget);
+    await tester.scrollUntilVisible(
+        find.textContaining('không thay thế điểm danh'), 200);
     expect(find.textContaining('không thay thế điểm danh'), findsOneWidget);
     expect(find.textContaining('Đã đến lớp'), findsNothing);
     expect(transport.requests, hasLength(2));

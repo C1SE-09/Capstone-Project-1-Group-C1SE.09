@@ -55,6 +55,26 @@ def rollback_leave_request_attendance(db: Session, leave_request: LeaveRequest) 
     return result.rowcount
 
 
+def cancellation_eligibility(req: LeaveRequest, now: datetime) -> tuple[bool, str | None]:
+    now = now.astimezone(vn_tz)
+    if req.status not in (LeaveStatus.PENDING, LeaveStatus.APPROVED):
+        return False, "Đơn đã được xử lý, không thể hủy"
+    if req.from_date < now.date():
+        return False, "Không thể hủy đơn cho ngày đã qua"
+    if req.from_date == now.date() and now.time() >= time(7, 30):
+        return False, "Đã quá 07:30 AM, vui lòng liên hệ giáo viên để hủy"
+    return True, None
+
+
+def cancellation_metadata(req: LeaveRequest, parent_id: uuid.UUID | None) -> dict:
+    if parent_id is None or parent_id != req.parent_id:
+        return {"can_cancel": False, "cancel_before": None,
+                "cancel_block_reason": "Chỉ phụ huynh gửi đơn mới có thể hủy"}
+    allowed, reason = cancellation_eligibility(req, datetime.now(vn_tz))
+    return {"can_cancel": allowed, "cancel_before": datetime.combine(req.from_date, time(7, 30), tzinfo=vn_tz),
+            "cancel_block_reason": reason}
+
+
 def cancel_leave_request(db: Session, request_id: uuid.UUID, parent_id: uuid.UUID) -> tuple[LeaveRequest, bool]:
     req = db.scalar(select(LeaveRequest).where(LeaveRequest.leave_id == request_id)
         .with_for_update(of=LeaveRequest).execution_options(populate_existing=True))
@@ -62,13 +82,10 @@ def cancel_leave_request(db: Session, request_id: uuid.UUID, parent_id: uuid.UUI
         raise HTTPException(status_code=404, detail="Không tìm thấy đơn xin nghỉ học")
     if req.parent_id != parent_id:
         raise HTTPException(status_code=403, detail="Bạn không có quyền hủy đơn này")
-    if req.status not in (LeaveStatus.PENDING, LeaveStatus.APPROVED):
-        raise HTTPException(status_code=400, detail="Đơn đã được xử lý, không thể hủy")
     now = datetime.now(vn_tz)
-    if req.from_date < now.date():
-        raise HTTPException(status_code=400, detail="Không thể hủy đơn cho ngày đã qua")
-    if req.from_date == now.date() and now.time() >= time(7, 30):
-        raise HTTPException(status_code=400, detail="Đã quá 07:30 AM, vui lòng liên hệ giáo viên để hủy")
+    allowed, reason = cancellation_eligibility(req, now)
+    if not allowed:
+        raise HTTPException(status_code=400, detail=reason)
     deleted = rollback_leave_request_attendance(db, req) if req.status == LeaveStatus.APPROVED else 0
     req.status = LeaveStatus.CANCELLED
     req.action_at = now

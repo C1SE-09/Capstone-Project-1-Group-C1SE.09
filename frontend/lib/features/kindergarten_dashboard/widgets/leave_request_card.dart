@@ -1,240 +1,168 @@
-// frontend/lib/features/kindergarten_dashboard/widgets/leave_request_card.dart
-// ============================================================================
-// Thẻ hiển thị thông tin đơn xin nghỉ học của học sinh.
-
+// Thẻ22: mở/thu gọn, nội dung và ETA thật; không coi báo trễ là check-in.
+import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class LeaveRequestCard extends StatelessWidget {
-  const LeaveRequestCard({
-    super.key,
-    required this.item,
-    required this.onApprove,
-    required this.onReject,
-    this.onAttachment,
-    this.processing = false,
-  });
+import '../screens/parent_medication_widgets.dart';
+import '../screens/parent_requests_widgets.dart';
+import '../theme.dart';
 
+class LeaveRequestCard extends StatefulWidget {
+  const LeaveRequestCard(
+      {super.key,
+      required this.item,
+      required this.onApprove,
+      required this.onReject,
+      this.onAttachment,
+      this.processing = false,
+      this.initiallyExpanded = true,
+      this.className});
   final LeaveRequestEntity item;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
+  final VoidCallback onApprove, onReject;
   final VoidCallback? onAttachment;
-  final bool processing;
+  final bool processing, initiallyExpanded;
+  final String? className;
+  @override
+  State<LeaveRequestCard> createState() => _LeaveRequestCardState();
+}
 
-  String _formatDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+class _LeaveRequestCardState extends State<LeaveRequestCard> {
+  late bool _open = widget.initiallyExpanded;
+  Future<void> _call() async {
+    final uri = phoneCallUri(widget.item.contactPhone);
+    if (uri == null) return;
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {/* Giữ thông tin liên hệ trên thẻ để giáo viên thử lại. */}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không mở được ứng dụng gọi điện.')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final k = context.k;
-    final isPending = item.status == LeaveStatus.pending;
-    final isApproved = item.status == LeaveStatus.approved;
-    final isCancelled = item.status == LeaveStatus.cancelled;
-    final isLate = item.requestType == LeaveRequestType.lateArrival;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: k.surface,
-        borderRadius: BorderRadius.circular(KRadii.card),
-        border: Border.all(color: k.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(KSpace.x4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: Avatar + Tên + Thời gian nộp + Badge trạng thái
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: k.brandTint,
-                backgroundImage: item.childAvatarUrl != null
-                    ? NetworkImage(item.childAvatarUrl!)
-                    : null,
-                child: item.childAvatarUrl == null
-                    ? Icon(Icons.person, color: k.brand)
-                    : null,
-              ),
-              const SizedBox(width: KSpace.x3),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.childName ?? 'Học sinh',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: k.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Phụ huynh: ${item.parentName ?? "Gia đình"} • Gửi lúc ${_formatDate(item.createdAt)}',
-                      style: TextStyle(fontSize: 12, color: k.inkFaint),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isPending)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isCancelled
-                        ? k.surfaceSunken
-                        : isApproved
-                            ? k.okTint
-                            : k.badTint,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    isCancelled
-                        ? 'Đã hủy'
-                        : isApproved
-                            ? 'Đã duyệt'
-                            : 'Đã từ chối',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isCancelled
-                          ? k.inkSoft
-                          : isApproved
-                              ? k.ok
-                              : k.bad,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: KSpace.x2),
-            child: Divider(color: k.line, height: 1),
-          ),
-
-          Text(isLate ? 'Báo đi trễ' : 'Nghỉ học',
-              style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600, color: k.brand)),
-          const SizedBox(height: KSpace.x2),
-          // ETA chỉ là giờ dự kiến, không phải giờ điểm danh thực tế.
-          Row(
-            children: [
-              Icon(Icons.calendar_today_outlined, size: 16, color: k.brand),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: Text(
-                isLate
-                    ? '${_formatDate(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'Chưa cập nhật'}'
-                    : 'Thời gian: ${_formatDate(item.fromDate)} - ${_formatDate(item.toDate)} (${item.totalDays} ngày)',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: k.ink,
-                ),
-              )),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Khối lý do
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(KSpace.x3),
-            decoration: BoxDecoration(
-              color: k.surfaceSunken,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isLate ? 'Lý do đi trễ:' : 'Lý do xin nghỉ:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: k.inkSoft,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.reason,
-                  style: TextStyle(fontSize: 13, color: k.ink),
-                ),
-                if (!isPending &&
-                    item.rejectReason != null &&
-                    item.rejectReason!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Lý do từ chối: ${item.rejectReason}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: k.bad,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          if (item.attachmentUrl != null && onAttachment != null)
-            TextButton.icon(
-              onPressed: onAttachment,
-              icon: const Icon(Icons.image_outlined, size: 18),
-              label: const Text('Xem ảnh đính kèm'),
-            ),
-
-          // Hàng nút hành động nếu đang Chờ duyệt
-          if (isPending) ...[
-            const SizedBox(height: KSpace.x4),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
+    final item = widget.item, k = context.k;
+    final pending = item.status == LeaveStatus.pending;
+    final late = item.requestType == LeaveRequestType.lateArrival;
+    final name = item.childName ?? 'Chưa có tên học sinh';
+    final words = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    final initials = words.reversed
+        .take(2)
+        .toList()
+        .reversed
+        .map((word) => String.fromCharCode(word.runes.first))
+        .join()
+        .toUpperCase();
+    return MedicationCard(
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Semantics(
+          button: true,
+          expanded: _open,
+          label: 'Chi tiết đơn của $name',
+          child: InkWell(
+              onTap: () => setState(() {
+                    _open = !_open;
+                  }),
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(children: [
+                    CircleAvatar(
+                        radius: 21,
+                        backgroundColor: k.brandTint,
+                        backgroundImage: item.childAvatarUrl == null
+                            ? null
+                            : NetworkImage(item.childAvatarUrl!),
+                        child: item.childAvatarUrl == null
+                            ? Text(initials,
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: k.brand))
+                            : null),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(name,
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w700)),
+                          Text(
+                              '${widget.className == null ? '' : '${widget.className} · '}${requestTimestamp(item.createdAt)}',
+                              style: TextStyle(fontSize: 11, color: k.inkSoft)),
+                        ])),
+                    const SizedBox(width: 8),
+                    Flexible(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                          MedicationBadge(late ? 'Báo đi trễ' : 'Xin nghỉ',
+                              status: late ? 'pending' : 'given'),
+                          if (!pending) ...[
+                            const SizedBox(height: 4),
+                            ParentRequestStatus(item.status)
+                          ],
+                        ])),
+                    const SizedBox(width: 4),
+                    Icon(_open ? Icons.expand_less : Icons.chevron_right,
+                        size: 18, color: k.inkFaint),
+                  ])))),
+      if (_open) ...[
+        const SizedBox(height: 10),
+        ParentRequestInfo(
+            'Ngày',
+            Text(
+                late
+                    ? '${requestDate(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'Chưa cập nhật'}'
+                    : requestRange(item),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 12))),
+        ParentRequestInfo(late ? 'Lý do đi trễ:' : 'Lý do xin nghỉ:',
+            Text(item.reason, style: const TextStyle(fontSize: 12))),
+        if (item.attachmentUrl != null)
+          ParentRequestInfo(
+              'Đính kèm',
+              TextButton(
+                  onPressed: widget.onAttachment,
+                  child: const Text('Xem ảnh đính kèm',
+                      style: TextStyle(fontSize: 12)))),
+        ParentRequestInfo(
+            'SĐT liên hệ',
+            TextButton(
+                onPressed:
+                    phoneCallUri(item.contactPhone) == null ? null : _call,
+                child: Text(maskedPhone(item.contactPhone),
+                    style: const TextStyle(fontSize: 12)))),
+        if (item.rejectReason?.isNotEmpty == true)
+          Text('Lý do từ chối: ${item.rejectReason}',
+              style: TextStyle(fontSize: 12, color: k.bad)),
+        if (pending) ...[
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+                child: OutlinedButton(
+                    onPressed: widget.processing ? null : widget.onReject,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: k.bad,
-                      side: BorderSide(color: k.bad),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: processing ? null : onReject,
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Từ chối',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ),
-                const SizedBox(width: KSpace.x3),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: k.ok,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: processing ? null : onApprove,
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Duyệt đơn',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ],
+                        foregroundColor: k.bad,
+                        side: BorderSide(color: k.bad),
+                        minimumSize: const Size(0, 48),
+                        shape: const StadiumBorder()),
+                    child: const Text('Từ chối'))),
+            const SizedBox(width: 8),
+            Expanded(
+                child: MedicationAction(
+                    label: 'Duyệt đơn',
+                    onPressed: widget.processing ? null : widget.onApprove)),
+          ])
         ],
-      ),
-    );
+      ],
+    ]));
   }
 }

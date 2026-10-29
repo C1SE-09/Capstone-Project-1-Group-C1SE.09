@@ -143,6 +143,9 @@ class LeaveRequestResponse(BaseModel):
     meal_warning_acknowledged: bool = False
     submitted_after_cutoff: bool = False
     contact_phone: str = ""
+    can_cancel: bool = False
+    cancel_before: datetime | None = None
+    cancel_block_reason: str | None = None
     status: LeaveStatus
     reject_reason: str | None = None
     reviewed_by: uuid.UUID | None = None

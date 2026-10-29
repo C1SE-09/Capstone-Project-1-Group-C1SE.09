@@ -33,6 +33,10 @@ class LeaveRequestEntity {
     this.requestType = LeaveRequestType.absence,
     this.expectedArrivalTime,
     this.mealWarningAcknowledged = false,
+    this.contactPhone = '',
+    this.canCancel = false,
+    this.cancelBefore,
+    this.cancelBlockReason,
   });
 
   final String requestId;
@@ -55,6 +59,10 @@ class LeaveRequestEntity {
   final LeaveRequestType requestType;
   final String? expectedArrivalTime;
   final bool mealWarningAcknowledged;
+  final String contactPhone;
+  final bool canCancel;
+  final DateTime? cancelBefore;
+  final String? cancelBlockReason;
 
   int get totalDays {
     final diff = toDate.difference(fromDate).inDays;
@@ -107,6 +115,10 @@ class LeaveRequestEntity {
       expectedArrivalTime: json['expected_arrival_time'] as String?,
       mealWarningAcknowledged:
           json['meal_warning_acknowledged'] as bool? ?? false,
+      contactPhone: json['contact_phone'] as String? ?? '',
+      canCancel: json['can_cancel'] == true,
+      cancelBefore: DateTime.tryParse(json['cancel_before'] as String? ?? ''),
+      cancelBlockReason: json['cancel_block_reason'] as String?,
     );
   }
 }

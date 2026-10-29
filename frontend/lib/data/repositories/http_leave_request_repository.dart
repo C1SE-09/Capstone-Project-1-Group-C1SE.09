@@ -29,6 +29,16 @@ class ParentRequestPage {
   final int total;
 }
 
+class LeaveRequestCancelResult {
+  const LeaveRequestCancelResult(
+      {required this.requestId,
+      required this.status,
+      required this.rollbackedAttendance});
+  final String requestId;
+  final LeaveStatus status;
+  final bool rollbackedAttendance;
+}
+
 class LeaveRequestBatchResult {
   const LeaveRequestBatchResult({
     required this.pendingCount,
@@ -221,6 +231,11 @@ class HttpLeaveRequestRepository {
         queryParameters: queryParameters,
         options: Options(validateStatus: (_) => true, followRedirects: false),
       );
+      if (sessions.currentSession?.sessionId != sessionId) {
+        throw const LeaveRequestException(
+            'Phiên đã thay đổi. Vui lòng mở lại dữ liệu của bé.',
+            code: 'session_changed');
+      }
       if (response.statusCode == 401 &&
           sessionId != null &&
           sessions.currentSession?.sessionId == sessionId) {
@@ -310,8 +325,9 @@ class HttpLeaveRequestRepository {
   /// Duyệt đơn 1 chạm
   Future<LeaveRequestEntity> approveLeaveRequest(String requestId) async {
     try {
-      final response =
-          await _dio.post('/api/leave-requests/$requestId/approve');
+      final response = await _post(
+          '/api/leave-requests/${Uri.encodeComponent(requestId)}/approve',
+          data: {});
       return LeaveRequestEntity.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _failure(
@@ -325,8 +341,8 @@ class HttpLeaveRequestRepository {
     required String rejectReason,
   }) async {
     try {
-      final response = await _dio.post(
-        '/api/leave-requests/$requestId/reject',
+      final response = await _post(
+        '/api/leave-requests/${Uri.encodeComponent(requestId)}/reject',
         data: {'reject_reason': rejectReason.trim()},
       );
       return LeaveRequestEntity.fromJson(response.data as Map<String, dynamic>);
@@ -334,5 +350,24 @@ class HttpLeaveRequestRepository {
       throw _failure(
           e.response?.data, e.response?.statusCode, 'Không thể từ chối đơn');
     }
+  }
+
+  Future<LeaveRequestCancelResult> cancelRequest(String requestId) async {
+    final response = await _post(
+        '/api/leave-requests/${Uri.encodeComponent(requestId)}/cancel',
+        data: {});
+    final body = response.data;
+    if (body is! Map ||
+        body['success'] != true ||
+        (body['leave_id'] ?? body['request_id']) != requestId ||
+        body['status'] != 'cancelled') {
+      throw const LeaveRequestException(
+          'Chưa xác nhận hủy. Hãy tải lại trạng thái trước khi thử lại.',
+          code: 'invalid_response');
+    }
+    return LeaveRequestCancelResult(
+        requestId: requestId,
+        status: LeaveStatus.cancelled,
+        rollbackedAttendance: body['rollbacked_attendance'] == true);
   }
 }
