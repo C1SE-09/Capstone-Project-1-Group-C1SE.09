@@ -46,6 +46,8 @@ from app.models.medication import (
     MedicationRequest,
     MedicationRequestStatus,
     MedicationSession,
+    MedicationStatus,
+    MedicineCategory,
 )
 from app.models.report import (
     ActivityCategory,
@@ -111,6 +113,8 @@ __all__ = [
     "MedicationRequest",
     "MedicationRequestStatus",
     "MedicationSession",
+    "MedicationStatus",
+    "MedicineCategory",
     "Parent",
     "ParentChild",
     "ParentStatus",

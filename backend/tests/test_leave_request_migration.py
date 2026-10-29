@@ -63,7 +63,10 @@ def test_migration_merges_existing_heads_into_one_head():
     assert set(migration.down_revision) == {"4d8e9f1a2b3c", "c0b673468361"}
     assert len(scripts.get_heads()) == 1, "Bản ghép phải có một head, không làm mất nhánh health/medicine"
     final = scripts.get_revision(scripts.get_heads()[0])
-    assert set(final.down_revision) == {REVISION, "a2b3c4d5e6f7", "b7c8d9e0f1a2"}
+    assert set(final.down_revision) == {"f0a1b2c3d4e5", "c7d8e9f0a1b2"}
+    assert set(scripts.get_revision("f0a1b2c3d4e5").down_revision) == {
+        REVISION, "a2b3c4d5e6f7", "b7c8d9e0f1a2",
+    }
 
 
 def test_d2_preserves_eta_already_created_by_upstream():
