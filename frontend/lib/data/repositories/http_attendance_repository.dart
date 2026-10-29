@@ -8,6 +8,22 @@ import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:dio/dio.dart';
 
+class AttendanceChildRecord {
+  const AttendanceChildRecord({
+    required this.childId,
+    required this.status,
+    this.expectedArrivalTime,
+    this.checkInTime,
+    this.note,
+  });
+
+  final String childId;
+  final AttendanceStatus status;
+  final String? expectedArrivalTime;
+  final String? checkInTime;
+  final String? note;
+}
+
 class HttpAttendanceRepository {
   HttpAttendanceRepository({Dio? dio, String? baseUrl})
       : _dio = dio ??
@@ -52,6 +68,8 @@ class HttpAttendanceRepository {
     switch (val?.toLowerCase()) {
       case 'absent':
         return AttendanceStatus.absent;
+      case 'excused_absent':
+        return AttendanceStatus.excusedAbsent;
       case 'late':
         return AttendanceStatus.late;
       case 'present':
@@ -65,6 +83,8 @@ class HttpAttendanceRepository {
     switch (status) {
       case AttendanceStatus.absent:
         return 'absent';
+      case AttendanceStatus.excusedAbsent:
+        return 'excused_absent';
       case AttendanceStatus.late:
         return 'late';
       case AttendanceStatus.arrived:
@@ -72,9 +92,9 @@ class HttpAttendanceRepository {
     }
   }
 
-  /// Lấy bản ghi điểm danh của lớp theo ngày.
+  /// Lấy chi tiết điểm danh của lớp theo ngày (bao gồm giờ ETA và ghi chú đơn).
   /// Endpoint: GET /api/attendance?class_id={classId}&attendance_date={YYYY-MM-DD}
-  Future<Map<String, AttendanceStatus>> getClassAttendance(
+  Future<Map<String, AttendanceChildRecord>> getClassAttendanceDetails(
     String classId,
     DateTime date,
   ) async {
@@ -89,11 +109,17 @@ class HttpAttendanceRepository {
       final data = res.data;
       if (data is Map && data['children'] is List) {
         final list = data['children'] as List;
-        final map = <String, AttendanceStatus>{};
+        final map = <String, AttendanceChildRecord>{};
         for (final item in list) {
           if (item is Map && item['child_id'] != null) {
-            map[item['child_id'].toString()] =
-                _parseStatus(item['status']?.toString());
+            final cid = item['child_id'].toString();
+            map[cid] = AttendanceChildRecord(
+              childId: cid,
+              status: _parseStatus(item['status']?.toString()),
+              expectedArrivalTime: item['expected_arrival_time']?.toString(),
+              checkInTime: item['check_in_time']?.toString(),
+              note: item['note']?.toString(),
+            );
           }
         }
         return map;
@@ -104,19 +130,32 @@ class HttpAttendanceRepository {
     }
   }
 
+  /// Lấy bản ghi điểm danh của lớp theo ngày.
+  /// Endpoint: GET /api/attendance?class_id={classId}&attendance_date={YYYY-MM-DD}
+  Future<Map<String, AttendanceStatus>> getClassAttendance(
+    String classId,
+    DateTime date,
+  ) async {
+    final details = await getClassAttendanceDetails(classId, date);
+    return details.map((k, v) => MapEntry(k, v.status));
+  }
+
   /// Lưu bảng điểm danh cả lớp trong ngày (batch).
   /// Endpoint: POST /api/attendance/batch
   Future<void> saveBatchAttendance({
     required String classId,
     required DateTime date,
     required Map<String, AttendanceStatus> record,
+    Map<String, String?>? expectedArrivalTimes,
+    Map<String, String?>? notes,
   }) async {
     final records = record.entries
         .map((e) => {
               'child_id': e.key,
               'status': _statusToString(e.value),
               'check_in_time': null,
-              'note': null,
+              'expected_arrival_time': expectedArrivalTimes?[e.key],
+              'note': notes?[e.key],
             })
         .toList();
 

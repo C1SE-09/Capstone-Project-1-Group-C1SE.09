@@ -36,7 +36,16 @@ def upgrade() -> None:
         sa.Column('attachment_url', sa.String(length=500), nullable=True, comment='Ảnh đính kèm đơn thuốc/giấy khám'),
         sa.Column(
             'status',
-            sa.Enum('pending', 'approved', 'rejected', name='leave_request_status', native_enum=True),
+            # create_type=False: type đã được tạo ở bước 1. Nếu để mặc định
+            # True, SQLAlchemy sẽ CREATE TYPE lần nữa khi tạo bảng → DuplicateObject.
+            sa.Enum(
+                'pending',
+                'approved',
+                'rejected',
+                name='leave_request_status',
+                native_enum=True,
+                create_type=False,
+            ),
             nullable=False,
             server_default='pending',
         ),

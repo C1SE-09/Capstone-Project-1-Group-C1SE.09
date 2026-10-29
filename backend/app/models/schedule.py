@@ -167,6 +167,9 @@ class ClassSchedule(Base, TimestampMixin):
         Index("ix_class_schedule_class_id", "class_id"),
         Index("ix_class_schedule_day", "class_id", "day_of_week"),
         Index("ix_class_schedule_slot", "slot_id"),
+        UniqueConstraint(
+            "class_id", "day_of_week", "slot_id", name="uq_class_schedule_slot"
+        ),
         {"comment": "Weekly class timetable entries"},
     )
 

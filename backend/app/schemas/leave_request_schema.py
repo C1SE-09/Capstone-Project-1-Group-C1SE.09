@@ -163,3 +163,34 @@ class StudentLeaveHistoryResponse(BaseModel):
     class_name: str | None = None
     total_requests: int
     data: list[StudentLeaveHistoryItem]
+
+
+class LeaveRequestReject(BaseModel):
+    """Payload từ chối đơn."""
+    reason: str = Field(..., min_length=3, max_length=500, description="Lý do từ chối đơn")
+
+
+class LeaveRequestReviewResponse(BaseModel):
+    """Kết quả duyệt hoặc từ chối đơn từ giáo viên."""
+    success: bool
+    message: str
+    leave_id: uuid.UUID
+    status: LeaveStatus
+    synced_attendance_count: int = 0
+
+
+class LeaveRequestCancelResponse(BaseModel):
+    """Kết quả huỷ đơn từ phụ huynh."""
+    success: bool
+    message: str
+    leave_id: uuid.UUID
+    status: LeaveStatus
+    rollbacked_attendance: bool = False
+
+
+class LeaveRequestBatchSummary(BaseModel):
+    """Tổng hợp danh sách đơn theo lớp cho giáo viên."""
+    pending_count: int
+    reviewed_count: int
+    items: list[StudentLeaveHistoryItem]
+

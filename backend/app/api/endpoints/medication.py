@@ -1,7 +1,5 @@
 """
 app/api/endpoints/medication.py
-===============================
-API Dặn thuốc & Theo dõi cữ uống thuốc của học sinh.
 """
 
 from __future__ import annotations

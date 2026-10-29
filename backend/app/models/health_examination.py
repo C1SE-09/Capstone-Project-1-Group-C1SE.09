@@ -3,7 +3,7 @@ app/models/health_examination.py
 ================================
 SQLAlchemy 2.0 ORM Model: HealthExamination
 -------------------------------------------
-Ghi nhận kết quả khám sức khỏe định kỳ của học sinh (chiều cao, cân nặng, BMI, phân loại thể trạng).
+Ghi nhận số liệu sức khoẻ định kỳ của học sinh vào sổ sức khoẻ (chiều cao, cân nặng, BMI, phân loại thể trạng).
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class HealthCategory(str, enum.Enum):
 
 
 class HealthExamination(Base, TimestampMixin):
-    """Kết quả khám sức khỏe định kỳ của học sinh."""
+    """Số liệu sức khoẻ định kỳ của học sinh ghi trong sổ sức khoẻ."""
 
     __tablename__ = "health_examinations"
 
@@ -55,14 +55,14 @@ class HealthExamination(Base, TimestampMixin):
         UUID(as_uuid=True),
         ForeignKey("child.child_id", ondelete="CASCADE"),
         nullable=False,
-        comment="Học sinh được khám sức khỏe",
+        comment="Học sinh có số liệu ghi nhận",
     )
 
     examination_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
         default=date.today,
-        comment="Ngày thực hiện khám sức khỏe",
+        comment="Ngày ghi nhận số liệu",
     )
 
     height: Mapped[float] = mapped_column(
@@ -98,14 +98,14 @@ class HealthExamination(Base, TimestampMixin):
     general_conclusion: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
-        comment="Kết luận chung của đợt khám sức khỏe",
+        comment="Kết luận chung của đợt ghi nhận",
     )
 
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.user_id", ondelete="SET NULL"),
         nullable=True,
-        comment="Tài khoản giáo viên / y tế thực hiện ghi nhận",
+        comment="Tài khoản thực hiện ghi nhận",
     )
 
     # Relationships

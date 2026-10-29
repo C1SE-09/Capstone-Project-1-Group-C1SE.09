@@ -1,7 +1,5 @@
 """
 app/schemas/medication_schema.py
-================================
-Pydantic Schemas for Medication Requests.
 """
 
 from __future__ import annotations

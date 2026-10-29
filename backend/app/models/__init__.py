@@ -34,6 +34,7 @@ from app.models.child import (
 )
 from app.models.device_token import DeviceToken
 from app.models.health_examination import HealthCategory, HealthExamination
+from app.models.health_incident import HealthIncident, HealthIncidentType
 from app.models.leave_request import (
     LeaveRequest,
     LeaveRequestStatus,
@@ -99,6 +100,8 @@ __all__ = [
     "DeviceToken",
     "HealthCategory",
     "HealthExamination",
+    "HealthIncident",
+    "HealthIncidentType",
     "LeaveRequest",
     "LeaveRequestStatus",
     "LeaveStatus",

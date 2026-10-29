@@ -1,8 +1,5 @@
 """
 app/models/medication.py
-========================
-SQLAlchemy 2.0 ORM Model: MedicationRequest
-Quản lý đơn dặn thuốc và lịch uống thuốc của học sinh.
 """
 
 from __future__ import annotations
