@@ -114,22 +114,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       .where((child) => _draft[child.id] == AttendanceStatus.absent)
       .toList();
 
-  AttendanceStatus _next(AttendanceStatus status) => switch (status) {
-        AttendanceStatus.arrived => AttendanceStatus.absent,
-        AttendanceStatus.absent => AttendanceStatus.excusedAbsent,
-        AttendanceStatus.excusedAbsent => AttendanceStatus.late,
-        AttendanceStatus.late => AttendanceStatus.arrived,
-      };
-
-  void _changeStatus(Child child) {
-    if (_saving) return;
-    final current = _draft[child.id] ?? AttendanceStatus.arrived;
-    if (current == AttendanceStatus.excusedAbsent) return;
-    setState(() {
-      _draft[child.id] = _next(current);
-    });
-  }
-
   void _setStatus(Child child, AttendanceStatus newStatus) {
     if (_saving) return;
     final current = _draft[child.id] ?? AttendanceStatus.arrived;
@@ -411,7 +395,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     AttendanceStatus.arrived,
                                 detail: _details[_filteredRoster[i].id],
                                 enabled: !_saving,
-                                onTapRow: () => _changeStatus(_filteredRoster[i]),
                                 onChanged: (newStatus) =>
                                     _setStatus(_filteredRoster[i], newStatus),
                               ),
@@ -645,7 +628,6 @@ class _AttendanceRow extends StatelessWidget {
     required this.status,
     required this.enabled,
     required this.onChanged,
-    required this.onTapRow,
     this.detail,
   });
 
@@ -653,7 +635,6 @@ class _AttendanceRow extends StatelessWidget {
   final AttendanceStatus status;
   final bool enabled;
   final ValueChanged<AttendanceStatus> onChanged;
-  final VoidCallback onTapRow;
   final AttendanceChildRecord? detail;
 
   Widget? _buildBadge(BuildContext context) {
@@ -741,11 +722,9 @@ class _AttendanceRow extends StatelessWidget {
     final visual = _statusVisual(context, status);
     final isLocked = status == AttendanceStatus.excusedAbsent;
 
-    return InkWell(
-      onTap: (enabled && !isLocked) ? onTapRow : null,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
           children: [
             CircleAvatar(
               radius: 20,
@@ -949,8 +928,7 @@ class _AttendanceRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildSelectedItem(BuildContext context, AttendanceStatus itemStatus) {

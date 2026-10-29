@@ -159,7 +159,7 @@ void main() {
       severity: Severity.none,
     );
 
-    testWidgets('Renders attendance screen with children and allows status toggle', (tester) async {
+    testWidgets('Tapping child name does not change attendance status; changing requires dropdown', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: AttendanceScreen(
@@ -183,11 +183,22 @@ void main() {
       expect(find.text('Bé An'), findsOneWidget);
       expect(find.text('Bé Bình'), findsOneWidget);
 
-      // Tap on Bé An to toggle status from arrived -> absent
+      // Tap on Bé An - should NOT toggle status
       await tester.tap(find.text('Bé An'));
       await tester.pumpAndSettle();
 
-      // Find "Vắng" status
+      // "Vắng" only appears once in the summary bar (label), not on child row
+      expect(find.text('Vắng'), findsOneWidget);
+
+      // Change status via dropdown
+      final dropdownFinder = find.byType(DropdownButton<AttendanceStatus>).first;
+      await tester.tap(dropdownFinder);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Vắng').last);
+      await tester.pumpAndSettle();
+
+      // Now "Vắng" appears more than once (summary bar + child row)
       expect(find.text('Vắng'), findsWidgets);
     });
 
