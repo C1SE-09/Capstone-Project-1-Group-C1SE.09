@@ -147,7 +147,10 @@ export default function HealthExamPage() {
         class_id: selectedClassId || undefined,
         examination_date: examDate || undefined,
       }),
-    { refreshInterval: 30000 }
+    {
+      refreshInterval: editing || importOpen ? 0 : 30000,
+      revalidateOnFocus: !(editing || importOpen),
+    }
   );
 
   useEffect(() => {
