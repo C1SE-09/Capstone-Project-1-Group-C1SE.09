@@ -30,27 +30,47 @@ from sqlalchemy import (
     Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 
 from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.child import Child, Parent
-    from app.models.user import Class_, Teacher
+    from app.models.user import Class_, Teacher, User
 
 
 class MedicationRequestStatus(str, enum.Enum):
     """Trạng thái của đơn dặn thuốc."""
+
     ACTIVE = "active"        # Đang có hiệu lực
     COMPLETED = "completed"  # Đã hoàn thành đợt uống
     CANCELLED = "cancelled"  # Phụ huynh huỷ
+    PENDING = "pending"      # Tương thích với AC
+    GIVEN = "given"          # Tương thích với AC
+
+
+# Compatibility alias
+MedicationStatus = MedicationRequestStatus
 
 
 class MedicationSession(str, enum.Enum):
     """Mốc thời gian cho trẻ uống thuốc trong ngày."""
+
     MORNING = "morning"      # Buổi sáng
     NOON = "noon"            # Buổi trưa
     AFTERNOON = "afternoon"  # Buổi chiều
+
+
+class MedicineCategory(str, enum.Enum):
+    """Danh mục thuốc phổ biến (US 3.1)."""
+
+    PRESCRIPTION = "prescription"      # Thuốc theo đơn bác sĩ / Đã chia liều
+    FEVER_REDUCER = "fever_reducer"    # Thuốc hạ sốt
+    COUGH_THROAT = "cough_throat"      # Thuốc ho / đau họng / siro ho
+    LOZENGE = "lozenge"                # Viên ngậm
+    DIGESTIVE = "digestive"            # Men tiêu hóa / vi sinh
+    EYE_NOSE_DROPS = "eye_nose_drops"  # Thuốc nhỏ mắt / mũi
+    OTHER = "other"                    # Khác
 
 
 class MedicationRequest(Base, TimestampMixin):
@@ -97,6 +117,7 @@ class MedicationRequest(Base, TimestampMixin):
     medication_name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
+        default="Thuốc theo đơn",
         comment="Tên thuốc (vd: Kháng sinh Cefixim, Siro ho Prospan)",
     )
 
@@ -122,12 +143,14 @@ class MedicationRequest(Base, TimestampMixin):
     start_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
+        default=date.today,
         comment="Ngày bắt đầu cho uống",
     )
 
     end_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
+        default=date.today,
         comment="Ngày kết thúc đợt thuốc",
     )
 
@@ -150,10 +173,78 @@ class MedicationRequest(Base, TimestampMixin):
         comment="Ghi chú thêm từ phụ huynh",
     )
 
+    # --- Trường mở rộng cho US 3.1 ---
+    batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+        comment="Mã đợt dặn thuốc gom nhiều cữ",
+    )
+
+    time_slot: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        comment="Khung giờ uống cụ thể (e.g. 08:30)",
+    )
+
+    request_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+        comment="Ngày uống cữ thuốc",
+    )
+
+    medicine_category: Mapped[MedicineCategory | None] = mapped_column(
+        SAEnum(
+            MedicineCategory,
+            name="medicine_category_enum",
+            native_enum=True,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=True,
+        default=MedicineCategory.PRESCRIPTION,
+    )
+
+    prescription_image_url: Mapped[str | None] = mapped_column(
+        String(512),
+        nullable=True,
+        comment="Ảnh đơn thuốc hoặc bao bì túi thuốc",
+    )
+
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Tài khoản tạo đơn",
+    )
+
+    created_by_role: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="parent | teacher",
+    )
+
+    given_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Thời điểm thực tế cho uống",
+    )
+
+    given_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("teacher.teacher_id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Giáo viên cho uống",
+    )
+
+    # Synonyms để hỗ trợ cả code đồng nghiệp và code US 3.1
+    id = synonym("request_id")
+    medicine_name = synonym("medication_name")
+
     # Relationships
     child: Mapped[Child] = relationship("Child", lazy="joined")
     class_: Mapped[Class_] = relationship("Class_", lazy="select")
     parent: Mapped[Parent | None] = relationship("Parent", lazy="joined")
+    teacher: Mapped[Teacher | None] = relationship("Teacher", foreign_keys=[given_by_id])
+    created_by_user: Mapped[User | None] = relationship("User", foreign_keys=[created_by_user_id])
     logs: Mapped[list[MedicationLog]] = relationship(
         "MedicationLog",
         back_populates="request",
