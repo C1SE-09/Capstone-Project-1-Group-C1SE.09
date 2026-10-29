@@ -40,9 +40,10 @@ if TYPE_CHECKING:
 
 class AttendanceStatus(str, enum.Enum):
     """Trạng thái điểm danh của trẻ."""
-    PRESENT = "present" #có mặt
-    ABSENT = "absent" #vắng mặt
-    LATE = "late" #đến muộn
+    PRESENT = "present"  # có mặt
+    ABSENT = "absent"  # vắng mặt không phép
+    EXCUSED_ABSENT = "excused_absent"  # vắng mặt có phép
+    LATE = "late"  # đến muộn
 
 class AttendanceRecord(Base, TimestampMixin):
     """Trạng thái điểm danh của trẻ."""
@@ -88,6 +89,12 @@ class AttendanceRecord(Base, TimestampMixin):
         comment="Giờ vào lớp thực tế (dùng khi trẻ đi muộn)",
     )
 
+    expected_arrival_time: Mapped[time | None] = mapped_column(
+        Time,
+        nullable=True,
+        comment="Giờ dự kiến đến lớp (dùng khi trẻ báo đi muộn/ETA)",
+    )
+
     note: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
@@ -117,4 +124,9 @@ class AttendanceRecord(Base, TimestampMixin):
             "class_id",
             "date",
         ),
+    )
+
+    source_leave_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leave_request.request_id", ondelete="SET NULL"),
+        nullable=True, comment="Chỉ bản ghi do đơn tạo mới mới được hoàn tác khi hủy",
     )

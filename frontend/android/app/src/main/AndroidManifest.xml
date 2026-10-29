@@ -60,5 +60,10 @@
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE"/>
         </intent>
+        <!-- url_launcher mở trình gọi điện thoại (tel) -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
     </queries>
 </manifest>

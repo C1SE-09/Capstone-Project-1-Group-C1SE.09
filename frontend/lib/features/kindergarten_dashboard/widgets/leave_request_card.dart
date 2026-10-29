@@ -30,6 +30,7 @@ class LeaveRequestCard extends StatelessWidget {
     final k = context.k;
     final isPending = item.status == LeaveStatus.pending;
     final isApproved = item.status == LeaveStatus.approved;
+    final isCancelled = item.status == LeaveStatus.cancelled;
     final isLate = item.requestType == LeaveRequestType.lateArrival;
 
     return Container(
@@ -88,15 +89,27 @@ class LeaveRequestCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isApproved ? k.okTint : k.badTint,
+                    color: isCancelled
+                        ? k.surfaceSunken
+                        : isApproved
+                            ? k.okTint
+                            : k.badTint,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    isApproved ? 'Đã duyệt' : 'Đã từ chối',
+                    isCancelled
+                        ? 'Đã hủy'
+                        : isApproved
+                            ? 'Đã duyệt'
+                            : 'Đã từ chối',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: isApproved ? k.ok : k.bad,
+                      color: isCancelled
+                          ? k.inkSoft
+                          : isApproved
+                              ? k.ok
+                              : k.bad,
                     ),
                   ),
                 ),

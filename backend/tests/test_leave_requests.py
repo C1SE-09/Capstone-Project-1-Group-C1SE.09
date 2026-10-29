@@ -23,9 +23,11 @@ from app.models import (
     AttendanceStatus,
     Base,
     Child,
+    ChildStatus,
     Class_,
     LeaveRequest,
     LeaveRequestStatus,
+    LeaveType,
     Parent,
     ParentChild,
     School,
@@ -33,7 +35,7 @@ from app.models import (
     User,
     UserRole,
 )
-from app.schemas.leave_request_schema import LeaveRequestCreate
+from app.schemas.leave_request_schema import ParentLeaveRequestCreate as LeaveRequestCreate
 
 TODAY = date(2030, 1, 5)
 VN = timezone(timedelta(hours=7))
@@ -101,10 +103,13 @@ def env(monkeypatch):
         def now(cls, tz=None):
             return state.now.astimezone(tz) if tz else state.now.replace(tzinfo=None)
 
-    monkeypatch.setattr(routes, "datetime", Clock)
     from app.services import leave_request_service
+    from app.services import attendance_sync_service
+    import app.config as app_config
 
     monkeypatch.setattr(leave_request_service, "datetime", Clock)
+    monkeypatch.setattr(attendance_sync_service, "datetime", Clock)
+    monkeypatch.setattr(app_config, "datetime", Clock)
 
     def record_sql(orm_state):
         state.statements.append(orm_state.statement)
@@ -141,6 +146,11 @@ def create(env, **changes):
 
 
 def seed_request(env, **changes):
+    old_kind = changes.pop("request_type", None)
+    if old_kind is not None:
+        changes["type"] = LeaveType.LATE if old_kind == "late_arrival" else LeaveType.SINGLE_DAY
+    if changes.get("reviewed_by") == env.teacher.teacher_id:
+        changes["reviewed_by"] = env.teacher.user_id
     values = {
         "request_id": uuid.uuid4(), "child_id": env.child.child_id,
         "parent_id": env.parents[0].parent_id, "class_id": env.class_.class_id,
@@ -497,15 +507,15 @@ def test_absence_approval_preserves_present_late_and_real_checkin(env):
         assert len(records) == 5
         assert [r.status for r in records] == [AttendanceStatus.PRESENT, AttendanceStatus.LATE,
                                                AttendanceStatus.ABSENT, AttendanceStatus.ABSENT,
-                                               AttendanceStatus.ABSENT]
-        assert [r.note for r in records[:3]] == ["Ghi nhận 0", "Ghi nhận 1", "Ghi nhận 2"]
+                                               AttendanceStatus.EXCUSED_ABSENT]
+        assert [r.note for r in records[:4]] == ["Ghi nhận 0", "Ghi nhận 1", "Ghi nhận 2", "Ghi nhận 3"]
         assert records[2].check_in_time == time(8, 0)
-        assert records[3].note == records[4].note == "Nghỉ có phép"
+        assert records[4].note == "Nghỉ có phép"
+        assert all(row.source_leave_id is None for row in records[:4])
+        assert records[4].source_leave_id == req.request_id
     upserts = [s.compile(dialect=postgresql.dialect())
                for s in env.statements if getattr(s, "is_insert", False)]
-    assert upserts and all("ON CONFLICT (child_id, date) DO UPDATE SET" in str(sql) for sql in upserts)
-    assert all("WHERE attendance_record.status = %(status_1)s AND attendance_record.check_in_time IS NULL" in str(sql)
-               and sql.params["status_1"] == AttendanceStatus.ABSENT for sql in upserts)
+    assert upserts and all("ON CONFLICT (child_id, date) DO NOTHING" in str(sql) for sql in upserts)
 
 
 def test_approval_refuses_oversized_legacy_date_range(env):
@@ -783,3 +793,143 @@ def test_attachment_routes_require_authentication(env, image_storage):
     assert env.client.get(
         f"/api/leave-requests/attachments/{env.child.child_id}/{uuid.uuid4()}"
     ).status_code == 401
+
+
+def test_orm_uses_existing_database_column_names():
+    sql = str(select(LeaveRequest).compile(dialect=postgresql.dialect()))
+    assert "leave_request.request_id" in sql
+    assert "leave_request.reviewed_at" in sql
+    assert "leave_request.leave_id" not in sql
+    assert "leave_request.action_at" not in sql
+
+
+def test_batch_api_and_parent_gateway_share_one_history(env):
+    first = env.client.post("/api/leave-requests", json={
+        "children": [{"child_id": str(env.child.child_id), "type": "late",
+                      "from_date": "2030-01-06", "expected_arrival_time": "09:00:00"}],
+        "reason": "Bé đi khám buổi sáng",
+    })
+    assert first.status_code == 201, first.text
+    item = first.json()["requests"][0]
+    assert item["type"] == "late" and item["request_type"] == "late_arrival"
+    duplicate = env.client.post("/api/leave-requests/parent", json=payload(
+        env, from_date="2030-01-06", to_date="2030-01-06",
+    ))
+    assert duplicate.status_code == 409, duplicate.text
+    assert count_requests(env) == 1
+    history = env.client.get(f"/api/leave-requests/student/{env.child.child_id}")
+    assert history.status_code == 200, history.text
+    assert history.json()["data"][0]["leave_id"] == item["leave_id"]
+
+
+def test_batch_failure_is_atomic_for_unlinked_second_child(env):
+    response = env.client.post("/api/leave-requests", json={
+        "children": [
+            {"child_id": str(env.child.child_id), "type": "single_day", "from_date": "2030-01-06"},
+            {"child_id": str(env.other_child.child_id), "type": "single_day", "from_date": "2030-01-06"},
+        ], "reason": "Gia đình có việc riêng",
+    })
+    assert response.status_code == 403, response.text
+    assert count_requests(env) == 0
+
+
+def test_cancel_only_rolls_back_generated_excused_rows_and_preserves_actual_records(env):
+    env.client._transport.raise_server_exceptions = True
+    env.now = datetime(2030, 1, 5, 7, 0, tzinfo=VN)
+    req = seed_request(env, to_date=TODAY + timedelta(days=2), type=LeaveType.MULTI_DAY)
+    for i, kind in [(0, AttendanceStatus.PRESENT), (2, AttendanceStatus.EXCUSED_ABSENT)]:
+        env.db.add(AttendanceRecord(child_id=env.child.child_id, class_id=env.class_.class_id,
+            date=TODAY + timedelta(days=i), status=kind, note=f"Giáo viên ghi nhận {i}"))
+    env.db.commit()
+    env.actor = env.teacher
+    response = env.client.post(f"/api/leave-requests/{req.request_id}/approve")
+    assert response.status_code == 200, response.text
+    with env.factory() as db:
+        generated = db.scalar(select(AttendanceRecord).where(AttendanceRecord.date == TODAY + timedelta(days=1)))
+        assert generated.status == AttendanceStatus.EXCUSED_ABSENT
+        assert generated.source_leave_id == req.request_id
+    env.actor = env.parents[0]
+    response = env.client.post(f"/api/leave-requests/{req.request_id}/cancel")
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "cancelled"
+    with env.factory() as db:
+        records = db.scalars(select(AttendanceRecord).order_by(AttendanceRecord.date)).all()
+        assert [row.status for row in records] == [AttendanceStatus.PRESENT, AttendanceStatus.EXCUSED_ABSENT]
+        assert [row.note for row in records] == ["Giáo viên ghi nhận 0", "Giáo viên ghi nhận 2"]
+
+
+@pytest.mark.parametrize("child_status", [ChildStatus.WITHDRAWN, ChildStatus.GRADUATED])
+@pytest.mark.parametrize("endpoint", ["", "/parent"])
+def test_inactive_child_cannot_receive_new_requests(env, child_status, endpoint):
+    env.child.status = child_status
+    env.db.commit()
+    data = payload(env) if endpoint else {
+        "children": [{"child_id": str(env.child.child_id), "type": "single_day", "from_date": "2030-01-05"}],
+        "reason": "Xin nghỉ một ngày",
+    }
+    response = env.client.post(f"/api/leave-requests{endpoint}", json=data)
+    assert response.status_code == 404, response.text
+    assert count_requests(env) == 0
+
+
+def test_batch_default_date_remains_today_in_vietnam(env):
+    env.now = datetime(2030, 1, 5, 18, 0, tzinfo=timezone.utc)
+    response = env.client.post("/api/leave-requests", json={
+        "children": [{"child_id": str(env.child.child_id), "type": "single_day"}],
+        "reason": "Ngày mặc định theo giờ Việt Nam",
+    })
+    assert response.status_code == 201, response.text
+    assert response.json()["requests"][0]["from_date"] == "2030-01-06"
+
+
+def test_shared_batch_image_stays_private_for_each_child_and_class(env, image_storage):
+    env.db.add(ParentChild(child_id=env.other_child.child_id, parent_id=env.parents[0].parent_id))
+    teacher = Teacher(teacher_id=uuid.uuid4(), full_name="Cô lớp B", school_id=env.other_class.school_id,
+                      class_id=env.other_class.class_id, email="teacher-b@example.test")
+    teacher_user = User(user_id=uuid.uuid4(), username="teacher-b", password_hash="x", role=UserRole.TEACHER,
+                        teacher=teacher)
+    env.db.add_all([teacher, teacher_user])
+    env.db.commit()
+    source = upload(env).json()["attachment_url"]
+    response = env.client.post("/api/leave-requests", json={
+        "children": [{"child_id": str(child.child_id), "type": "single_day", "from_date": "2030-01-06"}
+                     for child in [env.child, env.other_child]],
+        "reason": "Gia đình gửi chung giấy khám", "attachment_url": source,
+    })
+    assert response.status_code == 201, response.text
+    paths = [item["attachment_url"] for item in response.json()["requests"]]
+    assert paths[0] == source and paths[1] != source
+    assert paths[1].startswith(f"/api/leave-requests/attachments/{env.other_child.child_id}/")
+    env.actor = env.teacher
+    assert env.client.get(paths[0]).status_code == 200
+    assert env.client.get(paths[1]).status_code == 403
+    env.actor = teacher_user
+    assert env.client.get(paths[0]).status_code == 403
+    assert env.client.get(paths[1]).content == PNG
+
+
+@pytest.mark.parametrize("change", ["withdrawn", "class"])
+def test_approval_refuses_stale_child_profile_without_changing_attendance(env, change):
+    req = seed_request(env)
+    if change == "withdrawn":
+        env.child.status = ChildStatus.WITHDRAWN
+    else:
+        env.child.class_id = env.other_class.class_id
+    env.db.commit()
+    env.actor = env.teacher
+    response = env.client.post(f"/api/leave-requests/{req.request_id}/approve")
+    assert response.status_code == 409, response.text
+    with env.factory() as db:
+        assert db.get(LeaveRequest, req.request_id).status == LeaveRequestStatus.PENDING
+        assert db.scalar(select(func.count()).select_from(AttendanceRecord)) == 0
+
+
+def test_cancel_requires_parent_still_linked_to_child(env):
+    env.now = datetime(2030, 1, 5, 7, 0, tzinfo=VN)
+    req = seed_request(env)
+    env.child.parent_id = env.parents[2].parent_id
+    env.db.commit()
+    response = env.client.post(f"/api/leave-requests/{req.request_id}/cancel")
+    assert response.status_code == 403, response.text
+    env.db.refresh(req)
+    assert req.status == LeaveRequestStatus.PENDING

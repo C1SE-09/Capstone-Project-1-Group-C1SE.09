@@ -281,11 +281,13 @@ class HttpLeaveRequestRepository {
   Future<LeaveRequestBatchResult> getLeaveRequests({
     required String classId,
     required String tab,
+    int offset = 0,
+    int limit = 50,
   }) async {
     try {
       final response = await _dio.get(
         '/api/leave-requests/class/$classId',
-        queryParameters: {'tab': tab},
+        queryParameters: {'tab': tab, 'offset': offset, 'limit': limit},
       );
 
       final data = response.data as Map<String, dynamic>;

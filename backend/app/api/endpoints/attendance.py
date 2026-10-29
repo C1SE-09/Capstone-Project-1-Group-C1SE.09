@@ -110,6 +110,7 @@ def get_class_attendance(
     result_items: list[ChildAttendanceResponse] = []
     present_cnt = 0
     absent_cnt = 0
+    excused_absent_cnt = 0
     late_cnt = 0
 
     for child in children:
@@ -117,17 +118,21 @@ def get_class_attendance(
         if rec:
             st = rec.status
             in_time = rec.check_in_time
+            eta = rec.expected_arrival_time
             note = rec.note
         else:
             # Mặc định chưa lưu thì là Có mặt
             st = AttendanceStatus.PRESENT
             in_time = None
+            eta = None
             note = None
 
         if st == AttendanceStatus.PRESENT:
             present_cnt += 1
         elif st == AttendanceStatus.ABSENT:
             absent_cnt += 1
+        elif st == AttendanceStatus.EXCUSED_ABSENT:
+            excused_absent_cnt += 1
         elif st == AttendanceStatus.LATE:
             late_cnt += 1
 
@@ -139,6 +144,7 @@ def get_class_attendance(
                 avatar_url=getattr(child, "avatar_url", None),
                 status=st,
                 check_in_time=in_time,
+                expected_arrival_time=eta,
                 note=note,
             )
         )
@@ -149,6 +155,7 @@ def get_class_attendance(
         total_children=len(children),
         present_count=present_cnt,
         absent_count=absent_cnt,
+        excused_absent_count=excused_absent_cnt,
         late_count=late_cnt,
         children=result_items,
     )
@@ -172,13 +179,13 @@ def save_class_attendance_batch(
     if not payload.records:
         return AttendanceBatchSaveResponse(
             success=True,
-            message="Không có dữ liệt điểm danh cần lưu.",
+            message="Không có dữ liệu điểm danh cần lưu.",
             saved_count=0,
         )
 
     teacher_id = current_user.teacher_id
 
-    #Chuẩn bị dữ liệu cho câu lệnh insert/update
+    # Chuẩn bị dữ liệu cho câu lệnh insert/update
     values = [
         {
             "record_id": uuid.uuid4(),
@@ -187,6 +194,8 @@ def save_class_attendance_batch(
             "date": payload.date,
             "status": r.status,
             "check_in_time": r.check_in_time,
+            "expected_arrival_time": r.expected_arrival_time,
+            "source_leave_id": None,
             "note": r.note,
             "teacher_id": teacher_id,
         }
@@ -197,9 +206,11 @@ def save_class_attendance_batch(
     stmt = insert(AttendanceRecord).values(values)
     upsert_stmt = stmt.on_conflict_do_update(
         constraint="uq_attendance_child_date",
-        set_ = {
+        set_={
             "status": stmt.excluded.status,
             "check_in_time": stmt.excluded.check_in_time,
+            "expected_arrival_time": stmt.excluded.expected_arrival_time,
+            "source_leave_id": None,
             "note": stmt.excluded.note,
             "teacher_id": stmt.excluded.teacher_id,
             "updated_at": stmt.excluded.updated_at,

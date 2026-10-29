@@ -6,6 +6,7 @@ enum LeaveStatus {
   pending,
   approved,
   rejected,
+  cancelled,
 }
 
 enum LeaveRequestType { absence, lateArrival }
@@ -67,6 +68,8 @@ class LeaveRequestEntity {
           return LeaveStatus.approved;
         case 'rejected':
           return LeaveStatus.rejected;
+        case 'cancelled':
+          return LeaveStatus.cancelled;
         case 'pending':
         default:
           return LeaveStatus.pending;
@@ -74,7 +77,8 @@ class LeaveRequestEntity {
     }
 
     return LeaveRequestEntity(
-      requestId: json['request_id'] as String? ?? '',
+      requestId:
+          json['request_id'] as String? ?? json['leave_id'] as String? ?? '',
       childId: json['child_id'] as String? ?? '',
       parentId: json['parent_id'] as String? ?? '',
       classId: json['class_id'] as String? ?? '',
@@ -89,16 +93,17 @@ class LeaveRequestEntity {
       attachmentUrl: json['attachment_url'] as String?,
       rejectReason: json['reject_reason'] as String?,
       reviewedBy: json['reviewed_by'] as String?,
-      reviewedAt: json['reviewed_at'] != null
-          ? DateTime.tryParse(json['reviewed_at'] as String)
-          : null,
+      reviewedAt: DateTime.tryParse(
+          (json['reviewed_at'] ?? json['action_at']) as String? ?? ''),
       childName: json['child_name'] as String?,
       childAvatarUrl: json['child_avatar_url'] as String?,
       parentName: json['parent_name'] as String?,
-      reviewerName: json['reviewer_name'] as String?,
-      requestType: json['request_type'] == 'late_arrival'
-          ? LeaveRequestType.lateArrival
-          : LeaveRequestType.absence,
+      reviewerName: json['reviewer_name'] as String? ??
+          json['approved_by_name'] as String?,
+      requestType:
+          json['request_type'] == 'late_arrival' || json['type'] == 'late'
+              ? LeaveRequestType.lateArrival
+              : LeaveRequestType.absence,
       expectedArrivalTime: json['expected_arrival_time'] as String?,
       mealWarningAcknowledged:
           json['meal_warning_acknowledged'] as bool? ?? false,

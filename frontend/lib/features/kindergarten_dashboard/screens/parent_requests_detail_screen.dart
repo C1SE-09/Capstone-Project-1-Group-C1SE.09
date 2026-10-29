@@ -176,6 +176,7 @@ class _ReviewStatus extends StatelessWidget {
       LeaveStatus.pending => (k.warnDeep, k.warnTint),
       LeaveStatus.approved => (k.brand, k.brandTint),
       LeaveStatus.rejected => (k.bad, k.badTint),
+      LeaveStatus.cancelled => (k.inkSoft, k.surfaceSunken),
     };
     return ParentRequestCard(
         color: tint,
@@ -186,7 +187,7 @@ class _ReviewStatus extends StatelessWidget {
           Text(
               request.status == LeaveStatus.pending
                   ? 'Đơn đã gửi, đang chờ giáo viên duyệt.'
-                  : '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}',
+                  : '${request.status == LeaveStatus.cancelled ? 'Phụ huynh đã hủy đơn' : request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}',
               style: TextStyle(fontSize: 11, color: ink)),
         ]));
   }
@@ -212,11 +213,14 @@ class _Timeline extends StatelessWidget {
               LeaveStatus.pending => 'Đang chờ giáo viên duyệt',
               LeaveStatus.approved => 'Giáo viên đã duyệt',
               LeaveStatus.rejected => 'Giáo viên đã từ chối',
+              LeaveStatus.cancelled => 'Phụ huynh đã hủy đơn',
             },
             [
               if (request.reviewedAt != null)
                 requestTimestamp(request.reviewedAt!),
-              if (request.reviewerName != null) request.reviewerName!
+              if (request.status != LeaveStatus.cancelled &&
+                  request.reviewerName != null)
+                request.reviewerName!
             ].join(' · ')),
       ]));
 

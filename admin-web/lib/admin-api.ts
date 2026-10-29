@@ -5,7 +5,7 @@
  * Đồng bộ với backend/app/api/endpoints/admin.py + admin_dashboard.py.
  */
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchBlob } from "@/lib/api";
 
 /* ════════ Classes ════════ */
 export interface SchoolClass {
@@ -13,10 +13,50 @@ export interface SchoolClass {
   name: string;
   grade_label: string;
   room_number: string;
+  capacity?: number | null;
+  student_count?: number;
+}
+
+export interface ClassPayload {
+  name: string;
+  grade_label?: string | null;
+  room_number?: string | null;
+  capacity?: number | null;
 }
 
 export function getClasses(): Promise<SchoolClass[]> {
   return apiFetch<SchoolClass[]>("/api/admin/classes", { account: "schoolAdmin" });
+}
+
+export function createClass(data: ClassPayload) {
+  return apiFetch<{ id: string; message: string }>("/api/admin/classes", {
+    method: "POST",
+    body: data,
+    account: "schoolAdmin",
+  });
+}
+
+export function updateClass(id: string, data: ClassPayload) {
+  return apiFetch<{ message: string }>(`/api/admin/classes/${id}`, {
+    method: "PUT",
+    body: data,
+    account: "schoolAdmin",
+  });
+}
+
+export function deleteClass(id: string) {
+  return apiFetch<{ message: string }>(`/api/admin/classes/${id}`, {
+    method: "DELETE",
+    account: "schoolAdmin",
+  });
+}
+
+export function deleteClassesBatch(ids: string[]) {
+  return apiFetch<{ message: string; deleted_count: number; blocked?: string[] }>(`/api/admin/classes/batch-delete`, {
+    method: "POST",
+    body: { ids },
+    account: "schoolAdmin",
+  });
 }
 
 /* ════════ Teachers ════════ */
@@ -364,6 +404,108 @@ export function checkAvailability(
 ) {
   return apiFetch<AvailabilityCheck>("/api/admin/check-availability", {
     query: { type, ...params } as any,
+    account: "schoolAdmin",
+  });
+}
+
+/* ════════ Health Exam (sổ sức khoẻ — template + import) ════════ */
+export interface HealthExamRowIssue {
+  row_number: number;
+  sheet_name?: string | null;
+  child_id?: string | null;
+  full_name?: string | null;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface HealthExamImportResult {
+  total_rows: number;
+  success_count: number;
+  failed_count: number;
+  created_count: number;
+  updated_count: number;
+  errors: HealthExamRowIssue[];
+}
+
+/** Một bản ghi sức khoẻ đã ghi nhận trong sổ sức khoẻ. */
+export interface HealthExamRecord {
+  id: string;
+  child_id: string;
+  full_name: string;
+  class_id?: string | null;
+  class_name?: string | null;
+  date_of_birth?: string | null;
+  gender?: string | null;
+  examination_date: string;
+  height: number;
+  weight: number;
+  bmi?: number | null;
+  health_category: string;
+  health_category_label: string;
+  general_conclusion?: string | null;
+  created_by_name?: string | null;
+}
+
+export interface HealthExamRecordsResult {
+  total: number;
+  records: HealthExamRecord[];
+  stats: { normal?: number; underweight?: number; overweight?: number };
+}
+
+/** Lấy danh sách bản ghi sổ sức khoẻ (có thể lọc theo lớp / ngày ghi nhận). */
+export function getHealthExamRecords(params?: {
+  class_id?: string;
+  examination_date?: string;
+}) {
+  return apiFetch<HealthExamRecordsResult>("/api/health-exam/records", {
+    query: params as any,
+    account: "schoolAdmin",
+  });
+}
+
+export async function downloadHealthExamTemplate(
+  classId?: string,
+  examinationDate?: string,
+  filename?: string
+) {
+  const { blob, headers } = await apiFetchBlob("/api/health-exam/template", {
+    query: {
+      ...(classId ? { class_id: classId } : {}),
+      examination_date: examinationDate,
+    },
+  });
+  // Lấy tên file gợi ý từ header Content-Disposition của backend
+  let outName = filename || "Mau_So_Suc_Khoe.xlsx";
+  const disp = headers.get("Content-Disposition");
+  if (disp) {
+    const utf8Match = disp.match(/filename\*=UTF-8''([^;]+)/i);
+    const asciiMatch = disp.match(/filename="([^"]+)"/i);
+    try {
+      if (utf8Match) outName = decodeURIComponent(utf8Match[1]);
+      else if (asciiMatch) outName = asciiMatch[1];
+    } catch {
+      /* giữ tên mặc định */
+    }
+  }
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = outName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+/** Gửi file Excel kết quả lên backend, nhận báo cáo từng dòng. */
+export function importHealthExamFile(classId: string | null, file: File) {
+  const form = new FormData();
+  if (classId) form.append("class_id", classId);
+  form.append("file", file, file.name);
+  return apiFetch<HealthExamImportResult>("/api/health-exam/import", {
+    method: "POST",
+    body: form,
+    isFormData: true,
     account: "schoolAdmin",
   });
 }

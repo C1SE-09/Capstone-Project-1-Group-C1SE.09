@@ -255,7 +255,7 @@ class _HistoryCard extends StatelessWidget {
                     Text(
                         item.status == LeaveStatus.pending
                             ? 'Gửi ${requestTimestamp(item.createdAt)}${item.attachmentUrl == null ? '' : ' · Có ảnh y tế đính kèm'}'
-                            : '${item.reviewerName ?? 'Giáo viên'} ${item.status == LeaveStatus.approved ? 'đã duyệt' : 'đã từ chối'}${item.reviewedAt == null ? '' : ' · ${requestTimestamp(item.reviewedAt!)}'}',
+                            : '${item.status == LeaveStatus.cancelled ? 'Phụ huynh đã hủy đơn' : '${item.reviewerName ?? 'Giáo viên'} ${item.status == LeaveStatus.approved ? 'đã duyệt' : 'đã từ chối'}'}${item.reviewedAt == null ? '' : ' · ${requestTimestamp(item.reviewedAt!)}'}',
                         style:
                             TextStyle(fontSize: 11, color: context.k.inkSoft)),
                   ])),

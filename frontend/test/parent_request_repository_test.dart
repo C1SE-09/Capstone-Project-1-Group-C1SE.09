@@ -56,6 +56,24 @@ Map<String, dynamic> requestJson({String status = 'pending'}) => {
     };
 
 void main() {
+  test('đọc contract mới và trạng thái cancelled không thành chờ duyệt', () {
+    final data = {
+      ...requestJson(status: 'cancelled'),
+      'leave_id': 'canonical-request',
+      'type': 'late',
+      'expected_arrival_time': '08:30:00',
+      'approved_by_name': 'Cô Mai',
+      'action_at': '2026-10-29T06:30:00+07:00'
+    };
+    data.remove('request_id');
+    data.remove('reviewer_name');
+    final item = LeaveRequestEntity.fromJson(data);
+    expect(item.requestId, 'canonical-request');
+    expect(item.status.name, 'cancelled');
+    expect(item.requestType, LeaveRequestType.lateArrival);
+    expect(item.reviewerName, 'Cô Mai');
+  });
+
   test(
       'server cũ không hỗ trợ thì không fallback tạo nhầm đơn trên endpoint cũ',
       () async {

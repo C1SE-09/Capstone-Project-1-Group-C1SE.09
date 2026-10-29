@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
@@ -242,6 +243,7 @@ function findClassFlexible(classNameOrId: string, classes: SchoolClass[]): Schoo
 }
 
 export default function SchoolAdminStudentsPage() {
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
@@ -258,6 +260,12 @@ export default function SchoolAdminStudentsPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [duplicateAlert, setDuplicateAlert] = useState<DuplicateStudentAlert | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: "ok" | "bad" | "brand" | "warn" } | null>(null);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const cls = router.query.class;
+    if (typeof cls === "string" && cls) setSelectedClassId(cls);
+  }, [router.isReady, router.query.class]);
 
   useEffect(() => {
     if (!getToken() || !getStoredSchoolAdmin()) {
@@ -303,6 +311,20 @@ export default function SchoolAdminStudentsPage() {
         (c.care_notes || "").toLowerCase().includes(q),
     );
   }, [children, query, selectedClassId]);
+
+  // Lớp đang chọn trong form — dùng để cảnh báo sắp đầy sĩ số.
+  const selectedClass = useMemo(
+    () => classes.find((c) => c.id === form.class_id) ?? null,
+    [classes, form.class_id],
+  );
+  const selectedClassCount = selectedClass?.student_count ?? 0;
+  const selectedClassCapacity = selectedClass?.capacity ?? null;
+  // Bé đang sửa đã nằm sẵn ở lớp đó → giữ nguyên lớp không làm vượt sĩ số.
+  const stayingInSameClass = editing?.class_id === form.class_id;
+  const selectedClassIsFull =
+    selectedClassCapacity != null &&
+    selectedClassCount >= selectedClassCapacity &&
+    !stayingInSameClass;
 
   function handleExportExcel() {
     if (!children || children.length === 0) {
@@ -432,6 +454,12 @@ export default function SchoolAdminStudentsPage() {
       date_of_birth: c.date_of_birth,
     }));
 
+    // Theo dõi số bé theo từng lớp để chặn khi lớp đầy sĩ số (cộng dồn trong file).
+    const classCounts = new Map<string, number>();
+    for (const cl of classes) {
+      classCounts.set(cl.id, cl.student_count ?? 0);
+    }
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const fullName = row[0]?.trim();
@@ -494,6 +522,20 @@ export default function SchoolAdminStudentsPage() {
       }
       if (!matchedClassId && classes.length > 0) {
         matchedClassId = classes[0].id;
+      }
+
+      // Chặn nếu lớp đích đã đầy sĩ số (kể cả khi vừa thêm trong file này).
+      if (matchedClassId) {
+        const targetClass = classes.find((cl) => cl.id === matchedClassId);
+        const capacity = targetClass?.capacity ?? null;
+        const currentCount = classCounts.get(matchedClassId) ?? 0;
+        if (capacity != null && currentCount >= capacity) {
+          failed++;
+          errors.push(
+            `Dòng ${i + 1} (${fullName}): Lớp "${targetClass?.name}" đã đầy sĩ số (${currentCount}/${capacity}). Vui lòng chia sang lớp khác hoặc tăng sĩ số tối đa.`,
+          );
+          continue;
+        }
       }
 
       // Phát hiện trùng họ tên trong cùng lớp học
@@ -617,6 +659,12 @@ export default function SchoolAdminStudentsPage() {
           class_id: matchedClassId,
           date_of_birth: isoDob,
         });
+        if (matchedClassId) {
+          classCounts.set(
+            matchedClassId,
+            (classCounts.get(matchedClassId) ?? 0) + 1,
+          );
+        }
         success++;
       } catch (err: any) {
         failed++;
@@ -672,6 +720,14 @@ export default function SchoolAdminStudentsPage() {
     }
     if (form.allergy_status === "present" && !form.medical_allergies.trim()) {
       setToast({ msg: "Vui lòng nhập mô tả dị ứng của bé", tone: "bad" });
+      return;
+    }
+    // Chặn sớm lớp đã đầy sĩ số (backend cũng chặn lại để chắc chắn).
+    if (selectedClassIsFull) {
+      setToast({
+        msg: `Lớp "${selectedClass?.name}" đã đầy sĩ số (${selectedClassCount}/${selectedClassCapacity}). Vui lòng chọn lớp khác hoặc tăng sĩ số tối đa.`,
+        tone: "bad",
+      });
       return;
     }
     setSaving(true);
@@ -1150,10 +1206,22 @@ export default function SchoolAdminStudentsPage() {
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} {c.grade_label && `(${c.grade_label})`}
+                {c.capacity != null
+                  ? ` — ${c.student_count ?? 0}/${c.capacity} bé`
+                  : ""}
               </option>
             ))}
           </select>
         </FormField>
+        {selectedClassIsFull && (
+          <div
+            className="text-xs rounded-control px-3 py-2"
+            style={{ background: "#F6EED9", color: "#8A5E12" }}
+          >
+            Lớp đã đầy sĩ số ({selectedClassCount}/{selectedClassCapacity}). Hệ thống sẽ
+            chặn khi lưu — vui lòng chọn lớp khác hoặc tăng sĩ số ở trang Quản lý lớp.
+          </div>
+        )}
         <FormField
           label="Ngày sinh"
           hint={
@@ -1307,7 +1375,6 @@ export default function SchoolAdminStudentsPage() {
           >
             <option value="enrolled">Đang học</option>
             <option value="graduated">Đã tốt nghiệp</option>
-            <option value="transferred">Chuyển trường</option>
             <option value="withdrawn">Thôi học</option>
           </select>
         </FormField>

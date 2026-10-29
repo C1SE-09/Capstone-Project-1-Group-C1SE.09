@@ -14,6 +14,7 @@ String requestStatusLabel(LeaveStatus status) => switch (status) {
       LeaveStatus.pending => 'Chờ duyệt',
       LeaveStatus.approved => 'Đã duyệt',
       LeaveStatus.rejected => 'Từ chối',
+      LeaveStatus.cancelled => 'Đã hủy',
     };
 
 String requestDate(DateTime value) => DateFormat('dd/MM/yyyy').format(value);
@@ -100,6 +101,7 @@ class ParentRequestStatus extends StatelessWidget {
       LeaveStatus.pending => (k.warnDeep, k.warnTint),
       LeaveStatus.approved => (k.brand, k.brandTint),
       LeaveStatus.rejected => (k.bad, k.badTint),
+      LeaveStatus.cancelled => (k.inkSoft, k.surfaceSunken),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -12,6 +12,7 @@ class AttendanceScreen extends StatefulWidget {
     required this.roster,
     this.repository,
     this.initialRecords,
+    this.initialDetails,
     super.key,
   });
 
@@ -21,6 +22,7 @@ class AttendanceScreen extends StatefulWidget {
   final List<Child> roster;
   final HttpAttendanceRepository? repository;
   final Map<String, AttendanceStatus>? initialRecords;
+  final Map<String, AttendanceChildRecord>? initialDetails;
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -32,6 +34,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   late Map<String, AttendanceStatus> _saved;
   late Map<String, AttendanceStatus> _draft;
+  Map<String, AttendanceChildRecord> _details = {};
   bool _saving = false;
   bool _allowPop = false;
   bool _loading = false;
@@ -49,13 +52,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDetails != null && widget.initialDetails!.isNotEmpty) {
+      _details = Map.of(widget.initialDetails!);
+    }
     if (widget.initialRecords != null && widget.initialRecords!.isNotEmpty) {
       _saved = Map.of(widget.initialRecords!);
       _draft = Map.of(_saved);
     } else {
       _saved = {
         for (final child in widget.roster)
-          child.id: child.present ? AttendanceStatus.arrived : AttendanceStatus.absent,
+          child.id: _details[child.id]?.status ??
+              (child.present ? AttendanceStatus.arrived : AttendanceStatus.absent),
       };
       _draft = Map.of(_saved);
       _fetchLatest();
@@ -65,15 +72,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _fetchLatest() async {
     setState(() => _loading = true);
     try {
-      final records = await _repository.getClassAttendance(
+      final details = await _repository.getClassAttendanceDetails(
         widget.classId,
         DateTime.tryParse(widget.date) ?? DateTime.now(),
       );
-      if (records.isNotEmpty && mounted) {
+      if (details.isNotEmpty && mounted) {
         setState(() {
+          _details = details;
           _saved = {
             for (final child in widget.roster)
-              child.id: records[child.id] ??
+              child.id: details[child.id]?.status ??
                   (child.present ? AttendanceStatus.arrived : AttendanceStatus.absent),
           };
           _draft = Map.of(_saved);
@@ -91,11 +99,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       .where((child) => _draft[child.id] == AttendanceStatus.absent)
       .length;
 
+  int get _excusedAbsentCount => widget.roster
+      .where((child) => _draft[child.id] == AttendanceStatus.excusedAbsent)
+      .length;
+
   int get _lateCount => widget.roster
       .where((child) => _draft[child.id] == AttendanceStatus.late)
       .length;
 
-  int get _arrivedCount => widget.roster.length - _absentCount;
+  int get _arrivedCount =>
+      widget.roster.length - _absentCount - _excusedAbsentCount;
 
   List<Child> get _absentStudents => widget.roster
       .where((child) => _draft[child.id] == AttendanceStatus.absent)
@@ -103,7 +116,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   AttendanceStatus _next(AttendanceStatus status) => switch (status) {
         AttendanceStatus.arrived => AttendanceStatus.absent,
-        AttendanceStatus.absent => AttendanceStatus.late,
+        AttendanceStatus.absent => AttendanceStatus.excusedAbsent,
+        AttendanceStatus.excusedAbsent => AttendanceStatus.late,
         AttendanceStatus.late => AttendanceStatus.arrived,
       };
 
@@ -130,6 +144,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         classId: widget.classId,
         date: DateTime.tryParse(widget.date) ?? DateTime.now(),
         record: _draft,
+        expectedArrivalTimes: {
+          for (final e in _details.entries)
+            if (e.value.expectedArrivalTime != null)
+              e.key: e.value.expectedArrivalTime,
+        },
+        notes: {
+          for (final e in _details.entries)
+            if (e.value.note != null) e.key: e.value.note,
+        },
       );
       if (!mounted) return;
       setState(() {
@@ -293,6 +316,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               total: widget.roster.length,
               arrived: _arrivedCount,
               absent: _absentCount,
+              excusedAbsent: _excusedAbsentCount,
               late: _lateCount,
             ),
           ),
@@ -382,6 +406,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 student: _filteredRoster[i],
                                 status: _draft[_filteredRoster[i].id] ??
                                     AttendanceStatus.arrived,
+                                detail: _details[_filteredRoster[i].id],
                                 enabled: !_saving,
                                 onTapRow: () => _changeStatus(_filteredRoster[i]),
                                 onChanged: (newStatus) =>
@@ -484,6 +509,7 @@ class _AttendanceSummary extends StatelessWidget {
     required this.total,
     required this.arrived,
     required this.absent,
+    required this.excusedAbsent,
     required this.late,
   });
 
@@ -491,6 +517,7 @@ class _AttendanceSummary extends StatelessWidget {
   final int total;
   final int arrived;
   final int absent;
+  final int excusedAbsent;
   final int late;
 
   @override
@@ -511,9 +538,11 @@ class _AttendanceSummary extends StatelessWidget {
               child: _Counter(
                 value: arrived,
                 label: 'Đến',
-                helper: late > 0 ? 'Trong đó $late bé đến trễ' : null,
+                helper: late > 0 ? '$late bé trễ' : null,
               ),
             ),
+            VerticalDivider(width: 1, color: divider),
+            Expanded(child: _Counter(value: excusedAbsent, label: 'Có Phép')),
             VerticalDivider(width: 1, color: divider),
             Expanded(child: _Counter(value: absent, label: 'Vắng')),
           ],
@@ -614,6 +643,7 @@ class _AttendanceRow extends StatelessWidget {
     required this.enabled,
     required this.onChanged,
     required this.onTapRow,
+    this.detail,
   });
 
   final Child student;
@@ -621,6 +651,86 @@ class _AttendanceRow extends StatelessWidget {
   final bool enabled;
   final ValueChanged<AttendanceStatus> onChanged;
   final VoidCallback onTapRow;
+  final AttendanceChildRecord? detail;
+
+  Widget? _buildBadge(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (status == AttendanceStatus.excusedAbsent) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF152A38) : KColors.infoTint,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: (dark ? const Color(0xFF64B5F6) : KColors.info)
+                .withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.verified_outlined,
+              size: 11,
+              color: dark ? const Color(0xFF64B5F6) : KColors.info,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              'Excused Absent',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: dark ? const Color(0xFF64B5F6) : KColors.info,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (status == AttendanceStatus.late) {
+      String label = 'Late';
+      if (detail?.expectedArrivalTime != null &&
+          detail!.expectedArrivalTime!.isNotEmpty) {
+        final raw = detail!.expectedArrivalTime!;
+        final parts = raw.split(':');
+        final formattedEta =
+            parts.length >= 2 ? '${parts[0]}:${parts[1]}' : raw;
+        label = 'Late (ETA: $formattedEta)';
+      }
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF3A2F1A) : KColors.warnTint,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: _attendanceWarningText(context).withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.schedule_outlined,
+              size: 11,
+              color: _attendanceWarningText(context),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: _attendanceWarningText(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -647,14 +757,24 @@ class _AttendanceRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    student.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          student.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (_buildBadge(context) != null) ...[
+                        const SizedBox(width: 6),
+                        _buildBadge(context)!,
+                      ],
+                    ],
                   ),
                   if (student.nickname != null &&
                       student.nickname!.trim().isNotEmpty)
@@ -727,6 +847,7 @@ class _AttendanceRow extends StatelessWidget {
                   selectedItemBuilder: (context) => [
                     _buildSelectedItem(context, AttendanceStatus.arrived),
                     _buildSelectedItem(context, AttendanceStatus.absent),
+                    _buildSelectedItem(context, AttendanceStatus.excusedAbsent),
                     _buildSelectedItem(context, AttendanceStatus.late),
                   ],
                   items: [
@@ -769,6 +890,28 @@ class _AttendanceRow extends StatelessWidget {
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: _attendanceDangerText(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: AttendanceStatus.excusedAbsent,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.event_available_outlined,
+                            size: 16,
+                            color: _attendanceInfoText(context),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Có Phép',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _attendanceInfoText(context),
                             ),
                           ),
                         ],
@@ -968,6 +1111,13 @@ _StatusVisual _statusVisual(
         background: dark ? const Color(0xFF3A2621) : KColors.badTint,
         border: KColors.bad.withAlpha(100),
       ),
+    AttendanceStatus.excusedAbsent => (
+        label: 'Có Phép',
+        icon: Icons.event_available_outlined,
+        foreground: _attendanceInfoText(context),
+        background: dark ? const Color(0xFF152A38) : KColors.infoTint,
+        border: KColors.info.withAlpha(100),
+      ),
     AttendanceStatus.late => (
         label: 'Đến Trễ',
         icon: Icons.schedule_outlined,
@@ -977,6 +1127,11 @@ _StatusVisual _statusVisual(
       ),
   };
 }
+
+Color _attendanceInfoText(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF64B5F6)
+        : const Color(0xFF1976D2);
 
 Color _attendanceSuccessText(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark

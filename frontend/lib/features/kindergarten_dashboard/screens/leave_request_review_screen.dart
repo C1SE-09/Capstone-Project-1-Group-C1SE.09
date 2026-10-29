@@ -41,6 +41,11 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   int _reviewedCount = 0;
   List<LeaveRequestEntity> _items = [];
   final Set<String> _processing = {};
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  String? _moreError;
+  int _nextOffset = 0;
+  int _loadVersion = 0;
 
   @override
   void initState() {
@@ -64,30 +69,52 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     _loadRequests(tab: tabName);
   }
 
-  Future<void> _loadRequests({required String tab}) async {
+  Future<void> _loadRequests({required String tab, bool more = false}) async {
+    if (more && (_isLoading || _loadingMore)) return;
+    final version = ++_loadVersion;
     setState(() {
-      _isLoading = true;
+      _loadingMore = more;
+      _isLoading = !more;
       _errorMessage = null;
+      _moreError = null;
+      if (!more) {
+        _nextOffset = 0;
+        _hasMore = false;
+        _items = [];
+      }
     });
 
     try {
       final result = await _repository.getLeaveRequests(
         classId: widget.classId,
         tab: tab,
+        offset: _nextOffset,
       );
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() {
         _pendingCount = result.pendingCount;
         _reviewedCount = result.reviewedCount;
-        _items = result.items;
+        _nextOffset += result.items.length;
+        _hasMore = result.items.isNotEmpty &&
+            _nextOffset < (tab == 'pending' ? _pendingCount : _reviewedCount);
+        final unique = {
+          for (final item in [..._items, ...result.items]) item.requestId: item
+        };
+        _items = unique.values.toList();
         _isLoading = false;
+        _loadingMore = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() {
-        _errorMessage =
-            'Không thể tải danh sách đơn. Vui lòng kiểm tra kết nối mạng.';
+        if (more) {
+          _moreError = 'Không tải thêm được đơn. Vui lòng thử lại.';
+        } else {
+          _errorMessage =
+              'Không thể tải danh sách đơn. Vui lòng kiểm tra kết nối mạng.';
+        }
         _isLoading = false;
+        _loadingMore = false;
       });
     }
   }
@@ -355,9 +382,28 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       ),
       child: ListView.separated(
         padding: const EdgeInsets.all(KSpace.x4),
-        itemCount: _items.length,
+        itemCount: _items.length +
+            (_hasMore || _loadingMore || _moreError != null ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: KSpace.x3),
         itemBuilder: (context, index) {
+          if (index == _items.length) {
+            if (_loadingMore) {
+              return const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(KSpace.x4),
+                      child: CircularProgressIndicator()));
+            }
+            return Column(children: [
+              if (_moreError != null)
+                Text(_moreError!, style: TextStyle(color: k.bad)),
+              TextButton(
+                  onPressed: () => _loadRequests(
+                      tab: _tabController.index == 0 ? 'pending' : 'reviewed',
+                      more: true),
+                  child: Text(
+                      _moreError == null ? 'Tải thêm' : 'Thử lại tải thêm')),
+            ]);
+          }
           final item = _items[index];
           return LeaveRequestCard(
             item: item,

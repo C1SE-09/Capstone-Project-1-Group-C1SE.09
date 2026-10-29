@@ -18,7 +18,12 @@ def upgrade() -> None:
     op.add_column("leave_request", sa.Column(
         "request_type", sa.String(16), nullable=False, server_default="absence",
     ))
-    op.add_column("leave_request", sa.Column("expected_arrival_time", sa.Time(), nullable=True))
+    # Nhánh attendance mới cũng thêm ETA; cả hai thứ tự upgrade đều phải hợp lệ.
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("ALTER TABLE leave_request ADD COLUMN IF NOT EXISTS expected_arrival_time TIME WITHOUT TIME ZONE")
+    elif "expected_arrival_time" not in {column["name"] for column in sa.inspect(bind).get_columns("leave_request")}:
+        op.add_column("leave_request", sa.Column("expected_arrival_time", sa.Time(), nullable=True))
     op.add_column("leave_request", sa.Column(
         "meal_warning_acknowledged", sa.Boolean(), nullable=False, server_default=sa.text("false"),
     ))
@@ -26,5 +31,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("leave_request", "meal_warning_acknowledged")
-    op.drop_column("leave_request", "expected_arrival_time")
+    # Giữ ETA dùng chung để downgrade nhánh này không làm mất dữ liệu nhánh khác.
     op.drop_column("leave_request", "request_type")

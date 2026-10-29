@@ -111,3 +111,11 @@ def read_attachment(child_id: uuid.UUID, attachment_id: uuid.UUID) -> tuple[byte
     except Exception:
         raise _unavailable() from None
     return data, info.content_type
+
+
+def copy_attachment_for_child(path: str, source_child_id: uuid.UUID, child_id: uuid.UUID, user_id: uuid.UUID) -> str:
+    """Tách ảnh chung theo bé, không mở rộng quyền đọc sang ảnh/hồ sơ bé khác."""
+    validate_attachment_reference(path, source_child_id, user_id)
+    # shortcut: ảnh tối đa 5 MiB; dùng server-side copy khi batch lớn.
+    data, content_type = read_attachment(source_child_id, uuid.UUID(path.rsplit("/", 1)[1]))
+    return save_attachment(child_id, user_id, data, content_type)

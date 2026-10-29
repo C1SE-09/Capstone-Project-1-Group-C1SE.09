@@ -63,6 +63,39 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
 
 void main() {
   testWidgets(
+      'đơn đã hủy không bị hiển thị thành chờ duyệt hoặc giáo viên từ chối',
+      (tester) async {
+    final cancelled = {
+      ...requestJson(status: 'cancelled'),
+      'approved_by_name': 'Cô Mai',
+      'action_at': '2026-10-29T06:30:00+07:00'
+    };
+    final transport =
+        RequestTransport((options) => options.path.endsWith('/mine')
+            ? jsonBody({
+                'items': [cancelled],
+                'total': 1,
+                'offset': 0,
+                'limit': 20
+              })
+            : jsonBody(cancelled));
+    await tester.pumpWidget(app(ParentRequestsScreen(
+        child: child,
+        className: 'Mầm 1',
+        teacherName: 'Cô Mai',
+        repository: repository(transport))));
+    await tester.pumpAndSettle();
+    expect(find.text('Đã hủy'), findsWidgets);
+    expect(find.textContaining('Phụ huynh đã hủy đơn'), findsOneWidget);
+    await tapVisible(tester, find.text('Nghỉ học'));
+    await tester.pumpAndSettle();
+    expect(find.text('Chi tiết đơn'), findsOneWidget);
+    expect(find.textContaining('Phụ huynh đã hủy đơn'), findsWidgets);
+    expect(find.text('Giáo viên đã từ chối'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
       'history filters and pagination use this child, and detail fetches fresh review',
       (tester) async {
     final transport = RequestTransport((options) {
