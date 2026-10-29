@@ -303,16 +303,45 @@ class HttpMedicationRepository {
   Future<MedicationsTodayData> getTodayMedications({String? date}) async {
     final response = await _request('GET', '/api/teacher/medications/today',
         query: date == null ? null : {'date': date});
-    return MedicationsTodayData.fromJson(_map(response.data));
+    final body = _map(response.data);
+    if (body['date'] is! String ||
+        DateTime.tryParse(body['date'] as String) == null ||
+        body['class_id'] is! String ||
+        (body['class_id'] as String).isEmpty ||
+        ['morning', 'noon', 'afternoon'].any((key) => body[key] is! List)) {
+      throw const MedicationRequestException(
+          'Dữ liệu lịch thuốc không hợp lệ. Vui lòng tải lại.',
+          code: 'invalid_response');
+    }
+    try {
+      final data = MedicationsTodayData.fromJson(body);
+      if (data.totalRequests != data.allItems.length ||
+          data.completedCount + data.pendingCount != data.totalRequests ||
+          data.completedCount < 0 ||
+          data.pendingCount < 0 ||
+          data.morning.any((d) => d.session != 'morning') ||
+          data.noon.any((d) => d.session != 'noon') ||
+          data.afternoon.any((d) => d.session != 'afternoon')) {
+        throw const MedicationRequestException(
+            'Danh sách và số cữ chưa khớp. Vui lòng tải lại.',
+            code: 'invalid_response');
+      }
+      return data;
+    } on TypeError {
+      throw const MedicationRequestException('Dữ liệu cữ thuốc không hợp lệ.',
+          code: 'invalid_response');
+    }
   }
 
   Future<Map<String, dynamic>> confirmMedication(
       {required String requestId,
       required String session,
+      String? date,
       String? notes}) async {
     try {
       final response = await _request('PUT',
           '/api/teacher/medications/${Uri.encodeComponent(requestId)}/confirm',
+          query: date == null ? null : {'date': date},
           data: {
             'session': session,
             if (notes?.trim().isNotEmpty == true) 'notes': notes!.trim()

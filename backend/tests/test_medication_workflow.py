@@ -234,6 +234,16 @@ def test_legacy_json_sessions_string_is_read_without_fake_exact_time(env):
     assert response.json()["time_slot"] is None
 
 
+def test_given_slot_keeps_parent_instructions_in_teacher_schedule(env):
+    req = dose(env, notes="Chỉ dùng theo hướng dẫn của phụ huynh/bác sĩ")
+    response = confirm(env.client(env.seed["user_teacher_mai"]), req, "canonical")
+    assert response.status_code == 200, response.text
+    response = env.client(env.seed["user_teacher_mai"]).get("/api/teacher/medications/today",
+        params={"date": str(req.request_date)})
+    assert response.status_code == 200, response.text
+    assert response.json()["morning"][0]["instructions"] == req.notes
+
+
 def test_existing_legacy_log_for_new_slot_is_respected_without_read_side_effects(env):
     req = dose(env)
     env.db.add(MedicationLog(request_id=req.request_id, log_date=req.request_date,

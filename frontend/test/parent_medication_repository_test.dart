@@ -63,6 +63,12 @@ Future<MedicationBatchCreateResult> create(HttpMedicationRepository repo) =>
             '/api/medication-requests/attachments/child-1/image-1');
 
 void main() {
+  test('malformed today response is an error, not a false empty class schedule',
+      () async {
+    final transport = RequestTransport((_) => jsonBody({'status': 'ok'}));
+    await expectLater(medicationRepository(transport).getTodayMedications(),
+        throwsA(isA<MedicationRequestException>()));
+  });
   test(
       'late response from an ended session cannot become visible medication data',
       () async {
