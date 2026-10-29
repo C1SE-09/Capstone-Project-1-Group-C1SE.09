@@ -291,41 +291,6 @@ export default function SchoolAdminClassesPage() {
         </div>
       </div>
 
-      {selectedIds.length > 0 && (
-        <div
-          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
-          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
-        >
-          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
-              style={{ background: "#BB4A34" }}
-            >
-              {selectedIds.length}
-            </span>
-            <span>Đã chọn {selectedIds.length} lớp</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedIds([])}
-              className="kbtn kbtn-secondary text-xs"
-              disabled={bulkDeleting}
-            >
-              Bỏ chọn
-            </button>
-            <button
-              onClick={() => setConfirmBulkDel(true)}
-              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
-              style={{ background: "#BB4A34" }}
-              disabled={bulkDeleting}
-            >
-              <span>🗑️</span>
-              <span>Xóa đã chọn ({selectedIds.length})</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="card overflow-hidden">
         {!classes && !classesError ? (
           <Spinner />
@@ -349,8 +314,69 @@ export default function SchoolAdminClassesPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div>
+            <div
+              className={`px-4 py-2 flex items-center justify-between border-b text-xs font-semibold transition-colors duration-200 ${
+                selectedIds.length > 0
+                  ? "bg-[#FDF8F6] border-[#F2D5CE]"
+                  : "border-line"
+              }`}
+              style={selectedIds.length > 0 ? undefined : { background: "#EFECE5", color: "#605D57" }}
+            >
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="rounded cursor-pointer"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    title="Chọn tất cả lớp hiển thị"
+                  />
+                  <span>Chọn tất cả ({filtered.length})</span>
+                </label>
+
+                {selectedIds.length > 0 && (
+                  <>
+                    <span className="text-line-strong">|</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-[#BB4A34]">
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
+                        {selectedIds.length}
+                      </span>
+                      <span>Đã chọn {selectedIds.length} lớp</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {selectedIds.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedIds([])}
+                      className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
+                      disabled={bulkDeleting}
+                    >
+                      Bỏ chọn
+                    </button>
+                    <button
+                      onClick={() => setConfirmBulkDel(true)}
+                      className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
+                      style={{ background: "#BB4A34" }}
+                      disabled={bulkDeleting}
+                    >
+                      <span>🗑️</span>
+                      <span>Xóa đã chọn ({selectedIds.length})</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
               <thead
                 className="text-xs uppercase tracking-wider"
                 style={{ background: "#EFECE5", color: "#605D57" }}
@@ -442,6 +468,7 @@ export default function SchoolAdminClassesPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
