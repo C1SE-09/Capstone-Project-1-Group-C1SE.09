@@ -288,7 +288,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Kiểm tra Header
-      expect(find.text('Báo cáo sự cố khẩn cấp'), findsOneWidget);
+      expect(find.text('Báo cáo sự cố tại lớp'), findsOneWidget);
       expect(find.text('Phát cảnh báo khẩn cấp'), findsOneWidget);
 
       // Bấm nút phát cảnh báo
@@ -300,7 +300,7 @@ void main() {
 
       expect(mockRepo.emergencyCalls, 1);
       // Hiện màn hình danh bạ gọi nhanh bố mẹ
-      expect(find.text('Đã ghi nhận sự cố khẩn cấp'), findsOneWidget);
+      expect(find.text('Đã phát cảnh báo khẩn cấp'), findsOneWidget);
       expect(find.text('Bố · Nguyễn Văn Bố'), findsOneWidget);
       expect(find.text('Mẹ · Trần Thị Mẹ'), findsOneWidget);
       expect(find.text('0911222333'), findsOneWidget);

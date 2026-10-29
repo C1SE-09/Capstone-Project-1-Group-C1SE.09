@@ -67,7 +67,7 @@ void main() {
             repository: medicationRepository(transport)))));
     await tapVisible(tester, find.text('Phát cảnh báo khẩn cấp'));
     await tester.pumpAndSettle();
-    expect(tester.getTopLeft(find.text('Đã ghi nhận sự cố khẩn cấp')).dy,
+    expect(tester.getTopLeft(find.text('Đã phát cảnh báo khẩn cấp')).dy,
         lessThan(60));
   });
   WidgetController.hitTestWarningShouldBeFatal = true;
@@ -142,7 +142,7 @@ void main() {
     expect(transport.requests, hasLength(1));
     pending.complete(jsonBody(incidentJson(), 201));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Đã ghi nhận'), findsOneWidget);
+    expect(find.textContaining('Đã phát cảnh báo'), findsOneWidget);
     expect(find.textContaining('Bảo Châu từ server'), findsOneWidget);
     expect(find.textContaining('10:24'), findsWidgets);
     expect(find.textContaining('đã nhận thông báo'), findsNothing);
@@ -190,7 +190,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Mô tả đang soạn'), findsOneWidget);
       expect(transport.requests, hasLength(1));
-      expect(find.textContaining('Đã ghi nhận'), findsNothing);
+      expect(find.textContaining('Đã phát cảnh báo'), findsNothing);
     }
   });
 
@@ -212,7 +212,7 @@ void main() {
             repository: medicationRepository(transport)))));
     await tapVisible(tester, find.text('Phát cảnh báo khẩn cấp'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Đã ghi nhận'), findsOneWidget);
+    expect(find.textContaining('Đã phát cảnh báo'), findsOneWidget);
     await tapVisible(tester, find.text('Tải lại danh bạ'));
     await tester.pumpAndSettle();
     expect(find.text('Gọi ngay'), findsOneWidget);
