@@ -175,16 +175,6 @@ export default function SchoolAdminClassesPage() {
         return null;
       }
     }
-    const room = form.room_number.trim();
-    if (room) {
-      const dup = (classes ?? []).find(
-        (c) => c.id !== editing?.id && (c.room_number || "").trim() === room
-      );
-      if (dup) {
-        setToast({ msg: `Phòng '${room}' đã được dùng cho lớp '${dup.name}'`, tone: "bad" });
-        return null;
-      }
-    }
     return {
       name,
       grade_label: form.grade_label.trim() || null,

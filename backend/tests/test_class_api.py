@@ -147,13 +147,6 @@ def test_create_class_duplicate_name_rejected(admin_client, mock_db):
 
 
 def test_create_class_duplicate_room_rejected(admin_client, mock_db):
-    existing = _make_class("Lớp Mầm 1")
-    existing.room_number = "Room 101"
-
-    def _query(model, *args, **kwargs):
-        q = MagicMock()
-        if model is Class_:
-            q.filter.return_value.first.return_value = existing
     """Nhập số phòng đã có ở lớp khác -> bị chặn."""
     existing = _make_class("Lớp Mầm 1")  # đang dùng phòng P.101
     school = School(school_id=SCHOOL_ID, name="Trường Mầm Non", code="MN01")
@@ -172,9 +165,6 @@ def test_create_class_duplicate_room_rejected(admin_client, mock_db):
         return q
 
     mock_db.query.side_effect = _query
-    resp = admin_client.post("/api/admin/classes", json={"name": "Lớp Mầm 2", "room_number": "Room 101"})
-    assert resp.status_code == 400, resp.text
-    assert "đã được sử dụng" in resp.json()["detail"]
     resp = admin_client.post(
         "/api/admin/classes", json={"name": "Lớp Chồi 1", "room_number": "P.101"}
     )
