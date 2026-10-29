@@ -90,7 +90,11 @@ class _ParentNotificationsState extends State<ParentNotifications> {
               TextButton(
                 onPressed: widget.onSettings,
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                child: const Text('Cài đặt', style: TextStyle(fontSize: 12)),
+                child: Text('Cài đặt',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: k.brand)),
               ),
             ],
           ),
@@ -98,54 +102,43 @@ class _ParentNotificationsState extends State<ParentNotifications> {
         Padding(
           padding:
               const EdgeInsets.fromLTRB(KSpace.x5, 0, KSpace.x5, KSpace.x3),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(height: 3, color: k.line),
+          child: Scrollbar(
+            controller: _filterScroll,
+            thumbVisibility: true,
+            trackVisibility: true,
+            thickness: 4,
+            radius: const Radius.circular(KSpace.x1),
+            scrollbarOrientation: ScrollbarOrientation.bottom,
+            child: SingleChildScrollView(
+              controller: _filterScroll,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: KSpace.x2),
+              child: Row(
+                spacing: 7,
+                children: [
+                  for (final filter in _NotificationFilter.values)
+                    ChoiceChip(
+                      label: Text(filter.label),
+                      selected: _filter == filter,
+                      onSelected: (_) => setState(() => _filter = filter),
+                      showCheckmark: false,
+                      selectedColor: k.ink,
+                      backgroundColor: k.surfaceSunken,
+                      side: BorderSide.none,
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
+                      labelPadding: const EdgeInsets.symmetric(horizontal: 11),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        height: 1.25,
+                        fontWeight: FontWeight.w600,
+                        color: _filter == filter ? k.surface : k.ink,
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
+                    ),
+                ],
               ),
-              Scrollbar(
-                controller: _filterScroll,
-                thumbVisibility: true,
-                trackVisibility: true,
-                thickness: 4,
-                radius: const Radius.circular(KSpace.x1),
-                scrollbarOrientation: ScrollbarOrientation.bottom,
-                child: SingleChildScrollView(
-                  controller: _filterScroll,
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(bottom: KSpace.x2),
-                  child: Row(
-                    spacing: 7,
-                    children: [
-                      for (final filter in _NotificationFilter.values)
-                        ChoiceChip(
-                          label: Text(filter.label),
-                          selected: _filter == filter,
-                          onSelected: (_) => setState(() => _filter = filter),
-                          showCheckmark: false,
-                          selectedColor: k.ink,
-                          backgroundColor: k.surfaceSunken,
-                          side: BorderSide.none,
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          labelPadding:
-                              const EdgeInsets.symmetric(horizontal: 11),
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            height: 1.25,
-                            fontWeight: FontWeight.w600,
-                            color: _filter == filter ? k.surface : k.ink,
-                          ),
-                          materialTapTargetSize: MaterialTapTargetSize.padded,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
         Expanded(
