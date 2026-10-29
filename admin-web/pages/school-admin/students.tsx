@@ -28,7 +28,7 @@ import {
   Toast,
   todayIsoStr,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
 import {
   ExcelSheetData,
   exportMultiSheetToExcel,
@@ -327,11 +327,27 @@ export default function SchoolAdminStudentsPage() {
   );
 
   useEffect(() => {
-    if (childrenError && (childrenError as any).status === 401) {
-      clearToken("schoolAdmin");
+    if (!childrenError) return;
+    const status = (childrenError as any)?.status;
+    if (status !== 401) return;
+
+    // 401: thử làm mới token 1 lần trước khi kết luận phiên đã hết hạn.
+    // Trước đây trang này xoá token + chuyển về /login ngay lập tức, nên chỉ 1
+    // lần refresh hỏng (do race condition giữa các request song song) cũng khiến
+    // người dùng bị đăng xuất oan.
+    if (!getToken("schoolAdmin")) {
       window.location.href = "/login";
+      return;
     }
-  }, [childrenError]);
+    refreshAccessToken().then((token) => {
+      if (!token) {
+        clearToken("schoolAdmin");
+        window.location.href = "/login";
+      } else {
+        mutate();
+      }
+    });
+  }, [childrenError, mutate]);
 
   const filtered = useMemo(() => {
     let list = children ?? [];
