@@ -37,6 +37,8 @@ class _ParentMedicationDetailScreenState
 
   void _reset() {
     _version++;
+    _busy = false;
+    _dialog = false;
     _repo = widget.repository ?? HttpMedicationRepository();
     _error = null;
     _confirmed = null;

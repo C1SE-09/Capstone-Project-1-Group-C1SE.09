@@ -120,6 +120,7 @@ class MedicationRequestCreate(BaseModel):
     """Schema tạo đơn dặn thuốc (hỗ trợ dải ngày và nhiều cữ uống)."""
 
     child_id: uuid.UUID
+    expected_class_id: uuid.UUID | None = None
     from_date: dt.date = Field(default_factory=get_today, description="Ngày bắt đầu uống thuốc theo giờ Việt Nam")
     to_date: dt.date | None = Field(None, description="Ngày kết thúc uống thuốc (tối đa 7 ngày)")
     time_slots: list[str] = Field(..., min_length=1, max_length=24, description="Các khung giờ uống trong ngày, ví dụ ['08:30', '11:30']")

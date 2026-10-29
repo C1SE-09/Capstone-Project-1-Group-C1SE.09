@@ -57,6 +57,7 @@ class _ParentMedicationFormScreenState
   void didUpdateWidget(covariant ParentMedicationFormScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_child.childId != widget.child.childId ||
+        _child.classId != widget.child.classId ||
         oldWidget.repository != widget.repository) {
       _stale = true;
       _error =
@@ -96,8 +97,8 @@ class _ParentMedicationFormScreenState
   }
 
   Future<void> _pickDate(bool end) async {
-    final today = medicationDateInVietnam(DateTime.now());
-    final first = end && _from.isAfter(today) ? _from : today;
+    // Đồng hồ máy chỉ gợi ý ngày; server quyết định ngày nào còn được gửi.
+    final first = end ? _from : DateTime(1);
     var last = end
         ? DateTime(_from.year, _from.month, _from.day + 6)
         : DateTime(9999, 12, 31);
@@ -191,10 +192,9 @@ class _ParentMedicationFormScreenState
     String? invalid;
     if (_slots.isEmpty) invalid = 'Chọn ít nhất một khung giờ uống.';
     if (_bytes == null) invalid = 'Ảnh đơn thuốc là bắt buộc.';
-    if (_days < 1 ||
-        _days > 7 ||
-        _from.isBefore(medicationDateInVietnam(DateTime.now()))) {
-      invalid = 'Chọn thời gian từ hôm nay, tối đa 7 ngày tính cả hai đầu.';
+    if (_days < 1 || _days > 7) {
+      invalid =
+          'Chọn đợt tối đa 7 ngày tính cả hai đầu. Máy chủ kiểm tra ngày hợp lệ khi gửi.';
     }
     if (_child.classId?.isNotEmpty != true) {
       invalid = 'Bé chưa có lớp. Vui lòng liên hệ nhà trường.';
@@ -214,6 +214,7 @@ class _ParentMedicationFormScreenState
       if (!mounted || _stale) return;
       final result = await _repo.createMedicationRequests(
           childId: _child.childId,
+          expectedClassId: _child.classId,
           fromDate: _from,
           toDate: _to,
           timeSlots: slots,

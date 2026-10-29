@@ -158,6 +158,7 @@ class HttpMedicationRepository {
 
   Future<MedicationBatchCreateResult> createMedicationRequests(
       {required String childId,
+      String? expectedClassId,
       required DateTime fromDate,
       required DateTime toDate,
       required List<String> timeSlots,
@@ -174,6 +175,7 @@ class HttpMedicationRepository {
     }
     final response = await _request('POST', '/api/medication-requests', data: {
       'child_id': childId,
+      if (expectedClassId != null) 'expected_class_id': expectedClassId,
       'from_date': day(fromDate),
       'to_date': day(toDate),
       'time_slots': timeSlots,
@@ -191,7 +193,10 @@ class HttpMedicationRepository {
           'Chưa thể xác minh đợt thuốc đã tạo. Hãy tải lại danh sách.');
     }
     final items = raw.map(_dose).toList();
-    if (items.any((d) => d.childId != childId || d.batchId != batchId) ||
+    if (items.any((d) =>
+            d.childId != childId ||
+            d.batchId != batchId ||
+            (expectedClassId != null && d.classId != expectedClassId)) ||
         body['total_slots'] != items.length) {
       throw const MedicationRequestException(
           'Kết quả tạo đợt thuốc không khớp. Hãy tải lại danh sách, không gửi lại tự động.');
@@ -314,11 +319,24 @@ class HttpMedicationRepository {
           code: 'invalid_response');
     }
     try {
+      final rows = [
+        ...body['morning'] as List,
+        ...body['noon'] as List,
+        ...body['afternoon'] as List
+      ];
+      if (rows.any(
+          (row) => row is! Map<String, dynamic> || row['is_given'] is! bool)) {
+        throw const MedicationRequestException(
+            'Trạng thái cữ thuốc không hợp lệ. Vui lòng tải lại.',
+            code: 'invalid_response');
+      }
       final data = MedicationsTodayData.fromJson(body);
       if (data.totalRequests != data.allItems.length ||
           data.completedCount + data.pendingCount != data.totalRequests ||
           data.completedCount < 0 ||
           data.pendingCount < 0 ||
+          data.completedCount !=
+              data.allItems.where((item) => item.isGiven).length ||
           data.morning.any((d) => d.session != 'morning') ||
           data.noon.any((d) => d.session != 'noon') ||
           data.afternoon.any((d) => d.session != 'afternoon')) {

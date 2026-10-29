@@ -19,6 +19,23 @@ MEDICATION_IMAGE_PREFIX = "/api/medication-requests/attachments/"
 MEDICATION_BUCKET_SUFFIX = "-medication-requests"
 
 
+def verify_prescription_access(db: Session, user: User, child_id: uuid.UUID, attachment_id: uuid.UUID) -> None:
+    child = resolve_medication_child(db, user, child_id)
+    if role_of(user) != "teacher":
+        return
+    path = f"{MEDICATION_IMAGE_PREFIX}{child_id}/{attachment_id}"
+    references = db.scalars(select(MedicationRequest.class_id).where(
+        MedicationRequest.child_id == child_id, MedicationRequest.prescription_image_url == path,
+    )).all()
+    if references:
+        if child.class_id not in references:
+            raise HTTPException(403, "Bạn không có quyền đọc ảnh của đơn thuốc thuộc lớp khác")
+    else:
+        # Ảnh chưa gắn đơn chỉ được xem trước bởi chính người tải lên.
+        validate_private_image_reference(path=path, child_id=child_id, user_id=user.user_id,
+            bucket_suffix=MEDICATION_BUCKET_SUFFIX, url_prefix=MEDICATION_IMAGE_PREFIX)
+
+
 def resolve_class_access(user: User, db: Session, requested_class_id: uuid.UUID | None = None) -> uuid.UUID:
     role = role_of(user)
     if role == "admin":
@@ -191,6 +208,8 @@ def create_medication_requests(db: Session, payload: MedicationRequestCreate, us
     if child is None:
         raise HTTPException(404, "Không tìm thấy học sinh")
     resolve_medication_child(db, user, child.child_id, require_enrolled=True)
+    if payload.expected_class_id is not None and child.class_id != payload.expected_class_id:
+        raise HTTPException(409, "Lớp của bé đã thay đổi. Vui lòng mở lại hồ sơ và kiểm tra trước khi gửi thuốc")
     if child.class_id is None:
         raise HTTPException(422, "Bé chưa được phân lớp")
     if payload.from_date < get_today():

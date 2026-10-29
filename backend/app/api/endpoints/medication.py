@@ -55,6 +55,7 @@ from app.services.medication_service import (
     resolve_class_access,
     resolve_medication_child,
     verify_medication_access,
+    verify_prescription_access,
 )
 from app.services.private_medical_attachments import MAX_IMAGE_BYTES, read_private_image, save_private_image
 from app.tasks.medication_notifications import (
@@ -473,7 +474,7 @@ def read_medication_prescription(
     child_id: uuid.UUID, attachment_id: uuid.UUID,
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
 ):
-    resolve_medication_child(db, current_user, child_id)
+    verify_prescription_access(db, current_user, child_id, attachment_id)
     data, mime = read_private_image(child_id=child_id, attachment_id=attachment_id,
                                     bucket_suffix=MEDICATION_BUCKET_SUFFIX)
     return Response(content=data, media_type=mime,

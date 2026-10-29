@@ -50,6 +50,7 @@ def test_prescription_private_round_trip_is_bound_to_child_and_actor(env, images
     assert not images.public and all(stream.closed and stream.released for stream in images.streams)
     assert env.client(env.parent_b).get(path).status_code == 403
     assert env.client(env.teacher_b).get(path).status_code == 403
+    dose(env, prescription_image_url=path)
     assert env.client(env.seed["user_teacher_mai"]).get(path).status_code == 200
 
 
@@ -176,3 +177,64 @@ def test_default_request_day_is_vietnam_date_at_utc_boundary(env, images, monkey
     response = env.client(env.seed["user_parent"]).post("/api/medication-requests", json=body)
     assert response.status_code == 201, response.text
     assert {item["request_date"] for item in response.json()["items"]} == {"2030-01-06"}
+
+
+def test_parent_teacher_complete_two_dose_lifecycle_with_real_audit(env, images):
+    parent = env.client(env.seed["user_parent"])
+    path = upload(env).json()["prescription_image_url"]
+    created = parent.post("/api/medication-requests", json=payload(env, path))
+    assert created.status_code == 201, created.text
+    first, second = sorted(created.json()["items"], key=lambda row: row["time_slot"])
+    teacher = env.client(env.seed["user_teacher_mai"])
+    params = {"date": str(get_today())}
+    schedule = teacher.get("/api/teacher/medications/today", params=params).json()
+    assert schedule["pending_count"] == 2
+    result = teacher.put(f"/api/teacher/medications/{first['id']}/confirm", params=params,
+                         json={"session": "morning"})
+    assert result.status_code == 200, result.text
+    history = env.client(env.seed["user_parent"]).get("/api/medication-requests",
+        params={"child_id": str(env.seed["child"].child_id), "batch_id": created.json()["batch_id"]}).json()
+    given = next(row for row in history if row["id"] == first["id"])
+    assert given["status"] == "given" and given["given_at"]
+    assert given["given_by_id"] == str(env.seed["teacher_mai"].teacher_id)
+    assert given["given_by_name"] == env.seed["teacher_mai"].full_name
+    cancelled = env.client(env.seed["user_parent"]).post(f"/api/medication-requests/{second['id']}/cancel")
+    assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
+    schedule = env.client(env.seed["user_teacher_mai"]).get("/api/teacher/medications/today", params=params).json()
+    assert schedule["pending_count"] == 0 and schedule["completed_count"] == 1
+    assert [row["request_id"] for row in schedule["morning"]] == [first["id"]]
+    assert not schedule["noon"] and len(env.sent) == 1
+
+
+def test_teacher_cannot_bypass_historical_request_class_via_prescription_path(env, images):
+    path = upload(env).json()["prescription_image_url"]
+    req = dose(env, prescription_image_url=path)
+    env.seed["child"].class_id = env.class_b.class_id
+    env.db.commit()
+    teacher = env.client(env.teacher_b)
+    assert teacher.get(f"/api/medication-requests/{req.request_id}").status_code == 403
+    assert teacher.get(path).status_code == 403
+    assert env.client(env.seed["user_parent"]).get(path).status_code == 200
+
+
+def test_unreferenced_prescription_preview_is_uploader_only_for_teachers(env, images):
+    path = upload(env, user=env.seed["user_teacher_mai"]).json()["prescription_image_url"]
+    assert env.client(env.seed["user_teacher_mai"]).get(path).status_code == 200
+    assert env.client(env.seed["user_teacher_hoa"]).get(path).status_code == 403
+    dose(env, prescription_image_url=path)
+    assert env.client(env.seed["user_teacher_hoa"]).get(path).status_code == 200
+
+
+def test_changed_class_rejects_stale_parent_form_without_creating_any_doses(env, images):
+    path = upload(env).json()["prescription_image_url"]
+    snapshot = str(env.seed["child"].class_id)
+    env.seed["child"].class_id = env.class_b.class_id
+    env.db.commit()
+    response = env.client(env.seed["user_parent"]).post("/api/medication-requests",
+        json=payload(env, path, expected_class_id=snapshot))
+    assert response.status_code == 409, response.text
+    assert env.db.scalar(select(func.count()).select_from(MedicationRequest)) == 0
+    response = env.client(env.seed["user_parent"]).post("/api/medication-requests",
+        json=payload(env, path, expected_class_id=str(env.class_b.class_id)))
+    assert response.status_code == 201, response.text
+    assert {row["class_id"] for row in response.json()["items"]} == {str(env.class_b.class_id)}
