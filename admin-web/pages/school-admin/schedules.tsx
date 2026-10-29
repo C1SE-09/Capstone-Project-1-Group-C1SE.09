@@ -12,15 +12,16 @@ import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
+  ClassFilterSelect,
+  ConfirmDialog,
   Drawer,
   FormField,
+  ImportModal,
+  ImportResult,
   Modal,
   Pill,
   Spinner,
   Toast,
-  ConfirmDialog,
-  ImportModal,
-  ImportResult,
 } from "@/components/ui-school";
 import { exportMultiSheetToExcel, exportToExcel, ExcelSheetData } from "@/lib/excel-helper";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
@@ -1172,18 +1173,14 @@ export default function SchoolAdminSchedulesPage() {
           style={{ background: "#EFECE5" }}
         >
           <span className="text-sm font-semibold text-ink">Lớp:</span>
-          <select
-            className="kinput"
-            style={{ maxWidth: 280 }}
-            value={selectedClassId ?? ""}
-            onChange={(e) => setSelectedClassId(e.target.value || null)}
-          >
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.grade_label && `(${c.grade_label})`}
-              </option>
-            ))}
-          </select>
+          <div className="w-72">
+            <ClassFilterSelect
+              classes={classes}
+              value={selectedClassId ?? ""}
+              onChange={(val) => setSelectedClassId(val || null)}
+              placeholder="-- Chọn lớp --"
+            />
+          </div>
         </div>
       )}
 

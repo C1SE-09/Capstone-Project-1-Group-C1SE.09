@@ -146,6 +146,24 @@ def test_create_class_duplicate_name_rejected(admin_client, mock_db):
     assert "đã tồn tại" in resp.json()["detail"]
 
 
+def test_create_class_duplicate_room_rejected(admin_client, mock_db):
+    existing = _make_class("Lớp Mầm 1")
+    existing.room_number = "Room 101"
+
+    def _query(model, *args, **kwargs):
+        q = MagicMock()
+        if model is Class_:
+            q.filter.return_value.first.return_value = existing
+        else:
+            q.filter.return_value.first.return_value = None
+        return q
+
+    mock_db.query.side_effect = _query
+    resp = admin_client.post("/api/admin/classes", json={"name": "Lớp Mầm 2", "room_number": "Room 101"})
+    assert resp.status_code == 400, resp.text
+    assert "đã được sử dụng" in resp.json()["detail"]
+
+
 # ── PUT /classes/{id} ─────────────────────────────────────────────────────
 
 def test_update_class_ok(admin_client, mock_db):
@@ -166,6 +184,29 @@ def test_update_class_ok(admin_client, mock_db):
     resp = admin_client.put(f"/api/admin/classes/{CLASS_ID}", json={"name": "Lớp Mầm 2"})
     assert resp.status_code == 200, resp.text
     assert c.name == "Lớp Mầm 2"
+
+
+def test_update_class_duplicate_room_rejected(admin_client, mock_db):
+    c = _make_class("Lớp Mầm 1")
+    other_class = _make_class("Lớp Mầm 2")
+    other_class.class_id = uuid.uuid4()
+    other_class.room_number = "Room 102"
+    calls = {"n": 0}
+
+    def _query(model, *args, **kwargs):
+        q = MagicMock()
+        if model is Class_:
+            calls["n"] += 1
+            # Lần 1: lookup c; lần 2: check duplicate room -> trả về other_class
+            q.filter.return_value.first.return_value = c if calls["n"] == 1 else other_class
+        elif model is Child:
+            q.filter.return_value.count.return_value = 0
+        return q
+
+    mock_db.query.side_effect = _query
+    resp = admin_client.put(f"/api/admin/classes/{CLASS_ID}", json={"room_number": "Room 102"})
+    assert resp.status_code == 400, resp.text
+    assert "đã được sử dụng" in resp.json()["detail"]
 
 
 def test_update_class_capacity_below_students_rejected(admin_client, mock_db):

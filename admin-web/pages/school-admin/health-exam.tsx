@@ -553,20 +553,13 @@ export default function HealthExamPage() {
                 <label className="klabel mb-1.5">
                   Lớp <span className="text-bad ml-0.5">*</span>
                 </label>
-                <select
+                <ClassFilterSelect
+                  classes={classes}
                   value={importClassId}
-                  onChange={(e) => setImportClassId(e.target.value)}
-                  className="kinput text-sm font-medium bg-white"
-                >
-                  <option value="">Tất cả lớp</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.grade_label ? ` · ${c.grade_label}` : ""}
-                      {c.room_number ? ` (${c.room_number})` : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setImportClassId}
+                  placeholder="Tất cả lớp"
+                  className="w-full"
+                />
               </div>
               <div>
                 <label className="klabel mb-1.5">Ngày ghi nhận</label>

@@ -134,6 +134,22 @@ export default function SchoolAdminClassesPage() {
       setToast({ msg: "Vui lòng nhập tên lớp", tone: "bad" });
       return null;
     }
+    const room = form.room_number.trim();
+    if (room) {
+      const dupRoom = (classes || []).find(
+        (c) =>
+          c.room_number &&
+          c.room_number.trim().toLowerCase() === room.toLowerCase() &&
+          (!editing || c.id !== editing.id)
+      );
+      if (dupRoom) {
+        setToast({
+          msg: `Phòng "${room}" đã được sử dụng cho "${dupRoom.name}". Vui lòng chọn phòng khác!`,
+          tone: "bad",
+        });
+        return null;
+      }
+    }
     let capacity: number | null = null;
     if (form.capacity.trim()) {
       capacity = Number(form.capacity.trim());
@@ -145,7 +161,7 @@ export default function SchoolAdminClassesPage() {
     return {
       name,
       grade_label: form.grade_label.trim() || null,
-      room_number: form.room_number.trim() || null,
+      room_number: room || null,
       capacity,
     };
   }
@@ -165,7 +181,7 @@ export default function SchoolAdminClassesPage() {
       setDrawerOpen(false);
       mutate();
     } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu lớp", tone: "bad" });
+      setToast({ msg: err?.detail || err?.message || "Không thể lưu lớp", tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -468,7 +484,7 @@ export default function SchoolAdminClassesPage() {
             />
           )}
         </FormField>
-        <FormField label="Phòng">
+        <FormField label="Phòng" hint="Mỗi lớp học 1 phòng riêng, không được trùng nhau">
           <input
             className="kinput"
             value={form.room_number}

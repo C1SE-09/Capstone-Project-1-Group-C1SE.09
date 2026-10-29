@@ -14,7 +14,7 @@ from app.services.health_profile_service import (
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -545,14 +545,31 @@ def create_class(data: ClassCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Tên lớp không được để trống.")
     if len(name) > 100:
         raise HTTPException(status_code=400, detail="Tên lớp tối đa 100 ký tự.")
+
+    school_id = _get_school_id(db)
+
     room_number = (data.room_number or "").strip() or None
-    if room_number and len(room_number) > 20:
-        raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+    if room_number:
+        if len(room_number) > 20:
+            raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+        existing_room = (
+            db.query(Class_)
+            .filter(
+                Class_.school_id == school_id,
+                Class_.is_active.is_(True),
+                func.lower(Class_.room_number) == room_number.lower(),
+            )
+            .first()
+        )
+        if existing_room:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Phòng '{room_number}' đã được sử dụng cho lớp '{existing_room.name}'. Vui lòng chọn phòng khác.",
+            )
     grade_label = (data.grade_label or "").strip() or None
     if data.capacity is not None and data.capacity <= 0:
         raise HTTPException(status_code=400, detail="Sĩ số tối đa phải là số dương.")
 
-    school_id = _get_school_id(db)
     existing = (
         db.query(Class_)
         .filter(Class_.school_id == school_id, Class_.name == name, Class_.is_active.is_(True))
@@ -610,8 +627,24 @@ def update_class(class_id: str, data: ClassUpdate, db: Session = Depends(get_db)
         c.grade_label = (data.grade_label or "").strip() or None
     if "room_number" in data.model_fields_set:
         room_number = (data.room_number or "").strip() or None
-        if room_number and len(room_number) > 20:
-            raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+        if room_number:
+            if len(room_number) > 20:
+                raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+            existing_room = (
+                db.query(Class_)
+                .filter(
+                    Class_.school_id == c.school_id,
+                    Class_.is_active.is_(True),
+                    Class_.class_id != c.class_id,
+                    func.lower(Class_.room_number) == room_number.lower(),
+                )
+                .first()
+            )
+            if existing_room:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Phòng '{room_number}' đã được sử dụng cho lớp '{existing_room.name}'. Vui lòng chọn phòng khác.",
+                )
         c.room_number = room_number
     if "capacity" in data.model_fields_set:
         if data.capacity is not None:

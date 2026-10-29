@@ -4,13 +4,13 @@
  * Danh sách bug reports (Web Admin / dev team) — restyle theo theme KinderLog.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
 import { Badge, Card, EmptyState, Spinner } from "@/components/ui";
-import { Pill, SearchBar } from "@/components/ui-school";
+import { Pill, SearchBar, SearchableSelect, SelectOption } from "@/components/ui-school";
 import { apiFetch, clearToken, getToken } from "@/lib/api";
 import {
   CATEGORY_LABELS,
@@ -61,6 +61,38 @@ export default function BugReportsListPage() {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [search, setSearch] = useState("");
+
+  const statusOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "", label: "Tất cả trạng thái" },
+      ...Object.entries(STATUS_COLORS).map(([k, v]) => ({ value: k, label: v.label })),
+    ],
+    []
+  );
+
+  const severityOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "", label: "Tất cả mức độ" },
+      ...Object.entries(SEVERITY_COLORS).map(([k, v]) => ({ value: k, label: v.label })),
+    ],
+    []
+  );
+
+  const categoryOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "", label: "Tất cả loại lỗi" },
+      ...Object.entries(CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v })),
+    ],
+    []
+  );
+
+  const roleOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "", label: "Tất cả người gửi" },
+      ...Object.entries(ROLE_LABELS).map(([k, v]) => ({ value: k, label: v })),
+    ],
+    []
+  );
 
   useEffect(() => {
     if (!getToken("adminApp")) {
@@ -131,66 +163,50 @@ export default function BugReportsListPage() {
               }}
               placeholder="🔍 Tìm theo tiêu đề..."
             />
-            <select
+            <SearchableSelect
+              options={statusOptions}
               value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
+              onChange={(v) => {
+                setFilterStatus(v);
                 setPage(1);
               }}
-              className="kinput"
-            >
-              <option value="">Tất cả trạng thái</option>
-              {Object.entries(STATUS_COLORS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
-            <select
+              placeholder="Tất cả trạng thái"
+              searchPlaceholder="Tìm trạng thái..."
+              allowClear={true}
+            />
+            <SearchableSelect
+              options={severityOptions}
               value={filterSeverity}
-              onChange={(e) => {
-                setFilterSeverity(e.target.value);
+              onChange={(v) => {
+                setFilterSeverity(v);
                 setPage(1);
               }}
-              className="kinput"
-            >
-              <option value="">Tất cả mức độ</option>
-              {Object.entries(SEVERITY_COLORS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
-            <select
+              placeholder="Tất cả mức độ"
+              searchPlaceholder="Tìm mức độ..."
+              allowClear={true}
+            />
+            <SearchableSelect
+              options={categoryOptions}
               value={filterCategory}
-              onChange={(e) => {
-                setFilterCategory(e.target.value);
+              onChange={(v) => {
+                setFilterCategory(v);
                 setPage(1);
               }}
-              className="kinput"
-            >
-              <option value="">Tất cả loại lỗi</option>
-              {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
-            <select
+              placeholder="Tất cả loại lỗi"
+              searchPlaceholder="Tìm loại lỗi..."
+              allowClear={true}
+            />
+            <SearchableSelect
+              options={roleOptions}
               value={filterRole}
-              onChange={(e) => {
-                setFilterRole(e.target.value);
+              onChange={(v) => {
+                setFilterRole(v);
                 setPage(1);
               }}
-              className="kinput"
-            >
-              <option value="">Tất cả người gửi</option>
-              {Object.entries(ROLE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
+              placeholder="Tất cả người gửi"
+              searchPlaceholder="Tìm người gửi..."
+              allowClear={true}
+            />
           </div>
           <div className="mt-2 flex justify-end">
             <button
