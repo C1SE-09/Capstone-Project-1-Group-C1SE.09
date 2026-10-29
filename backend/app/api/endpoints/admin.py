@@ -14,7 +14,7 @@ from app.services.health_profile_service import (
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -548,7 +548,7 @@ def _assert_room_available(
         db.query(Class_)
         .filter(
             Class_.school_id == school_id,
-            Class_.room_number == room_number,
+            func.lower(Class_.room_number) == func.lower(room_number),
             Class_.is_active.is_(True),
         )
         .first()
@@ -567,6 +567,9 @@ def create_class(data: ClassCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Tên lớp không được để trống.")
     if len(name) > 100:
         raise HTTPException(status_code=400, detail="Tên lớp tối đa 100 ký tự.")
+
+    school_id = _get_school_id(db)
+
     room_number = (data.room_number or "").strip() or None
     if room_number and len(room_number) > 20:
         raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
@@ -574,7 +577,6 @@ def create_class(data: ClassCreate, db: Session = Depends(get_db)):
     if data.capacity is not None and data.capacity <= 0:
         raise HTTPException(status_code=400, detail="Sĩ số tối đa phải là số dương.")
 
-    school_id = _get_school_id(db)
     existing = (
         db.query(Class_)
         .filter(Class_.school_id == school_id, Class_.name == name, Class_.is_active.is_(True))

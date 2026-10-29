@@ -151,21 +151,27 @@ export default function SchoolAdminClassesPage() {
       setToast({ msg: "Vui lòng nhập tên lớp", tone: "bad" });
       return null;
     }
+    const room = form.room_number.trim();
+    if (room) {
+      const dupRoom = (classes || []).find(
+        (c) =>
+          c.room_number &&
+          c.room_number.trim().toLowerCase() === room.toLowerCase() &&
+          (!editing || c.id !== editing.id)
+      );
+      if (dupRoom) {
+        setToast({
+          msg: `Phòng "${room}" đã được sử dụng cho "${dupRoom.name}". Vui lòng chọn phòng khác!`,
+          tone: "bad",
+        });
+        return null;
+      }
+    }
     let capacity: number | null = null;
     if (form.capacity.trim()) {
       capacity = Number(form.capacity.trim());
       if (!Number.isInteger(capacity) || capacity <= 0) {
         setToast({ msg: "Sĩ số tối đa phải là số nguyên dương", tone: "bad" });
-        return null;
-      }
-    }
-    const room = form.room_number.trim();
-    if (room) {
-      const dup = (classes ?? []).find(
-        (c) => c.id !== editing?.id && (c.room_number || "").trim() === room
-      );
-      if (dup) {
-        setToast({ msg: `Phòng '${room}' đã được dùng cho lớp '${dup.name}'`, tone: "bad" });
         return null;
       }
     }
@@ -192,7 +198,7 @@ export default function SchoolAdminClassesPage() {
       setDrawerOpen(false);
       mutate();
     } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu lớp", tone: "bad" });
+      setToast({ msg: err?.detail || err?.message || "Không thể lưu lớp", tone: "bad" });
     } finally {
       setSaving(false);
     }

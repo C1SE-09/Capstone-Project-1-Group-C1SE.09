@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 # Cấu hình Token & Phiên
 SECRET_KEY = getattr(settings, "jwt_secret_key", "kinderlog-secret")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_SECONDS = 15 * 60  # 15 phút
-REFRESH_TOKEN_EXPIRE_SECONDS = 1 * 60 * 60  # 1 giờ (Sliding Window)
+ACCESS_TOKEN_EXPIRE_SECONDS = 2 * 24 * 60 * 60  # 2 ngày (172.800 giây)
+REFRESH_TOKEN_EXPIRE_SECONDS = 30 * 24 * 60 * 60  # 30 ngày (Sliding Window, 2.592.000 giây)
 MAX_CONCURRENT_DEVICES = 4
 
 KEY_SESSION_PREFIX = "session:"
@@ -105,6 +105,8 @@ def create_session(user_id: str, role: str, device_id: str, device_name: str) ->
             "device_id": device_id_clean,
             "device_name": device_name_clean,
             "refresh_token": refresh_token,
+            "prev_refresh_token": "",
+            "prev_rotated_at": "0",
             "last_active_at": datetime.now(UTC).isoformat(),
         },
     )
@@ -124,7 +126,31 @@ def refresh_session(session_id: str, refresh_token: str) -> dict[str, Any]:
     session_key = f"{KEY_SESSION_PREFIX}{session_id}"
     data = client.hgetall(session_key)
 
-    if not data or not secrets.compare_digest(data.get("refresh_token", ""), refresh_token):
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.",
+        )
+
+    current_refresh = data.get("refresh_token", "")
+    prev_refresh = data.get("prev_refresh_token", "")
+    try:
+        prev_rotated_at = float(data.get("prev_rotated_at", "0"))
+    except (ValueError, TypeError):
+        prev_rotated_at = 0.0
+
+    now = time.time()
+    now_ts = int(now * 1000)
+
+    is_current = secrets.compare_digest(current_refresh, refresh_token) if current_refresh else False
+    is_prev_valid = (
+        not is_current
+        and bool(prev_refresh)
+        and secrets.compare_digest(prev_refresh, refresh_token)
+        and (now - prev_rotated_at) < 60.0  # 60s grace period cho request đồng thời
+    )
+
+    if not is_current and not is_prev_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.",
@@ -132,14 +158,31 @@ def refresh_session(session_id: str, refresh_token: str) -> dict[str, Any]:
 
     user_id = data["user_id"]
     role = data["role"]
+
+    # Nếu khớp prev_refresh trong thời gian grace period (race condition giữa 2 request song song)
+    if is_prev_valid:
+        logger.info(
+            "Session %s: chấp nhận refresh token trước đó trong thời gian ân hạn 60s.",
+            session_id,
+        )
+        new_access = create_access_token(user_id=user_id, role=role, session_id=session_id)
+        return {
+            "access_token": new_access,
+            "refresh_token": current_refresh,
+            "session_id": session_id,
+            "token_type": "bearer",
+        }
+
+    # Trường hợp bình thường (is_current): Xoay refresh token mới và lưu lại token cũ vào prev
     new_refresh = secrets.token_urlsafe(48)
-    now_ts = int(time.time() * 1000)
 
     # Gia hạn thêm 30 ngày (Sliding Window)
     client.hset(
         session_key,
         mapping={
             "refresh_token": new_refresh,
+            "prev_refresh_token": current_refresh,
+            "prev_rotated_at": str(now),
             "last_active_at": datetime.now(UTC).isoformat(),
         },
     )

@@ -12,18 +12,20 @@ import { useRouter } from "next/router";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
+  ClassFilterSelect,
+  ConfirmDialog,
+  DateInput,
   Drawer,
   FormField,
+  ImportModal,
+  ImportResult,
   Modal,
   Pill,
   SearchBar,
+  SearchableSelect,
+  SelectOption,
   Spinner,
-  ConfirmDialog,
   Toast,
-  ClassFilterSelect,
-  ImportModal,
-  ImportResult,
-  DateInput,
   todayIsoStr,
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
@@ -327,6 +329,22 @@ export default function SchoolAdminStudentsPage() {
     selectedClassCapacity != null &&
     selectedClassCount >= selectedClassCapacity &&
     !stayingInSameClass;
+
+  const classFormOptions = useMemo<SelectOption[]>(() => {
+    return [
+      { value: "", label: "-- Chọn lớp --" },
+      ...classes.map((c) => ({
+        value: c.id,
+        label: `${c.name}${c.grade_label ? ` (${c.grade_label})` : ""}`,
+        sublabel:
+          c.capacity != null
+            ? `${c.student_count ?? 0}/${c.capacity} bé`
+            : c.room_number
+            ? c.room_number
+            : undefined,
+      })),
+    ];
+  }, [classes]);
 
   function handleExportExcel() {
     if (!children || children.length === 0) {
@@ -1199,21 +1217,14 @@ export default function SchoolAdminStudentsPage() {
           />
         </FormField>
         <FormField label="Lớp học" required>
-          <select
-            className="kinput"
+          <SearchableSelect
+            options={classFormOptions}
             value={form.class_id ?? ""}
-            onChange={(e) => setForm({ ...form, class_id: e.target.value || null })}
-          >
-            <option value="">-- Chọn lớp --</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.grade_label && `(${c.grade_label})`}
-                {c.capacity != null
-                  ? ` — ${c.student_count ?? 0}/${c.capacity} bé`
-                  : ""}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setForm({ ...form, class_id: val || null })}
+            placeholder="-- Chọn lớp --"
+            searchPlaceholder="Tìm kiếm tên lớp, phòng..."
+            prefixIcon={<span className="text-sm select-none">🏫</span>}
+          />
         </FormField>
         {selectedClassIsFull && (
           <div

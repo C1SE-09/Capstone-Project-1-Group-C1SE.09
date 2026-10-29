@@ -4,7 +4,7 @@
  * UI components nhỏ dùng chung cho School Admin — y hệt pattern Flutter app.
  */
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   downloadExcelTemplate,
   parseExcelOrCsvDetailed,
@@ -557,6 +557,247 @@ export function EmptyState({
   );
 }
 
+/* ════════ Helper: Chuyển tiếng Việt có dấu sang không dấu để tìm kiếm ════════ */
+function removeVietnameseTones(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .trim();
+}
+
+/* ════════ SearchableSelect ════════ */
+export interface SelectOption {
+  value: string;
+  label: string;
+  sublabel?: string;
+  badge?: string;
+}
+
+export function SearchableSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Chọn...",
+  searchPlaceholder = "Nhập tìm kiếm...",
+  prefixIcon,
+  className = "",
+  disabled = false,
+  allowClear = false,
+  renderOption,
+}: {
+  options: SelectOption[];
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  prefixIcon?: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  allowClear?: boolean;
+  renderOption?: (opt: SelectOption, isSelected: boolean) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Tìm option đang được chọn
+  const selectedOption = useMemo(
+    () => options.find((o) => o.value === value),
+    [options, value]
+  );
+
+  // Đóng khi click ra ngoài hoặc bấm Escape
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  // Reset từ khoá tìm kiếm khi đóng mở
+  useEffect(() => {
+    if (!open) {
+      setSearch("");
+    }
+  }, [open]);
+
+  // Lọc options dựa trên từ khóa tìm kiếm (hỗ trợ tiếng Việt không dấu & có dấu)
+  const filteredOptions = useMemo(() => {
+    const q = search.trim();
+    if (!q) return options;
+    const qNorm = removeVietnameseTones(q);
+    return options.filter((opt) => {
+      const labelNorm = removeVietnameseTones(opt.label);
+      const subNorm = opt.sublabel ? removeVietnameseTones(opt.sublabel) : "";
+      return (
+        labelNorm.includes(qNorm) ||
+        subNorm.includes(qNorm) ||
+        opt.label.toLowerCase().includes(q.toLowerCase()) ||
+        (opt.sublabel && opt.sublabel.toLowerCase().includes(q.toLowerCase()))
+      );
+    });
+  }, [options, search]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      {/* Nút bấm mở Drop box */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((prev) => !prev)}
+        className={`kinput !h-10 w-full flex items-center justify-between gap-2 text-left cursor-pointer bg-white transition-all ${
+          open ? "border-brand-500 ring-2 ring-brand-500/20" : ""
+        } ${disabled ? "opacity-60 cursor-not-allowed bg-sunken" : ""}`}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {prefixIcon && <span className="flex-shrink-0 text-ink-soft">{prefixIcon}</span>}
+          <span
+            className={`truncate text-sm ${
+              selectedOption && selectedOption.value !== ""
+                ? "font-medium text-ink"
+                : "text-ink-soft"
+            }`}
+          >
+            {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption?.sublabel && selectedOption.value !== "" && (
+              <span className="ml-1.5 text-xs text-ink-soft font-normal">
+                ({selectedOption.sublabel})
+              </span>
+            )}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {allowClear && value !== "" && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
+              title="Xóa lựa chọn"
+              className="text-ink-soft hover:text-ink w-5 h-5 flex items-center justify-center text-xs rounded-full hover:bg-black/5"
+            >
+              ✕
+            </span>
+          )}
+          <svg
+            className={`w-4 h-4 text-ink-soft transition-transform duration-200 ${
+              open ? "rotate-180 text-brand-600" : ""
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Menu thả xuống có ô input tìm kiếm */}
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1.5 w-full min-w-[240px] bg-white rounded-card border border-line shadow-xl z-50 overflow-hidden"
+          style={{ animation: "fadeIn 0.15s ease-out" }}
+        >
+          {/* Ô nhập tìm kiếm */}
+          <div className="p-2 border-b border-line bg-sunken/40">
+            <div className="relative flex items-center">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-soft select-none pointer-events-none">
+                🔍
+              </span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full pl-8 pr-7 py-1.5 text-xs sm:text-sm bg-white border border-line rounded-control text-ink placeholder:text-ink-soft focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink text-xs w-4 h-4 flex items-center justify-center rounded-full hover:bg-black/5"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Danh sách các item trong drop box */}
+          <div className="max-h-60 overflow-y-auto py-1">
+            {filteredOptions.length === 0 ? (
+              <div className="py-6 px-3 text-center text-xs text-ink-soft">
+                Không tìm thấy kết quả phù hợp cho &quot;{search}&quot;
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <div
+                    key={opt.value}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setOpen(false);
+                    }}
+                    className={`px-3.5 py-2 text-sm cursor-pointer flex items-center justify-between gap-2 transition-colors ${
+                      isSelected
+                        ? "bg-brand-50 text-brand-700 font-semibold"
+                        : "text-ink hover:bg-sunken"
+                    }`}
+                  >
+                    {renderOption ? (
+                      renderOption(opt, isSelected)
+                    ) : (
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="truncate">{opt.label}</span>
+                        {opt.sublabel && (
+                          <span className="text-xs text-ink-soft font-normal px-1.5 py-0.5 rounded bg-black/5 flex-shrink-0">
+                            {opt.sublabel}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {isSelected && (
+                      <span className="text-brand-600 text-xs font-bold flex-shrink-0">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ════════ ClassFilterSelect ════════ */
 export function ClassFilterSelect({
   classes,
@@ -565,45 +806,34 @@ export function ClassFilterSelect({
   placeholder = "Tất cả các lớp",
   className = "",
 }: {
-  classes: { id: string; name: string; room_number?: string }[];
+  classes: { id: string; name: string; room_number?: string; grade_label?: string }[];
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   className?: string;
 }) {
+  const options: SelectOption[] = useMemo(() => {
+    return [
+      { value: "", label: placeholder },
+      ...classes.map((c) => ({
+        value: c.id,
+        label: c.name,
+        sublabel: c.room_number ? c.room_number : (c.grade_label ? c.grade_label : undefined),
+      })),
+    ];
+  }, [classes, placeholder]);
+
   return (
-    <div className={`relative flex items-center ${className}`}>
-      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft text-sm pointer-events-none select-none z-10 leading-none">
-        🏫
-      </span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="kinput !pl-10 !pr-9 text-sm font-medium appearance-none cursor-pointer bg-white"
-        style={{ paddingLeft: "2.5rem", paddingRight: "2.25rem" }}
-      >
-        <option value="">{placeholder}</option>
-        {classes.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name} {c.room_number ? `(${c.room_number})` : ""}
-          </option>
-        ))}
-      </select>
-      {value ? (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          title="Bỏ lọc lớp"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink w-5 h-5 flex items-center justify-center text-xs rounded-full hover:bg-black/5 z-10"
-        >
-          ✕
-        </button>
-      ) : (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-soft text-xs select-none z-10">
-          ▼
-        </span>
-      )}
-    </div>
+    <SearchableSelect
+      options={options}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      searchPlaceholder="Tìm kiếm tên lớp, phòng..."
+      prefixIcon={<span className="text-sm select-none">🏫</span>}
+      className={`min-w-[200px] ${className}`}
+      allowClear={true}
+    />
   );
 }
 

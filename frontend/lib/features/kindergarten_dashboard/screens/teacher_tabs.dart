@@ -100,7 +100,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
