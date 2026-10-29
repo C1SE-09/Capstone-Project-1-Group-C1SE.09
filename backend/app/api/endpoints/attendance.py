@@ -195,6 +195,7 @@ def save_class_attendance_batch(
             "status": r.status,
             "check_in_time": r.check_in_time,
             "expected_arrival_time": r.expected_arrival_time,
+            "source_leave_id": None,
             "note": r.note,
             "teacher_id": teacher_id,
         }
@@ -209,6 +210,7 @@ def save_class_attendance_batch(
             "status": stmt.excluded.status,
             "check_in_time": stmt.excluded.check_in_time,
             "expected_arrival_time": stmt.excluded.expected_arrival_time,
+            "source_leave_id": None,
             "note": stmt.excluded.note,
             "teacher_id": stmt.excluded.teacher_id,
             "updated_at": stmt.excluded.updated_at,

@@ -214,7 +214,7 @@ class Child(Base, TimestampMixin):
         SAEnum(ChildStatus, name="child_status_enum", create_type=True),
         nullable=False,
         default=ChildStatus.ENROLLED,
-        server_default=ChildStatus.ENROLLED.value,
+        server_default=ChildStatus.ENROLLED.name,
         comment="Enrollment lifecycle status",
     )
 
@@ -366,7 +366,7 @@ class Parent(Base, TimestampMixin):
         SAEnum(ParentStatus, name="parent_status_enum", create_type=True),
         nullable=False,
         default=ParentStatus.ACTIVE,
-        server_default=ParentStatus.ACTIVE.value,
+        server_default=ParentStatus.ACTIVE.name,
         comment="Account lifecycle status",
     )
     is_verified: Mapped[bool] = mapped_column(

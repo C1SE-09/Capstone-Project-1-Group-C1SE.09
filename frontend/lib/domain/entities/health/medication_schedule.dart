@@ -22,6 +22,9 @@ class MedicationItem extends Equatable {
     this.notes,
     this.parentName,
     this.parentPhone,
+    this.timeSlot,
+    this.requestDate,
+    this.prescriptionImageUrl,
   });
 
   final String requestId;
@@ -40,6 +43,8 @@ class MedicationItem extends Equatable {
   final String? notes;
   final String? parentName;
   final String? parentPhone;
+  final String? timeSlot, prescriptionImageUrl;
+  final DateTime? requestDate;
 
   MedicationItem copyWith({
     bool? isGiven,
@@ -65,6 +70,9 @@ class MedicationItem extends Equatable {
       notes: notes ?? this.notes,
       parentName: parentName,
       parentPhone: parentPhone,
+      timeSlot: timeSlot,
+      requestDate: requestDate,
+      prescriptionImageUrl: prescriptionImageUrl,
     );
   }
 
@@ -80,12 +88,17 @@ class MedicationItem extends Equatable {
       instructions: json['instructions']?.toString(),
       session: json['session']?.toString() ?? 'morning',
       isGiven: json['is_given'] == true,
-      givenAt: json['given_at'] != null ? DateTime.tryParse(json['given_at'].toString()) : null,
+      givenAt: json['given_at'] != null
+          ? DateTime.tryParse(json['given_at'].toString())
+          : null,
       givenById: json['given_by_id']?.toString(),
       givenByName: json['given_by_name']?.toString(),
       notes: json['notes']?.toString(),
       parentName: json['parent_name']?.toString(),
       parentPhone: json['parent_phone']?.toString(),
+      timeSlot: json['time_slot']?.toString(),
+      requestDate: DateTime.tryParse(json['request_date']?.toString() ?? ''),
+      prescriptionImageUrl: json['prescription_image_url']?.toString(),
     );
   }
 
@@ -100,6 +113,9 @@ class MedicationItem extends Equatable {
         isGiven,
         givenAt,
         givenByName,
+        timeSlot,
+        requestDate,
+        prescriptionImageUrl,
       ];
 }
 
@@ -131,7 +147,9 @@ class MedicationsTodayData extends Equatable {
   factory MedicationsTodayData.fromJson(Map<String, dynamic> json) {
     List<MedicationItem> parseList(dynamic raw) {
       if (raw is List) {
-        return raw.map((e) => MedicationItem.fromJson(e as Map<String, dynamic>)).toList();
+        return raw
+            .map((e) => MedicationItem.fromJson(e as Map<String, dynamic>))
+            .toList();
       }
       return [];
     }

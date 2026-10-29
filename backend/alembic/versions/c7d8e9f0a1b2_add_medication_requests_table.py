@@ -47,11 +47,7 @@ def upgrade() -> None:
         sa.Column('time_slot', sa.String(length=10), nullable=False, comment='Khung giờ uống thuốc'),
         sa.Column(
             'medicine_category',
-            postgresql.ENUM(
-                'prescription', 'fever_reducer', 'cough_throat', 'lozenge', 'digestive', 'eye_nose_drops', 'other',
-                name='medicine_category_enum',
-                create_type=False,
-            ),
+            medicine_category_enum,
             nullable=False,
             server_default='prescription',
             comment='Phân loại thuốc / danh mục gợi ý'
@@ -62,11 +58,7 @@ def upgrade() -> None:
         sa.Column('prescription_image_url', sa.String(length=512), nullable=False, comment='Ảnh đơn thuốc hoặc bao bì túi thuốc'),
         sa.Column(
             'status',
-            postgresql.ENUM(
-                'pending', 'given', 'cancelled',
-                name='medication_status_enum',
-                create_type=False,
-            ),
+            medication_status_enum,
             nullable=False,
             server_default='pending',
             comment='Trạng thái cữ thuốc: pending | given | cancelled'

@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.config import get_today
 from app.models.medication import MedicationStatus, MedicineCategory
 
 
@@ -33,6 +34,9 @@ class MedicationItemResponse(BaseModel):
     dosage: str = Field(..., description="Liều lượng (vd: 5ml, 1 viên, 1 gói)")
     instructions: str | None = Field(None, description="Hướng dẫn sử dụng từ phụ huynh")
     session: str = Field(..., description="Mốc thời gian: morning, noon, afternoon")
+    time_slot: str | None = None
+    request_date: dt.date | None = None
+    prescription_image_url: str | None = None
 
     is_given: bool = Field(False, description="Đã cho uống thuốc buổi này chưa")
     given_at: dt.datetime | None = Field(None, description="Thời điểm cô đã cho uống")
@@ -78,13 +82,22 @@ class MedicationConfirmPayload(BaseModel):
     """Payload gửi lên từ app khi xác nhận đã cho uống thuốc."""
 
     session: str = Field(..., description="Buổi uống: morning, noon, afternoon")
-    notes: str | None = Field(None, description="Ghi chú thêm của cô (vd: bé uống ngoan)")
+    notes: str | None = Field(None, max_length=1000, description="Ghi chú thêm của cô (vd: bé uống ngoan)")
 
 
 class MedicationConfirmRequest(MedicationConfirmPayload):
     """Payload xác nhận có kèm request_id trong body."""
 
     request_id: uuid.UUID | None = Field(None, description="ID đơn dặn thuốc (tuỳ chọn nếu đã truyền trên URL)")
+
+
+class MedicationRequestConfirmInput(BaseModel):
+    session: str | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class MedicationPrescriptionResponse(BaseModel):
+    prescription_image_url: str
 
 
 class MedicationConfirmResponse(BaseModel):
@@ -107,14 +120,27 @@ class MedicationRequestCreate(BaseModel):
     """Schema tạo đơn dặn thuốc (hỗ trợ dải ngày và nhiều cữ uống)."""
 
     child_id: uuid.UUID
-    from_date: dt.date = Field(default_factory=dt.date.today, description="Ngày bắt đầu uống thuốc")
+    expected_class_id: uuid.UUID | None = None
+    from_date: dt.date = Field(default_factory=get_today, description="Ngày bắt đầu uống thuốc theo giờ Việt Nam")
     to_date: dt.date | None = Field(None, description="Ngày kết thúc uống thuốc (tối đa 7 ngày)")
-    time_slots: list[str] = Field(..., min_length=1, description="Các khung giờ uống trong ngày, ví dụ ['08:30', '11:30']")
+    time_slots: list[str] = Field(..., min_length=1, max_length=24, description="Các khung giờ uống trong ngày, ví dụ ['08:30', '11:30']")
     medicine_category: MedicineCategory = Field(default=MedicineCategory.PRESCRIPTION)
     medicine_name: str | None = Field(None, max_length=255)
     dosage: str = Field(..., min_length=1, max_length=255, description="Liều lượng hoặc quy cách gói thuốc")
     notes: str | None = Field(None, max_length=1000)
     prescription_image_url: str = Field(..., min_length=1, max_length=512, description="Ảnh đơn thuốc hoặc bao bì chia liều")
+
+    @field_validator("medicine_name", "dosage", "notes", mode="before")
+    @classmethod
+    def trim_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        self.to_date = self.to_date or self.from_date
+        if not 0 <= (self.to_date - self.from_date).days < 7:
+            raise ValueError("Đợt dặn thuốc tối đa 7 ngày, tính cả ngày bắt đầu và kết thúc")
+        return self
 
     @field_validator("prescription_image_url")
     @classmethod
@@ -145,24 +171,27 @@ class MedicationRequestResponse(BaseModel):
     """Schema chi tiết cữ uống thuốc trả về."""
 
     id: uuid.UUID
-    batch_id: uuid.UUID
+    batch_id: uuid.UUID | None
     child_id: uuid.UUID
     child_name: str
     class_id: uuid.UUID
     class_name: str | None = None
-    parent_id: uuid.UUID
+    parent_id: uuid.UUID | None
     parent_name: str | None = None
-    request_date: dt.date
-    time_slot: str
-    medicine_category: MedicineCategory
+    request_date: dt.date | None
+    time_slot: str | None
+    start_date: dt.date
+    end_date: dt.date
+    sessions: list[str] = Field(default_factory=list)
+    medicine_category: MedicineCategory | None
     medicine_name: str | None = None
     dosage: str
     notes: str | None = None
     prescription_image_url: str
     status: MedicationStatus
-    created_by_user_id: uuid.UUID
-    created_by_role: str
-    creator_name: str
+    created_by_user_id: uuid.UUID | None
+    created_by_role: str | None
+    creator_name: str | None
     given_at: dt.datetime | None = None
     given_by_id: uuid.UUID | None = None
     given_by_name: str | None = None

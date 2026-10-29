@@ -2,7 +2,7 @@
 backend/tests/test_attendance_auto_sync.py
 ==========================================
 Unit & Integration tests cho Task 1: [Service Attendance Auto-Sync]:
-- Đồng bộ tự động điểm danh khi duyệt đơn (EXCUSED_ABSENT cho nghỉ học, LATE kèm ETA cho đi trễ).
+- Đồng bộ EXCUSED_ABSENT cho ngày trống; ETA đi trễ không phải check-in thực.
 - Hoàn tác điểm danh (Rollback) khi phụ huynh huỷ đơn trước 07:30 AM.
 - Chặn huỷ đơn tự động sau 07:30 AM.
 - API GET /api/attendance trả về đầy đủ sĩ số excused_absent_count và ETA.
@@ -22,6 +22,7 @@ from app.api.endpoints.leave_request import router as leave_request_router
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.attendance import AttendanceRecord, AttendanceStatus
+from app.models.child import Child, ChildStatus
 from app.models.leave_request import LeaveRequest, LeaveStatus, LeaveType
 from app.models.user import Teacher, User, UserRole
 from app.services.attendance_sync_service import (
@@ -76,6 +77,7 @@ def test_sync_single_day_approved(sample_ids):
         date=req.from_date,
         status=AttendanceStatus.EXCUSED_ABSENT,
         note="Nghỉ có phép: Bé bị sốt",
+        source_leave_id=req.leave_id,
     )
 
     synced = sync_leave_request_to_attendance(db, req, teacher_id=sample_ids["teacher_id"])
@@ -85,7 +87,7 @@ def test_sync_single_day_approved(sample_ids):
 
 
 def test_sync_late_approved_with_eta(sample_ids):
-    """Duyệt đơn đi trễ -> Tự động gán trạng thái LATE kèm giờ ETA."""
+    """Duyệt báo trễ giữ ETA trong đơn, không tự đánh dấu bé đã đến lớp."""
     db = MagicMock()
     req = LeaveRequest(
         leave_id=uuid.uuid4(),
@@ -111,9 +113,9 @@ def test_sync_late_approved_with_eta(sample_ids):
     )
 
     synced = sync_leave_request_to_attendance(db, req, teacher_id=sample_ids["teacher_id"])
-    assert len(synced) == 1
-    assert synced[0].status == AttendanceStatus.LATE
-    assert synced[0].expected_arrival_time == time(8, 30)
+    assert synced == []
+    assert req.expected_arrival_time == time(8, 30)
+    db.execute.assert_not_called()
 
 
 def test_sync_pending_does_not_execute(sample_ids):
@@ -250,6 +252,11 @@ def test_api_approve_endpoint(sample_ids):
         to_date=date.today(),
         reason="Nghỉ ốm",
         status=LeaveStatus.PENDING,
+        meal_warning_acknowledged=False,
+        submitted_after_cutoff=False,
+        created_at=datetime(2026, 11, 2, 6, 0, tzinfo=VN_TZ),
+        updated_at=datetime(2026, 11, 2, 6, 0, tzinfo=VN_TZ),
+        child=Child(child_id=sample_ids["child_id"], class_id=sample_ids["class_id"], status=ChildStatus.ENROLLED),
     )
 
     mock_db = MagicMock()
@@ -267,6 +274,7 @@ def test_api_approve_endpoint(sample_ids):
                 class_id=req.class_id,
                 date=req.from_date,
                 status=AttendanceStatus.EXCUSED_ABSENT,
+                source_leave_id=req.leave_id,
             )
         return None
 
