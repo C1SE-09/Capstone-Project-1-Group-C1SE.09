@@ -33,6 +33,9 @@ class MedicationItemResponse(BaseModel):
     dosage: str = Field(..., description="Liều lượng (vd: 5ml, 1 viên, 1 gói)")
     instructions: str | None = Field(None, description="Hướng dẫn sử dụng từ phụ huynh")
     session: str = Field(..., description="Mốc thời gian: morning, noon, afternoon")
+    time_slot: str | None = None
+    request_date: dt.date | None = None
+    prescription_image_url: str | None = None
 
     is_given: bool = Field(False, description="Đã cho uống thuốc buổi này chưa")
     given_at: dt.datetime | None = Field(None, description="Thời điểm cô đã cho uống")
@@ -145,24 +148,27 @@ class MedicationRequestResponse(BaseModel):
     """Schema chi tiết cữ uống thuốc trả về."""
 
     id: uuid.UUID
-    batch_id: uuid.UUID
+    batch_id: uuid.UUID | None
     child_id: uuid.UUID
     child_name: str
     class_id: uuid.UUID
     class_name: str | None = None
-    parent_id: uuid.UUID
+    parent_id: uuid.UUID | None
     parent_name: str | None = None
-    request_date: dt.date
-    time_slot: str
+    request_date: dt.date | None
+    time_slot: str | None
+    start_date: dt.date
+    end_date: dt.date
+    sessions: list[str] = Field(default_factory=list)
     medicine_category: MedicineCategory
     medicine_name: str | None = None
     dosage: str
     notes: str | None = None
     prescription_image_url: str
     status: MedicationStatus
-    created_by_user_id: uuid.UUID
-    created_by_role: str
-    creator_name: str
+    created_by_user_id: uuid.UUID | None
+    created_by_role: str | None
+    creator_name: str | None
     given_at: dt.datetime | None = None
     given_by_id: uuid.UUID | None = None
     given_by_name: str | None = None

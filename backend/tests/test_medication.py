@@ -41,6 +41,11 @@ from app.models.user import Class_, School, Teacher, User, UserRole
 # ---------------------------------------------------------------------------
 # Test Database Engine (SQLite In-Memory with StaticPool)
 # ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def no_external_notifications(monkeypatch):
+    monkeypatch.setattr("app.api.endpoints.medication.send_medication_confirmed_notification.delay", lambda *args: None)
+
+
 @pytest.fixture(scope="session")
 def engine():
     engine = create_engine(

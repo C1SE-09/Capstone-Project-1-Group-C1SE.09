@@ -54,6 +54,14 @@ jobs:
     - name: Lint code with Ruff
       run: ruff check backend/
 
+    - name: Medication concurrency on PostgreSQL
+      env:
+        MEDICATION_TEST_DATABASE_URL: postgresql+psycopg://postgres:testpassword@localhost:5432/test_db
+        DATABASE_URL: postgresql+psycopg://postgres:testpassword@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379/0
+        PYTHONPATH: ${{ github.workspace }}/backend
+      run: python -m pytest backend/integration/test_medication_concurrency.py -v
+
     - name: Run Tests
       env:
         DATABASE_URL: postgresql+psycopg://postgres:testpassword@localhost:5432/test_db

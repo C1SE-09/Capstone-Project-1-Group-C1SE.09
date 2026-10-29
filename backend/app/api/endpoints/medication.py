@@ -11,15 +11,15 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import date, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import desc, select
+from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import get_today
+from app.core.access import role_of
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.child import Child, ChildStatus, Parent, ParentChild
@@ -42,8 +42,18 @@ from app.schemas.medication_schema import (
     MedicationRequestResponse,
     MedicationsTodayResponse,
 )
+from app.services.medication_service import (
+    aware_timestamp,
+    cancel_medication,
+    cancel_medication_batch as cancel_batch,
+    confirm_medication,
+    dose_audit,
+    medication_session,
+    resolve_class_access,
+    resolve_medication_child,
+    verify_medication_access,
+)
 from app.tasks.medication_notifications import (
-    SESSION_LABELS,
     deliver_medication_notification_sync,
     send_medication_confirmed_notification,
 )
@@ -51,67 +61,6 @@ from app.tasks.medication_notifications import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["medication"])
-
-VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
-
-
-# ===========================================================================
-# 1. PHÂN QUYỀN TRUY CẬP LỚP CHO GIÁO VIÊN (Task #283)
-# ===========================================================================
-def resolve_class_access(
-    current_user: User,
-    db: Session,
-    requested_class_id: uuid.UUID | None = None,
-) -> uuid.UUID:
-    """
-    Xác định class_id hợp lệ dựa trên quyền của người dùng:
-    - Admin: Có thể chỉ định class_id bất kỳ.
-    - Teacher: Tự động dùng lớp chủ nhiệm của cô, hoặc kiểm tra quyền nếu có truyền class_id.
-    """
-    role_val = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
-
-    if role_val == UserRole.ADMIN.value:
-        if not requested_class_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Tài khoản Admin vui lòng truyền tham số class_id",
-            )
-        return requested_class_id
-
-    if role_val == UserRole.TEACHER.value:
-        if not current_user.teacher_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Tài khoản giáo viên chưa được liên kết với thông tin nhân sự",
-            )
-
-        teacher = db.scalar(select(Teacher).where(Teacher.teacher_id == current_user.teacher_id))
-        if not teacher:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Không tìm thấy thông tin giáo viên trong hệ thống",
-            )
-
-        if requested_class_id:
-            if teacher.class_id != requested_class_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Bạn không có quyền truy cập dữ liệu dặn thuốc của lớp học này",
-                )
-            return requested_class_id
-
-        if not teacher.class_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Giáo viên chưa được phân công lớp chủ nhiệm",
-            )
-        return teacher.class_id
-
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Chức năng này chỉ dành cho Giáo viên và Quản trị viên",
-    )
-
 
 # ===========================================================================
 # 2. GET /api/teacher/medications/today (Task #283)
@@ -142,9 +91,12 @@ def get_teacher_medications_today(
         )
         .where(
             MedicationRequest.class_id == target_class_id,
-            MedicationRequest.status == MedicationRequestStatus.ACTIVE,
-            MedicationRequest.start_date <= target_date,
-            MedicationRequest.end_date >= target_date,
+            MedicationRequest.status.in_([MedicationRequestStatus.ACTIVE, MedicationRequestStatus.PENDING,
+                                          MedicationRequestStatus.GIVEN]),
+            MedicationRequest.child.has(and_(Child.class_id == target_class_id, Child.status == ChildStatus.ENROLLED)),
+            or_(MedicationRequest.request_date == target_date,
+                and_(MedicationRequest.request_date.is_(None), MedicationRequest.start_date <= target_date,
+                     MedicationRequest.end_date >= target_date)),
         )
         .order_by(MedicationRequest.created_at.asc())
     ).all()
@@ -200,7 +152,10 @@ def get_teacher_medications_today(
         elif isinstance(req.sessions, str):
             req_sessions = [s.strip().lower() for s in req.sessions.split(",")]
 
-        if not req_sessions:
+        is_slot = req.time_slot is not None and req.request_date is not None
+        if is_slot:
+            req_sessions = [medication_session(req.time_slot)]
+        elif not req_sessions:
             req_sessions = [
                 MedicationSession.MORNING.value,
                 MedicationSession.NOON.value,
@@ -214,13 +169,13 @@ def get_teacher_medications_today(
         ]:
             if sess_key in req_sessions:
                 log_entry = log_map.get((req.request_id, sess_key))
-                is_given = log_entry.is_given if log_entry else False
-                given_at = log_entry.given_at if log_entry else None
-                given_by_id = log_entry.given_by_id if log_entry else None
+                is_given = (is_slot and req.status == MedicationRequestStatus.GIVEN) or bool(log_entry and log_entry.is_given)
+                given_at = aware_timestamp(log_entry.given_at if log_entry else req.given_at if is_slot else None)
+                given_by_id = log_entry.given_by_id if log_entry else req.given_by_id if is_slot else None
                 given_by_name = (
                     log_entry.given_by.full_name
                     if (log_entry and log_entry.given_by)
-                    else None
+                    else req.teacher.full_name if is_slot and req.teacher else None
                 )
 
                 if is_given:
@@ -245,6 +200,9 @@ def get_teacher_medications_today(
                     notes=log_entry.notes if log_entry else req.notes,
                     parent_name=parent_name,
                     parent_phone=parent_phone,
+                    time_slot=req.time_slot if is_slot else None,
+                    request_date=req.request_date if is_slot else None,
+                    prescription_image_url=req.prescription_image_url,
                 )
                 session_buckets[sess_key].append(item)
 
@@ -275,116 +233,23 @@ def process_medication_confirmation(
     db: Session,
     background_tasks: BackgroundTasks,
 ) -> MedicationConfirmResponse:
-    normalized_session = session_str.strip().lower()
-    valid_sessions = {
-        MedicationSession.MORNING.value,
-        MedicationSession.NOON.value,
-        MedicationSession.AFTERNOON.value,
-    }
-    if normalized_session not in valid_sessions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Buổi uống không hợp lệ: '{session_str}'. Chỉ chấp nhận 'morning', 'noon', 'afternoon'.",
-        )
+    req, log = confirm_medication(db, request_id, current_user, target_date=target_date,
+                                  session=session_str, notes=notes)
+    _dispatch_confirmation(req.request_id, log.log_id, background_tasks)
+    teacher = log.given_by or (db.scalar(select(Teacher).where(Teacher.teacher_id == current_user.teacher_id))
+                               if current_user.teacher_id else None)
+    name = teacher.full_name if teacher else current_user.username
+    return MedicationConfirmResponse(success=True, message=f"{name} đã xác nhận cho bé uống thuốc thành công",
+        log_id=log.log_id, request_id=req.request_id, session=log.session, is_given=log.is_given,
+        given_by_name=name, given_at=aware_timestamp(log.given_at))
 
-    med_req = db.scalar(
-        select(MedicationRequest).where(MedicationRequest.request_id == request_id)
-    )
-    if not med_req:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy đơn dặn thuốc",
-        )
 
-    resolve_class_access(current_user, db, med_req.class_id)
-
-    stmt = (
-        select(MedicationLog)
-        .options(joinedload(MedicationLog.given_by))
-        .where(
-            MedicationLog.request_id == request_id,
-            MedicationLog.log_date == target_date,
-            MedicationLog.session == normalized_session,
-        )
-    )
+def _dispatch_confirmation(request_id: uuid.UUID, log_id: uuid.UUID, background_tasks: BackgroundTasks) -> None:
     try:
-        if db.bind and "sqlite" not in str(db.bind.dialect.name).lower():
-            stmt = stmt.with_for_update()
+        send_medication_confirmed_notification.delay(str(request_id), str(log_id))
     except Exception:
-        pass
-
-    log_entry = db.scalar(stmt)
-
-    if log_entry and log_entry.is_given:
-        already_teacher = log_entry.given_by.full_name if log_entry.given_by else "giáo viên khác"
-        vn_tz = timezone(timedelta(hours=7))
-        time_str = log_entry.given_at.astimezone(vn_tz).strftime("%H:%M") if log_entry.given_at else ""
-        session_vn = SESSION_LABELS.get(normalized_session, normalized_session)
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Cảnh báo trùng liều: Bé đã được {already_teacher} cho uống thuốc buổi {session_vn} "
-                f"lúc {time_str} rồi! Nút đã bị khoá để bảo vệ an toàn cho bé."
-            ),
-        )
-
-    now_utc = datetime.now(timezone.utc)
-    teacher_name = None
-
-    if current_user.teacher_id:
-        teacher = db.scalar(select(Teacher).where(Teacher.teacher_id == current_user.teacher_id))
-        teacher_name = teacher.full_name if teacher else current_user.username
-    else:
-        teacher_name = current_user.username
-
-    if log_entry:
-        log_entry.is_given = True
-        log_entry.given_by_id = current_user.teacher_id
-        log_entry.given_at = now_utc
-        if notes:
-            log_entry.notes = notes
-    else:
-        log_entry = MedicationLog(
-            log_id=uuid.uuid4(),
-            request_id=med_req.request_id,
-            log_date=target_date,
-            session=normalized_session,
-            is_given=True,
-            given_by_id=current_user.teacher_id,
-            given_at=now_utc,
-            notes=notes,
-        )
-        db.add(log_entry)
-
-    db.commit()
-    db.refresh(log_entry)
-
-    try:
-        send_medication_confirmed_notification.delay(
-            str(med_req.request_id),
-            str(log_entry.log_id),
-        )
-    except Exception as exc:
-        logger.info(
-            "[Medication] Celery worker không sẵn sàng, dispatch qua FastAPI BackgroundTasks: %s",
-            exc,
-        )
-        background_tasks.add_task(
-            deliver_medication_notification_sync,
-            str(med_req.request_id),
-            str(log_entry.log_id),
-        )
-
-    return MedicationConfirmResponse(
-        success=True,
-        message=f"{teacher_name} đã xác nhận cho bé uống thuốc thành công",
-        log_id=log_entry.log_id,
-        request_id=med_req.request_id,
-        session=normalized_session,
-        is_given=log_entry.is_given,
-        given_by_name=teacher_name,
-        given_at=log_entry.given_at or now_utc,
-    )
+        logger.info("[Medication] Dispatch qua BackgroundTasks: request_id=%s", request_id)
+        background_tasks.add_task(deliver_medication_notification_sync, str(request_id), str(log_id))
 
 
 @router.put("/teacher/medications/{request_id}/confirm", response_model=MedicationConfirmResponse)
@@ -436,41 +301,8 @@ def confirm_medication_post(
 # ===========================================================================
 # 4. USER STORY 3.1: DẶN THUỐC & THEO DÕI HỒ SƠ Y TẾ
 # ===========================================================================
-def _resolve_child(db: Session, child_id: uuid.UUID) -> Child:
-    child = db.scalar(
-        select(Child).where(Child.child_id == child_id, Child.status == ChildStatus.ENROLLED)
-    )
-    if not child:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy học sinh hoặc bé đã thôi học.",
-        )
-    return child
-
-
 def _verify_child_access(db: Session, current_user: User, child_id: uuid.UUID) -> Child:
-    child = _resolve_child(db, child_id)
-    if current_user.role == UserRole.PARENT:
-        parent_id = current_user.parent_id
-        if not parent_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Tài khoản chưa được liên kết với hồ sơ phụ huynh.",
-            )
-        is_owner = (child.parent_id == parent_id) or bool(
-            db.scalar(
-                select(ParentChild).where(
-                    ParentChild.child_id == child_id,
-                    ParentChild.parent_id == parent_id,
-                )
-            )
-        )
-        if not is_owner:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Bạn không có quyền quản lý đơn thuốc cho học sinh này.",
-            )
-    return child
+    return resolve_medication_child(db, current_user, child_id, require_enrolled=True)
 
 
 def _to_response(req: MedicationRequest, db: Session) -> MedicationRequestResponse:
@@ -485,7 +317,7 @@ def _to_response(req: MedicationRequest, db: Session) -> MedicationRequestRespon
     parent = req.parent or (db.scalar(select(Parent).where(Parent.parent_id == req.parent_id)) if req.parent_id else None)
     parent_name = parent.full_name if parent else None
 
-    creator_name = "Người dùng"
+    creator_name = None
     if req.created_by_role == "parent":
         creator_name = parent_name or "Phụ huynh"
     elif req.created_by_role == "teacher":
@@ -500,37 +332,42 @@ def _to_response(req: MedicationRequest, db: Session) -> MedicationRequestRespon
         else:
             creator_name = creator_user.username if creator_user else "Giáo viên"
 
+    audit = dose_audit(req)
+    given_by_id = audit.given_by_id if audit else req.given_by_id
     given_by_name = None
-    if req.given_by_id:
-        t = req.teacher or db.scalar(select(Teacher).where(Teacher.teacher_id == req.given_by_id))
+    if given_by_id:
+        t = audit.given_by if audit else req.teacher
+        t = t or db.scalar(select(Teacher).where(Teacher.teacher_id == given_by_id))
         given_by_name = t.full_name if t else None
 
-    now_vn = datetime.now(VN_TZ)
     return MedicationRequestResponse(
         id=req.request_id,
-        batch_id=req.batch_id or req.request_id,
+        batch_id=req.batch_id,
         child_id=req.child_id,
         child_name=child_name,
         class_id=req.class_id,
         class_name=class_name,
-        parent_id=req.parent_id or uuid.UUID("00000000-0000-0000-0000-000000000000"),
+        parent_id=req.parent_id,
         parent_name=parent_name,
-        request_date=req.request_date or req.start_date,
-        time_slot=req.time_slot or "08:30",
+        request_date=req.request_date,
+        time_slot=req.time_slot,
+        start_date=req.start_date,
+        end_date=req.end_date,
+        sessions=req.sessions or [],
         medicine_category=req.medicine_category or MedicineCategory.PRESCRIPTION,
         medicine_name=req.medication_name,
         dosage=req.dosage,
         notes=req.notes,
         prescription_image_url=req.prescription_image_url or "",
-        status=req.status,
-        created_by_user_id=req.created_by_user_id or uuid.uuid4(),
-        created_by_role=req.created_by_role or "parent",
+        status=MedicationRequestStatus.GIVEN if audit else req.status,
+        created_by_user_id=req.created_by_user_id,
+        created_by_role=req.created_by_role,
         creator_name=creator_name,
-        given_at=req.given_at,
-        given_by_id=req.given_by_id,
+        given_at=aware_timestamp(audit.given_at if audit else req.given_at),
+        given_by_id=given_by_id,
         given_by_name=given_by_name,
-        created_at=req.created_at or now_vn,
-        updated_at=req.updated_at or now_vn,
+        created_at=aware_timestamp(req.created_at),
+        updated_at=aware_timestamp(req.updated_at),
     )
 
 
@@ -652,28 +489,34 @@ def list_medication_requests(
 ):
     stmt = select(MedicationRequest)
 
-    if current_user.role == UserRole.PARENT:
-        parent_id = current_user.parent_id
-        stmt = stmt.where(MedicationRequest.parent_id == parent_id)
-        if child_id:
-            stmt = stmt.where(MedicationRequest.child_id == child_id)
-    elif current_user.role == UserRole.TEACHER:
+    role = role_of(current_user)
+    if child_id:
+        resolve_medication_child(db, current_user, child_id)
+        stmt = stmt.where(MedicationRequest.child_id == child_id)
+    if role == "parent":
+        if not current_user.parent_id:
+            raise HTTPException(403, "Tài khoản chưa liên kết phụ huynh")
+        stmt = stmt.where(MedicationRequest.child.has(or_(
+            Child.parent_id == current_user.parent_id,
+            Child.parent_links.any(ParentChild.parent_id == current_user.parent_id))))
         if class_id:
             stmt = stmt.where(MedicationRequest.class_id == class_id)
-        elif current_user.teacher_id:
-            teacher = db.scalar(
-                select(Teacher).where(Teacher.teacher_id == current_user.teacher_id)
-            )
-            if teacher and teacher.class_id:
-                stmt = stmt.where(MedicationRequest.class_id == teacher.class_id)
-        if child_id:
-            stmt = stmt.where(MedicationRequest.child_id == child_id)
+    elif role == "teacher":
+        own_class = resolve_class_access(current_user, db, class_id)
+        stmt = stmt.where(MedicationRequest.class_id == own_class,
+                          MedicationRequest.child.has(Child.class_id == own_class))
+    elif role == "admin":
+        if class_id:
+            stmt = stmt.where(MedicationRequest.class_id == class_id)
+    else:
+        raise HTTPException(403, "Bạn không có quyền xem đơn thuốc")
 
     if target_date:
         stmt = stmt.where(
             (MedicationRequest.request_date == target_date)
             | (
-                (MedicationRequest.start_date <= target_date)
+                MedicationRequest.request_date.is_(None)
+                & (MedicationRequest.start_date <= target_date)
                 & (MedicationRequest.end_date >= target_date)
             )
         )
@@ -703,7 +546,7 @@ def get_medication_request(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy cữ thuốc yêu cầu.",
         )
-    _verify_child_access(db, current_user, req.child_id)
+    verify_medication_access(db, req, current_user)
     return _to_response(req, db)
 
 
@@ -719,6 +562,7 @@ class MedicationRequestConfirmInput(BaseModel):
 )
 def confirm_medication_request_intake(
     request_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     confirm_data: MedicationRequestConfirmInput | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -729,47 +573,9 @@ def confirm_medication_request_intake(
             detail="Chỉ giáo viên mới có quyền xác nhận đã cho bé uống thuốc.",
         )
 
-    req = db.scalar(
-        select(MedicationRequest)
-        .where(MedicationRequest.request_id == request_id)
-    )
-    if not req:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy cữ thuốc cần xác nhận.",
-        )
-
-    if req.status == MedicationRequestStatus.GIVEN:
-        given_by_name = "Giáo viên khác"
-        if req.given_by_id:
-            t = db.scalar(select(Teacher).where(Teacher.teacher_id == req.given_by_id))
-            if t:
-                given_by_name = f"cô {t.full_name}"
-        time_str = req.given_at.strftime("%H:%M") if req.given_at else req.time_slot or ""
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Cữ thuốc này đã được {given_by_name} cho bé uống lúc {time_str}. Thao tác bị khóa để chống trùng liều.",
-        )
-
-    if req.status == MedicationRequestStatus.CANCELLED:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cữ thuốc này đã bị phụ huynh hủy.",
-        )
-
-    teacher = db.scalar(select(Teacher).where(Teacher.teacher_id == current_user.teacher_id))
-    teacher_id = teacher.teacher_id if teacher else None
-
-    now_vn = datetime.now(VN_TZ)
-    req.status = MedicationRequestStatus.GIVEN
-    req.given_at = now_vn
-    req.given_by_id = teacher_id
-    if confirm_data and confirm_data.notes:
-        req.notes = f"{req.notes} | [Cô xác nhận: {confirm_data.notes}]" if req.notes else confirm_data.notes
-
-    db.commit()
-    db.refresh(req)
-
+    req, log = confirm_medication(db, request_id, current_user,
+        session=confirm_data.session if confirm_data else None, notes=confirm_data.notes if confirm_data else None)
+    _dispatch_confirmation(req.request_id, log.log_id, background_tasks)
     return _to_response(req, db)
 
 
@@ -783,25 +589,7 @@ def cancel_medication_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    req = db.scalar(select(MedicationRequest).where(MedicationRequest.request_id == request_id))
-    if not req:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy cữ thuốc cần hủy.",
-        )
-
-    _verify_child_access(db, current_user, req.child_id)
-
-    if req.status == MedicationRequestStatus.GIVEN:
-        time_str = req.given_at.strftime("%H:%M") if req.given_at else req.time_slot or ""
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Không thể hủy đơn vì bé đã được cô giáo cho uống thuốc lúc {time_str}.",
-        )
-
-    req.status = MedicationRequestStatus.CANCELLED
-    db.commit()
-    db.refresh(req)
+    req = cancel_medication(db, request_id, current_user)
     return _to_response(req, db)
 
 
@@ -814,24 +602,7 @@ def cancel_medication_batch(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    records = db.scalars(
-        select(MedicationRequest).where(MedicationRequest.batch_id == batch_id)
-    ).all()
-    if not records:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy đợt dặn thuốc này.",
-        )
-
-    _verify_child_access(db, current_user, records[0].child_id)
-
-    cancelled_count = 0
-    for r in records:
-        if r.status in [MedicationRequestStatus.PENDING, MedicationRequestStatus.ACTIVE]:
-            r.status = MedicationRequestStatus.CANCELLED
-            cancelled_count += 1
-
-    db.commit()
+    cancelled_count = cancel_batch(db, batch_id, current_user)
     return {
         "batch_id": batch_id,
         "cancelled_count": cancelled_count,
