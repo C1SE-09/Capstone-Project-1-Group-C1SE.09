@@ -32,7 +32,7 @@ import {
   Spinner,
   Toast,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
 import { exportMultiSheetToExcel, exportToExcel, ExcelSheetData } from "@/lib/excel-helper";
 import {
   HealthExamImportResult,
@@ -119,10 +119,20 @@ export default function HealthExamPage() {
 
   useEffect(() => {
     if (error && (error as any).status === 401) {
-      clearToken("schoolAdmin");
-      window.location.href = "/login";
+      if (!getToken("schoolAdmin")) {
+        window.location.href = "/login";
+        return;
+      }
+      refreshAccessToken().then((token) => {
+        if (!token) {
+          clearToken("schoolAdmin");
+          window.location.href = "/login";
+        } else {
+          mutate();
+        }
+      });
     }
-  }, [error]);
+  }, [error, mutate]);
 
   const records = useMemo(() => data?.records ?? [], [data]);
 

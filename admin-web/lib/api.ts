@@ -182,6 +182,19 @@ interface RequestOpts {
   account?: AccountKind;
 }
 
+export function isTokenExpiringSoon(token: string, thresholdSeconds = 120): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return true;
+    const payload = JSON.parse(atob(parts[1]));
+    if (!payload.exp) return false;
+    const nowSec = Math.floor(Date.now() / 1000);
+    return payload.exp - nowSec <= thresholdSeconds;
+  } catch {
+    return false;
+  }
+}
+
 let isRefreshingPromise: Promise<string | null> | null = null;
 
 async function performTokenRefresh(): Promise<string | null> {
@@ -215,6 +228,9 @@ async function performTokenRefresh(): Promise<string | null> {
       if (data.session_id) {
         setSessionId(data.session_id);
       }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("kinderlog_token_refreshed", { detail: data }));
+      }
       return data.access_token;
     }
     return null;
@@ -224,7 +240,13 @@ async function performTokenRefresh(): Promise<string | null> {
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
-  return performTokenRefresh();
+  if (isRefreshingPromise) {
+    return isRefreshingPromise;
+  }
+  isRefreshingPromise = performTokenRefresh().finally(() => {
+    isRefreshingPromise = null;
+  });
+  return isRefreshingPromise;
 }
 
 /**
@@ -251,7 +273,13 @@ export async function apiFetchBlob(
   const headers: Record<string, string> = {
     "Bypass-Tunnel-Reminder": "true",
   };
-  const token = getToken("schoolAdmin");
+  let token = getToken("schoolAdmin");
+  if (token && isTokenExpiringSoon(token, 120)) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      token = refreshed;
+    }
+  }
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -259,7 +287,7 @@ export async function apiFetchBlob(
   const res = await fetch(url, { method: opts.method || "GET", headers });
 
   if (res.status === 401 && !isRetry) {
-    const newToken = await performTokenRefresh();
+    const newToken = await refreshAccessToken();
     if (newToken) {
       return apiFetchBlob(path, opts, true);
     }
@@ -314,7 +342,14 @@ export async function apiFetch<T = any>(
     headers["Content-Type"] = "application/json";
   }
   if (auth) {
-    const token = getToken(account);
+    const k = account ?? currentKind();
+    let token = getToken(k);
+    if (k === "schoolAdmin" && token && isTokenExpiringSoon(token, 120)) {
+      const refreshedToken = await refreshAccessToken();
+      if (refreshedToken) {
+        token = refreshedToken;
+      }
+    }
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -341,12 +376,7 @@ export async function apiFetch<T = any>(
       !path.includes("/login") &&
       !path.includes("/refresh")
     ) {
-      if (!isRefreshingPromise) {
-        isRefreshingPromise = performTokenRefresh().finally(() => {
-          isRefreshingPromise = null;
-        });
-      }
-      const newToken = await isRefreshingPromise;
+      const newToken = await refreshAccessToken();
       if (newToken) {
         // Thử lại request gốc với token mới vừa được cấp
         return apiFetch<T>(path, opts, true);
