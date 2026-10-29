@@ -30,31 +30,45 @@ class ParentMedicationSubmittedScreen extends StatelessWidget {
             const Text('Đã tạo đơn dặn thuốc',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 9),
+            Text(
+                '${result.items.first.name ?? result.items.first.dosage} · '
+                '${batchRange(MedicationBatch(result.batchId, result.items))}',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.5, color: context.k.inkSoft)),
             const SizedBox(height: 13),
             MedicationCard(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  MedicationBatchHeading(
-                      MedicationBatch(result.batchId, result.items)),
-                  const SizedBox(height: 12),
-                  Text('Hệ thống đã tạo ${result.items.length} cữ riêng:'),
+                  Text(
+                      'Hệ thống đã tách thành ${result.items.length} đơn riêng:',
+                      style: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w600)),
                   for (final dose in result.items)
                     Padding(
                         padding: const EdgeInsets.only(top: 9),
                         child: Row(children: [
                           Expanded(
-                              child: Text(doseWhen(dose),
+                              child: Text(dose.timeSlot ?? '',
                                   style: const TextStyle(
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w700))),
+                          const SizedBox(width: 8),
                           Flexible(
                               child: MedicationBadge(doseStatus(dose.status),
                                   status: dose.status)),
                         ])),
+                  const SizedBox(height: 9),
+                  Text(
+                      batchCreator(
+                          MedicationBatch(result.batchId, result.items)),
+                      style:
+                          TextStyle(fontSize: 10.5, color: context.k.inkFaint)),
                 ])),
             const SizedBox(height: 13),
             Text(
-                'Giáo viên sẽ thấy các cữ theo ngày uống đã chọn. Bạn có thể theo dõi từng lần xác nhận trong chi tiết đợt thuốc.',
+                'Cô giáo sẽ thấy các cữ này trong danh sách uống thuốc hôm nay theo buổi Sáng / Trưa / Chiều.',
                 style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
             const SizedBox(height: 13),
             MedicationAction(

@@ -46,8 +46,13 @@ String batchCreator(MedicationBatch batch) {
   final first = batch.doses.first;
   final name = first.creatorName;
   final at = first.createdAt;
+  // Figma xếp giờ trước ngày: "Tạo bởi Mẹ · 07:02, 28/10/2026".
+  final stamp = at == null
+      ? null
+      : DateFormat('HH:mm, dd/MM/yyyy')
+          .format(at.toUtc().add(const Duration(hours: 7)));
   return '${name == null ? 'Chưa có thông tin người tạo' : 'Tạo bởi $name'}'
-      '${at == null ? '' : ' · ${requestTimestamp(at)}'}';
+      '${stamp == null ? '' : ' · $stamp'}';
 }
 
 enum MedicationTone { brand, ok, warn, neutral }
