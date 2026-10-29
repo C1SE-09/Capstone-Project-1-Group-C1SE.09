@@ -34,7 +34,7 @@ class _ParentMedicationFormScreenState
       _dosage = TextEditingController(),
       _notes = TextEditingController();
   final _slots = <String>{};
-  late final Child _child = widget.child;
+  late Child _child;
   late final HttpMedicationRepository _repo =
       widget.repository ?? HttpMedicationRepository();
   DateTime _from = medicationDateInVietnam(DateTime.now());
@@ -52,6 +52,12 @@ class _ParentMedicationFormScreenState
           .difference(DateTime.utc(_from.year, _from.month, _from.day))
           .inDays +
       1;
+
+  @override
+  void initState() {
+    super.initState();
+    _child = widget.child; // Chốt hồ sơ của bé ngay từ đầu.
+  }
 
   @override
   void didUpdateWidget(covariant ParentMedicationFormScreen oldWidget) {
@@ -266,21 +272,47 @@ class _ParentMedicationFormScreenState
         ),
         const SizedBox(height: 13)
       ]);
-  Widget _chip(String label, bool selected, VoidCallback onTap) => ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      showCheckmark: false,
-      onSelected: _busy || _stale ? null : (_) => onTap(),
-      selectedColor: context.k.brand,
-      backgroundColor: context.k.surface,
-      labelStyle: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: selected
-              ? Theme.of(context).colorScheme.onPrimary
-              : context.k.inkSoft),
-      shape: const StadiumBorder(),
-      visualDensity: VisualDensity.compact);
+  Widget _chip(String label, bool selected, VoidCallback onTap,
+          {bool check = false}) =>
+      ChoiceChip(
+          label: Text(selected && check ? '✓ $label' : label),
+          selected: selected,
+          showCheckmark: false,
+          onSelected: _busy || _stale ? null : (_) => onTap(),
+          selectedColor: context.k.brand,
+          backgroundColor: context.k.surface,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          elevation: 0,
+          pressElevation: 0,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: EdgeInsets.zero,
+          labelStyle: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : context.k.inkSoft),
+          side: BorderSide.none,
+          shape: const StadiumBorder(),
+          visualDensity: VisualDensity.compact);
+  Widget _dateButton(bool end) => OutlinedButton(
+      onPressed: _busy || _stale ? null : () => _pickDate(end),
+      style: OutlinedButton.styleFrom(
+          backgroundColor: context.k.surface,
+          foregroundColor: context.k.ink,
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          side: BorderSide(color: context.k.line),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(
+              fontFamily: 'BeVietnamPro',
+              fontSize: 13,
+              fontWeight: FontWeight.w400)),
+      child: Tooltip(
+          message: end ? 'Đến ngày' : 'Từ ngày',
+          child:
+              Text('${end ? 'Đến' : 'Từ'} ${requestDate(end ? _to : _from)}')));
   @override
   Widget build(BuildContext context) {
     final times = {'08:30', '11:30', '14:30', ..._slots}.toList()..sort();
@@ -298,12 +330,8 @@ class _ParentMedicationFormScreenState
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text('Bé ${_child.fullName} · ${widget.className}',
-                              style: TextStyle(
-                                  fontSize: 11, color: context.k.brand)),
-                          const SizedBox(height: 13),
                           _label('Loại thuốc'),
-                          Wrap(spacing: 7, children: [
+                          Wrap(spacing: 7, runSpacing: 7, children: [
                             for (final entry in {
                               'prescription': 'Theo đơn bác sĩ',
                               'non_prescription': 'Không kê đơn',
@@ -321,35 +349,36 @@ class _ParentMedicationFormScreenState
                           _field('Tên thuốc', _name, 255),
                           _field('Liều lượng', _dosage, 255, required: true),
                           _label('Khung giờ uống (chọn nhiều)'),
-                          Wrap(spacing: 7, children: [
+                          Wrap(spacing: 7, runSpacing: 7, children: [
                             for (final value in times)
                               _chip(value, _slots.contains(value),
-                                  () => _toggle(value)),
-                            TextButton(
-                                onPressed: _busy || _stale ? null : _pickTime,
-                                child: const Text('+ Thêm giờ')),
+                                  () => _toggle(value),
+                                  check: true),
+                            InkWell(
+                                borderRadius: BorderRadius.circular(999),
+                                onTap: _busy || _stale ? null : _pickTime,
+                                child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                        color: context.k.brandTint,
+                                        borderRadius:
+                                            BorderRadius.circular(999)),
+                                    child: Text('+ Thêm giờ',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: context.k.brand)))),
                           ]),
                           Text(
-                              'Đã chọn ${_slots.length} khung giờ × $_days ngày → ${_slots.length * _days} cữ riêng.',
+                              'Đã chọn ${_slots.length} khung giờ × $_days ngày → ${_slots.length * _days} cữ riêng, cô xác nhận từng cữ độc lập.',
                               style: TextStyle(
                                   fontSize: 11, color: context.k.brand)),
                           const SizedBox(height: 13),
                           _label('Thời gian uống'),
                           Wrap(spacing: 8, runSpacing: 8, children: [
-                            OutlinedButton(
-                                onPressed: _busy || _stale
-                                    ? null
-                                    : () => _pickDate(false),
-                                child: Tooltip(
-                                    message: 'Từ ngày',
-                                    child: Text('Từ ${requestDate(_from)}'))),
-                            OutlinedButton(
-                                onPressed: _busy || _stale
-                                    ? null
-                                    : () => _pickDate(true),
-                                child: Tooltip(
-                                    message: 'Đến ngày',
-                                    child: Text('Đến ${requestDate(_to)}'))),
+                            _dateButton(false),
+                            _dateButton(true),
                           ]),
                           const SizedBox(height: 8),
                           Text('Tối đa 7 ngày cho một đợt dặn thuốc.',
@@ -362,17 +391,36 @@ class _ParentMedicationFormScreenState
                                   ? null
                                   : _pickImage,
                               style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.all(13),
+                                  backgroundColor: context.k.surface,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 13),
+                                  side: BorderSide(
+                                      color: context.k.brand, width: 1.5),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14))),
-                              child: Column(children: [
-                                Text(_picking
-                                    ? 'Đang mở thư viện...'
-                                    : _fileName ?? '+ Thêm ảnh đơn thuốc'),
-                                if (_fileName != null)
-                                  const Text('Đã đính kèm · Chạm để thay ảnh',
-                                      style: TextStyle(fontSize: 11))
-                              ])),
+                              child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                        _picking
+                                            ? 'Đang mở thư viện...'
+                                            : _fileName == null
+                                                ? '+ Thêm ảnh đơn thuốc'
+                                                : '📄 $_fileName',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: context.k.brand)),
+                                    if (_fileName != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text('Đã đính kèm · Chạm để thay ảnh',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: context.k.inkSoft))
+                                    ]
+                                  ])),
                           const SizedBox(height: 8),
                           Text(
                               'Ảnh bắt buộc, JPEG/PNG/WebP tối đa 5 MiB. Hệ thống không kiểm duyệt nội dung ảnh hoặc tư vấn liều dùng.',
