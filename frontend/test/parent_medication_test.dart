@@ -80,7 +80,7 @@ void main() {
     await tapVisible(tester, find.text('Hủy cữ này'));
     await tapVisible(tester, find.text('Hủy cữ'));
     await tester.pumpAndSettle();
-    expect(find.text('Đã uống'), findsOneWidget);
+    expect(find.text('✓ Đã uống'), findsOneWidget);
     expect(find.textContaining('Cô Mai'), findsOneWidget);
     expect(find.text('Đã hủy'), findsNothing);
     expect(

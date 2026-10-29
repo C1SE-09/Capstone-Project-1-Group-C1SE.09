@@ -55,6 +55,26 @@ String batchCreator(MedicationBatch batch) {
       '${stamp == null ? '' : ' · $stamp'}';
 }
 
+/// Nhãn ngày theo giọng nói thường ngày, dùng cho tiêu đề cữ và hộp thoại hủy.
+String medicationDay(DateTime? date) {
+  if (date == null) return '';
+  final today = medicationDateInVietnam(DateTime.now());
+  final diff = DateTime.utc(date.year, date.month, date.day)
+      .difference(DateTime.utc(today.year, today.month, today.day))
+      .inDays;
+  return switch (diff) {
+    0 => 'hôm nay',
+    1 => 'ngày mai',
+    -1 => 'hôm qua',
+    _ => 'ngày ${DateFormat('dd/MM').format(date)}'
+  };
+}
+
+/// "08:30 hôm nay" — đúng mẫu tiêu đề cữ trong Figma M4.
+String doseTitle(MedicationDose dose) => dose.isLegacy || dose.timeSlot == null
+    ? doseWhen(dose)
+    : '${dose.timeSlot} ${medicationDay(dose.requestDate)}'.trim();
+
 enum MedicationTone { brand, ok, warn, neutral }
 
 class MedicationCard extends StatelessWidget {
@@ -120,6 +140,8 @@ class MedicationAction extends StatelessWidget {
           style: FilledButton.styleFrom(
               backgroundColor: danger ? context.k.bad : context.k.brand,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              disabledBackgroundColor: context.k.surfaceSunken,
+              disabledForegroundColor: context.k.inkSoft,
               minimumSize: const Size(0, 48),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               shape: const StadiumBorder(),
