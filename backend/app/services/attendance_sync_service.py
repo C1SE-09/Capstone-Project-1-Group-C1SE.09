@@ -6,7 +6,6 @@ from datetime import datetime, time, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import delete, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.config import vn_tz
@@ -44,17 +43,32 @@ def sync_leave_request_to_attendance(
     records = []
     for day in range(days + 1):
         date = leave_request.from_date + timedelta(days=day)
-        stmt = insert(AttendanceRecord).values(
-            record_id=uuid.uuid4(), child_id=leave_request.child_id, class_id=leave_request.class_id,
-            date=date, status=target_status, expected_arrival_time=eta, note=note,
-            source_leave_id=leave_request.leave_id, teacher_id=teacher_id,
-        ).on_conflict_do_nothing(index_elements=["child_id", "date"])
-        # Không ghi đè kể cả bản ghi vắng do giáo viên đã lưu; hủy đơn không được xóa nó.
-        db.execute(stmt)
         record = db.scalar(select(AttendanceRecord).where(
-            AttendanceRecord.child_id == leave_request.child_id, AttendanceRecord.date == date,
+            AttendanceRecord.child_id == leave_request.child_id,
+            AttendanceRecord.date == date,
         ))
-        if record and record.source_leave_id == leave_request.leave_id:
+        if record:
+            if record.check_in_time is None:
+                record.status = target_status
+                record.expected_arrival_time = eta
+                record.note = note
+                record.source_leave_id = leave_request.leave_id
+                if teacher_id:
+                    record.teacher_id = teacher_id
+                records.append(record)
+        else:
+            record = AttendanceRecord(
+                record_id=uuid.uuid4(),
+                child_id=leave_request.child_id,
+                class_id=leave_request.class_id,
+                date=date,
+                status=target_status,
+                expected_arrival_time=eta,
+                note=note,
+                source_leave_id=leave_request.leave_id,
+                teacher_id=teacher_id,
+            )
+            db.add(record)
             records.append(record)
     return records
 

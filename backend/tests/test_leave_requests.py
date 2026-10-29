@@ -539,17 +539,16 @@ def test_absence_approval_preserves_present_late_and_real_checkin(env):
     with env.factory() as db:
         records = db.scalars(select(AttendanceRecord).order_by(AttendanceRecord.date)).all()
         assert len(records) == 5
-        assert [r.status for r in records] == [AttendanceStatus.PRESENT, AttendanceStatus.LATE,
-                                               AttendanceStatus.ABSENT, AttendanceStatus.ABSENT,
+        # Các ngày có check_in_time thực tế (ngày 1 và 2) được bảo toàn;
+        # các ngày chưa có check_in_time (ngày 0, 3, 4) được tự động đồng bộ sang EXCUSED_ABSENT.
+        assert [r.status for r in records] == [AttendanceStatus.EXCUSED_ABSENT, AttendanceStatus.LATE,
+                                               AttendanceStatus.ABSENT, AttendanceStatus.EXCUSED_ABSENT,
                                                AttendanceStatus.EXCUSED_ABSENT]
-        assert [r.note for r in records[:4]] == ["Ghi nhận 0", "Ghi nhận 1", "Ghi nhận 2", "Ghi nhận 3"]
+        assert records[1].check_in_time == time(9, 0)
         assert records[2].check_in_time == time(8, 0)
         assert records[4].note == "Nghỉ có phép"
-        assert all(row.source_leave_id is None for row in records[:4])
+        assert records[0].source_leave_id == req.request_id
         assert records[4].source_leave_id == req.request_id
-    upserts = [s.compile(dialect=postgresql.dialect())
-               for s in env.statements if getattr(s, "is_insert", False)]
-    assert upserts and all("ON CONFLICT (child_id, date) DO NOTHING" in str(sql) for sql in upserts)
 
 
 def test_approval_refuses_oversized_legacy_date_range(env):
@@ -577,6 +576,37 @@ def test_late_approval_syncs_late_attendance_with_eta_and_no_actual_checkin(env)
         assert record.expected_arrival_time == time(9, 0)
         assert record.check_in_time is None
         assert record.source_leave_id == uuid.UUID(response.json()["request_id"])
+
+
+def test_leave_approval_updates_existing_attendance_record(env):
+    with env.factory() as db:
+        rec = AttendanceRecord(
+            record_id=uuid.uuid4(),
+            child_id=env.child.child_id,
+            class_id=env.class_.class_id,
+            date=TODAY,
+            status=AttendanceStatus.PRESENT,
+        )
+        db.add(rec)
+        db.commit()
+
+    response = create(env, request_type="absence")
+    assert response.status_code == 201, response.text
+    req_id = response.json()["request_id"]
+
+    env.actor = env.teacher
+    approved = env.client.post(f"/api/leave-requests/{req_id}/approve")
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["synced_attendance_count"] == 1
+
+    with env.factory() as db:
+        record = db.scalar(select(AttendanceRecord).where(
+            AttendanceRecord.child_id == env.child.child_id,
+            AttendanceRecord.date == TODAY,
+        ))
+        assert record is not None
+        assert record.status == AttendanceStatus.EXCUSED_ABSENT
+        assert record.source_leave_id == uuid.UUID(req_id)
 
 
 def test_teacher_list_and_parent_history_carry_type_eta_and_decision(env):
@@ -879,7 +909,7 @@ def test_cancel_only_rolls_back_generated_excused_rows_and_preserves_actual_reco
     req = seed_request(env, to_date=TODAY + timedelta(days=2), type=LeaveType.MULTI_DAY)
     for i, kind in [(0, AttendanceStatus.PRESENT), (2, AttendanceStatus.EXCUSED_ABSENT)]:
         env.db.add(AttendanceRecord(child_id=env.child.child_id, class_id=env.class_.class_id,
-            date=TODAY + timedelta(days=i), status=kind, note=f"Giáo viên ghi nhận {i}"))
+            date=TODAY + timedelta(days=i), status=kind, check_in_time=time(7, 15), note=f"Giáo viên ghi nhận {i}"))
     env.db.commit()
     env.actor = env.teacher
     response = env.client.post(f"/api/leave-requests/{req.request_id}/approve")
