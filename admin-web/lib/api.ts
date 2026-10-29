@@ -52,6 +52,30 @@ function keysFor(kind: AccountKind) {
   return kind === "schoolAdmin" ? NS.schoolAdmin : NS.adminApp;
 }
 
+/**
+ * device_id ổn định cho RIÊNG từng trình duyệt (web).
+ *
+ * Backend giữ 1 phiên cho mỗi device_id. Nếu mọi trình duyệt dùng chung một
+ * device_id cố định thì đăng nhập ở Chrome sẽ giết phiên của Edge/Firefox ->
+ * 401 liên tục và bị đăng xuất oan. Vì vậy ta sinh 1 mã ngẫu nhiên duy nhất
+ * cho từng trình duyệt rồi lưu trong localStorage.
+ */
+const DEVICE_ID_KEY = "school_admin_device_id";
+
+export function getSchoolAdminDeviceId(): string {
+  if (typeof window === "undefined") return "school_admin_web";
+  let id = window.localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    const rand =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    id = `web_${rand}`;
+    window.localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  TOKEN & INFO GETTERS / SETTERS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -425,7 +449,13 @@ export async function schoolAdminLoginRequest(payload: {
     school_name?: string | null;
   }>("/api/school-admin/login", {
     method: "POST",
-    body: payload,
+    body: {
+      ...payload,
+      // device_id riêng theo trình duyệt — tránh đăng nhập 1 nơi giết phiên nơi khác.
+      device_id: getSchoolAdminDeviceId(),
+      device_name:
+        typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 80) : "KinderLog Admin Web",
+    },
     auth: false,
   });
 }

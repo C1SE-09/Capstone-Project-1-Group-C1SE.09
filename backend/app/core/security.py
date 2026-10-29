@@ -76,22 +76,35 @@ def create_session(user_id: str, role: str, device_id: str, device_name: str) ->
     # nhầm máy khoẻ thay vì máy cũ nhất.
     now_ts = int(time.time() * 1000)
 
-    # 1. Nếu thiết bị này đã có session cũ -> xóa trước khi cấp mới
+    # 1. Phiên cũ của CÙNG thiết bị: không xoá ngay.
+    #    Nếu xoá ngay, thì đăng nhập ở tab/trình duyệt này sẽ giết phiên của
+    #    tab khác đang mở cùng trình duyệt -> tab đó bị 401 liên tục và bị đá
+    #    ra khỏi trang. Thay vào đó đánh dấu score = 0 (rất cũ) để LRU dọn
+    #    khi vượt giới hạn 4 thiết bị.
     existing_sessions = client.zrange(user_sessions_key, 0, -1)
     for old_sid in existing_sessions:
         old_key = f"{KEY_SESSION_PREFIX}{old_sid}"
         if client.hget(old_key, "device_id") == device_id_clean:
-            client.delete(old_key)
-            client.zrem(user_sessions_key, old_sid)
+            client.zadd(user_sessions_key, {old_sid: 0})
 
-    # 2. Vượt quá 4 thiết bị -> Đá thiết bị ít hoạt động nhất (score nhỏ nhất trong ZSET)
-    if client.zcard(user_sessions_key) >= MAX_CONCURRENT_DEVICES:
+    # 2. Dọn rác các entry cũ trong ZSET (session đã bị xoá nhưng còn sót trong
+    #    ZSET) để zcard không bị phình to -> gây đá nhầm phiên đang dùng.
+    for stale_sid in client.zrange(user_sessions_key, 0, -1):
+        if not client.exists(f"{KEY_SESSION_PREFIX}{stale_sid}"):
+            client.zrem(user_sessions_key, stale_sid)
+
+    # 3. Vượt quá 4 thiết bị -> Đá thiết bị ít hoạt động nhất.
+    #    Score của mỗi session là thời điểm HOẠT ĐỘNG gần nhất (được cập nhật
+    #    mỗi khi người dùng gọi API), không phải thời điểm đăng nhập. Nhờ vậy
+    #    phiên đang dùng (web) không bị đá chỉ vì có máy khác đăng nhập sau.
+    while client.zcard(user_sessions_key) >= MAX_CONCURRENT_DEVICES:
         oldest = client.zrange(user_sessions_key, 0, 0)
-        if oldest:
-            client.delete(f"{KEY_SESSION_PREFIX}{oldest[0]}")
-            client.zrem(user_sessions_key, oldest[0])
+        if not oldest:
+            break
+        client.delete(f"{KEY_SESSION_PREFIX}{oldest[0]}")
+        client.zrem(user_sessions_key, oldest[0])
 
-    # 3. Tạo phiên mới với TTL 30 ngày
+    # 4. Tạo phiên mới với TTL 30 ngày
     session_id = str(uuid.uuid4())
     refresh_token = secrets.token_urlsafe(48)
     session_key = f"{KEY_SESSION_PREFIX}{session_id}"
@@ -206,6 +219,25 @@ def validate_session(session_id: str) -> bool:
         return True
 
 
+def touch_session(session_id: str, user_id: str | None = None) -> None:
+    """Đánh dấu phiên vừa được dùng -> cập nhật score LRU.
+
+    Score của session là thời điểm hoạt động gần nhất. Khi vượt giới hạn
+    4 thiết bị, hệ thống đá phiên có score nhỏ nhất (lâu không dùng nhất).
+    Nếu không cập nhật score, phiên đang mở trên web sẽ bị đá chỉ vì có
+    máy khác đăng nhập sau -> người dùng bị đăng xuất oan.
+    """
+    try:
+        client = get_redis_client()
+        session_key = f"{KEY_SESSION_PREFIX}{session_id}"
+        uid = user_id or client.hget(session_key, "user_id")
+        if not uid:
+            return
+        client.zadd(f"{KEY_USER_SESSIONS_PREFIX}{uid}", {session_id: int(time.time() * 1000)})
+    except Exception as e:  # noqa: BLE001 - cập nhật LRU không được làm hỏng request
+        logger.warning("Lỗi cập nhật hoạt động session: %s", e)
+
+
 def revoke_session(session_id: str) -> None:
     try:
         client = get_redis_client()
@@ -250,6 +282,10 @@ def get_current_user(
         # Nếu có session_id thì kiểm tra xem phiên còn tồn tại trên Redis không
         if session_id and not validate_session(session_id):
             raise credentials_exception
+
+        # Đánh dấu phiên đang hoạt động để LRU đá đúng máy thật sự không dùng
+        if session_id:
+            touch_session(session_id, str(user_id))
 
         user_uuid = uuid.UUID(str(user_id))
     except (JWTError, ValueError) as exc:
