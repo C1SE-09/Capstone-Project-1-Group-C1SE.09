@@ -548,93 +548,82 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             </div>
           </div>
         ) : (
-          <div>
-            <div
-              className={`px-4 py-2 flex items-center justify-between border-b text-xs font-semibold transition-colors duration-200 ${
-                selectedIds.length > 0
-                  ? "bg-[#FDF8F6] border-[#F2D5CE]"
-                  : "border-line"
-              }`}
-              style={selectedIds.length > 0 ? undefined : { background: "#EFECE5", color: "#605D57" }}
-            >
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="rounded cursor-pointer"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected;
-                    }}
-                    onChange={toggleSelectAll}
-                    title="Chọn tất cả phụ huynh hiển thị"
-                  />
-                  <span>Chọn tất cả ({filtered.length})</span>
-                </label>
-
-                {selectedIds.length > 0 && (
-                  <>
-                    <span className="text-line-strong">|</span>
-                    <div className="flex items-center gap-1.5 font-semibold text-[#BB4A34]">
-                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
-                        {selectedIds.length}
-                      </span>
-                      <span>Đã chọn {selectedIds.length} phụ huynh</span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                {selectedIds.length > 0 && (
-                  <>
-                    <button
-                      onClick={() => setSelectedIds([])}
-                      className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
-                      disabled={bulkDeleting}
-                    >
-                      Bỏ chọn
-                    </button>
-                    <button
-                      onClick={() => setConfirmBulkDel(true)}
-                      className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
-                      style={{ background: "#BB4A34" }}
-                      disabled={bulkDeleting}
-                    >
-                      <span>🗑️</span>
-                      <span>Xóa đã chọn ({selectedIds.length})</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
               <thead
-                className="text-xs uppercase tracking-wider"
-                style={{ background: "#EFECE5", color: "#605D57" }}
+                className="text-xs uppercase tracking-wider transition-colors duration-200"
+                style={{
+                  background: selectedIds.length > 0 ? "#FDF8F6" : "#EFECE5",
+                  color: selectedIds.length > 0 ? "#BB4A34" : "#605D57",
+                }}
               >
-                <tr>
-                  <th className="px-3 py-3 text-center w-10">
-                    <input
-                      type="checkbox"
-                      className="rounded cursor-pointer"
-                      checked={allSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someSelected;
-                      }}
-                      onChange={toggleSelectAll}
-                      title="Chọn tất cả phụ huynh hiển thị"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
-                  <th className="px-4 py-3 text-left font-semibold">SĐT / Quan hệ</th>
-                  <th className="px-4 py-3 text-left font-semibold">Con liên kết</th>
-                  <th className="px-4 py-3 text-left font-semibold">Tài khoản</th>
-                  <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
-                  <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
-                </tr>
+                {selectedIds.length > 0 ? (
+                  <tr className="border-b border-[#F2D5CE]">
+                    <th className="px-3 py-2.5 text-center w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                        title="Bỏ chọn tất cả"
+                      />
+                    </th>
+                    <th colSpan={4} className="px-4 py-2.5 text-left font-semibold normal-case text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
+                          {selectedIds.length}
+                        </span>
+                        <span className="text-[#BB4A34] font-bold">
+                          Đã chọn {selectedIds.length} phụ huynh
+                        </span>
+                      </div>
+                    </th>
+                    <th colSpan={2} className="px-4 py-2.5 text-right font-semibold normal-case">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setSelectedIds([])}
+                          className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
+                          disabled={bulkDeleting}
+                        >
+                          Bỏ chọn
+                        </button>
+                        <button
+                          onClick={() => setConfirmBulkDel(true)}
+                          className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
+                          style={{ background: "#BB4A34" }}
+                          disabled={bulkDeleting}
+                        >
+                          <span>🗑️</span>
+                          <span>Xóa đã chọn ({selectedIds.length})</span>
+                        </button>
+                      </div>
+                    </th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th className="px-3 py-3 text-center w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                        title="Chọn tất cả phụ huynh hiển thị"
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
+                    <th className="px-4 py-3 text-left font-semibold">SĐT / Quan hệ</th>
+                    <th className="px-4 py-3 text-left font-semibold">Con liên kết</th>
+                    <th className="px-4 py-3 text-left font-semibold">Tài khoản</th>
+                    <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
+                    <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {filtered.map((p, idx) => {
@@ -708,7 +697,6 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               })}
               </tbody>
             </table>
-            </div>
           </div>
         )}
       </div>
