@@ -220,7 +220,7 @@ void main() {
       expect(find.text('Đến Trễ'), findsWidgets);
     });
 
-    testWidgets('Displays Excused Absent badge and allows teacher manual override', (tester) async {
+    testWidgets('Displays Excused Absent badge and locks status from being changed', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: AttendanceScreen(
@@ -241,13 +241,14 @@ void main() {
       expect(find.text('Excused Absent'), findsOneWidget);
       expect(find.text('Có Phép'), findsWidgets);
 
-      // Giáo viên click để ghi đè / chuyển trạng thái thủ công (Excused Absent -> Late)
+      // Giáo viên click vào dòng bé có đơn xin nghỉ (đã bị khóa)
       await tester.tap(find.text('Bé An'));
       await tester.pumpAndSettle();
 
-      // Xác thực badge Excused Absent không còn hiển thị và trạng thái chuyển sang Đến Trễ
-      expect(find.text('Excused Absent'), findsNothing);
-      expect(find.text('Đến Trễ'), findsWidgets);
+      // Xác thực trạng thái được khóa, không bị chuyển sang Đến Trễ hay Đến
+      expect(find.text('Excused Absent'), findsOneWidget);
+      expect(find.text('Có Phép'), findsWidgets);
+      expect(find.text('Đến Trễ'), findsNothing);
     });
 
     testWidgets('Displays Late ETA badge when expectedArrivalTime is present', (tester) async {
