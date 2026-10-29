@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/admin_dashboard_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 import 'package:adark_frontend/core/notifications/emergency_siren_service.dart';
@@ -24,7 +23,6 @@ String initialRouteFor(AppSession? session) {
   if (session == null) return '/login';
   if (session.role == 'teacher') return '/class-select';
   if (session.role == 'parent') return '/parent';
-  if (session.role == 'admin') return '/admin';
   return '/login';
 }
 
@@ -47,13 +45,6 @@ final GoRouter appRouter = GoRouter(
       path: '/forgot-password',
       builder: (context, state) => ForgotPasswordScreen(
         onBackToLogin: () => appRouter.go('/login'),
-      ),
-    ),
-    GoRoute(
-      path: '/admin',
-      builder: (context, state) => AdminDashboardScreen(
-        onLogout: _goLogin,
-        username: AuthRepository.currentUser?.username,
       ),
     ),
     GoRoute(
@@ -196,7 +187,7 @@ class _LoginRoute extends StatelessWidget {
           }
           switch (role) {
             case UserRole.admin:
-              appRouter.go('/admin');
+              _goLogin();
               break;
             case UserRole.parent:
               appRouter.go('/parent');

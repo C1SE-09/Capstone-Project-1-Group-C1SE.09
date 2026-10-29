@@ -2,9 +2,9 @@
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
 
-import '../screens/parent_medication_widgets.dart';
-import '../screens/parent_requests_widgets.dart';
-import '../theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 class RejectReasonDialog extends StatefulWidget {
   const RejectReasonDialog(

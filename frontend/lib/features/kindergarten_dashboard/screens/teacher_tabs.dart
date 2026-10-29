@@ -149,7 +149,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Tiến độ hôm nay', style: Theme.of(context).textTheme.bodyMedium),
-                    Text('${data.dashboard.completedCount}/$total báo cáo đã gửi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text('${data.dashboard.completedCount}/$total báo cáo đã gửi', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                     Text.rich(
                       TextSpan(children: [
                         const TextSpan(text: 'Còn '),
@@ -599,7 +599,7 @@ class _ChildRow extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(child: Text(child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-                      if (child.allergy != null) Padding(padding: EdgeInsets.only(left: 5), child: Icon(Icons.warning_amber_rounded, size: 15, color: context.k.warn)),
+                      if (child.allergy != null) Padding(padding: const EdgeInsets.only(left: 5), child: Icon(Icons.warning_amber_rounded, size: 15, color: context.k.warn)),
                     ],
                   ),
                   if (child.severity != Severity.none)

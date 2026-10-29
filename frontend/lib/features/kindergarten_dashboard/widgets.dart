@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'models.dart';
-import 'theme.dart';
-import 'theme_controller.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 
 class KCard extends StatelessWidget {
   const KCard({super.key, required this.child, this.padding, this.onTap, this.color});
@@ -52,10 +52,10 @@ class KButton extends StatelessWidget {
           : Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [Icon(icon, size: 18), SizedBox(width: 8), Text(label)],
+              children: [Icon(icon, size: 18), const SizedBox(width: 8), Text(label)],
             ),
     );
-    final style = ButtonStyle(
+    final style = const ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size(double.infinity, 44)),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(KRadii.control))),
@@ -98,7 +98,7 @@ class KAppBar extends StatelessWidget implements PreferredSizeWidget {
       shape: Border(bottom: BorderSide(color: context.k.line)),
       leading: onBack == null
           ? null
-          : IconButton(onPressed: onBack, tooltip: 'Quay lại', icon: Icon(Icons.chevron_left)),
+          : IconButton(onPressed: onBack, tooltip: 'Quay lại', icon: const Icon(Icons.chevron_left)),
       titleSpacing: onBack == null ? KSpace.x5 : 0,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,7 +107,7 @@ class KAppBar extends StatelessWidget implements PreferredSizeWidget {
           if (subtitle != null) Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
-      actions: trailing == null ? null : [trailing!, SizedBox(width: KSpace.x3)],
+      actions: trailing == null ? null : [trailing!, const SizedBox(width: KSpace.x3)],
     );
   }
 }
@@ -546,7 +546,7 @@ class ThemeSelector extends StatelessWidget {
               children: [
                 Icon(Icons.brightness_6_outlined, size: 19, color: context.k.inkSoft),
                 const SizedBox(width: 12),
-                Text('Giao diện', style: const TextStyle(fontSize: 14)),
+                const Text('Giao diện', style: TextStyle(fontSize: 14)),
               ],
             ),
             const SizedBox(height: 10),

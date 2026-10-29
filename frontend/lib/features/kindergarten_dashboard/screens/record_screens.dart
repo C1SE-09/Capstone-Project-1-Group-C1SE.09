@@ -152,7 +152,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Cả ${data.className}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.w600)),
                             Text('Ghi một lần, tạo báo cáo cho tất cả trẻ.',
                                 style: TextStyle(
@@ -165,16 +165,16 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Row(
                     children: [
-                      Expanded(child: Divider()),
+                      const Expanded(child: Divider()),
                       Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text('hoặc chọn từng trẻ',
                               style: TextStyle(
                                   fontSize: 12, color: context.k.inkFaint))),
-                      Expanded(child: Divider()),
+                      const Expanded(child: Divider()),
                     ],
                   ),
                 ),
@@ -469,7 +469,7 @@ class _RecordingScreenState extends State<RecordingScreen>
           setState(() => isBusy = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Vui lòng cấp quyền truy cập micro để ghi âm.'),
+              content: const Text('Vui lòng cấp quyền truy cập micro để ghi âm.'),
               backgroundColor: context.k.warn,
             ),
           );
@@ -591,7 +591,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
+                content: const Text(
                     'Bản ghi âm quá ngắn hoặc không có âm thanh. Vui lòng thử lại.'),
                 backgroundColor: context.k.warn,
               ),
@@ -763,7 +763,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                               children: [
                                 Icon(Icons.check_circle_rounded,
                                     size: 15, color: context.k.ok),
-                                SizedBox(width: 6),
+                                const SizedBox(width: 6),
                                 Text(
                                   'Đã sẵn sàng tạo báo cáo',
                                   style: TextStyle(
@@ -1236,8 +1236,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                 children: [
                   Icon(Icons.warning_amber_rounded,
                       color: context.k.warn, size: 26),
-                  SizedBox(width: 10),
-                  Expanded(
+                  const SizedBox(width: 10),
+                  const Expanded(
                     child: Text(
                       'Nội dung không liên quan',
                       style: TextStyle(fontSize: 16),
@@ -1292,8 +1292,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             title: Row(
               children: [
                 Icon(Icons.warning_amber_rounded, color: context.k.warn),
-                SizedBox(width: 8),
-                Text('Nội dung không liên quan',
+                const SizedBox(width: 8),
+                const Text('Nội dung không liên quan',
                     style: TextStyle(fontSize: 18)),
               ],
             ),
@@ -1347,8 +1347,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           children: [
             Icon(Icons.error_outline_rounded,
                 color: context.k.bad, size: 26),
-            SizedBox(width: 10),
-            Expanded(
+            const SizedBox(width: 10),
+            const Expanded(
               child: Text(
                 'Không thể xử lý file âm thanh',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -1620,7 +1620,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       roster = children;
       items = _buildObservations(children);
       return children;
-    }).catchError((e, st) {
+    }).catchError((Object e, StackTrace st) {
       debugPrint('ReviewScreen childrenFuture error: $e\n$st');
       throw e;
     });
@@ -1791,7 +1791,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             result.add(_unmatchedItem(
               'unmatched_$i',
               text,
-              seg is Map && seg['extraction'] is Map ? seg['extraction'] : null,
+              seg is Map && seg['extraction'] is Map ? (seg['extraction'] as Map<dynamic, dynamic>) : null,
             ));
           }
         }
@@ -1811,7 +1811,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 result.add(_unmatchedItem(
                   'unmatched_${uIdx++}',
                   text,
-                  seg['extraction'] is Map ? seg['extraction'] : null,
+                  seg['extraction'] is Map ? (seg['extraction'] as Map<dynamic, dynamic>) : null,
                 ));
               }
             }
@@ -2298,8 +2298,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
         title: Row(
           children: [
             Icon(Icons.description_outlined, color: context.k.brand, size: 22),
-            SizedBox(width: 8),
-            Text('Text đã phân tích',
+            const SizedBox(width: 8),
+            const Text('Text đã phân tích',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           ],
         ),
@@ -2913,8 +2913,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
         title: Row(
           children: [
             Icon(Icons.edit_note_rounded, color: context.k.brand),
-            SizedBox(width: 8),
-            Text('Chỉnh sửa văn bản ghi âm',
+            const SizedBox(width: 8),
+            const Text('Chỉnh sửa văn bản ghi âm',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           ],
         ),
@@ -3136,7 +3136,7 @@ class _ObservationTile extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               if (card.matched)
                 Avatar(name: card.name, size: 32)
               else
@@ -3151,7 +3151,7 @@ class _ObservationTile extends StatelessWidget {
                         fontWeight: FontWeight.w700),
                   ),
                 ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3176,17 +3176,17 @@ class _ObservationTile extends StatelessWidget {
             ],
           ),
           if (isUnmatched) ...[
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             _SurfaceBox(
               color: context.k.surface,
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Lời cô nói, chỉ cô thấy',
                       style:
                           TextStyle(fontSize: 10, color: context.k.inkFaint)),
-                  SizedBox(height: 3),
+                  const SizedBox(height: 3),
                   Text(
                     card.snippet.isNotEmpty
                         ? card.snippet
@@ -3197,7 +3197,7 @@ class _ObservationTile extends StatelessWidget {
               ),
             ),
           ],
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           if (card.eating.isNotEmpty)
             _buildReportLine(context, 'Bữa ăn', card.eating),
           if (card.sleep.isNotEmpty)
@@ -3218,7 +3218,7 @@ class _ObservationTile extends StatelessWidget {
               card.note.trim().isEmpty &&
               !isUnmatched)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 'Không có thông tin chi tiết được ghi nhận',
                 style: TextStyle(
@@ -3349,7 +3349,7 @@ class _ObservationTile extends StatelessWidget {
                         children: [
                           Icon(Icons.check_circle_rounded,
                               size: 15, color: context.k.ok),
-                          SizedBox(width: 5),
+                          const SizedBox(width: 5),
                           Text(
                             'Đã duyệt',
                             style: TextStyle(
@@ -3364,8 +3364,8 @@ class _ObservationTile extends StatelessWidget {
                 ] else
                   OutlinedButton.icon(
                     onPressed: onToggleApprove,
-                    icon: Icon(Icons.check_rounded, size: 15),
-                    label: Text('Duyệt'),
+                    icon: const Icon(Icons.check_rounded, size: 15),
+                    label: const Text('Duyệt'),
                   ),
               ],
             ),
@@ -3375,9 +3375,9 @@ class _ObservationTile extends StatelessWidget {
   }
 
   Widget _buildReportLine(BuildContext context, String label, String text) {
-    if (text.isEmpty) return SizedBox.shrink();
+    if (text.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Text.rich(
         TextSpan(
           children: [

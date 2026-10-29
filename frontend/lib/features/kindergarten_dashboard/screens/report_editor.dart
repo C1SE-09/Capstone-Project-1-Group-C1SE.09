@@ -204,7 +204,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   child: Row(
                     children: [
                       Icon(Icons.check_circle_outline, size: 18, color: context.k.ok),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Text('Báo cáo đã gửi, không thể sửa.', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
                     ],
                   ),

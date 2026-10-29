@@ -4,10 +4,10 @@ import 'package:adark_frontend/data/repositories/http_medication_repository.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../models.dart';
-import '../screens/parent_medication_widgets.dart';
-import '../screens/parent_requests_widgets.dart';
-import '../theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 class TeacherEmergencySheet extends StatefulWidget {
   const TeacherEmergencySheet(

@@ -5,12 +5,12 @@ import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../theme.dart';
-import '../models.dart' as ui;
-import '../adapters/child_adapter.dart';
-import '../widgets/teacher_emergency_sheet.dart';
-import 'parent_medication_widgets.dart';
-import 'parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' as ui;
+import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 
 class TeacherMedicationScreen extends StatefulWidget {
   const TeacherMedicationScreen(
@@ -75,7 +75,7 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
   Future<void> _refresh() async {
     try {
       await _reload();
-    } catch (_) {/* FutureBuilder hiện lỗi/tải lại. */}
+    } on Exception catch (_) {/* FutureBuilder hiện lỗi/tải lại. */}
   }
 
   void _message(String text) =>
@@ -98,7 +98,7 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                   reportStatus: ui.ReportStatus.none,
                   severity: ui.Severity.none))
               .toList());
-    } catch (_) {
+    } on Exception catch (_) {
       if (mounted && version == _version) {
         _message(
             'Không tải được danh sách lớp. Vui lòng thử lại hoặc mở báo cáo sự cố từ trang lớp.');
@@ -115,9 +115,10 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
   Future<void> _confirm(MedicationItem item, String date) async {
     final key = _key(item, date), version = _version;
     if (item.isGiven || _processing.contains(key)) return;
+    final reqDate = item.requestDate;
     if (DateTime.tryParse(date) == null ||
-        (item.requestDate != null &&
-            DateFormat('yyyy-MM-dd').format(item.requestDate!) != date)) {
+        (reqDate != null &&
+            DateFormat('yyyy-MM-dd').format(reqDate) != date)) {
       _message(
           'Ngày của cữ thuốc chưa khớp. Vui lòng tải lại trước khi xác nhận.');
       return;
@@ -143,7 +144,7 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
         _message(error.message);
         await _refresh();
       }
-    } catch (error) {
+    } on Exception catch (error) {
       if (mounted && version == _version) _message(medicationError(error));
     } finally {
       if (mounted && version == _version) {
@@ -293,10 +294,11 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
         .map((word) => String.fromCharCode(word.runes.first))
         .join()
         .toUpperCase();
-    final stamp = item.givenAt == null
+    final givenAt = item.givenAt;
+    final stamp = givenAt == null
         ? null
         : DateFormat('HH:mm')
-            .format(item.givenAt!.toUtc().add(const Duration(hours: 7)));
+            .format(givenAt.toUtc().add(const Duration(hours: 7)));
     return MedicationCard(
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

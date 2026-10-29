@@ -794,7 +794,7 @@ class _AttendanceRow extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 2),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.monitor_heart_outlined,
                             size: 13,
                             color: KColors.warn,
@@ -805,7 +805,7 @@ class _AttendanceRow extends StatelessWidget {
                               'Lưu ý: ${student.allergy}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 11,
                                 color: KColors.warn,
                                 fontWeight: FontWeight.w500,

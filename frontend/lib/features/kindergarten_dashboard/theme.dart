@@ -235,9 +235,9 @@ extension KThemeContext on BuildContext {
   KPalette get k => Theme.of(this).extension<KPalette>() ?? KPalette.light;
 }
 
-ButtonStyle _buttonShape() => ButtonStyle(
+ButtonStyle _buttonShape() => const ButtonStyle(
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: const BorderRadius.all(Radius.circular(KRadii.control))),
+        RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(KRadii.control))),
       ),
     );
 

@@ -65,7 +65,7 @@ class PushNotificationService {
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null || token.isEmpty) return;
       await _registerToken(token);
-    } catch (error) {
+    } on Exception catch (error) {
       debugPrint('Push registration skipped: $error');
     }
   }
@@ -79,7 +79,7 @@ class PushNotificationService {
       if (token == null || token.isEmpty) return;
       _currentToken = null;
       await repository.deleteDeviceToken(token);
-    } catch (error) {
+    } on Exception catch (error) {
       debugPrint('Push token cleanup skipped: $error');
     }
   }
@@ -93,7 +93,7 @@ class PushNotificationService {
             ? 'android'
             : 'other',
       );
-    } catch (error) {
+    } on Exception catch (error) {
       debugPrint('Push token registration failed: $error');
     }
   }

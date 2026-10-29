@@ -102,7 +102,7 @@ class MockMedicationRepository extends HttpMedicationRepository {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final sampleMorningItem = MedicationItem(
+  final sampleMorningItem = const MedicationItem(
     requestId: 'req-1',
     childId: 'child-1',
     childName: 'Bé Gia Bảo',
