@@ -51,10 +51,14 @@ jobs:
         pip install -r req_ci.txt
         pip install ruff pytest httpx pytest-cov
 
+<<<<<<< HEAD
     - name: Lint code with Ruff
       run: ruff check backend/
 
     - name: Run Tests
+=======
+    - name: Install dependencies and Run Test
+>>>>>>> 09cbad42c99fd2bd514858336cd9929e62f5d8de
       env:
         DATABASE_URL: postgresql+psycopg://postgres:testpassword@localhost:5432/test_db
         REDIS_URL: redis://localhost:6379/0

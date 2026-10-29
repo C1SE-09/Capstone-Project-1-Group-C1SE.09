@@ -95,6 +95,7 @@ def sample_children():
         child_id=uuid.uuid4(),
         class_id=OWN_CLASS_ID,
         full_name="Nguyễn Văn An",
+        nickname="Nhỏ",
         date_of_birth=date(2021, 5, 10),
         gender="male",
         status=ChildStatus.ENROLLED,
@@ -103,6 +104,7 @@ def sample_children():
         child_id=uuid.uuid4(),
         class_id=OWN_CLASS_ID,
         full_name="Trần Thị Bình",
+        nickname="Lớn",
         date_of_birth=date(2021, 8, 20),
         gender="female",
         status=ChildStatus.ENROLLED,
@@ -122,7 +124,11 @@ def test_export_template_success_admin(mock_db, admin_user, sample_classroom, sa
 
     def mock_scalars(statement):
         result = MagicMock()
-        result.all.return_value = sample_children
+        text = str(statement)
+        if "health_examination" in text:
+            result.all.return_value = []  # Chưa có bản ghi sức khoẻ nào
+        else:
+            result.all.return_value = sample_children
         return result
 
     mock_db.scalar.side_effect = mock_scalar
@@ -142,9 +148,8 @@ def test_export_template_success_admin(mock_db, admin_user, sample_classroom, sa
     # 1. Sheet KHÔNG bị khóa bảo vệ (người dùng sửa tự do)
     assert ws.protection.sheet is False
 
-    # 2. Tiêu đề các cột
+    # 2. Tiêu đề các cột — KHÔNG có cột mã học sinh
     expected_headers = [
-        "Mã học sinh",
         "Họ và tên",
         "Ngày sinh",
         "Giới tính",
@@ -155,18 +160,73 @@ def test_export_template_success_admin(mock_db, admin_user, sample_classroom, sa
     ]
     for col_idx, expected in enumerate(expected_headers, start=1):
         assert ws.cell(row=1, column=col_idx).value == expected
+    assert ws.max_column == 7
 
-    # 3. Dòng dữ liệu học sinh 1
+    # 3. Dòng dữ liệu học sinh 1 — họ tên kèm biệt danh
     c1 = sample_children[0]
-    assert ws.cell(row=2, column=1).value == str(c1.child_id)
-    assert ws.cell(row=2, column=2).value == c1.full_name
-    assert ws.cell(row=2, column=3).value == "10/05/2021"
-    assert ws.cell(row=2, column=4).value == "Nam"
+    assert ws.cell(row=2, column=1).value == f"{c1.full_name} ({c1.nickname})"
+    assert ws.cell(row=2, column=2).value == "10/05/2021"
+    assert ws.cell(row=2, column=3).value == "Nam"
 
     # Các cột nhập liệu để trống cho người dùng điền
-    assert ws.cell(row=2, column=6).value is None  # Chiều cao
-    assert ws.cell(row=2, column=7).value is None  # Cân nặng
-    assert ws.cell(row=2, column=8).value is None  # Kết luận
+    assert ws.cell(row=2, column=5).value is None  # Chiều cao
+    assert ws.cell(row=2, column=6).value is None  # Cân nặng
+    assert ws.cell(row=2, column=7).value is None  # Kết luận
+
+    app.dependency_overrides.clear()
+
+
+def test_export_template_prefills_existing_data(
+    mock_db, admin_user, sample_classroom, sample_children
+):
+    """Bé đã có bản ghi sức khoẻ -> file mẫu điền sẵn chiều cao/cân nặng/kết luận."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1 = sample_children[0]
+    existing = HealthExamination(
+        examination_id=uuid.uuid4(),
+        child_id=c1.child_id,
+        examination_date=date(2026, 9, 1),
+        height=94.0,
+        weight=13.5,
+        bmi=15.26,
+        health_category=HealthCategory.NORMAL,
+        general_conclusion="Bé khỏe",
+    )
+
+    def mock_scalar(statement):
+        if "FROM class" in str(statement):
+            return sample_classroom
+        return None
+
+    def mock_scalars(statement):
+        result = MagicMock()
+        text = str(statement)
+        if "health_examination" in text:
+            result.all.return_value = [existing]
+        else:
+            result.all.return_value = sample_children
+        return result
+
+    mock_db.scalar.side_effect = mock_scalar
+    mock_db.scalars.side_effect = mock_scalars
+
+    client = TestClient(app)
+    resp = client.get(f"/api/health-exam/template?class_id={OWN_CLASS_ID}")
+
+    assert resp.status_code == 200
+    wb = openpyxl.load_workbook(BytesIO(resp.content))
+    ws = wb.active
+
+    # Dòng của bé đã có số liệu -> điền sẵn 3 cột + ngày ghi nhận cũ
+    assert ws.cell(row=2, column=4).value == "01/09/2026"
+    assert ws.cell(row=2, column=5).value == 94.0
+    assert ws.cell(row=2, column=6).value == 13.5
+    assert ws.cell(row=2, column=7).value == "Bé khỏe"
+
+    # Bé chưa có số liệu -> vẫn để trống
+    assert ws.cell(row=3, column=5).value is None
 
     app.dependency_overrides.clear()
 
@@ -224,7 +284,7 @@ def _build_exam_workbook(rows: list[list]) -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append([
-        "Mã học sinh", "Họ và tên", "Ngày sinh", "Giới tính", "Ngày ghi nhận",
+        "Họ và tên", "Ngày sinh", "Giới tính", "Ngày ghi nhận",
         "Chiều cao (cm)", "Cân nặng (kg)", "Kết luận chung",
     ])
     for row in rows:
@@ -232,6 +292,13 @@ def _build_exam_workbook(rows: list[list]) -> bytes:
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def _display_name(child) -> str:
+    """Tên hiển thị trong file mẫu: "Nguyễn Văn An (Nhỏ)"."""
+    if child.nickname:
+        return f"{child.full_name} ({child.nickname})"
+    return child.full_name
 
 
 def _mock_import_db(mock_db, classroom, children):
@@ -266,11 +333,11 @@ def test_import_exam_mixed_rows(mock_db, admin_user, sample_classroom, sample_ch
     c1, c2 = sample_children
     content = _build_exam_workbook([
         # Dòng 2: hợp lệ (BMI + phân loại do hệ thống tự tính)
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 95, 14, "Bé khỏe"],
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 95, 14, "Bé khỏe"],
         # Dòng 3: thiếu cân nặng
-        [str(c2.child_id), c2.full_name, "20/08/2021", "Nữ", "20/10/2026", 90, "", ""],
+        [_display_name(c2), "20/08/2021", "Nữ", "20/10/2026", 90, "", ""],
         # Dòng 4: cân nặng vô lý 150kg
-        [str(c2.child_id), c2.full_name, "20/08/2021", "Nữ", "21/10/2026", 90, 150, ""],
+        [_display_name(c2), "20/08/2021", "Nữ", "21/10/2026", 90, 150, ""],
     ])
 
     client = TestClient(app)
@@ -382,7 +449,7 @@ def _build_exam_record(child, classroom, *, height=95.0, weight=14.0, bmi=15.51,
 
 
 def test_list_records_success_admin(mock_db, admin_user, sample_classroom, sample_children):
-    """Admin xem danh sách bản ghi: trả về bản ghi kèm thông tin học sinh + thống kê."""
+    """Admin xem danh sách: trả về toàn bộ học sinh kèm số liệu + thống kê."""
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: admin_user
 
@@ -396,12 +463,18 @@ def test_list_records_success_admin(mock_db, admin_user, sample_classroom, sampl
     def mock_execute(statement):
         result = MagicMock()
         result.all.return_value = [
-            (rec1, c1, sample_classroom),
-            (rec2, c2, sample_classroom),
+            (c1, sample_classroom),
+            (c2, sample_classroom),
         ]
         return result
 
+    def mock_scalars(statement):
+        result = MagicMock()
+        result.all.return_value = [rec1, rec2]
+        return result
+
     mock_db.execute.side_effect = mock_execute
+    mock_db.scalars.side_effect = mock_scalars
 
     client = TestClient(app)
     resp = client.get("/api/health-exam/records")
@@ -413,6 +486,7 @@ def test_list_records_success_admin(mock_db, admin_user, sample_classroom, sampl
 
     first = body["records"][0]
     assert first["full_name"] == c1.full_name
+    assert first["nickname"] == c1.nickname
     assert first["class_name"] == sample_classroom.name
     assert first["height"] == 95.0
     assert first["weight"] == 14.0
@@ -421,11 +495,141 @@ def test_list_records_success_admin(mock_db, admin_user, sample_classroom, sampl
     assert first["health_category_label"] == "Bình thường"
     assert first["examination_date"] == "20/10/2026"
     assert first["date_of_birth"] == "10/05/2021"
+    assert first["has_record"] is True
 
     # Thống kê theo phân loại thể trạng
     assert body["stats"]["normal"] == 1
     assert body["stats"]["underweight"] == 1
     assert body["stats"]["overweight"] == 0
+
+    app.dependency_overrides.clear()
+
+
+def test_list_records_includes_children_without_data(
+    mock_db, admin_user, sample_classroom, sample_children
+):
+    """Bé chưa có số liệu vẫn xuất hiện trong danh sách (has_record = false)."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1, c2 = sample_children
+    rec1 = _build_exam_record(c1, sample_classroom)
+
+    def mock_execute(statement):
+        result = MagicMock()
+        result.all.return_value = [(c1, sample_classroom), (c2, sample_classroom)]
+        return result
+
+    def mock_scalars(statement):
+        result = MagicMock()
+        result.all.return_value = [rec1]
+        return result
+
+    mock_db.execute.side_effect = mock_execute
+    mock_db.scalars.side_effect = mock_scalars
+
+    client = TestClient(app)
+    resp = client.get("/api/health-exam/records")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+
+    second = body["records"][1]
+    assert second["child_id"] == str(c2.child_id)
+    assert second["id"] is None
+    assert second["has_record"] is False
+    assert second["height"] is None
+    assert second["weight"] is None
+    assert second["bmi"] is None
+    assert second["health_category"] is None
+    assert second["general_conclusion"] is None
+
+    app.dependency_overrides.clear()
+
+
+def test_list_records_filter_by_date_only_returns_children_with_record(
+    mock_db, admin_user, sample_classroom, sample_children
+):
+    """Lọc theo ngày ghi nhận: chỉ trả về bé CÓ bản ghi đúng ngày đó.
+
+    Bé không có bản ghi trong ngày được lọc thì KHÔNG xuất hiện
+    (khác với trường hợp không lọc ngày — lúc đó mọi bé đều hiện).
+    """
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1, c2 = sample_children
+    rec1 = _build_exam_record(c1, sample_classroom, exam_date=date(2026, 10, 20))
+    rec2 = _build_exam_record(
+        c2, sample_classroom, height=90.0, weight=12.0, bmi=14.81,
+        category=HealthCategory.UNDERWEIGHT, exam_date=date(2026, 9, 1),
+    )
+
+    def mock_execute(statement):
+        result = MagicMock()
+        result.all.return_value = [(c1, sample_classroom), (c2, sample_classroom)]
+        return result
+
+    def mock_scalars(statement):
+        result = MagicMock()
+        # Backend đã lọc sẵn theo ngày trong query → chỉ trả về rec1.
+        result.all.return_value = [rec1]
+        return result
+
+    mock_db.execute.side_effect = mock_execute
+    mock_db.scalars.side_effect = mock_scalars
+
+    client = TestClient(app)
+    resp = client.get("/api/health-exam/records?examination_date=2026-10-20")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert len(body["records"]) == 1
+    assert body["records"][0]["child_id"] == str(c1.child_id)
+    assert body["records"][0]["examination_date"] == "20/10/2026"
+    assert body["records"][0]["has_record"] is True
+
+    # Thống kê cũng chỉ tính trong nhóm đã lọc.
+    assert body["stats"]["normal"] == 1
+    assert body["stats"]["underweight"] == 0
+
+    app.dependency_overrides.clear()
+
+
+def test_list_records_filter_by_date_excludes_children_without_record_that_day(
+    mock_db, admin_user, sample_classroom, sample_children
+):
+    """Lọc theo ngày mà bé không có bản ghi → bị loại khỏi danh sách."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1, c2 = sample_children
+    rec1 = _build_exam_record(c1, sample_classroom, exam_date=date(2026, 10, 20))
+
+    def mock_execute(statement):
+        result = MagicMock()
+        result.all.return_value = [(c1, sample_classroom), (c2, sample_classroom)]
+        return result
+
+    def mock_scalars(statement):
+        result = MagicMock()
+        result.all.return_value = [rec1]
+        return result
+
+    mock_db.execute.side_effect = mock_execute
+    mock_db.scalars.side_effect = mock_scalars
+
+    client = TestClient(app)
+    resp = client.get("/api/health-exam/records?examination_date=2026-10-20")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    # c2 không có bản ghi ngày 20/10/2026 → không xuất hiện.
+    assert body["total"] == 1
+    assert all(r["child_id"] == str(c1.child_id) for r in body["records"])
+    assert all(r["has_record"] is True for r in body["records"])
 
     app.dependency_overrides.clear()
 
@@ -445,7 +649,7 @@ def test_list_records_forbidden_teacher(mock_db, teacher_user):
 
 
 def test_list_records_empty(mock_db, admin_user):
-    """Chưa có bản ghi nào -> trả về danh sách rỗng, total = 0."""
+    """Không có học sinh nào -> trả về danh sách rỗng, total = 0."""
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: admin_user
 
@@ -454,7 +658,13 @@ def test_list_records_empty(mock_db, admin_user):
         result.all.return_value = []
         return result
 
+    def mock_scalars(statement):
+        result = MagicMock()
+        result.all.return_value = []
+        return result
+
     mock_db.execute.side_effect = mock_execute
+    mock_db.scalars.side_effect = mock_scalars
 
     client = TestClient(app)
     resp = client.get("/api/health-exam/records")
@@ -489,7 +699,7 @@ def test_import_exam_date_before_birth(mock_db, admin_user, sample_classroom, sa
     c1 = sample_children[0]  # Sinh 10/05/2021
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "01/01/2020", 95, 14, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "01/01/2020", 95, 14, ""],
     ])
 
     assert resp.status_code == 200
@@ -510,8 +720,8 @@ def test_import_duplicate_child_in_file(mock_db, admin_user, sample_classroom, s
     c1 = sample_children[0]
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 95, 14, ""],
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 96, 15, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 95, 14, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 96, 15, ""],
     ])
 
     assert resp.status_code == 200
@@ -537,8 +747,8 @@ def test_import_who_classification(mock_db, admin_user, sample_classroom, sample
     c1, c2 = sample_children
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 100, 16, ""],
-        [str(c2.child_id), c2.full_name, "20/08/2021", "Nữ", "21/10/2026", 100, 19, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 100, 16, ""],
+        [_display_name(c2), "20/08/2021", "Nữ", "21/10/2026", 100, 19, ""],
     ])
 
     assert resp.status_code == 200
@@ -565,7 +775,7 @@ def test_import_who_underweight(mock_db, admin_user, sample_classroom, sample_ch
     c2 = sample_children[1]  # Nu, sinh 20/08/2021
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c2.child_id), c2.full_name, "20/08/2021", "Nữ", "20/10/2026", 100, 12, ""],
+        [_display_name(c2), "20/08/2021", "Nữ", "20/10/2026", 100, 12, ""],
     ])
 
     assert resp.status_code == 200
@@ -578,8 +788,28 @@ def test_import_who_underweight(mock_db, admin_user, sample_classroom, sample_ch
     app.dependency_overrides.clear()
 
 
+def test_import_unknown_child_name_rejected(mock_db, admin_user, sample_classroom, sample_children):
+    """Ten + biet danh khong khop ho so -> LOI CHAN (khong luu)."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    _mock_import_db(mock_db, sample_classroom, sample_children)
+
+    client = TestClient(app)
+    resp = _post_import(client, [
+        ["Nguyen Van X (Nho)", "01/01/2020", "Nữ", "20/10/2026", 95, 14, ""],
+    ])
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success_count"] == 0
+    assert body["failed_count"] == 1
+    assert any("Không tìm thấy học sinh" in m for m in body["errors"][0]["errors"])
+
+    app.dependency_overrides.clear()
+
+
 def test_import_profile_mismatch_warns_but_saves(mock_db, admin_user, sample_classroom, sample_children):
-    """Ten/ngay sinh/gioi tinh lech ho so -> CANH BAO nhung VAN LUU theo ma HS."""
+    """Ngay sinh/gioi tinh lech ho so -> CANH BAO nhung VAN LUU theo ten + biet danh."""
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: admin_user
     _mock_import_db(mock_db, sample_classroom, sample_children)
@@ -587,15 +817,14 @@ def test_import_profile_mismatch_warns_but_saves(mock_db, admin_user, sample_cla
     c1 = sample_children[0]  # Nam, sinh 10/05/2021
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c1.child_id), "Nguyen Van X", "01/01/2020", "Nữ", "20/10/2026", 95, 14, ""],
+        [_display_name(c1), "01/01/2020", "Nữ", "20/10/2026", 95, 14, ""],
     ])
 
     assert resp.status_code == 200
     body = resp.json()
     assert body["success_count"] == 1
-    # Co canh bao cho ca ten, ngay sinh, gioi tinh
+    # Co canh bao cho ca ngay sinh, gioi tinh
     warns = " ".join(body["errors"][0]["warnings"])
-    assert "Họ tên" in warns
     assert "Ngày sinh" in warns
     assert "Giới tính" in warns
 
@@ -611,7 +840,7 @@ def test_import_height_outlier_warns(mock_db, admin_user, sample_classroom, samp
     c1 = sample_children[0]
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 60, 14, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 60, 14, ""],
     ])
 
     assert resp.status_code == 200
@@ -649,25 +878,6 @@ def test_import_wrong_structure_rejected(mock_db, admin_user):
     app.dependency_overrides.clear()
 
 
-def test_import_file_without_header_accepted(mock_db, admin_user, sample_classroom, sample_children):
-    """File KHONG co dong tieu de (dong 1 la du lieu) van duoc chap nhan."""
-    app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_current_user] = lambda: admin_user
-    _mock_import_db(mock_db, sample_classroom, sample_children)
-
-    c1 = sample_children[0]
-    client = TestClient(app)
-    resp = _post_import(client, [
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 95, 14, ""],
-    ])
-
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["success_count"] == 1
-
-    app.dependency_overrides.clear()
-
-
 def test_import_duplicate_different_date_formats(mock_db, admin_user, sample_classroom, sample_children):
     """Trung ma HS voi 2 dinh dang ngay khac nhau -> van bat trung."""
     app.dependency_overrides[get_db] = lambda: mock_db
@@ -677,8 +887,8 @@ def test_import_duplicate_different_date_formats(mock_db, admin_user, sample_cla
     c1 = sample_children[0]
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 95, 14, ""],
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "2026-10-20", 96, 15, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 95, 14, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "2026-10-20", 96, 15, ""],
     ])
 
     assert resp.status_code == 200
@@ -698,7 +908,7 @@ def test_import_zero_height_rejected(mock_db, admin_user, sample_classroom, samp
     c1 = sample_children[0]
     client = TestClient(app)
     resp = _post_import(client, [
-        [str(c1.child_id), c1.full_name, "10/05/2021", "Nam", "20/10/2026", 0, 14, ""],
+        [_display_name(c1), "10/05/2021", "Nam", "20/10/2026", 0, 14, ""],
     ])
 
     assert resp.status_code == 200
@@ -706,4 +916,128 @@ def test_import_zero_height_rejected(mock_db, admin_user, sample_classroom, samp
     assert body["failed_count"] == 1
     assert any("lớn hơn 0" in m for m in body["errors"][0]["errors"])
 
+    app.dependency_overrides.clear()
+
+
+# ===========================================================================
+# PUT/POST /api/health-exam/records — sua & tao so lieu suc khoe
+# ===========================================================================
+
+def test_update_record_recalculates_bmi(mock_db, admin_user, sample_children):
+    """Sua chieu cao/can nang -> server tu tinh lai BMI va xep loai theo WHO."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1 = sample_children[0]
+    rec = _build_exam_record(c1, None)
+
+    def mock_scalar(statement):
+        text = str(statement)
+        if "FROM health_examinations" in text:
+            return rec
+        if "FROM child" in text:
+            return c1
+        return None
+
+    mock_db.scalar.side_effect = mock_scalar
+
+    client = TestClient(app)
+    resp = client.put(
+        f"/api/health-exam/records/{rec.examination_id}",
+        json={"height": 100, "weight": 16, "general_conclusion": "Bé khỏe"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    # BMI = 16 / 1.0^2 = 16.0
+    assert abs(body["bmi"] - 16.0) < 0.01
+    assert body["height"] == 100.0
+    assert body["weight"] == 16.0
+    assert body["general_conclusion"] == "Bé khỏe"
+    assert body["has_record"] is True
+    mock_db.commit.assert_called_once()
+
+    app.dependency_overrides.clear()
+
+
+def test_update_record_not_found(mock_db, admin_user):
+    """Sua ban ghi khong ton tai -> 404."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    mock_db.scalar.return_value = None
+
+    client = TestClient(app)
+    resp = client.put(
+        f"/api/health-exam/records/{uuid.uuid4()}",
+        json={"height": 100, "weight": 16},
+    )
+
+    assert resp.status_code == 404
+    app.dependency_overrides.clear()
+
+
+def test_update_record_invalid_height(mock_db, admin_user):
+    """Chieu cao <= 0 -> 422 (validate schema)."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    client = TestClient(app)
+    resp = client.put(
+        f"/api/health-exam/records/{uuid.uuid4()}",
+        json={"height": 0, "weight": 16},
+    )
+
+    assert resp.status_code == 422
+    app.dependency_overrides.clear()
+
+
+def test_create_record_for_child_without_data(mock_db, admin_user, sample_children):
+    """Tao moi ban ghi cho be chua co so lieu -> tao record va tu tinh BMI."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1 = sample_children[0]
+
+    def mock_scalar(statement):
+        text = str(statement)
+        if "FROM child" in text:
+            return c1
+        return None
+
+    mock_db.scalar.side_effect = mock_scalar
+
+    client = TestClient(app)
+    resp = client.post(
+        "/api/health-exam/records",
+        json={
+            "child_id": str(c1.child_id),
+            "height": 95,
+            "weight": 14,
+            "general_conclusion": "Bé khỏe",
+        },
+    )
+
+    assert resp.status_code == 201
+    body = resp.json()
+    assert abs(body["bmi"] - 15.51) < 0.01
+    assert body["full_name"] == c1.full_name
+    assert body["has_record"] is True
+    assert mock_db.add.called
+
+    app.dependency_overrides.clear()
+
+
+def test_create_record_child_not_found(mock_db, admin_user):
+    """Hoc sinh khong ton tai -> 404."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    mock_db.scalar.return_value = None
+
+    client = TestClient(app)
+    resp = client.post(
+        "/api/health-exam/records",
+        json={"child_id": str(uuid.uuid4()), "height": 95, "weight": 14},
+    )
+
+    assert resp.status_code == 404
     app.dependency_overrides.clear()
