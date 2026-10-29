@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 
 import '../theme.dart';
 import '../widgets.dart';
+import 'parent_medication_screen.dart';
 
 /// Đếm code point để khớp `len()` của Python, không dùng UTF-16 length.
 int healthCharCount(String value) => value.runes.length;
@@ -42,12 +44,14 @@ class ParentHealthProfileScreen extends StatefulWidget {
     required this.className,
     required this.repository,
     this.onSaved,
+    this.medicationRepository,
   });
 
   final Child child;
   final String className;
   final HttpDashboardRepository repository;
   final ValueChanged<Child>? onSaved;
+  final HttpMedicationRepository? medicationRepository;
 
   @override
   State<ParentHealthProfileScreen> createState() =>
@@ -94,9 +98,8 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
     _child = child;
     _status = child.allergyStatus;
     _initialStatus = _status;
-    _initialAllergy = _status == 'present'
-        ? (child.medicalAllergies ?? '').trim()
-        : '';
+    _initialAllergy =
+        _status == 'present' ? (child.medicalAllergies ?? '').trim() : '';
     _initialNotes = (child.careNotes ?? '').trim();
     _allergyController.text = _initialAllergy;
     _notesController.text = _initialNotes;
@@ -238,7 +241,8 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
           _bannerBody = 'Vui lòng tải lại trước khi lưu.';
         } else if (error.statusCode == 422) {
           _bannerTitle = 'Thông tin chưa hợp lệ';
-          _bannerBody = 'Vui lòng kiểm tra lại thông tin dị ứng và lưu ý chăm sóc.';
+          _bannerBody =
+              'Vui lòng kiểm tra lại thông tin dị ứng và lưu ý chăm sóc.';
         } else {
           _bannerTitle = 'Chưa lưu được thay đổi';
           _bannerBody =
@@ -294,6 +298,16 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
         appBar: KAppBar(
           title: 'Thông tin sức khỏe',
           onBack: () => Navigator.maybePop(context),
+          trailing: IconButton(
+              tooltip: 'Dặn dò uống thuốc',
+              icon: const Icon(Icons.medication_outlined),
+              onPressed: _dirty || _saving
+                  ? null
+                  : () => Navigator.of(context).push<void>(MaterialPageRoute(
+                      builder: (_) => ParentMedicationScreen(
+                          child: _child,
+                          className: widget.className,
+                          repository: widget.medicationRepository)))),
         ),
         body: SafeArea(child: _buildBody(context)),
       ),
@@ -414,7 +428,8 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
             helperMaxLines: 2,
           ),
         ),
-        _CharCounter(count: healthCharCount(_notesController.text), max: _maxChars),
+        _CharCounter(
+            count: healthCharCount(_notesController.text), max: _maxChars),
         if (_metaLabel != null) ...[
           const SizedBox(height: 12),
           Text(

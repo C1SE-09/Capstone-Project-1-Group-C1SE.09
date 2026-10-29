@@ -218,6 +218,22 @@ def test_legacy_missing_category_is_not_fabricated_as_prescription(env):
     assert response.json()["medicine_category"] is None
 
 
+def test_legacy_schedule_uses_real_request_id_for_batch_detail_filter(env):
+    req = dose(env, batch_id=None, request_date=None, time_slot=None, status=State.ACTIVE, sessions=["morning"])
+    response = env.client(env.seed["user_parent"]).get("/api/medication-requests",
+        params={"child_id": str(req.child_id), "batch_id": str(req.request_id)})
+    assert response.status_code == 200, response.text
+    assert [row["id"] for row in response.json()] == [str(req.request_id)]
+
+
+def test_legacy_json_sessions_string_is_read_without_fake_exact_time(env):
+    req = dose(env, request_date=None, time_slot=None, status=State.ACTIVE, sessions="morning,noon")
+    response = env.client(env.seed["user_parent"]).get(f"/api/medication-requests/{req.request_id}")
+    assert response.status_code == 200, response.text
+    assert response.json()["sessions"] == ["morning", "noon"]
+    assert response.json()["time_slot"] is None
+
+
 def test_existing_legacy_log_for_new_slot_is_respected_without_read_side_effects(env):
     req = dose(env)
     env.db.add(MedicationLog(request_id=req.request_id, log_date=req.request_date,

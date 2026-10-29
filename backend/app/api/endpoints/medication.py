@@ -353,7 +353,7 @@ def _to_response(req: MedicationRequest, db: Session) -> MedicationRequestRespon
         time_slot=req.time_slot,
         start_date=req.start_date,
         end_date=req.end_date,
-        sessions=req.sessions or [],
+        sessions=req.sessions if isinstance(req.sessions, list) else [item.strip() for item in (req.sessions or "").split(",") if item.strip()],
         medicine_category=req.medicine_category,
         medicine_name=req.medication_name,
         dosage=req.dosage,
@@ -443,7 +443,8 @@ def list_medication_requests(
     if status_filter:
         stmt = stmt.where(MedicationRequest.status == status_filter)
     if batch_id:
-        stmt = stmt.where(MedicationRequest.batch_id == batch_id)
+        stmt = stmt.where(or_(MedicationRequest.batch_id == batch_id,
+                              and_(MedicationRequest.batch_id.is_(None), MedicationRequest.request_id == batch_id)))
 
     stmt = stmt.order_by(
         desc(MedicationRequest.created_at),
