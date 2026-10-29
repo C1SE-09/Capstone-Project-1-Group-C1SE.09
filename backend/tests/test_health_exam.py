@@ -1041,3 +1041,36 @@ def test_create_record_child_not_found(mock_db, admin_user):
 
     assert resp.status_code == 404
     app.dependency_overrides.clear()
+
+
+# --- split_display_name: ngoac long nhau (biet danh co hau to "Lon/Nho") ---
+def test_split_display_name_nested_parentheses():
+    """Biet danh trong DB co the chua hau to phan biet mau -> file mau sinh
+    'Le Ngoc Anh (Bong (Lon))' -> phai tach duoc 2 cap ngoac."""
+    from app.services.health_exam_import_service import split_display_name
+
+    full, nick = split_display_name("Lê Ngọc Ánh (Bống (Lớn))")
+    assert full == "Lê Ngọc Ánh"
+    assert nick == "Bống (Lớn)"
+
+    full, nick = split_display_name("Trần Gia Bảo (Bảo Bảo (Nhỏ))")
+    assert full == "Trần Gia Bảo"
+    assert nick == "Bảo Bảo (Nhỏ)"
+
+
+def test_split_display_name_plain():
+    """Ten khong co ngoac -> bien nguyen -> (ten, None)."""
+    from app.services.health_exam_import_service import split_display_name
+
+    full, nick = split_display_name("Trần Gia Bảo")
+    assert full == "Trần Gia Bảo"
+    assert nick is None
+
+    full, nick = split_display_name("Lê Ngọc Ánh (Bống)")
+    assert full == "Lê Ngọc Ánh"
+    assert nick == "Bống"
+
+    # Ngoac rong -> khong tach
+    full, nick = split_display_name("Lê Ngọc Ánh ()")
+    assert full == "Lê Ngọc Ánh ()"
+    assert nick is None

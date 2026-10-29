@@ -162,16 +162,38 @@ def normalize_name_key(value: object) -> str:
 def split_display_name(value: object) -> tuple[str, str | None]:
     """Tach chuoi 'Nguyen Van Anh (Nho)' thanh (ho ten, biet danh).
 
+    Ho tro NGOAC LONG NHAU: biet danh trong DB co the chua hau to phan biet
+    mau, vi du 'Bong (Lon)' -> hien thi trong file mau la
+    'Le Ngoc Anh (Bong (Lon))'. Regex '([^()]*)' cu khong tach duoc truong
+    hop nay -> se khong tim thay hoc sinh khi nhap file.
+
     Neu khong co phan trong ngoac -> biet danh = None.
     """
     text = str(value or "").strip()
     if not text:
         return "", None
-    match = re.match(r"^(.*?)\s*\(([^()]*)\)\s*$", text)
-    if not match:
+
+    # Tach phan ngoac ngoai cung bang thuoc tinh noi bo (khong regex).
+    if not (text.endswith(")") and "(" in text):
         return text, None
-    full_name = match.group(1).strip()
-    nickname = match.group(2).strip()
+
+    # Tim dau ngoac mo ngoai cung: quet tu phai sang trai, dem cap do ngoac.
+    depth = 0
+    open_idx = -1
+    for i in range(len(text) - 1, -1, -1):
+        ch = text[i]
+        if ch == ")":
+            depth += 1
+        elif ch == "(":
+            depth -= 1
+            if depth == 0:
+                open_idx = i
+                break
+    if open_idx < 0:
+        return text, None
+
+    full_name = text[:open_idx].strip()
+    nickname = text[open_idx + 1 : -1].strip()
     if not full_name or not nickname:
         return text, None
     return full_name, nickname
