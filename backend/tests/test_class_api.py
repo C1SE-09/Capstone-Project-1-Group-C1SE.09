@@ -255,7 +255,7 @@ def test_update_class_capacity_below_students_rejected(admin_client, mock_db):
     assert resp.status_code == 400, resp.text
 
 
-def test_update_class_duplicate_room_rejected(admin_client, mock_db):
+def test_update_class_duplicate_room_overwrite_rejected(admin_client, mock_db):
     """Sửa lớp sang phòng đã có ở lớp khác -> bị chặn, không ghi đè."""
     c = _make_class("Lớp Mầm 1")  # đang dùng phòng P.101
     # Lớp KHÁC (class_id khác) cũng dùng phòng P.101.

@@ -83,35 +83,15 @@ export function sanitizeUrl(url: string | null | undefined): string {
 }
 
 /**
- * Chuẩn hóa URL của file đính kèm/hình ảnh để xem được trực tiếp trên trình duyệt máy khách:
- * - Giải quyết vấn đề URL chứa hostname nội bộ Docker "minio:9000" -> tự động chuyển thành hostname hiện tại (ví dụ localhost:9000)
- * - Xử lý đường dẫn tương đối (/bug-reports/...)
- * - Ngăn chặn XSS
+ * Chuẩn hóa URL của file đính kèm/hình ảnh trước khi render:
+ * - Chặn scheme nguy hiểm (javascript:)
+ * - Backend đã trả URL tuyệt đối đúng host/scheme (MINIO_PUBLIC_URL),
+ *   client không tự đoán hostname nữa.
  */
 export function resolveAttachmentUrl(url: string | null | undefined): string {
   if (!url) return "";
   const trimmed = url.trim();
   if (!trimmed || /^\s*javascript:/i.test(trimmed)) return "";
-
-  // Nếu chứa host nội bộ container MinIO (ví dụ http://minio:9000/...)
-  if (trimmed.includes("minio:9000")) {
-    const host =
-      (typeof window !== "undefined" && window.location.hostname) || "localhost";
-    return trimmed.replace(/https?:\/\/minio:9000/g, `http://${host}:9000`);
-  }
-
-  // Nếu là URL tuyệt đối hợp lệ
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-
-  // Nếu là đường dẫn tương đối (ví dụ /bug-reports/...)
-  if (trimmed.startsWith("/")) {
-    const host =
-      (typeof window !== "undefined" && window.location.hostname) || "localhost";
-    return `http://${host}:9000${trimmed}`;
-  }
-
   return trimmed;
 }
 
