@@ -4,7 +4,8 @@
  * UI components nhỏ dùng chung cho School Admin — y hệt pattern Flutter app.
  */
 
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DirectGridInput } from "@/components/DirectGridInput";
 import {
   downloadExcelTemplate,
   parseExcelOrCsvDetailed,
@@ -1023,14 +1024,25 @@ export function ImportModal({
   onSuccess?: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<"grid" | "file">("grid");
   const [file, setFile] = useState<File | null>(null);
   const [overwrite, setOverwrite] = useState(true);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
+  const [gridRows, setGridRows] = useState<string[][]>([]);
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheetInfo[]>([]);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Khởi tạo dòng trống cho Grid
+  const resetGridRows = useCallback(() => {
+    const emptyRows: string[][] = [];
+    for (let i = 0; i < 5; i++) {
+      emptyRows.push(sampleHeaders.map(() => ""));
+    }
+    setGridRows(emptyRows);
+  }, [sampleHeaders]);
 
   // Reset state when closing or opening
   useEffect(() => {
@@ -1043,9 +1055,17 @@ export function ImportModal({
       setImporting(false);
       setResult(null);
       setErrorMsg(null);
+      resetGridRows();
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, [open]);
+  }, [open, resetGridRows]);
+
+  // Lọc các dòng có ít nhất 1 ô có dữ liệu trong bảng Grid
+  const validGridRows = useMemo(() => {
+    return gridRows.filter((r) => r.some((c) => c && c.trim().length > 0));
+  }, [gridRows]);
+
+  const effectiveRowsToImport = activeTab === "grid" ? validGridRows : parsedRows;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
@@ -1079,11 +1099,11 @@ export function ImportModal({
   }
 
   async function handleStartImport() {
-    if (parsedRows.length === 0) return;
+    if (effectiveRowsToImport.length === 0) return;
     setImporting(true);
     setErrorMsg(null);
     try {
-      const res = await onImportRows(parsedRows, { overwrite });
+      const res = await onImportRows(effectiveRowsToImport, { overwrite });
       setResult(res);
       if (res.success > 0 && onSuccess) {
         onSuccess();
@@ -1100,7 +1120,7 @@ export function ImportModal({
       open={open}
       onClose={onClose}
       title={title}
-      size="lg"
+      size="xl"
       footer={
         <div className="flex items-center justify-between w-full">
           <button
@@ -1123,7 +1143,7 @@ export function ImportModal({
               <button
                 type="button"
                 onClick={handleStartImport}
-                disabled={parsedRows.length === 0 || importing || parsing}
+                disabled={effectiveRowsToImport.length === 0 || importing || parsing}
                 className="kbtn kbtn-primary flex items-center gap-2"
               >
                 {importing && (
@@ -1131,7 +1151,7 @@ export function ImportModal({
                 )}
                 {importing
                   ? "Đang nhập..."
-                  : `Nhập dữ liệu (${parsedRows.length} dòng)`}
+                  : `Nhập dữ liệu (${effectiveRowsToImport.length} dòng)`}
               </button>
             )}
           </div>
@@ -1143,52 +1163,179 @@ export function ImportModal({
           <p className="text-sm text-ink-soft">{description}</p>
         )}
 
-        {/* Step 1: Template download instruction */}
-        <div className="rounded-card border border-line bg-sunken/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div>
-            <div className="font-bold text-ink mb-0.5">
-              Bước 1: Chuẩn bị file dữ liệu
-            </div>
-            <div className="text-ink-soft">
-              Hỗ trợ định dạng Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) hoặc <strong>.csv</strong>. Bạn có thể tải file mẫu để nhập đúng cấu trúc.
-            </div>
+        {/* Tab switcher: Nhập trực tiếp vs Tải file */}
+        {!result && (
+          <div className="flex border-b border-line gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("grid")}
+              className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === "grid"
+                  ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                  : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+              }`}
+            >
+              <span>📊</span>
+              <span>Bảng nhập trực tiếp (Web Grid)</span>
+              {validGridRows.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                  {validGridRows.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("file")}
+              className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === "file"
+                  ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                  : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+              }`}
+            >
+              <span>📁</span>
+              <span>Tải file Excel / CSV</span>
+              {parsedRows.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                  {parsedRows.length}
+                </span>
+              )}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleDownloadTemplate}
-            className="kbtn kbtn-secondary text-xs whitespace-nowrap self-start sm:self-auto shrink-0"
-          >
-            📄 Tải file mẫu
-          </button>
-        </div>
+        )}
 
-        {/* Step 2: Upload dropzone */}
-        <div>
-          <label className="klabel mb-1.5">Bước 2: Chọn file dữ liệu tải lên</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv,.txt"
-            onChange={handleFileChange}
-            className="hidden"
-            id="excel-file-upload-input"
-          />
-          <label
-            htmlFor="excel-file-upload-input"
-            className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
-          >
-            <div className="text-3xl mb-2">📁</div>
-            <div className="text-sm font-semibold text-ink">
-              {file ? file.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
-            </div>
-            <div className="text-xs text-ink-faint mt-1">
-              Hỗ trợ các định dạng .xlsx, .xls, .csv (tối đa 10MB)
-            </div>
-          </label>
-        </div>
+        {/* Nội dung Tab 1: Grid nhập trực tiếp */}
+        {activeTab === "grid" && !result && (
+          <div className="space-y-3">
+            <DirectGridInput
+              headers={sampleHeaders}
+              sampleRow={sampleRow}
+              rows={gridRows}
+              onChange={setGridRows}
+              disabled={importing}
+            />
+          </div>
+        )}
 
-        {/* Overwrite option */}
-        {allowOverwrite && (
+        {/* Nội dung Tab 2: Tải file Excel */}
+        {activeTab === "file" && !result && (
+          <div className="space-y-4">
+            {/* Step 1: Template download instruction */}
+            <div className="rounded-card border border-line bg-sunken/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <div className="font-bold text-ink mb-0.5">
+                  Bước 1: Chuẩn bị file dữ liệu
+                </div>
+                <div className="text-ink-soft">
+                  Hỗ trợ định dạng Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) hoặc <strong>.csv</strong>. Bạn có thể tải file mẫu để nhập đúng cấu trúc.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="kbtn kbtn-secondary text-xs whitespace-nowrap self-start sm:self-auto shrink-0"
+              >
+                📄 Tải file mẫu
+              </button>
+            </div>
+
+            {/* Step 2: Upload dropzone */}
+            <div>
+              <label className="klabel mb-1.5">Bước 2: Chọn file dữ liệu tải lên</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv,.txt"
+                onChange={handleFileChange}
+                className="hidden"
+                id="excel-file-upload-input"
+              />
+              <label
+                htmlFor="excel-file-upload-input"
+                className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
+              >
+                <div className="text-3xl mb-2">📁</div>
+                <div className="text-sm font-semibold text-ink">
+                  {file ? file.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
+                </div>
+                <div className="text-xs text-ink-faint mt-1">
+                  Hỗ trợ các định dạng .xlsx, .xls, .csv (tối đa 10MB)
+                </div>
+              </label>
+            </div>
+
+            {/* Parsing state */}
+            {parsing && (
+              <div className="flex items-center justify-center py-4 text-xs text-ink-soft gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                Đang phân tích file...
+              </div>
+            )}
+
+            {/* Preview parsed data */}
+            {parsedRows.length > 0 && !result && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-ink">
+                  <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
+                  <span className="text-ink-soft font-normal">Hiển thị trước tối đa 5 dòng</span>
+                </div>
+
+                {detectedSheets.length > 1 && (
+                  <div className="p-2.5 rounded-control bg-sunken/60 border border-line space-y-1.5 text-xs">
+                    <div className="font-semibold text-ink flex items-center justify-between">
+                      <span>📄 Tự động nhận diện dữ liệu từ {detectedSheets.length} sheet:</span>
+                      <span className="text-ink-soft text-[11px] font-normal">Mỗi sheet được chia theo lớp</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {detectedSheets.map((s, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-control bg-white border border-line-strong text-ink font-semibold text-[11px] shadow-sm flex items-center gap-1.5"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                          <span>{s.name}:</span>
+                          <span className="text-brand-strong">{s.count} dòng</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border border-line rounded-control overflow-x-auto max-h-48">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-sunken font-semibold text-ink border-b border-line sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 w-10">#</th>
+                        {sampleHeaders.map((h, i) => (
+                          <th key={i} className="px-3 py-2 whitespace-nowrap">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {parsedRows.slice(0, 5).map((row, idx) => (
+                        <tr key={idx} className="hover:bg-sunken/40">
+                          <td className="px-3 py-2 text-ink-faint">{idx + 1}</td>
+                          {sampleHeaders.map((_, colIdx) => (
+                            <td
+                              key={colIdx}
+                              className="px-3 py-2 whitespace-nowrap text-ink-soft"
+                            >
+                              {row[colIdx] || "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Overwrite option dùng chung */}
+        {allowOverwrite && !result && (
           <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-1.5 transition-colors">
             <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-ink select-none">
               <input
@@ -1202,17 +1349,9 @@ export function ImportModal({
             <p className="text-[11px] text-ink-soft pl-6.5 leading-relaxed">
               {overwriteHint ||
                 (overwrite
-                  ? "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới từ file Excel sẽ cập nhật thay thế dữ liệu cũ."
-                  : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng trong file Excel.")}
+                  ? "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới sẽ cập nhật thay thế dữ liệu cũ."
+                  : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng.")}
             </p>
-          </div>
-        )}
-
-        {/* Parsing state */}
-        {parsing && (
-          <div className="flex items-center justify-center py-4 text-xs text-ink-soft gap-2">
-            <span className="inline-block w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-            Đang phân tích file...
           </div>
         )}
 
@@ -1220,67 +1359,6 @@ export function ImportModal({
         {errorMsg && (
           <div className="rounded-control bg-bad/10 border border-bad/30 p-3 text-xs text-bad">
             ⚠ {errorMsg}
-          </div>
-        )}
-
-        {/* Preview parsed data */}
-        {parsedRows.length > 0 && !result && (
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-ink">
-              <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
-              <span className="text-ink-soft font-normal">Hiển thị trước tối đa 5 dòng</span>
-            </div>
-
-            {detectedSheets.length > 1 && (
-              <div className="p-2.5 rounded-control bg-sunken/60 border border-line space-y-1.5 text-xs">
-                <div className="font-semibold text-ink flex items-center justify-between">
-                  <span>📄 Tự động nhận diện dữ liệu từ {detectedSheets.length} sheet:</span>
-                  <span className="text-ink-soft text-[11px] font-normal">Mỗi sheet được chia theo lớp</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {detectedSheets.map((s, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2.5 py-1 rounded-control bg-white border border-line-strong text-ink font-semibold text-[11px] shadow-sm flex items-center gap-1.5"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-                      <span>{s.name}:</span>
-                      <span className="text-brand-strong">{s.count} dòng</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="border border-line rounded-control overflow-x-auto max-h-48">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-sunken font-semibold text-ink border-b border-line sticky top-0">
-                  <tr>
-                    <th className="px-3 py-2 w-10">#</th>
-                    {sampleHeaders.map((h, i) => (
-                      <th key={i} className="px-3 py-2 whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {parsedRows.slice(0, 5).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-sunken/40">
-                      <td className="px-3 py-2 text-ink-faint">{idx + 1}</td>
-                      {sampleHeaders.map((_, colIdx) => (
-                        <td
-                          key={colIdx}
-                          className="px-3 py-2 whitespace-nowrap text-ink-soft"
-                        >
-                          {row[colIdx] || "—"}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 
@@ -1345,4 +1423,4 @@ export function ImportModal({
       </div>
     </Modal>
   );
-}
+}

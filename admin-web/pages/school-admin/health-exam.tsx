@@ -25,6 +25,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
+import { DirectGridInput } from "@/components/DirectGridInput";
 import {
   ClassFilterSelect,
   DateInput,
@@ -44,6 +45,7 @@ import {
   exportMultiSheetToExcel,
   exportToExcel,
   formatDateToDmy,
+  rowsToExcelFile,
 } from "@/lib/excel-helper";
 import {
   HealthExamImportResult,
@@ -110,7 +112,40 @@ export default function HealthExamPage() {
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<HealthExamImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [importMode, setImportMode] = useState<"grid" | "file">("grid");
+  const [gridRows, setGridRows] = useState<string[][]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const healthExamHeaders = useMemo(
+    () => [
+      "Họ và tên",
+      "Ngày sinh",
+      "Giới tính",
+      "Ngày ghi nhận",
+      "Chiều cao",
+      "Cân nặng",
+      "Kết luận chung",
+    ],
+    []
+  );
+
+  const sampleHealthExamRow = useMemo(
+    () => [
+      "Nguyễn Bảo An (Bống)",
+      "15/05/2021",
+      "Nữ",
+      importDate ? formatDateToDmy(importDate) : "20/10/2026",
+      "102.5",
+      "16.8",
+      "Bình thường",
+    ],
+    [importDate]
+  );
+
+  const validGridRows = useMemo(
+    () => gridRows.filter((r) => r.some((c) => c && c.trim().length > 0)),
+    [gridRows]
+  );
 
   /* Drawer sửa số liệu 1 dòng */
   const [editing, setEditing] = useState<HealthExamRecord | null>(null);
@@ -334,6 +369,11 @@ export default function HealthExamPage() {
     setImportFile(null);
     setImportResult(null);
     setImportError(null);
+    const emptyRows: string[][] = [];
+    for (let i = 0; i < 5; i++) {
+      emptyRows.push(["", "", "", "", "", "", ""]);
+    }
+    setGridRows(emptyRows);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setImportOpen(true);
   }
@@ -393,11 +433,25 @@ export default function HealthExamPage() {
 
   /* ══ Gửi file lên backend ══ */
   async function handleImport() {
-    if (!importFile) return;
+    let fileToUpload: File | null = importFile;
+    if (importMode === "grid") {
+      if (validGridRows.length === 0) {
+        setImportError("Vui lòng nhập ít nhất 1 dòng số liệu vào bảng.");
+        return;
+      }
+      fileToUpload = rowsToExcelFile(
+        "so_suc_khoe_grid.xlsx",
+        "SoSucKhoe",
+        healthExamHeaders,
+        validGridRows
+      );
+    }
+
+    if (!fileToUpload) return;
     setImportBusy(true);
     setImportError(null);
     try {
-      const res = await importHealthExamFile(importClassId || null, importFile);
+      const res = await importHealthExamFile(importClassId || null, fileToUpload);
       setImportResult(res);
       mutate();
       if (res.failed_count === 0 && res.success_count > 0) {
@@ -663,12 +717,12 @@ export default function HealthExamPage() {
         )}
       </div>
 
-      {/* ══ Modal nhập kết quả từ Excel ══ */}
+            {/* ══ Modal nhập kết quả vào sổ sức khoẻ (Grid + Excel) ══ */}
       <Modal
         open={importOpen}
         onClose={closeImportModal}
         title="Nhập kết quả vào sổ sức khoẻ"
-        size="lg"
+        size="xl"
         footer={
           <div className="flex items-center justify-between w-full">
             <button
@@ -691,13 +745,20 @@ export default function HealthExamPage() {
                 <button
                   type="button"
                   onClick={handleImport}
-                  disabled={!importFile || importBusy}
+                  disabled={
+                    importBusy ||
+                    (importMode === "grid" ? validGridRows.length === 0 : !importFile)
+                  }
                   className="kbtn kbtn-primary flex items-center gap-2"
                 >
                   {importBusy && (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  {importBusy ? "Đang nhập..." : "Nhập vào sổ sức khoẻ"}
+                  {importBusy
+                    ? "Đang nhập..."
+                    : importMode === "grid"
+                    ? `Nhập vào sổ sức khoẻ (${validGridRows.length} dòng)`
+                    : "Nhập vào sổ sức khoẻ"}
                 </button>
               )}
             </div>
@@ -706,14 +767,53 @@ export default function HealthExamPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-ink-soft">
-            Tải file mẫu Excel đã điền sẵn danh sách học sinh (họ tên kèm biệt danh)
-            của lớp → cơ sở y tế điền số liệu đo → tải file kết quả lên hệ thống.
-            Hệ thống tự tính BMI và báo rõ dòng nào bị lỗi để sửa lại.
+            Hỗ trợ nhập trực tiếp số liệu khám vào bảng bên dưới hoặc tải file Excel lên.
+            Hệ thống tự tính BMI và báo rõ dòng nào bị lỗi để chỉnh sửa.
           </p>
 
-          {/* Bước 1: chọn lớp + ngày */}
+          {/* Tab switcher: Nhập trực tiếp vs Tải file */}
+          {!importResult && (
+            <div className="flex border-b border-line gap-2">
+              <button
+                type="button"
+                onClick={() => setImportMode("grid")}
+                className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                  importMode === "grid"
+                    ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                    : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+                }`}
+              >
+                <span>📊</span>
+                <span>Bảng nhập trực tiếp (Web Grid)</span>
+                {validGridRows.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                    {validGridRows.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportMode("file")}
+                className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                  importMode === "file"
+                    ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                    : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+                }`}
+              >
+                <span>📁</span>
+                <span>Tải file Excel</span>
+                {importFile && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                    1
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Bước chọn lớp & ngày ghi nhận (dùng chung cho cả 2 tab) */}
           <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-3">
-            <div className="font-bold text-ink text-sm">Bước 1: Chọn lớp & ngày ghi nhận</div>
+            <div className="font-bold text-ink text-sm">Chọn lớp & ngày ghi nhận</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="klabel mb-1.5">
@@ -739,42 +839,56 @@ export default function HealthExamPage() {
             </div>
             {importClass ? (
               <div className="text-[11px] text-ink-soft">
-                File mẫu sẽ chứa danh sách học sinh đang theo học của lớp{" "}
-                <strong className="text-ink">{importClass.name}</strong>.
+                Đang chọn lớp <strong className="text-ink">{importClass.name}</strong>.
               </div>
             ) : (
               <div className="text-[11px] text-ink-soft">
-                File mẫu sẽ chứa <strong className="text-ink">tất cả lớp</strong>.
+                Đang chọn <strong className="text-ink">tất cả lớp</strong>.
               </div>
             )}
           </div>
 
-          {/* Bước 2: chọn file */}
-          <div>
-            <label className="klabel mb-1.5">Bước 2: Chọn file kết quả tải lên</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(e) => acceptFile(e.target.files?.[0])}
-              className="hidden"
-              id="health-exam-file-input"
-            />
-            <label
-              htmlFor="health-exam-file-input"
-              className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
-            >
-              <div className="text-3xl mb-2">📁</div>
-              <div className="text-sm font-semibold text-ink truncate max-w-full">
-                {importFile ? importFile.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
-              </div>
-              <div className="text-xs text-ink-faint mt-1">
-                {importFile
-                  ? `${(importFile.size / 1024).toFixed(0)} KB`
-                  : "Hỗ trợ định dạng .xlsx, .xls (tối đa 10MB) — dùng đúng file mẫu đã tải ở bước 1"}
-              </div>
-            </label>
-          </div>
+          {/* Nội dung Tab 1: Grid nhập trực tiếp */}
+          {importMode === "grid" && !importResult && (
+            <div className="space-y-3">
+              <DirectGridInput
+                headers={healthExamHeaders}
+                sampleRow={sampleHealthExamRow}
+                rows={gridRows}
+                onChange={setGridRows}
+                disabled={importBusy}
+              />
+            </div>
+          )}
+
+          {/* Nội dung Tab 2: Bước 2 chọn file Excel */}
+          {importMode === "file" && !importResult && (
+            <div>
+              <label className="klabel mb-1.5">Chọn file kết quả tải lên</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => acceptFile(e.target.files?.[0])}
+                className="hidden"
+                id="health-exam-file-input"
+              />
+              <label
+                htmlFor="health-exam-file-input"
+                className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
+              >
+                <div className="text-3xl mb-2">📁</div>
+                <div className="text-sm font-semibold text-ink truncate max-w-full">
+                  {importFile ? importFile.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
+                </div>
+                <div className="text-xs text-ink-faint mt-1">
+                  {importFile
+                    ? `${(importFile.size / 1024).toFixed(0)} KB`
+                    : "Hỗ trợ định dạng .xlsx, .xls (tối đa 10MB)"}
+                </div>
+              </label>
+            </div>
+          )}
 
           {importError && (
             <div className="rounded-control bg-bad/10 border border-bad/30 p-3 text-xs text-bad">
