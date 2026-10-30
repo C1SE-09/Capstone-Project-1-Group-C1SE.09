@@ -440,3 +440,24 @@ export async function parseExcelOrCsv(
   return res.rows;
 }
 
+
+
+/**
+ * Tao mot doi tuong File Excel (.xlsx) trong bo nho tu mang cac hang du lieu (Array of Arrays).
+ * Dung cho tinh nang nhap truc tiep dang bang (Web Grid) de gui du lieu len cac API nhan file multipart.
+ */
+export function rowsToExcelFile(
+  filename: string,
+  sheetName: string,
+  headers: string[],
+  rows: (string | number)[][],
+): File {
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  applyTextFormatToSheet(ws);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new File([wbout], filename, {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+}
