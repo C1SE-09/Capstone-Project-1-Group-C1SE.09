@@ -499,11 +499,25 @@ export default function HealthExamPage() {
             📥 Xuất Excel
           </button>
           <button
-            onClick={openImportModal}
-            className="kbtn kbtn-primary text-sm flex items-center gap-1.5"
-            title="Nhập kết quả đo vào sổ sức khoẻ từ file Excel"
+            onClick={() => {
+              setImportMode("file");
+              openImportModal();
+            }}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Nhập kết quả từ file Excel"
           >
-            📤 Nhập kết quả
+            📤 Nhập file
+          </button>
+          <button
+            onClick={() => {
+              setImportMode("grid");
+              openImportModal();
+            }}
+            className="kbtn kbtn-primary text-sm flex items-center gap-1.5"
+            title="Nhập số liệu sức khoẻ trực tiếp trên bảng tính"
+          >
+            <span>📊</span>
+            <span>Nhập trực tiếp</span>
           </button>
         </div>
       }

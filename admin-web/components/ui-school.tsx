@@ -1004,6 +1004,7 @@ export function ImportModal({
   sampleHeaders,
   sampleRow,
   templateFilename,
+  initialTab = "file",
   allowOverwrite = false,
   overwriteLabel,
   overwriteHint,
@@ -1020,6 +1021,7 @@ export function ImportModal({
   allowOverwrite?: boolean;
   overwriteLabel?: string;
   overwriteHint?: string;
+  initialTab?: "grid" | "file";
   onImportRows: (rows: string[][], options?: { overwrite?: boolean }) => Promise<ImportResult>;
   onSuccess?: () => void;
 }) {
@@ -1056,9 +1058,10 @@ export function ImportModal({
       setResult(null);
       setErrorMsg(null);
       resetGridRows();
+      setActiveTab(initialTab);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, [open, resetGridRows]);
+  }, [open, initialTab, resetGridRows]);
 
   // Lọc các dòng có ít nhất 1 ô có dữ liệu trong bảng Grid
   const validGridRows = useMemo(() => {
