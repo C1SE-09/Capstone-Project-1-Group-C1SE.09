@@ -12,6 +12,30 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+/**
+ * FastAPI trả `detail` dạng string, hoặc array `[{ msg, loc, ... }]` khi 422,
+ * hoặc object `{ message }`. Chuẩn hoá về string để không render object vào JSX.
+ */
+function toMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d) =>
+        typeof d === "string"
+          ? d
+          : d && typeof d === "object" && typeof (d as any).msg === "string"
+            ? (d as any).msg
+            : null,
+      )
+      .filter((m): m is string => !!m);
+    if (msgs.length) return msgs.join("; ");
+  }
+  if (detail && typeof detail === "object" && typeof (detail as any).message === "string") {
+    return (detail as any).message;
+  }
+  return fallback;
+}
+
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -321,7 +345,7 @@ export async function apiFetchBlob(
     let detail = `HTTP ${res.status}`;
     try {
       const errJson = await res.json();
-      detail = errJson.detail || detail;
+      detail = toMessage(errJson.detail, detail);
     } catch {
       /* ignore */
     }
@@ -410,7 +434,7 @@ export async function apiFetch<T = any>(
     let detail = `HTTP ${res.status}`;
     try {
       const errJson = await res.json();
-      detail = errJson.detail || detail;
+      detail = toMessage(errJson.detail, detail);
     } catch {
       try {
         detail = await res.text();

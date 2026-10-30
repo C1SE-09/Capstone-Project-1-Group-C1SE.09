@@ -1,0 +1,43 @@
+name: Admin Web
+
+on:
+  pull_request:
+    branches: [ "develop", "main" ]
+    paths:
+      - "admin-web/**"
+      - ".github/workflows/admin-web.yml"
+
+concurrency:
+  group: admin-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+        cache: "npm"
+        cache-dependency-path: admin-web/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./admin-web
+      run: npm ci
+
+    - name: Lint
+      working-directory: ./admin-web
+      run: npm run lint
+
+    - name: Type check
+      working-directory: ./admin-web
+      run: npx tsc --noEmit
+
+    - name: Build
+      working-directory: ./admin-web
+      run: npm run build

@@ -567,10 +567,6 @@ def test_list_records_filter_by_date_only_returns_children_with_record(
 
     c1, c2 = sample_children
     rec1 = _build_exam_record(c1, sample_classroom, exam_date=date(2026, 10, 20))
-    rec2 = _build_exam_record(
-        c2, sample_classroom, height=90.0, weight=12.0, bmi=14.81,
-        category=HealthCategory.UNDERWEIGHT, exam_date=date(2026, 9, 1),
-    )
 
     def mock_execute(statement):
         result = MagicMock()
