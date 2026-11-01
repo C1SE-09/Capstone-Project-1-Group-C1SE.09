@@ -360,6 +360,7 @@ export default function SchoolAdminStudentsPage() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<"file" | "grid">("file");
   const [editing, setEditing] = useState<Child | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -1119,11 +1120,25 @@ export default function SchoolAdminStudentsPage() {
             📥 Xuất Excel
           </button>
           <button
-            onClick={() => setImportOpen(true)}
+            onClick={() => {
+              setImportTab("file");
+              setImportOpen(true);
+            }}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập dữ liệu từ file Excel / CSV"
           >
             📤 Nhập file
+          </button>
+          <button
+            onClick={() => {
+              setImportTab("grid");
+              setImportOpen(true);
+            }}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+            title="Nhập dữ liệu trực tiếp bằng bảng tính trên Web"
+          >
+            <span>📊</span>
+            <span>Nhập trực tiếp</span>
           </button>
           <button onClick={openCreate} className="kbtn kbtn-primary">
             + Thêm học sinh
@@ -1708,6 +1723,7 @@ export default function SchoolAdminStudentsPage() {
 
       <ImportModal
         open={importOpen}
+        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách học sinh từ file"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV. Hệ thống hỗ trợ đọc cùng lúc nhiều sheet (chia theo từng lớp), tự động nhận diện lớp theo tên sheet và tự động liên kết với phụ huynh theo số điện thoại."

@@ -114,23 +114,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       .where((child) => _draft[child.id] == AttendanceStatus.absent)
       .toList();
 
-  AttendanceStatus _next(AttendanceStatus status) => switch (status) {
-        AttendanceStatus.arrived => AttendanceStatus.absent,
-        AttendanceStatus.absent => AttendanceStatus.excusedAbsent,
-        AttendanceStatus.excusedAbsent => AttendanceStatus.late,
-        AttendanceStatus.late => AttendanceStatus.arrived,
-      };
-
-  void _changeStatus(Child child) {
-    if (_saving) return;
-    setState(() {
-      final current = _draft[child.id] ?? AttendanceStatus.arrived;
-      _draft[child.id] = _next(current);
-    });
-  }
-
   void _setStatus(Child child, AttendanceStatus newStatus) {
     if (_saving) return;
+    final current = _draft[child.id] ?? AttendanceStatus.arrived;
+    if (current == AttendanceStatus.excusedAbsent) return;
     setState(() {
       _draft[child.id] = newStatus;
     });
@@ -408,7 +395,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     AttendanceStatus.arrived,
                                 detail: _details[_filteredRoster[i].id],
                                 enabled: !_saving,
-                                onTapRow: () => _changeStatus(_filteredRoster[i]),
                                 onChanged: (newStatus) =>
                                     _setStatus(_filteredRoster[i], newStatus),
                               ),
@@ -642,7 +628,6 @@ class _AttendanceRow extends StatelessWidget {
     required this.status,
     required this.enabled,
     required this.onChanged,
-    required this.onTapRow,
     this.detail,
   });
 
@@ -650,44 +635,10 @@ class _AttendanceRow extends StatelessWidget {
   final AttendanceStatus status;
   final bool enabled;
   final ValueChanged<AttendanceStatus> onChanged;
-  final VoidCallback onTapRow;
   final AttendanceChildRecord? detail;
 
   Widget? _buildBadge(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    if (status == AttendanceStatus.excusedAbsent) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: dark ? const Color(0xFF152A38) : KColors.infoTint,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: (dark ? const Color(0xFF64B5F6) : KColors.info)
-                .withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.verified_outlined,
-              size: 11,
-              color: dark ? const Color(0xFF64B5F6) : KColors.info,
-            ),
-            const SizedBox(width: 3),
-            Text(
-              'Excused Absent',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: dark ? const Color(0xFF64B5F6) : KColors.info,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     if (status == AttendanceStatus.late) {
       String label = 'Late';
       if (detail?.expectedArrivalTime != null &&
@@ -736,12 +687,11 @@ class _AttendanceRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final visual = _statusVisual(context, status);
+    final isLocked = status == AttendanceStatus.excusedAbsent;
 
-    return InkWell(
-      onTap: enabled ? onTapRow : null,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
           children: [
             CircleAvatar(
               radius: 20,
@@ -831,13 +781,13 @@ class _AttendanceRow extends StatelessWidget {
                   value: status,
                   isDense: true,
                   icon: Icon(
-                    Icons.arrow_drop_down,
-                    size: 20,
+                    isLocked ? Icons.lock_outline : Icons.arrow_drop_down,
+                    size: isLocked ? 16 : 20,
                     color: visual.foreground,
                   ),
                   borderRadius: BorderRadius.circular(12),
                   dropdownColor: theme.colorScheme.surface,
-                  onChanged: enabled
+                  onChanged: (enabled && !isLocked)
                       ? (newVal) {
                           if (newVal != null) {
                             onChanged(newVal);
@@ -945,8 +895,7 @@ class _AttendanceRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildSelectedItem(BuildContext context, AttendanceStatus itemStatus) {

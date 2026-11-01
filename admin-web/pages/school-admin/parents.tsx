@@ -128,6 +128,7 @@ export default function SchoolAdminParentsPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<"file" | "grid">("file");
   const [editing, setEditing] = useState<Parent | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -497,11 +498,25 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             📥 Xuất Excel
           </button>
           <button
-            onClick={() => setImportOpen(true)}
+            onClick={() => {
+              setImportTab("file");
+              setImportOpen(true);
+            }}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập dữ liệu từ file Excel / CSV"
           >
             📤 Nhập file
+          </button>
+          <button
+            onClick={() => {
+              setImportTab("grid");
+              setImportOpen(true);
+            }}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+            title="Nhập dữ liệu trực tiếp bằng bảng tính trên Web"
+          >
+            <span>📊</span>
+            <span>Nhập trực tiếp</span>
           </button>
           <button onClick={openCreate} className="kbtn kbtn-primary">
             + Thêm phụ huynh
@@ -854,6 +869,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
 
       <ImportModal
         open={importOpen}
+        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách phụ huynh từ file"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh và tự động liên kết với con theo tên học sinh. Nếu để trống cột Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456."

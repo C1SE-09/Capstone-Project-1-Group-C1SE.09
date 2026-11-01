@@ -32,6 +32,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from app.core.public_url import build_public_url
 from app.core.storage import _ensure_bucket_exists, minio_client
 from app.models.admin_user import AdminUser
 from app.models.bug_report import (
@@ -293,23 +294,7 @@ def _upload_to_minio(
         content_type=mime_type,
     )
 
-    # Trả về URL public (dựa trên config của MinIO)
-    from app.config import settings
-
-    if settings.minio_public_url:
-        return f"{settings.minio_public_url.rstrip('/')}/{BUG_REPORT_BUCKET}/{object_name}"
-
-    endpoint = settings.minio_endpoint
-    # Nếu endpoint là tên container nội bộ docker "minio:9000" hoặc "minio",
-    # client trình duyệt bên ngoài không phân giải được host name "minio".
-    # Chuyển thành "localhost:..." để truy cập được từ máy host.
-    if endpoint.startswith("minio:"):
-        endpoint = "localhost:" + endpoint.split(":", 1)[1]
-    elif endpoint == "minio":
-        endpoint = "localhost:9000"
-
-    protocol = "https" if settings.minio_secure else "http"
-    return f"{protocol}://{endpoint}/{BUG_REPORT_BUCKET}/{object_name}"
+    return build_public_url(BUG_REPORT_BUCKET, object_name)
 
 
 # ===========================================================================

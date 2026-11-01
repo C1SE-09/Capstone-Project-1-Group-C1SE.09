@@ -47,10 +47,15 @@ class HealthExamRecordsResponse(BaseModel):
 
 
 class HealthExamUpdate(BaseModel):
-    """Payload sửa 1 bản ghi sức khoẻ (chỉ số đo + kết luận chung)."""
+    """Payload sửa 1 bản ghi sức khoẻ (chỉ số đo + kết luận chung).
 
-    height: float = Field(..., gt=0, le=200, description="Chiều cao (cm)")
-    weight: float = Field(..., gt=0, le=100, description="Cân nặng (kg)")
+    Cho phép bỏ trống chiều cao hoặc cân nặng — chỉ cần có 1 trong 3 thông tin
+    (chiều cao, cân nặng, kết luận chung). BMI + phân loại thể trạng chỉ được
+    tính khi có đủ chiều cao và cân nặng.
+    """
+
+    height: float | None = Field(default=None, gt=0, le=200, description="Chiều cao (cm)")
+    weight: float | None = Field(default=None, gt=0, le=100, description="Cân nặng (kg)")
     general_conclusion: str | None = Field(
         default=None,
         max_length=2000,

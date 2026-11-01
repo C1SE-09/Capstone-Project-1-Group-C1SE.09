@@ -16,6 +16,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
+from app.core.public_url import normalize_public_url
 from app.models.bug_report import BugCategory, BugSeverity, BugStatus
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -102,6 +103,11 @@ class BugReportAttachmentOut(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("file_url")
+    @classmethod
+    def _normalize_file_url(cls, value: str) -> str:
+        return normalize_public_url(value)
 
 
 # ===========================================================================

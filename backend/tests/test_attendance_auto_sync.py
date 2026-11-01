@@ -55,8 +55,8 @@ def sample_ids():
     }
 
 
-def test_sync_single_day_approved(sample_ids):
-    """Duyệt đơn nghỉ 1 ngày -> Tự động tạo bản ghi điểm danh EXCUSED_ABSENT."""
+def test_sync_single_day_approved_creates_new(sample_ids):
+    """Duyệt đơn nghỉ 1 ngày khi chưa có bản ghi -> Tự động tạo bản ghi điểm danh EXCUSED_ABSENT."""
     db = MagicMock()
     req = LeaveRequest(
         leave_id=uuid.uuid4(),
@@ -69,21 +69,43 @@ def test_sync_single_day_approved(sample_ids):
         reason="Bé bị sốt",
         status=LeaveStatus.APPROVED,
     )
+    db.scalar.return_value = None
 
-    db.scalar.return_value = AttendanceRecord(
+    synced = sync_leave_request_to_attendance(db, req, teacher_id=sample_ids["teacher_id"])
+    assert len(synced) == 1
+    assert db.add.called
+    assert synced[0].status == AttendanceStatus.EXCUSED_ABSENT
+    assert synced[0].source_leave_id == req.leave_id
+
+
+def test_sync_single_day_approved_updates_existing(sample_ids):
+    """Duyệt đơn nghỉ 1 ngày khi đã có bản ghi -> Cập nhật trạng thái thành EXCUSED_ABSENT."""
+    db = MagicMock()
+    req = LeaveRequest(
+        leave_id=uuid.uuid4(),
+        child_id=sample_ids["child_id"],
+        class_id=sample_ids["class_id"],
+        parent_id=sample_ids["parent_id"],
+        type=LeaveType.SINGLE_DAY,
+        from_date=date(2026, 11, 2),
+        to_date=date(2026, 11, 2),
+        reason="Bé bị sốt",
+        status=LeaveStatus.APPROVED,
+    )
+    existing_record = AttendanceRecord(
         record_id=uuid.uuid4(),
         child_id=req.child_id,
         class_id=req.class_id,
         date=req.from_date,
-        status=AttendanceStatus.EXCUSED_ABSENT,
-        note="Nghỉ có phép: Bé bị sốt",
-        source_leave_id=req.leave_id,
+        status=AttendanceStatus.PRESENT,
+        source_leave_id=None,
     )
+    db.scalar.return_value = existing_record
 
     synced = sync_leave_request_to_attendance(db, req, teacher_id=sample_ids["teacher_id"])
     assert len(synced) == 1
-    assert db.execute.called
     assert synced[0].status == AttendanceStatus.EXCUSED_ABSENT
+    assert synced[0].source_leave_id == req.leave_id
 
 
 def test_sync_late_approved_with_eta(sample_ids):
@@ -101,23 +123,14 @@ def test_sync_late_approved_with_eta(sample_ids):
         reason="Kẹt xe",
         status=LeaveStatus.APPROVED,
     )
-
-    db.scalar.return_value = AttendanceRecord(
-        record_id=uuid.uuid4(),
-        child_id=req.child_id,
-        class_id=req.class_id,
-        date=req.from_date,
-        status=AttendanceStatus.LATE,
-        expected_arrival_time=time(8, 30),
-        note="Đi trễ (ETA: 08:30): Kẹt xe",
-        source_leave_id=req.leave_id,
-    )
+    db.scalar.return_value = None
 
     synced = sync_leave_request_to_attendance(db, req, teacher_id=sample_ids["teacher_id"])
     assert len(synced) == 1
-    assert db.execute.called
+    assert db.add.called
     assert synced[0].status == AttendanceStatus.LATE
     assert synced[0].expected_arrival_time == time(8, 30)
+    assert synced[0].source_leave_id == req.leave_id
 
 
 def test_sync_pending_does_not_execute(sample_ids):
@@ -136,7 +149,8 @@ def test_sync_pending_does_not_execute(sample_ids):
 
     synced = sync_leave_request_to_attendance(db, req)
     assert synced == []
-    db.execute.assert_not_called()
+    db.add.assert_not_called()
+    db.scalar.assert_not_called()
 
 
 def test_rollback_leave_request_attendance(sample_ids):

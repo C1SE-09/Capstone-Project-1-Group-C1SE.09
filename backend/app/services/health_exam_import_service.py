@@ -384,11 +384,21 @@ def import_health_exam_file(
             if key in existing or key in pending:
                 target = pending.get(key, existing.get(key))
                 assert target is not None
-                target.height = record.height
-                target.weight = record.weight
-                target.bmi = record.bmi
-                target.health_category = record.health_category
-                target.general_conclusion = record.general_conclusion
+                # Ô trống trong file = "không ghi nhận lần này" -> GIỮ giá trị
+                # cũ đang có thay vì xoá, để không mất số liệu đã nhập trước đó.
+                target.height = record.height if record.height is not None else target.height
+                target.weight = record.weight if record.weight is not None else target.weight
+                target.bmi = record.bmi if record.bmi is not None else target.bmi
+                target.health_category = (
+                    record.health_category
+                    if record.health_category is not None
+                    else target.health_category
+                )
+                target.general_conclusion = (
+                    record.general_conclusion
+                    if record.general_conclusion is not None
+                    else target.general_conclusion
+                )
                 target.created_by_user_id = record.created_by_user_id
                 pending[key] = target
                 result.updated_count += 1
@@ -442,9 +452,10 @@ def _build_record(
     same_name_children = list(children_by_full_name.get(file_name_key, []))
     candidates: list[Child] = []
     if file_nick_key:
+        # File CÓ biệt danh -> ưu tiên khớp chính xác cả họ tên lẫn biệt danh.
         candidates = list(children_by_name.get((file_name_key, file_nick_key), []))
         if not candidates and same_name_children:
-            # Có bé trùng họ tên nhưng biệt danh không khớp → báo lỗi cho rõ.
+            # Có bé trùng họ tên nhưng biệt danh trong file không khớp ai.
             have_nicks = ", ".join(
                 f"({c.nickname})" for c in same_name_children if c.nickname
             ) or "(không có biệt danh)"
@@ -454,8 +465,24 @@ def _build_record(
             )
             return None
     if not candidates:
-        # Không có biệt danh khớp → thử theo họ tên đơn thuần.
+        # File KHÔNG có biệt danh (hoặc không khớp) -> lọc theo họ tên đơn thuần.
         candidates = same_name_children
+        if len(candidates) > 1:
+            # Ranh giới phân biệt:
+            #   - 1 bé có biệt danh + 1 bé KHÔNG có biệt danh -> vẫn phân biệt
+            #     được -> chọn bé không có biệt danh (file mẫu ghi tên trần cho
+            #     bé này).
+            #   - >= 2 bé không có biệt danh -> không biết là bé nào -> chặn.
+            without_nick = [c for c in candidates if not c.nickname]
+            if len(without_nick) == 1:
+                candidates = without_nick
+            elif len(without_nick) >= 2:
+                issue.errors.append(
+                    f"Có {len(without_nick)} học sinh trùng họ tên '{file_full_name}' và đều "
+                    "không có biệt danh, không thể xác định bé nào. Vui lòng bổ sung "
+                    "biệt danh phân biệt trong hồ sơ học sinh."
+                )
+                return None
 
     if not candidates:
         issue.errors.append(
@@ -538,74 +565,100 @@ def _build_record(
         )
         return None
 
-    # --- 5. Chiều cao ---
-    height = parse_float_cell(cols[4])
-    if cols[4] is None or str(cols[4]).strip() == "":
-        issue.errors.append("Thiếu chiều cao (cột E).")
-        return None
-    if height is None:
-        issue.errors.append(f"Chiều cao '{cols[4]}' không phải là số.")
-        return None
-    if height <= 0:
-        issue.errors.append(f"Chiều cao phải lớn hơn 0 (nhận được {cols[4]}).")
-        return None
-    if not (HEIGHT_MIN_CM <= height <= HEIGHT_MAX_CM):
-        issue.errors.append(
-            f"Chiều cao {height:g} cm không hợp lý (cho phép {HEIGHT_MIN_CM:g}–{HEIGHT_MAX_CM:g} cm)."
-        )
-        return None
-
-    # --- 6. Cân nặng ---
-    weight = parse_float_cell(cols[5])
-    if cols[5] is None or str(cols[5]).strip() == "":
-        issue.errors.append("Thiếu cân nặng (cột F).")
-        return None
-    if weight is None:
-        issue.errors.append(f"Cân nặng '{cols[5]}' không phải là số.")
-        return None
-    if weight <= 0:
-        issue.errors.append(f"Cân nặng phải lớn hơn 0 (nhận được {cols[5]}).")
-        return None
-    if not (WEIGHT_MIN_KG <= weight <= WEIGHT_MAX_KG):
-        issue.errors.append(
-            f"Cân nặng {weight:g} kg không hợp lý (cho phép {WEIGHT_MIN_KG:g}–{WEIGHT_MAX_KG:g} kg)."
-        )
-        return None
-
-    # --- 7. BMI + phân loại (luôn tự tính phía server, xếp loại theo WHO) ---
-    # File nhập không còn cột BMI/phân loại — người nhập chỉ điền số đo,
-    # hệ thống tự tính BMI và xếp loại theo tuổi + giới tính của bé.
-    bmi = calc_bmi(height, weight)
-    health_category = classify_bmi_who(
-        bmi,
-        birth_date=child.date_of_birth,
-        exam_date=exam_date,
-        gender=child.gender,
-    )
-    if child.date_of_birth is None or not child.gender:
-        issue.warnings.append(
-            "Hồ sơ thiếu ngày sinh hoặc giới tính nên hệ thống xếp loại theo ngưỡng "
-            "chung. Vui lòng bổ sung hồ sơ để đánh giá chính xác hơn."
-        )
-
-    # Canh bao neu chiều cao bất thường so với tuoi (co the do nhap sai don vi).
-    if child.date_of_birth:
-        months_old = age_in_months(child.date_of_birth, exam_date)
-        if height < 70 and months_old >= 24:
-            issue.warnings.append(
-                f"Chiều cao {height:g} cm rất thấp so với {months_old} tháng tuổi. "
-                "Vui lòng kiểm tra có nhầm đơn vị không."
+    # --- 5. Chiều cao (có thể để trống) ---
+    # Quy tắc mới: chỉ cần có 1 trong 3 thông tin (chiều cao, cân nặng, kết
+    # luận chung) thì vẫn nhập được. Thiếu CẢ 3 mới báo lỗi chặn dòng.
+    height: float | None = None
+    height_raw = str(cols[4]).strip() if cols[4] is not None else ""
+    if height_raw != "":
+        height = parse_float_cell(cols[4])
+        if height is None:
+            issue.errors.append(f"Chiều cao '{cols[4]}' không phải là số.")
+            return None
+        if height <= 0:
+            issue.errors.append(f"Chiều cao phải lớn hơn 0 (nhận được {cols[4]}).")
+            return None
+        if not (HEIGHT_MIN_CM <= height <= HEIGHT_MAX_CM):
+            issue.errors.append(
+                f"Chiều cao {height:g} cm không hợp lý "
+                f"(cho phép {HEIGHT_MIN_CM:g}–{HEIGHT_MAX_CM:g} cm)."
             )
-        elif height > 140 and months_old <= 36:
-            issue.warnings.append(
-                f"Chiều cao {height:g} cm rất cao so với {months_old} tháng tuổi. "
-                "Vui lòng kiểm tra có nhầm đơn vị không."
-            )
+            return None
 
+    # --- 6. Cân nặng (có thể để trống) ---
+    weight: float | None = None
+    weight_raw = str(cols[5]).strip() if cols[5] is not None else ""
+    if weight_raw != "":
+        weight = parse_float_cell(cols[5])
+        if weight is None:
+            issue.errors.append(f"Cân nặng '{cols[5]}' không phải là số.")
+            return None
+        if weight <= 0:
+            issue.errors.append(f"Cân nặng phải lớn hơn 0 (nhận được {cols[5]}).")
+            return None
+        if not (WEIGHT_MIN_KG <= weight <= WEIGHT_MAX_KG):
+            issue.errors.append(
+                f"Cân nặng {weight:g} kg không hợp lý "
+                f"(cho phép {WEIGHT_MIN_KG:g}–{WEIGHT_MAX_KG:g} kg)."
+            )
+            return None
+
+    # --- 7. Kết luận chung (có thể để trống) ---
     conclusion = str(cols[6]).strip() if cols[6] is not None else ""
     if len(conclusion) > 2000:
         issue.errors.append("Kết luận chung quá dài (tối đa 2000 ký tự).")
         return None
+
+    # Thiếu cả 3 thông tin -> dòng không có gì để lưu -> báo lỗi chặn.
+    if height is None and weight is None and not conclusion:
+        issue.errors.append(
+            "Dòng không có dữ liệu: cần ít nhất 1 trong 3 thông tin "
+            "(Chiều cao, Cân nặng hoặc Kết luận chung)."
+        )
+        return None
+
+    # --- 8. BMI + phân loại (chỉ tính khi có ĐỦ chiều cao và cân nặng) ---
+    # File nhập không có cột BMI/phân loại — người nhập chỉ điền số đo,
+    # hệ thống tự tính BMI và xếp loại theo tuổi + giới tính của bé.
+    bmi: float | None = None
+    health_category: HealthCategory | None = None
+    if height is not None and weight is not None:
+        bmi = calc_bmi(height, weight)
+        health_category = classify_bmi_who(
+            bmi,
+            birth_date=child.date_of_birth,
+            exam_date=exam_date,
+            gender=child.gender,
+        )
+        if child.date_of_birth is None or not child.gender:
+            issue.warnings.append(
+                "Hồ sơ thiếu ngày sinh hoặc giới tính nên hệ thống xếp loại theo ngưỡng "
+                "chung. Vui lòng bổ sung hồ sơ để đánh giá chính xác hơn."
+            )
+
+        # Canh bao neu chiều cao bất thường so với tuoi (co the do nhap sai don vi).
+        if child.date_of_birth:
+            months_old = age_in_months(child.date_of_birth, exam_date)
+            if height < 70 and months_old >= 24:
+                issue.warnings.append(
+                    f"Chiều cao {height:g} cm rất thấp so với {months_old} tháng tuổi. "
+                    "Vui lòng kiểm tra có nhầm đơn vị không."
+                )
+            elif height > 140 and months_old <= 36:
+                issue.warnings.append(
+                    f"Chiều cao {height:g} cm rất cao so với {months_old} tháng tuổi. "
+                    "Vui lòng kiểm tra có nhầm đơn vị không."
+                )
+    else:
+        missing = []
+        if height is None:
+            missing.append("chiều cao")
+        if weight is None:
+            missing.append("cân nặng")
+        issue.warnings.append(
+            f"Thiếu {' và '.join(missing)} nên hệ thống chưa tính được BMI và "
+            "phân loại thể trạng cho lần ghi nhận này."
+        )
 
     return HealthExamination(
         child_id=child.child_id,

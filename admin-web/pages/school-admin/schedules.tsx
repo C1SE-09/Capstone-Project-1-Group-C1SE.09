@@ -109,6 +109,7 @@ export default function SchoolAdminSchedulesPage() {
   const [roomSearch, setRoomSearch] = useState("");
   const [schoolConflictsModalOpen, setSchoolConflictsModalOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<"file" | "grid">("file");
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportConfig, setExportConfig] = useState<{
     scope: "current" | "all";
@@ -1104,11 +1105,25 @@ export default function SchoolAdminSchedulesPage() {
             📥 Xuất excel
           </button>
           <button
-            onClick={() => setImportOpen(true)}
+            onClick={() => {
+              setImportTab("file");
+              setImportOpen(true);
+            }}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập thời khóa biểu từ file Excel / CSV"
           >
             📤 Nhập file
+          </button>
+          <button
+            onClick={() => {
+              setImportTab("grid");
+              setImportOpen(true);
+            }}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+            title="Nhập thời khóa biểu trực tiếp bằng bảng tính trên Web"
+          >
+            <span>📊</span>
+            <span>Nhập trực tiếp</span>
           </button>
           <button onClick={() => openCreate(selectedDay)} className="kbtn kbtn-primary">
             + Thêm hoạt động
@@ -1762,6 +1777,7 @@ export default function SchoolAdminSchedulesPage() {
 
       <ImportModal
         open={importOpen}
+        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập thời khóa biểu từ file Excel"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống cho phép nạp và tự động cảnh báo nếu có tiết học bị trùng phòng."
