@@ -22,3 +22,7 @@ yarn-error.log*
 next-env.d.ts
 .vercel
 .env*
+
+# runtime artifacts
+dump.rdb
+*.err

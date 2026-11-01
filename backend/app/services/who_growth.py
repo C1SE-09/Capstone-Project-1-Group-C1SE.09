@@ -1,19 +1,24 @@
 """
 app/services/who_growth.py
 ===========================
-Xep loai the trang tre em theo nguong WHO BMI-for-age (ban rut gon).
+Xep loai the trang tre em theo chuan WHO BMI-for-age.
 
-Nguon: WHO Child Growth Standards 2006 (0-60 thang) + WHO Growth Reference
-2007 (61-120 thang). Bang duoi day la nguong BMI gioi han cho 5 nhom tuoi,
-tinh tu bang LMS goc cua WHO (da lam tron 0.5 de doc duoc).
+Dung bang LMS (L, M, S) chinh thuc cua WHO:
+  - WHO Child Growth Standards 2006 -> thang 0..60   (0-5 tuoi)
+  - WHO Growth Reference 2007       -> thang 61..228 (5-19 tuoi)
 
-Quy uoc xep loai:
-- BMI < nguong_suy_dinh_duong  -> SUY DINH DUONG
-- BMI > nguong_thua_can        -> THUA CAN
-- con lai                     -> BINH THUONG
+Cong thuc Z-score (LMS):
+    Z = ((X / M) ** L - 1) / S
 
-Neu thieu ngay sinh hoac gioi tinh (khong tinh duoc tuoi) thi dung nguong
-chung cho tre mam non de xep loai.
+Quy uoc xep loai (theo dinh nghia cua WHO):
+  - Z < -2              -> SUY DINH DUONG   (thinness / underweight)
+  - -2 <= Z <= +1       -> BINH THUONG      (normal weight)
+  - Z > +1              -> THUA CAN         (overweight, co the can can)
+  - Z > +2              -> thuong bi phan loai la "beo phi" (obesity), o day
+                            van giu o nhom THUA CAN de don gian.
+
+Neu thieu ngay sinh hoac khong xac dinh duoc gioi tinh thi dung nguong chung
+cho tre mam non 3-6 tuoi de xep loai (fallback).
 """
 
 from __future__ import annotations
@@ -22,25 +27,16 @@ import logging
 from datetime import date
 
 from app.models.health_examination import HealthCategory
+from app.services.who_bmi_lms import lookup
 
 logger = logging.getLogger(__name__)
 
-# (so thang toi da, nguong suy dinh duong, nguong thua can) cho be trai / be gai
-# Chi lay cac moc thang theo nhom tuoi, khong can bang LMS day du.
-BMI_BANDS: tuple[tuple[int, float, float, float, float], ...] = (
-    (23, 14.0, 19.5, 13.5, 19.5),  # 0-23 thang  (0-2 tuoi)
-    (47, 13.5, 18.5, 13.0, 18.5),  # 24-47 thang (2-4 tuoi)
-    (71, 13.0, 16.5, 12.5, 17.0),  # 48-71 thang (4-6 tuoi)
-    (95, 13.0, 17.0, 12.5, 17.5),  # 72-95 thang (6-8 tuoi)
-    (120, 13.5, 18.0, 13.0, 18.5),  # 96-120 thang (8-10 tuoi)
-)
+# Gioi han tuoi ma chuan WHO con ap dung duoc (19 tuoi = 228 thang).
+MAX_AGE_MONTHS = 228
 
 # Nguong chung khi khong biet tuoi/hoi tinh (tre mam non 3-6 tuoi).
 FALLBACK_UNDERWEIGHT_MAX = 13.5
 FALLBACK_OVERWEIGHT_MAX = 18.5
-
-# Gioi han tuoi ma chuan WHO con ap dung duoc.
-MAX_AGE_MONTHS = 120
 
 
 def age_in_months(birth: date, on: date) -> int:
@@ -61,6 +57,33 @@ def _is_boy(gender: str | None) -> bool | None:
     return None
 
 
+def bmi_zscore(
+    bmi: float,
+    *,
+    birth_date: date | None,
+    exam_date: date,
+    gender: str | None,
+) -> float | None:
+    """Tinh Z-score BMI-theo-tuoi theo chuan WHO. None neu khong tinh duoc."""
+    boy = _is_boy(gender)
+    if birth_date is None or boy is None:
+        return None
+
+    months = age_in_months(birth_date, exam_date)
+    if months > MAX_AGE_MONTHS:
+        return None
+
+    row = lookup("boys" if boy else "girls", months)
+    if row is None:
+        return None
+
+    l_value, m_value, s_value = row[0], row[1], row[2]
+    if m_value <= 0 or s_value <= 0 or l_value == 0:
+        return None
+    # Cong thuc Z-score chuan cua WHO (LMS): Z = ((X/M)^L - 1) / (L * S)
+    return ((bmi / m_value) ** l_value - 1) / (l_value * s_value)
+
+
 def bmi_thresholds(
     *,
     birth_date: date | None,
@@ -76,12 +99,12 @@ def bmi_thresholds(
     if months > MAX_AGE_MONTHS:
         return (FALLBACK_UNDERWEIGHT_MAX, FALLBACK_OVERWEIGHT_MAX)
 
-    for max_months, boy_under, boy_over, girl_under, girl_over in BMI_BANDS:
-        if months <= max_months:
-            return (
-                (boy_under, boy_over) if boy else (girl_under, girl_over)
-            )
-    return (FALLBACK_UNDERWEIGHT_MAX, FALLBACK_OVERWEIGHT_MAX)
+    row = lookup("boys" if boy else "girls", months)
+    if row is None:
+        return (FALLBACK_UNDERWEIGHT_MAX, FALLBACK_OVERWEIGHT_MAX)
+
+    # row = (L, M, S, sd2neg, sd1, sd2)
+    return (row[3], row[4])
 
 
 def classify_bmi_who(
@@ -91,7 +114,7 @@ def classify_bmi_who(
     exam_date: date,
     gender: str | None,
 ) -> HealthCategory:
-    """Xep loai the trang theo nguong WHO theo tuoi va gioi tinh."""
+    """Xep loai the trang theo chuan WHO theo tuoi va gioi tinh."""
     under_max, over_min = bmi_thresholds(
         birth_date=birth_date, exam_date=exam_date, gender=gender
     )

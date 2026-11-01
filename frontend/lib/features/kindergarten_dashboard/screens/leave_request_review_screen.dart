@@ -12,7 +12,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/leave_request_card.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/reject_reason_dialog.dart';
 import 'package:flutter/material.dart';
-import 'parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 
 class LeaveRequestReviewScreen extends StatefulWidget {
   const LeaveRequestReviewScreen({

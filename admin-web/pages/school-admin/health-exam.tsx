@@ -10,7 +10,9 @@
  *   4. Modal nhập Excel (dùng chung `ImportModal`-style) để đẩy số liệu cả lớp.
  *
  * Luồng nhập Excel (nút 📤 Nhập file):
- *   a. Tải file mẫu .xlsx do backend sinh ra (đã điền sẵn mã HS, họ tên, ngày sinh, giới tính).
+ *   a. Tải file mẫu .xlsx do backend sinh ra (đã điền sẵn họ tên kèm biệt danh,
+ *      ngày sinh, giới tính; nếu bé đã có số liệu sức khoẻ thì 3 cột chiều cao,
+ *      cân nặng, kết luận chung cũng được điền sẵn).
  *   b. Cơ sở y tế điền số liệu đo vào file (file KHÔNG bị khóa bảo vệ).
  *   c. Tải file kết quả lên hệ thống → backend validate từng dòng, tự tính BMI +
  *      xếp loại thể trạng, lưu bản ghi hợp lệ và báo rõ dòng nào lỗi để sửa lại.
@@ -23,25 +25,38 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
+import { DirectGridInput } from "@/components/DirectGridInput";
 import {
   ClassFilterSelect,
+  DateInput,
+  Drawer,
   EmptyState,
+  FormField,
   Modal,
   Pill,
   SearchBar,
   Spinner,
   Toast,
+  todayIsoStr,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
-import { exportMultiSheetToExcel, exportToExcel, ExcelSheetData } from "@/lib/excel-helper";
+import { clearToken, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
+import {
+  ExcelSheetData,
+  exportMultiSheetToExcel,
+  exportToExcel,
+  formatDateToDmy,
+  rowsToExcelFile,
+} from "@/lib/excel-helper";
 import {
   HealthExamImportResult,
   HealthExamRecord,
   SchoolClass,
+  createHealthExamRecord,
   downloadHealthExamTemplate,
   getClasses,
   getHealthExamRecords,
   importHealthExamFile,
+  updateHealthExamRecord,
 } from "@/lib/admin-api";
 
 /* ════════ Hằng số ════════ */
@@ -67,6 +82,18 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
+/** Chuyển "DD/MM/YYYY" → "YYYY-MM-DD" để đưa vào input type=date. */
+function toIsoDate(dmy: string) {
+  const m = dmy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return "";
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+/** Hôm nay theo giờ địa phương (không dùng toISOString vì lệch múi giờ UTC+7). */
+function todayIso() {
+  return todayIsoStr();
+}
+
 /* ════════ Trang ════════ */
 
 export default function HealthExamPage() {
@@ -80,12 +107,53 @@ export default function HealthExamPage() {
   /* Modal nhập Excel */
   const [importOpen, setImportOpen] = useState(false);
   const [importClassId, setImportClassId] = useState("");
-  const [importDate, setImportDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [importDate, setImportDate] = useState(() => todayIso());
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<HealthExamImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [importMode, setImportMode] = useState<"grid" | "file">("grid");
+  const [gridRows, setGridRows] = useState<string[][]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const healthExamHeaders = useMemo(
+    () => [
+      "Họ và tên",
+      "Ngày sinh",
+      "Giới tính",
+      "Ngày ghi nhận",
+      "Chiều cao",
+      "Cân nặng",
+      "Kết luận chung",
+    ],
+    []
+  );
+
+  const sampleHealthExamRow = useMemo(
+    () => [
+      "Nguyễn Bảo An (Bống)",
+      "15/05/2021",
+      "Nữ",
+      importDate ? formatDateToDmy(importDate) : "20/10/2026",
+      "102.5",
+      "16.8",
+      "Bình thường",
+    ],
+    [importDate]
+  );
+
+  const validGridRows = useMemo(
+    () => gridRows.filter((r) => r.some((c) => c && c.trim().length > 0)),
+    [gridRows]
+  );
+
+  /* Drawer sửa số liệu 1 dòng */
+  const [editing, setEditing] = useState<HealthExamRecord | null>(null);
+  const [editHeight, setEditHeight] = useState("");
+  const [editWeight, setEditWeight] = useState("");
+  const [editConclusion, setEditConclusion] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
 
   /* ── Auth guard + danh sách lớp ── */
   useEffect(() => {
@@ -114,15 +182,28 @@ export default function HealthExamPage() {
         class_id: selectedClassId || undefined,
         examination_date: examDate || undefined,
       }),
-    { refreshInterval: 30000 }
+    {
+      refreshInterval: editing || importOpen ? 0 : 30000,
+      revalidateOnFocus: !(editing || importOpen),
+    }
   );
 
   useEffect(() => {
     if (error && (error as any).status === 401) {
-      clearToken("schoolAdmin");
-      window.location.href = "/login";
+      if (!getToken("schoolAdmin")) {
+        window.location.href = "/login";
+        return;
+      }
+      refreshAccessToken().then((token) => {
+        if (!token) {
+          clearToken("schoolAdmin");
+          window.location.href = "/login";
+        } else {
+          mutate();
+        }
+      });
     }
-  }, [error]);
+  }, [error, mutate]);
 
   const records = useMemo(() => data?.records ?? [], [data]);
 
@@ -132,6 +213,7 @@ export default function HealthExamPage() {
     return records.filter(
       (r) =>
         r.full_name.toLowerCase().includes(q) ||
+        (r.nickname || "").toLowerCase().includes(q) ||
         (r.class_name || "").toLowerCase().includes(q) ||
         (r.health_category_label || "").toLowerCase().includes(q) ||
         (r.general_conclusion || "").toLowerCase().includes(q)
@@ -159,15 +241,15 @@ export default function HealthExamPage() {
       "Kết luận chung",
     ];
     const toRow = (r: HealthExamRecord) => [
-      r.full_name,
+      r.nickname ? `${r.full_name} (${r.nickname})` : r.full_name,
       r.class_name || "",
       r.date_of_birth || "",
       r.gender === "male" ? "Nam" : r.gender === "female" ? "Nữ" : r.gender || "",
-      r.examination_date,
-      String(r.height),
-      String(r.weight),
+      r.examination_date || "",
+      r.height != null ? String(r.height) : "",
+      r.weight != null ? String(r.weight) : "",
       r.bmi != null ? String(r.bmi) : "",
-      r.health_category_label,
+      r.health_category_label || "",
       r.general_conclusion || "",
     ];
     // Toàn trường (không lọc lớp) → mỗi lớp 1 sheet
@@ -184,23 +266,114 @@ export default function HealthExamPage() {
         return;
       }
       exportMultiSheetToExcel("so_suc_khoe_toan_truong.xlsx", sheets);
-      setToast({ msg: `Đã xuất sổ sức khoẻ toàn trường ra ${sheets.length} sheet (chia theo từng lớp)`, tone: "ok" });
+      setToast({ msg: "Đã xuất sổ sức khoẻ toàn trường ra file Excel.", tone: "ok" });
       return;
     }
     const currentClass = classes.find((c) => c.id === selectedClassId);
     const sheetName = currentClass ? currentClass.name : "SoSucKhoe";
     const filename = currentClass ? `so_suc_khoe_${currentClass.name.replace(/\s+/g, "_")}.xlsx` : "so_suc_khoe.xlsx";
     exportToExcel(filename, sheetName, headers, filtered.map(toRow));
-    setToast({ msg: `Đã xuất ${filtered.length} bản ghi của lớp "${sheetName}" ra file Excel`, tone: "ok" });
+    setToast({ msg: `Đã xuất ${filtered.length} học sinh của lớp "${sheetName}" ra file Excel.`, tone: "ok" });
+  }
+
+  /* ══ Mở modal sửa 1 dòng sổ sức khoẻ ══ */
+  function openEditModal(r: HealthExamRecord) {
+    setEditing(r);
+    setEditHeight(r.height != null ? String(r.height) : "");
+    setEditWeight(r.weight != null ? String(r.weight) : "");
+    setEditConclusion(r.general_conclusion || "");
+    setEditDate(
+      r.examination_date
+        ? toIsoDate(r.examination_date)
+        : todayIso()
+    );
+  }
+
+  function closeEditModal() {
+    if (editBusy) return;
+    setEditing(null);
+  }
+
+  async function handleSaveEdit() {
+    if (!editing) return;
+    // Chỉ cần có 1 trong 3 thông tin: chiều cao, cân nặng, kết luận chung.
+    const hasHeight = editHeight.trim() !== "";
+    const hasWeight = editWeight.trim() !== "";
+    const hasConclusion = editConclusion.trim() !== "";
+    if (!hasHeight && !hasWeight && !hasConclusion) {
+      setToast({
+        msg: "Vui lòng nhập ít nhất 1 thông tin: chiều cao, cân nặng hoặc kết luận chung",
+        tone: "bad",
+      });
+      return;
+    }
+    let height: number | null = null;
+    if (hasHeight) {
+      height = Number(editHeight);
+      if (!Number.isFinite(height) || height <= 0 || height > 200) {
+        setToast({
+          msg: "Chiều cao phải là số lớn hơn 0 và không vượt quá 200 cm",
+          tone: "bad",
+        });
+        return;
+      }
+    }
+    let weight: number | null = null;
+    if (hasWeight) {
+      weight = Number(editWeight);
+      if (!Number.isFinite(weight) || weight <= 0 || weight > 100) {
+        setToast({
+          msg: "Cân nặng phải là số lớn hơn 0 và không vượt quá 100 kg",
+          tone: "bad",
+        });
+        return;
+      }
+    }
+
+    setEditBusy(true);
+    try {
+      if (editing.id) {
+        await updateHealthExamRecord(editing.id, {
+          height,
+          weight,
+          general_conclusion: hasConclusion ? editConclusion.trim() : null,
+        });
+      } else {
+        await createHealthExamRecord({
+          child_id: editing.child_id,
+          height,
+          weight,
+          general_conclusion: hasConclusion ? editConclusion.trim() : null,
+          examination_date: editDate || null,
+        });
+      }
+      await mutate();
+      setEditing(null);
+      setToast({
+        msg: `Đã cập nhật số liệu sức khoẻ của ${
+          editing.nickname ? `${editing.full_name} (${editing.nickname})` : editing.full_name
+        }.`,
+        tone: "ok",
+      });
+    } catch (err: any) {
+      setToast({ msg: err?.message || "Không lưu được số liệu. Vui lòng thử lại.", tone: "bad" });
+    } finally {
+      setEditBusy(false);
+    }
   }
 
   /* ══ Mở modal nhập Excel ══ */
   function openImportModal() {
     setImportClassId(selectedClassId || "");
-    setImportDate(new Date().toISOString().slice(0, 10));
+    setImportDate(todayIso());
     setImportFile(null);
     setImportResult(null);
     setImportError(null);
+    const emptyRows: string[][] = [];
+    for (let i = 0; i < 5; i++) {
+      emptyRows.push(["", "", "", "", "", "", ""]);
+    }
+    setGridRows(emptyRows);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setImportOpen(true);
   }
@@ -260,11 +433,25 @@ export default function HealthExamPage() {
 
   /* ══ Gửi file lên backend ══ */
   async function handleImport() {
-    if (!importFile) return;
+    let fileToUpload: File | null = importFile;
+    if (importMode === "grid") {
+      if (validGridRows.length === 0) {
+        setImportError("Vui lòng nhập ít nhất 1 dòng số liệu vào bảng.");
+        return;
+      }
+      fileToUpload = rowsToExcelFile(
+        "so_suc_khoe_grid.xlsx",
+        "SoSucKhoe",
+        healthExamHeaders,
+        validGridRows
+      );
+    }
+
+    if (!fileToUpload) return;
     setImportBusy(true);
     setImportError(null);
     try {
-      const res = await importHealthExamFile(importClassId || null, importFile);
+      const res = await importHealthExamFile(importClassId || null, fileToUpload);
       setImportResult(res);
       mutate();
       if (res.failed_count === 0 && res.success_count > 0) {
@@ -312,20 +499,40 @@ export default function HealthExamPage() {
             📥 Xuất Excel
           </button>
           <button
-            onClick={openImportModal}
-            className="kbtn kbtn-primary text-sm flex items-center gap-1.5"
-            title="Nhập kết quả đo vào sổ sức khoẻ từ file Excel"
+            onClick={() => {
+              setImportMode("file");
+              openImportModal();
+            }}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            title="Nhập kết quả từ file Excel"
           >
-            📤 Nhập kết quả
+            📤 Nhập file
+          </button>
+          <button
+            onClick={() => {
+              setImportMode("grid");
+              openImportModal();
+            }}
+            className="kbtn kbtn-primary text-sm flex items-center gap-1.5"
+            title="Nhập số liệu sức khoẻ trực tiếp trên bảng tính"
+          >
+            <span>📊</span>
+            <span>Nhập trực tiếp</span>
           </button>
         </div>
       }
     >
       {/* ══ Thống kê nhanh ══ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
         <div className="card p-3.5">
-          <div className="text-[11px] text-ink-soft font-semibold">Tổng bản ghi</div>
+          <div className="text-[11px] text-ink-soft font-semibold">Tổng học sinh</div>
           <div className="text-2xl font-bold text-ink mt-1">{filtered.length}</div>
+        </div>
+        <div className="card p-3.5">
+          <div className="text-[11px] text-ink-soft font-semibold">Đã có số liệu</div>
+          <div className="text-2xl font-bold text-ink mt-1">
+            {filtered.filter((r) => r.has_record).length}
+          </div>
         </div>
         <div className="card p-3.5">
           <div className="text-[11px] text-ink-soft font-semibold">Bình thường</div>
@@ -348,7 +555,7 @@ export default function HealthExamPage() {
       </div>
 
       {/* ══ Bộ lọc ══ */}
-      <div className="card p-3 mb-3 flex flex-col sm:flex-row sm:items-center gap-2.5">
+      <div className="card p-3 mb-3 flex flex-col sm:flex-row sm:items-end gap-2.5">
         <div className="flex-1 min-w-0">
           <SearchBar
             value={query}
@@ -357,25 +564,30 @@ export default function HealthExamPage() {
           />
         </div>
         <div className="w-full sm:w-56">
+          <label className="klabel mb-1" htmlFor="filter-class">
+            Lớp
+          </label>
           <ClassFilterSelect
             classes={classes}
             value={selectedClassId}
             onChange={setSelectedClassId}
           />
         </div>
-        <div className="w-full sm:w-44">
-          <input
-            type="date"
+        <div className="w-full sm:w-52">
+          <label className="klabel mb-1" htmlFor="filter-exam-date">
+            Ngày ghi nhận
+          </label>
+          <DateInput
             value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            className="kinput text-sm bg-white"
-            title="Lọc theo ngày ghi nhận"
+            onChange={setExamDate}
+            max={todayIso()}
+            onInvalid={(msg) => setToast({ msg, tone: "bad" })}
           />
         </div>
         {examDate && (
           <button
             onClick={() => setExamDate("")}
-            className="kbtn kbtn-secondary text-xs whitespace-nowrap"
+            className="kbtn kbtn-secondary text-xs whitespace-nowrap self-end"
             title="Bỏ lọc theo ngày"
           >
             ✕ Bỏ ngày
@@ -401,14 +613,22 @@ export default function HealthExamPage() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="📒"
-            title={query ? "Không có kết quả phù hợp." : "Chưa có dữ liệu sức khoẻ"}
+            title={
+              query
+                ? "Không có kết quả phù hợp."
+                : examDate
+                ? `Chưa có số liệu ghi nhận ngày ${formatDateToDmy(examDate)}`
+                : "Chưa có học sinh nào"
+            }
             description={
               query
                 ? "Thử từ khoá khác hoặc bỏ bớt bộ lọc."
+                : examDate
+                ? "Chỉ hiển thị những học sinh có số liệu ghi nhận đúng ngày này. Thử ngày khác hoặc bỏ bộ lọc ngày."
                 : "Dùng nút “📤 Nhập kết quả” để tải file mẫu Excel điền số liệu đo cho cả lớp."
             }
             action={
-              !query ? (
+              !query && !examDate ? (
                 <button onClick={openImportModal} className="kbtn kbtn-primary text-sm">
                   📤 Nhập kết quả từ Excel
                 </button>
@@ -429,12 +649,14 @@ export default function HealthExamPage() {
                   <th className="px-4 py-3 text-right font-semibold">Chiều cao</th>
                   <th className="px-4 py-3 text-right font-semibold">Cân nặng</th>
                   <th className="px-4 py-3 text-right font-semibold">BMI</th>
-                  <th className="px-4 py-3 text-left font-semibold">Thể trạng</th>                  <th className="px-4 py-3 text-left font-semibold">Kết luận chung</th>
+                  <th className="px-4 py-3 text-left font-semibold">Thể trạng</th>
+                  <th className="px-4 py-3 text-left font-semibold">Kết luận chung</th>
+                  <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r, idx) => (
-                  <tr key={r.id} className={idx > 0 ? "border-t border-line" : ""}>
+                  <tr key={r.child_id} className={idx > 0 ? "border-t border-line" : ""}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div
@@ -444,7 +666,12 @@ export default function HealthExamPage() {
                           {r.full_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-ink truncate">{r.full_name}</div>
+                          <div className="font-semibold text-ink truncate">
+                            {r.full_name}
+                            {r.nickname && (
+                              <span className="font-normal text-ink-soft"> ({r.nickname})</span>
+                            )}
+                          </div>
                           {r.date_of_birth && (
                             <div className="text-[11px] text-ink-faint">
                               {r.date_of_birth} ·{" "}
@@ -458,26 +685,43 @@ export default function HealthExamPage() {
                       {r.class_name || "—"}
                     </td>
                     <td className="px-4 py-3 text-ink-soft whitespace-nowrap">
-                      {r.examination_date}
+                      {r.examination_date || "—"}
                     </td>
                     <td className="px-4 py-3 text-right text-ink whitespace-nowrap">
-                      {r.height} cm
+                      {r.height != null ? `${r.height} cm` : "—"}
                     </td>
                     <td className="px-4 py-3 text-right text-ink whitespace-nowrap">
-                      {r.weight} kg
+                      {r.weight != null ? `${r.weight} kg` : "—"}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-ink whitespace-nowrap">
                       {r.bmi != null ? r.bmi.toFixed(2) : "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <Pill tone={CATEGORY_TONE[r.health_category] ?? "neutral"}>
-                        {r.health_category_label}
-                      </Pill>
+                      {r.health_category_label ? (
+                        <Pill tone={CATEGORY_TONE[r.health_category || ""] ?? "neutral"}>
+                          {r.health_category_label}
+                        </Pill>
+                      ) : (
+                        <span className="text-[11px] text-ink-faint italic">Chưa có</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-ink-soft">
                       <div className="max-w-[280px] truncate" title={r.general_conclusion || ""}>
                         {r.general_conclusion || "—"}
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => openEditModal(r)}
+                        className="kbtn kbtn-ghost text-xs"
+                        title={
+                          r.id
+                            ? "Sửa chiều cao, cân nặng và kết luận chung"
+                            : "Nhập số liệu sức khoẻ cho học sinh này"
+                        }
+                      >
+                        Sửa
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -487,12 +731,12 @@ export default function HealthExamPage() {
         )}
       </div>
 
-      {/* ══ Modal nhập kết quả từ Excel ══ */}
+            {/* ══ Modal nhập kết quả vào sổ sức khoẻ (Grid + Excel) ══ */}
       <Modal
         open={importOpen}
         onClose={closeImportModal}
         title="Nhập kết quả vào sổ sức khoẻ"
-        size="lg"
+        size="xl"
         footer={
           <div className="flex items-center justify-between w-full">
             <button
@@ -515,13 +759,20 @@ export default function HealthExamPage() {
                 <button
                   type="button"
                   onClick={handleImport}
-                  disabled={!importFile || importBusy}
+                  disabled={
+                    importBusy ||
+                    (importMode === "grid" ? validGridRows.length === 0 : !importFile)
+                  }
                   className="kbtn kbtn-primary flex items-center gap-2"
                 >
                   {importBusy && (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  {importBusy ? "Đang nhập..." : "Nhập vào sổ sức khoẻ"}
+                  {importBusy
+                    ? "Đang nhập..."
+                    : importMode === "grid"
+                    ? `Nhập vào sổ sức khoẻ (${validGridRows.length} dòng)`
+                    : "Nhập vào sổ sức khoẻ"}
                 </button>
               )}
             </div>
@@ -530,82 +781,128 @@ export default function HealthExamPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-ink-soft">
-            Tải file mẫu Excel đã điền sẵn danh sách học sinh của lớp → cơ sở y tế điền số
-            liệu đo → tải file kết quả lên hệ thống. Hệ thống tự tính BMI và báo rõ dòng
-            nào bị lỗi để sửa lại.
+            Hỗ trợ nhập trực tiếp số liệu khám vào bảng bên dưới hoặc tải file Excel lên.
+            Hệ thống tự tính BMI và báo rõ dòng nào bị lỗi để chỉnh sửa.
           </p>
 
-          {/* Bước 1: chọn lớp + ngày */}
+          {/* Tab switcher: Nhập trực tiếp vs Tải file */}
+          {!importResult && (
+            <div className="flex border-b border-line gap-2">
+              <button
+                type="button"
+                onClick={() => setImportMode("grid")}
+                className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                  importMode === "grid"
+                    ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                    : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+                }`}
+              >
+                <span>📊</span>
+                <span>Bảng nhập trực tiếp (Web Grid)</span>
+                {validGridRows.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                    {validGridRows.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportMode("file")}
+                className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                  importMode === "file"
+                    ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                    : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+                }`}
+              >
+                <span>📁</span>
+                <span>Tải file Excel</span>
+                {importFile && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                    1
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Bước chọn lớp & ngày ghi nhận (dùng chung cho cả 2 tab) */}
           <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-3">
-            <div className="font-bold text-ink text-sm">Bước 1: Chọn lớp & ngày ghi nhận</div>
+            <div className="font-bold text-ink text-sm">Chọn lớp & ngày ghi nhận</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="klabel mb-1.5">
                   Lớp <span className="text-bad ml-0.5">*</span>
                 </label>
-                <select
+                <ClassFilterSelect
+                  classes={classes}
                   value={importClassId}
-                  onChange={(e) => setImportClassId(e.target.value)}
-                  className="kinput text-sm font-medium bg-white"
-                >
-                  <option value="">Tất cả lớp</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.grade_label ? ` · ${c.grade_label}` : ""}
-                      {c.room_number ? ` (${c.room_number})` : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setImportClassId}
+                  placeholder="Tất cả lớp"
+                  className="w-full"
+                />
               </div>
               <div>
                 <label className="klabel mb-1.5">Ngày ghi nhận</label>
-                <input
-                  type="date"
+                <DateInput
                   value={importDate}
-                  onChange={(e) => setImportDate(e.target.value)}
-                  className="kinput text-sm bg-white"
+                  max={todayIso()}
+                  onChange={setImportDate}
+                  onInvalid={(msg) => setToast({ msg, tone: "bad" })}
                 />
               </div>
             </div>
             {importClass ? (
               <div className="text-[11px] text-ink-soft">
-                File mẫu sẽ chứa danh sách học sinh đang theo học của lớp{" "}
-                <strong className="text-ink">{importClass.name}</strong>.
+                Đang chọn lớp <strong className="text-ink">{importClass.name}</strong>.
               </div>
             ) : (
               <div className="text-[11px] text-ink-soft">
-                File mẫu sẽ chứa <strong className="text-ink">tất cả lớp</strong>.
+                Đang chọn <strong className="text-ink">tất cả lớp</strong>.
               </div>
             )}
           </div>
 
-          {/* Bước 2: chọn file */}
-          <div>
-            <label className="klabel mb-1.5">Bước 2: Chọn file kết quả tải lên</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(e) => acceptFile(e.target.files?.[0])}
-              className="hidden"
-              id="health-exam-file-input"
-            />
-            <label
-              htmlFor="health-exam-file-input"
-              className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
-            >
-              <div className="text-3xl mb-2">📁</div>
-              <div className="text-sm font-semibold text-ink truncate max-w-full">
-                {importFile ? importFile.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
-              </div>
-              <div className="text-xs text-ink-faint mt-1">
-                {importFile
-                  ? `${(importFile.size / 1024).toFixed(0)} KB`
-                  : "Hỗ trợ định dạng .xlsx, .xls (tối đa 10MB) — dùng đúng file mẫu đã tải ở bước 1"}
-              </div>
-            </label>
-          </div>
+          {/* Nội dung Tab 1: Grid nhập trực tiếp */}
+          {importMode === "grid" && !importResult && (
+            <div className="space-y-3">
+              <DirectGridInput
+                headers={healthExamHeaders}
+                sampleRow={sampleHealthExamRow}
+                rows={gridRows}
+                onChange={setGridRows}
+                disabled={importBusy}
+              />
+            </div>
+          )}
+
+          {/* Nội dung Tab 2: Bước 2 chọn file Excel */}
+          {importMode === "file" && !importResult && (
+            <div>
+              <label className="klabel mb-1.5">Chọn file kết quả tải lên</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => acceptFile(e.target.files?.[0])}
+                className="hidden"
+                id="health-exam-file-input"
+              />
+              <label
+                htmlFor="health-exam-file-input"
+                className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
+              >
+                <div className="text-3xl mb-2">📁</div>
+                <div className="text-sm font-semibold text-ink truncate max-w-full">
+                  {importFile ? importFile.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
+                </div>
+                <div className="text-xs text-ink-faint mt-1">
+                  {importFile
+                    ? `${(importFile.size / 1024).toFixed(0)} KB`
+                    : "Hỗ trợ định dạng .xlsx, .xls (tối đa 10MB)"}
+                </div>
+              </label>
+            </div>
+          )}
 
           {importError && (
             <div className="rounded-control bg-bad/10 border border-bad/30 p-3 text-xs text-bad">
@@ -705,6 +1002,113 @@ export default function HealthExamPage() {
           )}
         </div>
       </Modal>
+
+      {/* ══ Drawer chỉnh sửa số liệu 1 dòng ══ */}
+      <Drawer
+        open={!!editing}
+        onClose={closeEditModal}
+        title={
+          editing
+            ? editing.id
+              ? "Chỉnh sửa số liệu sức khoẻ"
+              : "Nhập số liệu sức khoẻ"
+            : "Chỉnh sửa số liệu sức khoẻ"
+        }
+        footer={
+          <>
+            <button
+              onClick={closeEditModal}
+              className="kbtn kbtn-secondary"
+              disabled={editBusy}
+            >
+              Hủy
+            </button>
+            <button onClick={handleSaveEdit} className="kbtn kbtn-primary" disabled={editBusy}>
+              {editBusy ? "Đang lưu..." : editing?.id ? "Lưu thay đổi" : "Lưu số liệu"}
+            </button>
+          </>
+        }
+      >
+        {editing && (
+          <>
+            <div className="text-xs text-ink-soft mb-3">
+              Học sinh:{" "}
+              <strong className="text-ink">
+                {editing.nickname
+                  ? `${editing.full_name} (${editing.nickname})`
+                  : editing.full_name}
+              </strong>
+              {editing.class_name && (
+                <>
+                  {" · "}
+                  Lớp {editing.class_name}
+                </>
+              )}
+            </div>
+
+            {!editing.id && (
+              <FormField
+                label="Ngày ghi nhận"
+                hint={
+                  editDate
+                    ? `Đã chọn: ${formatDateToDmy(editDate)}`
+                    : "Nhập theo định dạng dd/mm/yyyy"
+                }
+              >
+                <DateInput
+                  value={editDate}
+                  max={todayIso()}
+                  onChange={setEditDate}
+                  onInvalid={(msg) => setToast({ msg, tone: "bad" })}
+                />
+              </FormField>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Chiều cao (cm)" hint="Có thể để trống nếu chỉ nhập kết luận">
+                <input
+                  className="kinput"
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="200"
+                  value={editHeight}
+                  onChange={(e) => setEditHeight(e.target.value)}
+                  placeholder="95.5"
+                />
+              </FormField>
+              <FormField label="Cân nặng (kg)" hint="Có thể để trống nếu chỉ nhập kết luận">
+                <input
+                  className="kinput"
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="100"
+                  value={editWeight}
+                  onChange={(e) => setEditWeight(e.target.value)}
+                  placeholder="14.2"
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Kết luận chung" hint="Có thể để trống nếu đã nhập chiều cao và cân nặng">
+              <textarea
+                className="kinput resize-y"
+                value={editConclusion}
+                onChange={(e) => setEditConclusion(e.target.value)}
+                rows={4}
+                maxLength={2000}
+                placeholder="Nhập kết luận của đợt ghi nhận..."
+              />
+            </FormField>
+
+            <div className="text-xs text-ink-faint">
+              💡 Hệ thống tự tính BMI và xếp loại thể trạng theo chuẩn WHO dựa trên tuổi và
+              giới tính của học sinh.
+            </div>
+          </>
+        )}
+      </Drawer>
 
       {toast && <Toast message={toast.msg} tone={toast.tone} onClose={() => setToast(null)} />}
     </SchoolAdminLayout>

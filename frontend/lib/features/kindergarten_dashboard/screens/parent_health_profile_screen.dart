@@ -10,9 +10,9 @@ import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart'
 import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 
-import '../theme.dart';
-import '../widgets.dart';
-import 'parent_medication_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_screen.dart';
 
 /// Đếm code point để khớp `len()` của Python, không dùng UTF-16 length.
 int healthCharCount(String value) => value.runes.length;

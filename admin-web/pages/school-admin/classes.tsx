@@ -35,6 +35,7 @@ import {
 interface ClassFormState {
   name: string;
   grade_label: string;
+  grade_custom: boolean;
   room_number: string;
   capacity: string;
 }
@@ -42,11 +43,13 @@ interface ClassFormState {
 const EMPTY_FORM: ClassFormState = {
   name: "",
   grade_label: "",
+  grade_custom: false,
   room_number: "",
   capacity: "",
 };
 
-const GRADE_OPTIONS = ["Nhà trẻ", "Mầm", "Chồi", "Lá", "Mẫu giáo", "Khác"];
+const GRADE_OPTIONS = ["Nhà trẻ", "Mầm", "Chồi", "Lá", "Mẫu giáo"];
+const GRADE_OTHER = "Khác";
 
 export default function SchoolAdminClassesPage() {
   const [ready, setReady] = useState(false);
@@ -94,6 +97,18 @@ export default function SchoolAdminClassesPage() {
     );
   }, [classes, query]);
 
+  /** Danh sách phòng đã có ở lớp khác (trừ lớp đang sửa) — để user tránh nhập trùng. */
+  const usedRooms = useMemo(() => {
+    const list = classes ?? [];
+    return Array.from(
+      new Set(
+        list
+          .filter((c) => c.id !== editing?.id && (c.room_number || "").trim())
+          .map((c) => (c.room_number || "").trim())
+      )
+    ).sort();
+  }, [classes, editing]);
+
   function handleExportExcel() {
     if (!filtered || filtered.length === 0) {
       setToast({ msg: "Không có dữ liệu lớp để xuất", tone: "warn" });
@@ -119,9 +134,11 @@ export default function SchoolAdminClassesPage() {
 
   function openEdit(c: SchoolClass) {
     setEditing(c);
+    const gl = c.grade_label || "";
     setForm({
       name: c.name,
-      grade_label: c.grade_label || "",
+      grade_label: gl,
+      grade_custom: !!gl && !GRADE_OPTIONS.includes(gl),
       room_number: c.room_number || "",
       capacity: c.capacity != null ? String(c.capacity) : "",
     });
@@ -134,6 +151,22 @@ export default function SchoolAdminClassesPage() {
       setToast({ msg: "Vui lòng nhập tên lớp", tone: "bad" });
       return null;
     }
+    const room = form.room_number.trim();
+    if (room) {
+      const dupRoom = (classes || []).find(
+        (c) =>
+          c.room_number &&
+          c.room_number.trim().toLowerCase() === room.toLowerCase() &&
+          (!editing || c.id !== editing.id)
+      );
+      if (dupRoom) {
+        setToast({
+          msg: `Phòng "${room}" đã được sử dụng cho "${dupRoom.name}". Vui lòng chọn phòng khác!`,
+          tone: "bad",
+        });
+        return null;
+      }
+    }
     let capacity: number | null = null;
     if (form.capacity.trim()) {
       capacity = Number(form.capacity.trim());
@@ -145,7 +178,7 @@ export default function SchoolAdminClassesPage() {
     return {
       name,
       grade_label: form.grade_label.trim() || null,
-      room_number: form.room_number.trim() || null,
+      room_number: room || null,
       capacity,
     };
   }
@@ -165,7 +198,7 @@ export default function SchoolAdminClassesPage() {
       setDrawerOpen(false);
       mutate();
     } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu lớp", tone: "bad" });
+      setToast({ msg: err?.detail || err?.message || "Không thể lưu lớp", tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -258,41 +291,6 @@ export default function SchoolAdminClassesPage() {
         </div>
       </div>
 
-      {selectedIds.length > 0 && (
-        <div
-          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
-          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
-        >
-          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
-              style={{ background: "#BB4A34" }}
-            >
-              {selectedIds.length}
-            </span>
-            <span>Đã chọn {selectedIds.length} lớp</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedIds([])}
-              className="kbtn kbtn-secondary text-xs"
-              disabled={bulkDeleting}
-            >
-              Bỏ chọn
-            </button>
-            <button
-              onClick={() => setConfirmBulkDel(true)}
-              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
-              style={{ background: "#BB4A34" }}
-              disabled={bulkDeleting}
-            >
-              <span>🗑️</span>
-              <span>Xóa đã chọn ({selectedIds.length})</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="card overflow-hidden">
         {!classes && !classesError ? (
           <Spinner />
@@ -319,28 +317,78 @@ export default function SchoolAdminClassesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead
-                className="text-xs uppercase tracking-wider"
-                style={{ background: "#EFECE5", color: "#605D57" }}
+                className="text-xs uppercase tracking-wider transition-colors duration-200"
+                style={{
+                  background: selectedIds.length > 0 ? "#FDF8F6" : "#EFECE5",
+                  color: selectedIds.length > 0 ? "#BB4A34" : "#605D57",
+                }}
               >
-                <tr>
-                  <th className="px-3 py-3 text-center w-10">
-                    <input
-                      type="checkbox"
-                      className="rounded cursor-pointer"
-                      checked={allSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someSelected;
-                      }}
-                      onChange={toggleSelectAll}
-                      title="Chọn tất cả lớp hiển thị"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold">Tên lớp</th>
-                  <th className="px-4 py-3 text-left font-semibold">Khối</th>
-                  <th className="px-4 py-3 text-left font-semibold">Phòng</th>
-                  <th className="px-4 py-3 text-left font-semibold">Sĩ số</th>
-                  <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
-                </tr>
+                {selectedIds.length > 0 ? (
+                  <tr className="border-b border-[#F2D5CE]">
+                    <th className="px-3 py-2.5 text-center w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                        title="Bỏ chọn tất cả"
+                      />
+                    </th>
+                    <th colSpan={3} className="px-4 py-2.5 text-left font-semibold normal-case text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
+                          {selectedIds.length}
+                        </span>
+                        <span className="text-[#BB4A34] font-bold">
+                          Đã chọn {selectedIds.length} lớp
+                        </span>
+                      </div>
+                    </th>
+                    <th colSpan={2} className="px-4 py-2.5 text-right font-semibold normal-case">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setSelectedIds([])}
+                          className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
+                          disabled={bulkDeleting}
+                        >
+                          Bỏ chọn
+                        </button>
+                        <button
+                          onClick={() => setConfirmBulkDel(true)}
+                          className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
+                          style={{ background: "#BB4A34" }}
+                          disabled={bulkDeleting}
+                        >
+                          <span>🗑️</span>
+                          <span>Xóa đã chọn ({selectedIds.length})</span>
+                        </button>
+                      </div>
+                    </th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th className="px-3 py-3 text-center w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded cursor-pointer"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                        title="Chọn tất cả lớp hiển thị"
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold">Tên lớp</th>
+                    <th className="px-4 py-3 text-left font-semibold">Khối</th>
+                    <th className="px-4 py-3 text-left font-semibold">Phòng</th>
+                    <th className="px-4 py-3 text-left font-semibold">Sĩ số</th>
+                    <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {filtered.map((c, idx) => {
@@ -448,27 +496,45 @@ export default function SchoolAdminClassesPage() {
         <FormField label="Khối">
           <select
             className="kinput"
-            value={GRADE_OPTIONS.includes(form.grade_label) ? form.grade_label : form.grade_label ? "Khác" : ""}
+            value={
+              form.grade_custom
+                ? GRADE_OTHER
+                : GRADE_OPTIONS.includes(form.grade_label)
+                ? form.grade_label
+                : ""
+            }
             onChange={(e) => {
               const v = e.target.value;
-              setForm({ ...form, grade_label: v === "Khác" ? form.grade_label : v });
+              if (v === GRADE_OTHER) {
+                setForm({ ...form, grade_custom: true, grade_label: "" });
+              } else {
+                setForm({ ...form, grade_custom: false, grade_label: v });
+              }
             }}
           >
             <option value="">— Chọn khối —</option>
             {GRADE_OPTIONS.map((g) => (
               <option key={g} value={g}>{g}</option>
             ))}
+            <option value={GRADE_OTHER}>{GRADE_OTHER}</option>
           </select>
-          {(!GRADE_OPTIONS.includes(form.grade_label) || form.grade_label === "Khác") && (
+          {form.grade_custom && (
             <input
               className="kinput mt-2"
-              value={form.grade_label === "Khác" ? "" : form.grade_label}
+              value={form.grade_label}
               onChange={(e) => setForm({ ...form, grade_label: e.target.value })}
               placeholder="Nhập tên khối..."
             />
           )}
         </FormField>
-        <FormField label="Phòng">
+        <FormField
+          label="Phòng"
+          hint={
+            usedRooms.length > 0
+              ? `Phòng đã dùng: ${usedRooms.join(", ")}`
+              : undefined
+          }
+        >
           <input
             className="kinput"
             value={form.room_number}

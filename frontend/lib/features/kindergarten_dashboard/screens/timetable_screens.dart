@@ -8,7 +8,6 @@
 // - Sheets: hành động (Sửa/Xóa), biểu mẫu thêm/sửa, xác nhận xóa (danger).
 // - Xung đột: trùng khung giờ trong cùng ngày → cảnh báo mềm, không chặn.
 
-import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/timetable/subject.dart';
@@ -71,6 +70,18 @@ bool matchesTimetableQuery(ClassSchedule item, String query) {
   return false;
 }
 
+/// Lớp học dùng trong bộ chọn thời khóa biểu.
+class TimetableClassItem {
+  const TimetableClassItem({
+    required this.id,
+    required this.name,
+    this.gradeLabel = '',
+  });
+  final String id;
+  final String name;
+  final String gradeLabel;
+}
+
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({
     super.key,
@@ -89,7 +100,7 @@ class TimetableScreen extends StatefulWidget {
   final ScheduleRepository? repository;
   final bool isReadOnly;
   final bool embedded;
-  final List<AdminClassDto>? classList;
+  final List<TimetableClassItem>? classList;
   final ValueChanged<String>? onClassChanged;
   final String? searchQuery;
 

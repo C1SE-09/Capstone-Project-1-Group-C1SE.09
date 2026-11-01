@@ -4,7 +4,7 @@ app/core/storage.py
 MinIO client và helper functions để upload audio file.
 
 MinIO là object storage tương thích S3, được deploy trong docker-compose.
-Audio URL trả về là presigned URL public để Celery worker có thể đọc file.
+Audio URL trả về là URL public của bucket (bucket được đặt policy public-read).
 """
 
 import io
@@ -15,6 +15,7 @@ from urllib.parse import unquote, urlsplit
 from minio import Minio
 
 from app.config import settings
+from app.core.public_url import build_public_url
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ def upload_audio_to_minio(
 
     Returns
     -------
-    str : URL công khai để truy cập file, dạng http://minio:9000/audio/...
+    str : URL công khai để truy cập file (``MINIO_PUBLIC_URL`` nếu đã cấu hình).
     """
     bucket = settings.minio_bucket
     _ensure_bucket_exists(bucket)
@@ -85,8 +86,7 @@ def upload_audio_to_minio(
     )
 
     # Trả về URL dạng http://<endpoint>/<bucket>/<object>
-    protocol = "https" if settings.minio_secure else "http"
-    return f"{protocol}://{settings.minio_endpoint}/{bucket}/{object_name}"
+    return build_public_url(bucket, object_name)
 
 
 def upload_audio_bytes_to_minio(
@@ -112,8 +112,7 @@ def upload_audio_bytes_to_minio(
         content_type=content_type,
     )
 
-    protocol = "https" if settings.minio_secure else "http"
-    return f"{protocol}://{settings.minio_endpoint}/{bucket}/{object_name}"
+    return build_public_url(bucket, object_name)
 
 
 # ---------------------------------------------------------------------------

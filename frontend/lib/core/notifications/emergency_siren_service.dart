@@ -25,15 +25,15 @@ class EmergencySirenService {
   Future<void> playSiren() async {
     if (!enabled || _isPlaying) return;
     try {
-      _player ??= AudioPlayer();
-      await _player!.setAsset('assets/audio/siren.wav');
-      await _player!.setLoopMode(LoopMode.one);
-      await _player!.setVolume(1.0);
+      final player = _player ??= AudioPlayer();
+      await player.setAsset('assets/audio/siren.wav');
+      await player.setLoopMode(LoopMode.one);
+      await player.setVolume(1.0);
       _isPlaying = true;
-      await _player!.play();
+      await player.play();
     } on MissingPluginException {
       _isPlaying = false;
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('[EmergencySirenService] Không thể phát âm thanh còi hú: $e');
       _isPlaying = false;
     }
@@ -58,6 +58,6 @@ class EmergencySirenService {
       await stopSiren();
       await _player?.dispose();
       _player = null;
-    } catch (_) {}
+    } on Exception catch (_) {}
   }
 }

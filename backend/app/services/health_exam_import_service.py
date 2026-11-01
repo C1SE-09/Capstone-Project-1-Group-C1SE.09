@@ -2,16 +2,18 @@
 app/services/health_exam_import_service.py
 ===========================================
 Nhập kết quả vào sổ sức khoẻ từ file Excel (.xlsx) do school admin tải lên:
-- Đọc đúng cấu trúc 8 cột của file mẫu do GET /api/health-exam/template sinh ra
-  (A: Mã học sinh, B: Họ tên, C: Ngày sinh, D: Giới tính, E: Ngày ghi nhận,
-   F: Chiều cao, G: Cân nặng, H: Kết luận chung).
+- Đọc đúng cấu trúc 7 cột của file mẫu do GET /api/health-exam/template sinh ra
+  (A: Họ và tên — dạng "Nguyễn Văn Ánh (Nhỏ)", B: Ngày sinh, C: Giới tính,
+   D: Ngày ghi nhận, E: Chiều cao, F: Cân nặng, G: Kết luận chung).
+- KHÔNG dùng mã học sinh trong file: học sinh được đối chiếu bằng Họ tên + Biệt danh.
 - Validate từng dòng theo 2 mức:
-  + LỖI CHẶN (không lưu dòng): sai mã HS, HS không thuộc lớp/đã nghỉ,
-    ngày ghi nhận sai/tương lai/trước ngày sinh, trùng HS trong file,
-    thiếu/sai số liệu chiều cao-cân nặng, file sai cấu trúc/quá nhiều dòng.
-  + CẢNH BÁO (vẫn lưu): tên/ngày sinh/giới tính trong file lệch hồ sơ
-    (cột A là khóa ngoại duy nhất, B/C/D chỉ để đối chiếu), chiều cao
-    bất thường so với tuổi, hồ sơ thiếu ngày sinh/giới tính.
+  + LỖI CHẶN (không lưu dòng): không tìm thấy học sinh theo tên/biệt danh,
+    HS không thuộc lớp/đã nghỉ, ngày ghi nhận sai/tương lai/trước ngày sinh,
+    trùng HS trong file, thiếu/sai số liệu chiều cao-cân nặng,
+    file sai cấu trúc/quá nhiều dòng.
+  + CẢNH BÁO (vẫn lưu): ngày sinh/giới tính trong file lệch hồ sơ
+    (tên + biệt danh là khoá đối chiếu), chiều cao bất thường so với tuổi,
+    hồ sơ thiếu ngày sinh/giới tính.
 - Tự tính BMI và xếp loại thể trạng theo ngưỡng WHO BMI-for-age theo nhóm tuổi
   (xem who_growth.py; fallback ngưỡng chung khi thiếu ngày sinh/giới tính).
 - Upsert theo cặp (child_id, examination_date): tạo mới hoặc cập nhật bản ghi đã có,
@@ -22,7 +24,8 @@ Nhập kết quả vào sổ sức khoẻ từ file Excel (.xlsx) do school admi
 from __future__ import annotations
 
 import logging
-import uuid
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from io import BytesIO
@@ -132,17 +135,68 @@ def calc_bmi(height_cm: float, weight_kg: float) -> float:
 
 
 def _duplicate_key(values: list[object]) -> tuple[str, str] | None:
-    """Khoa nhoan trung dong trong file: (ma HS chuan hoa, ngay ISO).
+    """Khoa nhoan trung dong trong file: (ten HS chuan hoa, ngay ISO).
 
     Ngay rong -> dung chuoi rong de moi dong co ngay khac nhau van la duy nhat.
     """
-    cols = list(values) + [None] * (8 - len(values))
-    child_id_text = str(cols[0]).strip().lower() if cols[0] is not None else ""
-    if not child_id_text:
+    cols = list(values) + [None] * (7 - len(values))
+    name_key = normalize_name_key(cols[0])
+    if not name_key:
         return None
-    exam_date = parse_date_cell(cols[4])
+    exam_date = parse_date_cell(cols[3])
     date_key = exam_date.isoformat() if exam_date is not None else ""
-    return (child_id_text, date_key)
+    return (name_key, date_key)
+
+
+def normalize_name_key(value: object) -> str:
+    """Chuan hoa chuoi ten de so sanh: bo dau, lowercase, gom khoang trang."""
+    if value is None:
+        return ""
+    text = unicodedata.normalize("NFD", str(value).strip().lower())
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    text = text.replace("đ", "d").replace("Đ", "d")
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return " ".join(text.split())
+
+
+def split_display_name(value: object) -> tuple[str, str | None]:
+    """Tach chuoi 'Nguyen Van Anh (Nho)' thanh (ho ten, biet danh).
+
+    Ho tro NGOAC LONG NHAU: biet danh trong DB co the chua hau to phan biet
+    mau, vi du 'Bong (Lon)' -> hien thi trong file mau la
+    'Le Ngoc Anh (Bong (Lon))'. Regex '([^()]*)' cu khong tach duoc truong
+    hop nay -> se khong tim thay hoc sinh khi nhap file.
+
+    Neu khong co phan trong ngoac -> biet danh = None.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return "", None
+
+    # Tach phan ngoac ngoai cung bang thuoc tinh noi bo (khong regex).
+    if not (text.endswith(")") and "(" in text):
+        return text, None
+
+    # Tim dau ngoac mo ngoai cung: quet tu phai sang trai, dem cap do ngoac.
+    depth = 0
+    open_idx = -1
+    for i in range(len(text) - 1, -1, -1):
+        ch = text[i]
+        if ch == ")":
+            depth += 1
+        elif ch == "(":
+            depth -= 1
+            if depth == 0:
+                open_idx = i
+                break
+    if open_idx < 0:
+        return text, None
+
+    full_name = text[:open_idx].strip()
+    nickname = text[open_idx + 1 : -1].strip()
+    if not full_name or not nickname:
+        return text, None
+    return full_name, nickname
 
 
 def normalize_gender_cell(value: object) -> str | None:
@@ -162,11 +216,11 @@ def normalize_gender_cell(value: object) -> str | None:
 
 
 def read_exam_workbook(file_bytes: bytes) -> list[tuple[str | None, int, list[object]]]:
-    """Đọc toàn bộ sheet của file Excel, trả về [(tên sheet, số dòng, [giá trị 8 cột])].
+    """Đọc toàn bộ sheet của file Excel, trả về [(tên sheet, số dòng, [giá trị 7 cột])].
 
-    Mỗi sheet xử lý giống nhau: dòng 1 là tiêu đề (bỏ qua), trừ khi cột A đã là
-    mã học sinh (UUID). Các dòng trống được bỏ qua. File mẫu tải tất cả lớp có
-    mỗi lớp 1 sheet nên cần đọc hết, không chỉ sheet đầu.
+    Mỗi sheet xử lý giống nhau: dòng 1 là tiêu đề (bỏ qua). Các dòng trống
+    được bỏ qua. File mẫu tải tất cả lớp có mỗi lớp 1 sheet nên cần đọc hết,
+    không chỉ sheet đầu.
     """
     try:
         wb = openpyxl.load_workbook(BytesIO(file_bytes), data_only=True, read_only=True)
@@ -180,18 +234,12 @@ def read_exam_workbook(file_bytes: bytes) -> list[tuple[str | None, int, list[ob
     skipped_blank = 0
     for ws in wb.worksheets:
         sheet_name = ws.title if len(wb.sheetnames) > 1 else None
-        all_rows = list(ws.iter_rows(min_row=1, max_col=8, values_only=True))
+        all_rows = list(ws.iter_rows(min_row=1, max_col=7, values_only=True))
         if not all_rows:
             continue
 
+        _validate_header_row(all_rows[0])
         start_idx = 1
-        first_cell = all_rows[0][0] if len(all_rows[0]) > 0 else None
-        try:
-            uuid.UUID(str(first_cell).strip())
-            start_idx = 0  # Dòng 1 đã là dữ liệu (cột A là mã học sinh)
-        except (ValueError, AttributeError):
-            start_idx = 1
-            _validate_header_row(all_rows[0])
 
         for idx in range(start_idx, len(all_rows)):
             values = list(all_rows[idx])
@@ -218,8 +266,8 @@ def read_exam_workbook(file_bytes: bytes) -> list[tuple[str | None, int, list[ob
 def _validate_header_row(header: tuple[object, ...]) -> None:
     """Kiem tra dong tieu de co dung cau truc file mau khong.
 
-    File mau co 8 cot: Ma hoc sinh / Ho va ten / Ngay sinh / Gioi tinh /
-    Ngay ghi nhan / Chieu cao / Can nang / Ket luan chung.
+    File mau co 7 cot: Ho va ten / Ngay sinh / Gioi tinh / Ngay ghi nhan /
+    Chieu cao / Can nang / Ket luan chung.
 
     Neu dong 1 khong giong mot tieu de (vi du nguoi dung xoa tieu de roi
     nhung chua nhap du lieu) thi bao loi de tai lai file mau.
@@ -229,14 +277,14 @@ def _validate_header_row(header: tuple[object, ...]) -> None:
         return
 
     # Neu co it nhat mot cot dinh danh/doi luong thi co the la tieu de that.
-    has_id = any("mã học sinh" in c or "ma hoc sinh" in c or "mã hs" in c for c in cells)
+    has_name = any("họ và tên" in c or "ho va ten" in c or "họ tên" in c for c in cells)
     has_height = any("chiều cao" in c or "chieu cao" in c for c in cells)
     has_weight = any("cân nặng" in c or "can nang" in c for c in cells)
-    if has_id or has_height or has_weight:
+    if has_name or has_height or has_weight:
         # Co tieu de nhung thieu cot bat buoc -> bao loi.
         missing = []
-        if not has_id:
-            missing.append("Mã học sinh")
+        if not has_name:
+            missing.append("Họ và tên")
         if not has_height:
             missing.append("Chiều cao")
         if not has_weight:
@@ -250,17 +298,12 @@ def _validate_header_row(header: tuple[object, ...]) -> None:
         return
 
     # Khong co cot nao giong tieu duoc biet -> dong 1 co the la du lieu.
-    # Neu cot A khong phai UUID thi file sai cau truc (hoac xoa tieu de).
-    first_cell = cells[0] if cells else ""
-    try:
-        uuid.UUID(first_cell)
-    except (ValueError, AttributeError):
-        raise HealthExamFileError(
-            "File không đúng cấu trúc file mẫu. Vui lòng giữ nguyên dòng tiêu đề "
-            "(Mã học sinh, Họ và tên, Ngày sinh, Giới tính, Ngày ghi nhận, "
-            "Chiều cao, Cân nặng, Kết luận chung) "
-            "hoặc tải file mẫu mới nhất rồi nhập lại."
-        ) from None
+    raise HealthExamFileError(
+        "File không đúng cấu trúc file mẫu. Vui lòng giữ nguyên dòng tiêu đề "
+        "(Họ và tên, Ngày sinh, Giới tính, Ngày ghi nhận, "
+        "Chiều cao, Cân nặng, Kết luận chung) "
+        "hoặc tải file mẫu mới nhất rồi nhập lại."
+    )
 
 
 def import_health_exam_file(
@@ -272,8 +315,8 @@ def import_health_exam_file(
     """Validate + lưu toàn bộ dòng hợp lệ, gom báo cáo lỗi từng dòng.
 
     Đọc toàn bộ sheet trong file (mỗi sheet là một lớp trong file mẫu tải tất cả).
-    Học sinh được tra theo toàn trường (mã HS là khóa duy nhất) nên file nhiều
-    sheet vẫn nhập đúng lớp của từng bé. `classroom=None` nghĩa là nhập toàn trường.
+    Học sinh được tra theo Họ tên + Biệt danh nên file nhiều sheet vẫn nhập
+    đúng lớp của từng bé. `classroom=None` nghĩa là nhập toàn trường.
     Các dòng hợp lệ được lưu trong một commit duy nhất; dòng lỗi không chặn dòng đúng.
     """
     rows = read_exam_workbook(file_bytes)
@@ -284,8 +327,16 @@ def import_health_exam_file(
     children = db.scalars(select(Child)).all()
     if classroom is not None:
         children = [c for c in children if c.class_id == classroom.class_id]
-    children_by_id: dict[str, Child] = {str(c.child_id): c for c in children}
     class_name = classroom.name if classroom is not None else "toàn trường"
+
+    # Index tra cứu học sinh theo (họ tên, biệt danh) và theo họ tên đơn thuần.
+    children_by_name: dict[tuple[str, str], list[Child]] = {}
+    children_by_full_name: dict[str, list[Child]] = {}
+    for c in children:
+        full_key = normalize_name_key(c.full_name)
+        nick_key = normalize_name_key(c.nickname) if c.nickname else ""
+        children_by_full_name.setdefault(full_key, []).append(c)
+        children_by_name.setdefault((full_key, nick_key), []).append(c)
 
     child_ids = [str(c.child_id) for c in children]
     existing: dict[tuple[str, date], HealthExamination] = {}
@@ -298,8 +349,8 @@ def import_health_exam_file(
 
     pending: dict[tuple[str, date], HealthExamination] = {}
 
-    # Phat hien trung ma HS + cung ngay trong 1 file TRUOC khi luu:
-    # gom nhom theo (child_id, ngay da chuan hoa) de bao loi ca 2 dong.
+    # Phat hien trung HS + cung ngay trong 1 file TRUOC khi luu:
+    # gom nhom theo (ten HS chuan hoa, ngay da chuan hoa) de bao loi ca 2 dong.
     # Ngay duoc chuan hoa ve ISO de "20/10/2026" va "2026-10-20" la trung nhau.
     seen_in_file: dict[tuple[str, str], list[tuple[str | None, int]]] = {}
     for sheet_name, row_number, values in rows:
@@ -314,7 +365,8 @@ def import_health_exam_file(
             record = _build_record(
                 db=db,
                 scope_name=class_name,
-                children_by_id=children_by_id,
+                children_by_name=children_by_name,
+                children_by_full_name=children_by_full_name,
                 existing=existing,
                 pending=pending,
                 dup_keys=dup_keys,
@@ -332,11 +384,21 @@ def import_health_exam_file(
             if key in existing or key in pending:
                 target = pending.get(key, existing.get(key))
                 assert target is not None
-                target.height = record.height
-                target.weight = record.weight
-                target.bmi = record.bmi
-                target.health_category = record.health_category
-                target.general_conclusion = record.general_conclusion
+                # Ô trống trong file = "không ghi nhận lần này" -> GIỮ giá trị
+                # cũ đang có thay vì xoá, để không mất số liệu đã nhập trước đó.
+                target.height = record.height if record.height is not None else target.height
+                target.weight = record.weight if record.weight is not None else target.weight
+                target.bmi = record.bmi if record.bmi is not None else target.bmi
+                target.health_category = (
+                    record.health_category
+                    if record.health_category is not None
+                    else target.health_category
+                )
+                target.general_conclusion = (
+                    record.general_conclusion
+                    if record.general_conclusion is not None
+                    else target.general_conclusion
+                )
                 target.created_by_user_id = record.created_by_user_id
                 pending[key] = target
                 result.updated_count += 1
@@ -357,7 +419,8 @@ def import_health_exam_file(
 def _build_record(
     db: Session,
     scope_name: str,
-    children_by_id: dict[str, Child],
+    children_by_name: dict[tuple[str, str], list[Child]],
+    children_by_full_name: dict[str, list[Child]],
     existing: dict[tuple[str, date], HealthExamination],
     pending: dict[tuple[str, date], HealthExamination],
     dup_keys: dict[tuple[str, str], list[tuple[str | None, int]]],
@@ -368,78 +431,108 @@ def _build_record(
     """Validate một dòng Excel và dựng entity; lỗi ghi vào issue, trả None khi lỗi chặn.
 
     Quy tac dinh danh:
-    - Cot A (Ma hoc sinh) la khoa ngoai duy nhat — validate chat, sai thi chan.
-    - Cot B/C/D (Ten, Ngay sinh, Gioi tinh) chi de doi chieu — lech thi canh bao,
+    - Cot A (Ho va ten) chua "Ho ten (Biet danh)" la khoa doi chieu duy nhat.
+    - Cot B/C (Ngay sinh, Gioi tinh) chi de doi chieu — lech thi canh bao,
       van luu theo ho so (khong chan de tranh ket ca lop vi 1 loi danh may).
     """
-    cols = list(values) + [None] * (8 - len(values))
-    child_id_text = str(cols[0]).strip() if cols[0] is not None else ""
-    full_name_text = str(cols[1]).strip() if cols[1] is not None else ""
-    dob_text = str(cols[2]).strip() if cols[2] is not None else ""
-    gender_text_raw = cols[3]
-    issue.child_id = child_id_text or None
-    issue.full_name = full_name_text or None
+    cols = list(values) + [None] * (7 - len(values))
+    name_text = str(cols[0]).strip() if cols[0] is not None else ""
+    dob_text = str(cols[1]).strip() if cols[1] is not None else ""
+    gender_text_raw = cols[2]
+    issue.full_name = name_text or None
 
-    # --- 1. Mã học sinh (khóa ngoại — validate chặt) ---
-    if not child_id_text:
-        issue.errors.append("Thiếu mã học sinh (cột A). Hãy tải lại file mẫu mới nhất.")
-        return None
-    try:
-        child_uuid = uuid.UUID(child_id_text)
-    except ValueError:
-        issue.errors.append(f"Mã học sinh '{child_id_text}' không đúng định dạng.")
+    # --- 1. Đối chiếu học sinh theo Họ tên + Biệt danh ---
+    file_full_name, file_nickname = split_display_name(name_text)
+    if not file_full_name:
+        issue.errors.append("Thiếu họ và tên học sinh (cột A). Hãy tải lại file mẫu mới nhất.")
         return None
 
-    child = children_by_id.get(str(child_uuid))
-    if child is None:
-        other = db.scalar(select(Child).where(Child.child_id == child_uuid))
-        if other is None:
-            issue.errors.append(f"Mã học sinh '{child_id_text}' không tồn tại trong hệ thống.")
-        else:
+    file_name_key = normalize_name_key(file_full_name)
+    file_nick_key = normalize_name_key(file_nickname) if file_nickname else ""
+    same_name_children = list(children_by_full_name.get(file_name_key, []))
+    candidates: list[Child] = []
+    if file_nick_key:
+        # File CÓ biệt danh -> ưu tiên khớp chính xác cả họ tên lẫn biệt danh.
+        candidates = list(children_by_name.get((file_name_key, file_nick_key), []))
+        if not candidates and same_name_children:
+            # Có bé trùng họ tên nhưng biệt danh trong file không khớp ai.
+            have_nicks = ", ".join(
+                f"({c.nickname})" for c in same_name_children if c.nickname
+            ) or "(không có biệt danh)"
             issue.errors.append(
-                f"Học sinh '{other.full_name}' không thuộc phạm vi '{scope_name}'."
+                f"Biệt danh '{file_nickname}' không khớp với hồ sơ của '{file_full_name}' "
+                f"{have_nicks}. Vui lòng dùng đúng biệt danh như trong file mẫu."
             )
+            return None
+    if not candidates:
+        # File KHÔNG có biệt danh (hoặc không khớp) -> lọc theo họ tên đơn thuần.
+        candidates = same_name_children
+        if len(candidates) > 1:
+            # Ranh giới phân biệt:
+            #   - 1 bé có biệt danh + 1 bé KHÔNG có biệt danh -> vẫn phân biệt
+            #     được -> chọn bé không có biệt danh (file mẫu ghi tên trần cho
+            #     bé này).
+            #   - >= 2 bé không có biệt danh -> không biết là bé nào -> chặn.
+            without_nick = [c for c in candidates if not c.nickname]
+            if len(without_nick) == 1:
+                candidates = without_nick
+            elif len(without_nick) >= 2:
+                issue.errors.append(
+                    f"Có {len(without_nick)} học sinh trùng họ tên '{file_full_name}' và đều "
+                    "không có biệt danh, không thể xác định bé nào. Vui lòng bổ sung "
+                    "biệt danh phân biệt trong hồ sơ học sinh."
+                )
+                return None
+
+    if not candidates:
+        issue.errors.append(
+            f"Không tìm thấy học sinh '{name_text}' trong {scope_name}. "
+            "Vui lòng dùng đúng họ tên và biệt danh như trong file mẫu."
+        )
         return None
+    if len(candidates) > 1:
+        issue.errors.append(
+            f"Có nhiều học sinh trùng họ tên '{file_full_name}'"
+            + (f" và biệt danh '{file_nickname}'" if file_nickname else "")
+            + f" trong {scope_name}. Vui lòng kiểm tra lại hồ sơ."
+        )
+        return None
+
+    child = candidates[0]
+    issue.child_id = str(child.child_id)
     if child.status != ChildStatus.ENROLLED:
         issue.errors.append(f"Học sinh '{child.full_name}' hiện không còn theo học tại lớp.")
         return None
 
-    # --- 2. Đối chiếu cột hồ sơ B/C/D với hồ sơ (lệch → cảnh báo, vẫn lưu) ---
-    if full_name_text and full_name_text.lower() != child.full_name.lower():
-        issue.warnings.append(
-            f"Họ tên trong file ('{full_name_text}') khác với hồ sơ ('{child.full_name}'), "
-            "vẫn lưu theo mã học sinh."
-        )
+    # --- 2. Đối chiếu cột hồ sơ B/C với hồ sơ (lệch → cảnh báo, vẫn lưu) ---
     if dob_text:
-        file_dob = parse_date_cell(cols[2])
+        file_dob = parse_date_cell(cols[1])
         if file_dob is None:
             issue.warnings.append(
-                f"Ngày sinh trong file ('{dob_text}') không đúng định dạng, "
-                "bỏ qua và đối chiếu theo mã học sinh."
+                f"Ngày sinh trong file ('{dob_text}') không đúng định dạng, bỏ qua."
             )
         elif child.date_of_birth and file_dob != child.date_of_birth:
             issue.warnings.append(
                 f"Ngày sinh trong file ({file_dob.strftime('%d/%m/%Y')}) khác với hồ sơ "
-                f"({child.date_of_birth.strftime('%d/%m/%Y')}), vẫn lưu theo mã học sinh."
+                f"({child.date_of_birth.strftime('%d/%m/%Y')}), vẫn lưu theo hồ sơ."
             )
     file_gender = normalize_gender_cell(gender_text_raw)
     if gender_text_raw is not None and str(gender_text_raw).strip() != "":
         if file_gender is None:
             issue.warnings.append(
-                f"Giới tính trong file ('{gender_text_raw}') không nhận diện được, "
-                "bỏ qua và đối chiếu theo mã học sinh."
+                f"Giới tính trong file ('{gender_text_raw}') không nhận diện được, bỏ qua."
             )
         elif child.gender and file_gender != child.gender.lower():
             gender_vi = {"male": "Nam", "female": "Nữ"}.get(child.gender.lower(), child.gender)
             issue.warnings.append(
                 f"Giới tính trong file ('{gender_text_raw}') khác với hồ sơ ({gender_vi}), "
-                "vẫn lưu theo mã học sinh."
+                "vẫn lưu theo hồ sơ."
             )
 
     # --- 3. Ngày ghi nhận (trống thì lấy hôm nay) ---
-    exam_date = parse_date_cell(cols[4])
-    if cols[4] is not None and str(cols[4]).strip() != "" and exam_date is None:
-        issue.errors.append(f"Ngày ghi nhận '{cols[4]}' không đúng định dạng (dùng DD/MM/YYYY).")
+    exam_date = parse_date_cell(cols[3])
+    if cols[3] is not None and str(cols[3]).strip() != "" and exam_date is None:
+        issue.errors.append(f"Ngày ghi nhận '{cols[3]}' không đúng định dạng (dùng DD/MM/YYYY).")
         return None
     if exam_date is None:
         exam_date = date.today()
@@ -472,74 +565,100 @@ def _build_record(
         )
         return None
 
-    # --- 5. Chiều cao ---
-    height = parse_float_cell(cols[5])
-    if cols[5] is None or str(cols[5]).strip() == "":
-        issue.errors.append("Thiếu chiều cao (cột F).")
-        return None
-    if height is None:
-        issue.errors.append(f"Chiều cao '{cols[5]}' không phải là số.")
-        return None
-    if height <= 0:
-        issue.errors.append(f"Chiều cao phải lớn hơn 0 (nhận được {cols[5]}).")
-        return None
-    if not (HEIGHT_MIN_CM <= height <= HEIGHT_MAX_CM):
-        issue.errors.append(
-            f"Chiều cao {height:g} cm không hợp lý (cho phép {HEIGHT_MIN_CM:g}–{HEIGHT_MAX_CM:g} cm)."
-        )
-        return None
-
-    # --- 6. Cân nặng ---
-    weight = parse_float_cell(cols[6])
-    if cols[6] is None or str(cols[6]).strip() == "":
-        issue.errors.append("Thiếu cân nặng (cột G).")
-        return None
-    if weight is None:
-        issue.errors.append(f"Cân nặng '{cols[6]}' không phải là số.")
-        return None
-    if weight <= 0:
-        issue.errors.append(f"Cân nặng phải lớn hơn 0 (nhận được {cols[6]}).")
-        return None
-    if not (WEIGHT_MIN_KG <= weight <= WEIGHT_MAX_KG):
-        issue.errors.append(
-            f"Cân nặng {weight:g} kg không hợp lý (cho phép {WEIGHT_MIN_KG:g}–{WEIGHT_MAX_KG:g} kg)."
-        )
-        return None
-
-    # --- 7. BMI + phân loại (luôn tự tính phía server, xếp loại theo WHO) ---
-    # File nhập không còn cột BMI/phân loại — người nhập chỉ điền số đo,
-    # hệ thống tự tính BMI và xếp loại theo tuổi + giới tính của bé.
-    bmi = calc_bmi(height, weight)
-    health_category = classify_bmi_who(
-        bmi,
-        birth_date=child.date_of_birth,
-        exam_date=exam_date,
-        gender=child.gender,
-    )
-    if child.date_of_birth is None or not child.gender:
-        issue.warnings.append(
-            "Hồ sơ thiếu ngày sinh hoặc giới tính nên hệ thống xếp loại theo ngưỡng "
-            "chung. Vui lòng bổ sung hồ sơ để đánh giá chính xác hơn."
-        )
-
-    # Canh bao neu chiều cao bất thường so với tuoi (co the do nhap sai don vi).
-    if child.date_of_birth:
-        months_old = age_in_months(child.date_of_birth, exam_date)
-        if height < 70 and months_old >= 24:
-            issue.warnings.append(
-                f"Chiều cao {height:g} cm rất thấp so với {months_old} tháng tuổi. "
-                "Vui lòng kiểm tra có nhầm đơn vị không."
+    # --- 5. Chiều cao (có thể để trống) ---
+    # Quy tắc mới: chỉ cần có 1 trong 3 thông tin (chiều cao, cân nặng, kết
+    # luận chung) thì vẫn nhập được. Thiếu CẢ 3 mới báo lỗi chặn dòng.
+    height: float | None = None
+    height_raw = str(cols[4]).strip() if cols[4] is not None else ""
+    if height_raw != "":
+        height = parse_float_cell(cols[4])
+        if height is None:
+            issue.errors.append(f"Chiều cao '{cols[4]}' không phải là số.")
+            return None
+        if height <= 0:
+            issue.errors.append(f"Chiều cao phải lớn hơn 0 (nhận được {cols[4]}).")
+            return None
+        if not (HEIGHT_MIN_CM <= height <= HEIGHT_MAX_CM):
+            issue.errors.append(
+                f"Chiều cao {height:g} cm không hợp lý "
+                f"(cho phép {HEIGHT_MIN_CM:g}–{HEIGHT_MAX_CM:g} cm)."
             )
-        elif height > 140 and months_old <= 36:
-            issue.warnings.append(
-                f"Chiều cao {height:g} cm rất cao so với {months_old} tháng tuổi. "
-                "Vui lòng kiểm tra có nhầm đơn vị không."
-            )
+            return None
 
-    conclusion = str(cols[7]).strip() if cols[7] is not None else ""
+    # --- 6. Cân nặng (có thể để trống) ---
+    weight: float | None = None
+    weight_raw = str(cols[5]).strip() if cols[5] is not None else ""
+    if weight_raw != "":
+        weight = parse_float_cell(cols[5])
+        if weight is None:
+            issue.errors.append(f"Cân nặng '{cols[5]}' không phải là số.")
+            return None
+        if weight <= 0:
+            issue.errors.append(f"Cân nặng phải lớn hơn 0 (nhận được {cols[5]}).")
+            return None
+        if not (WEIGHT_MIN_KG <= weight <= WEIGHT_MAX_KG):
+            issue.errors.append(
+                f"Cân nặng {weight:g} kg không hợp lý "
+                f"(cho phép {WEIGHT_MIN_KG:g}–{WEIGHT_MAX_KG:g} kg)."
+            )
+            return None
+
+    # --- 7. Kết luận chung (có thể để trống) ---
+    conclusion = str(cols[6]).strip() if cols[6] is not None else ""
     if len(conclusion) > 2000:
         issue.errors.append("Kết luận chung quá dài (tối đa 2000 ký tự).")
         return None
+
+    # Thiếu cả 3 thông tin -> dòng không có gì để lưu -> báo lỗi chặn.
+    if height is None and weight is None and not conclusion:
+        issue.errors.append(
+            "Dòng không có dữ liệu: cần ít nhất 1 trong 3 thông tin "
+            "(Chiều cao, Cân nặng hoặc Kết luận chung)."
+        )
+        return None
+
+    # --- 8. BMI + phân loại (chỉ tính khi có ĐỦ chiều cao và cân nặng) ---
+    # File nhập không có cột BMI/phân loại — người nhập chỉ điền số đo,
+    # hệ thống tự tính BMI và xếp loại theo tuổi + giới tính của bé.
+    bmi: float | None = None
+    health_category: HealthCategory | None = None
+    if height is not None and weight is not None:
+        bmi = calc_bmi(height, weight)
+        health_category = classify_bmi_who(
+            bmi,
+            birth_date=child.date_of_birth,
+            exam_date=exam_date,
+            gender=child.gender,
+        )
+        if child.date_of_birth is None or not child.gender:
+            issue.warnings.append(
+                "Hồ sơ thiếu ngày sinh hoặc giới tính nên hệ thống xếp loại theo ngưỡng "
+                "chung. Vui lòng bổ sung hồ sơ để đánh giá chính xác hơn."
+            )
+
+        # Canh bao neu chiều cao bất thường so với tuoi (co the do nhap sai don vi).
+        if child.date_of_birth:
+            months_old = age_in_months(child.date_of_birth, exam_date)
+            if height < 70 and months_old >= 24:
+                issue.warnings.append(
+                    f"Chiều cao {height:g} cm rất thấp so với {months_old} tháng tuổi. "
+                    "Vui lòng kiểm tra có nhầm đơn vị không."
+                )
+            elif height > 140 and months_old <= 36:
+                issue.warnings.append(
+                    f"Chiều cao {height:g} cm rất cao so với {months_old} tháng tuổi. "
+                    "Vui lòng kiểm tra có nhầm đơn vị không."
+                )
+    else:
+        missing = []
+        if height is None:
+            missing.append("chiều cao")
+        if weight is None:
+            missing.append("cân nặng")
+        issue.warnings.append(
+            f"Thiếu {' và '.join(missing)} nên hệ thống chưa tính được BMI và "
+            "phân loại thể trạng cho lần ghi nhận này."
+        )
 
     return HealthExamination(
         child_id=child.child_id,

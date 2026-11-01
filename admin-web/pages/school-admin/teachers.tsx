@@ -65,6 +65,7 @@ export default function SchoolAdminTeachersPage() {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<"file" | "grid">("file");
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [form, setForm] = useState<TeacherFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -360,11 +361,25 @@ export default function SchoolAdminTeachersPage() {
             📥 Xuất Excel
           </button>
           <button
-            onClick={() => setImportOpen(true)}
+            onClick={() => {
+              setImportTab("file");
+              setImportOpen(true);
+            }}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập dữ liệu từ file Excel / CSV"
           >
             📤 Nhập file
+          </button>
+          <button
+            onClick={() => {
+              setImportTab("grid");
+              setImportOpen(true);
+            }}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+            title="Nhập dữ liệu trực tiếp bằng bảng tính trên Web"
+          >
+            <span>📊</span>
+            <span>Nhập trực tiếp</span>
           </button>
           <button onClick={openCreate} className="kbtn kbtn-primary">
             + Thêm giáo viên
@@ -388,41 +403,6 @@ export default function SchoolAdminTeachersPage() {
           />
         </div>
       </div>
-
-      {selectedIds.length > 0 && (
-        <div
-          className="card p-3 mb-3 flex items-center justify-between gap-3 border"
-          style={{ background: "#FDF8F6", borderColor: "#F2D5CE" }}
-        >
-          <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold"
-              style={{ background: "#BB4A34" }}
-            >
-              {selectedIds.length}
-            </span>
-            <span>Đã chọn {selectedIds.length} giáo viên</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedIds([])}
-              className="kbtn kbtn-secondary text-xs"
-              disabled={bulkDeleting}
-            >
-              Bỏ chọn
-            </button>
-            <button
-              onClick={() => setConfirmBulkDel(true)}
-              className="kbtn text-xs text-white font-medium flex items-center gap-1.5"
-              style={{ background: "#BB4A34" }}
-              disabled={bulkDeleting}
-            >
-              <span>🗑️</span>
-              <span>Xóa đã chọn ({selectedIds.length})</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="card overflow-hidden">
         {!teachers && !teachersError ? (
@@ -452,29 +432,79 @@ export default function SchoolAdminTeachersPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead
-                  className="text-xs uppercase tracking-wider"
-                  style={{ background: "#EFECE5", color: "#605D57" }}
+                  className="text-xs uppercase tracking-wider transition-colors duration-200"
+                  style={{
+                    background: selectedIds.length > 0 ? "#FDF8F6" : "#EFECE5",
+                    color: selectedIds.length > 0 ? "#BB4A34" : "#605D57",
+                  }}
                 >
-                  <tr>
-                    <th className="px-3 py-3 text-center w-10">
-                      <input
-                        type="checkbox"
-                        className="rounded cursor-pointer"
-                        checked={allSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = someSelected;
-                        }}
-                        onChange={toggleSelectAll}
-                        title="Chọn tất cả giáo viên hiển thị"
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
-                    <th className="px-4 py-3 text-left font-semibold">Email / SĐT</th>
-                    <th className="px-4 py-3 text-left font-semibold">Lớp phụ trách</th>
-                    <th className="px-4 py-3 text-left font-semibold">Tài khoản</th>
-                    <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
-                    <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
-                  </tr>
+                  {selectedIds.length > 0 ? (
+                    <tr className="border-b border-[#F2D5CE]">
+                      <th className="px-3 py-2.5 text-center w-10">
+                        <input
+                          type="checkbox"
+                          className="rounded cursor-pointer"
+                          checked={allSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = someSelected;
+                          }}
+                          onChange={toggleSelectAll}
+                          title="Bỏ chọn tất cả"
+                        />
+                      </th>
+                      <th colSpan={4} className="px-4 py-2.5 text-left font-semibold normal-case text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
+                            {selectedIds.length}
+                          </span>
+                          <span className="text-[#BB4A34] font-bold">
+                            Đã chọn {selectedIds.length} giáo viên
+                          </span>
+                        </div>
+                      </th>
+                      <th colSpan={2} className="px-4 py-2.5 text-right font-semibold normal-case">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedIds([])}
+                            className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
+                            disabled={bulkDeleting}
+                          >
+                            Bỏ chọn
+                          </button>
+                          <button
+                            onClick={() => setConfirmBulkDel(true)}
+                            className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
+                            style={{ background: "#BB4A34" }}
+                            disabled={bulkDeleting}
+                          >
+                            <span>🗑️</span>
+                            <span>Xóa đã chọn ({selectedIds.length})</span>
+                          </button>
+                        </div>
+                      </th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th className="px-3 py-3 text-center w-10">
+                        <input
+                          type="checkbox"
+                          className="rounded cursor-pointer"
+                          checked={allSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = someSelected;
+                          }}
+                          onChange={toggleSelectAll}
+                          title="Chọn tất cả giáo viên hiển thị"
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
+                      <th className="px-4 py-3 text-left font-semibold">Email / SĐT</th>
+                      <th className="px-4 py-3 text-left font-semibold">Lớp phụ trách</th>
+                      <th className="px-4 py-3 text-left font-semibold">Tài khoản</th>
+                      <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
+                      <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
                   {filtered.map((t, idx) => {
@@ -552,7 +582,7 @@ export default function SchoolAdminTeachersPage() {
                 </tbody>
               </table>
             </div>
-          )}
+        )}
       </div>
 
       <div className="text-xs text-ink-faint mt-2">
@@ -687,6 +717,7 @@ export default function SchoolAdminTeachersPage() {
 
       <ImportModal
         open={importOpen}
+        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách giáo viên từ file"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường. Nếu để trống Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (giáo viên có thể đăng nhập bằng cả Email hoặc Số điện thoại)."

@@ -100,7 +100,7 @@ void main() {
 
     final mockRepo = MockDashboardRepository();
     final mockClassRepo = MockClassDataRepository();
-    final child = ui.Child(
+    final child = const ui.Child(
       id: 'child-1',
       name: 'Nguyễn Văn An',
       status: ui.ReportStatus.draft,
@@ -145,7 +145,7 @@ void main() {
 
     final mockRepo = MockDashboardRepository();
     final mockClassRepo = MockClassDataRepository();
-    final child = ui.Child(
+    final child = const ui.Child(
       id: 'child-1',
       name: 'Trần Thị Bích',
       status: ui.ReportStatus.draft,
@@ -200,7 +200,7 @@ void main() {
 
     final mockRepo = MockDashboardRepository();
     final children = <ui.Child>[
-      ui.Child(
+      const ui.Child(
         id: 'child-1',
         name: 'Nguyễn Văn An',
         status: ui.ReportStatus.draft,

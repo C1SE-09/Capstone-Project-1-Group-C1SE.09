@@ -1,8 +1,8 @@
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
 
-import '../theme.dart';
-import 'parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 
 class ParentRequestSubmittedScreen extends StatelessWidget {
   const ParentRequestSubmittedScreen({super.key, required this.request});

@@ -14,7 +14,7 @@ from app.services.health_profile_service import (
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -538,6 +538,28 @@ def list_classes(db: Session = Depends(get_db)):
     return [_serialize_class(db, c) for c in classes]
 
 
+def _assert_room_available(
+    db: Session, school_id, room_number: str | None, exclude_class_id=None
+) -> None:
+    """Chặn nhập trùng số phòng đã có ở lớp khác trong cùng trường."""
+    if not room_number:
+        return
+    dup = (
+        db.query(Class_)
+        .filter(
+            Class_.school_id == school_id,
+            func.lower(Class_.room_number) == func.lower(room_number),
+            Class_.is_active.is_(True),
+        )
+        .first()
+    )
+    if dup is not None and (exclude_class_id is None or dup.class_id != exclude_class_id):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Phòng '{room_number}' đã được dùng cho lớp '{dup.name}'.",
+        )
+
+
 @router.post("/classes", status_code=status.HTTP_201_CREATED)
 def create_class(data: ClassCreate, db: Session = Depends(get_db)):
     name = (data.name or "").strip()
@@ -545,6 +567,9 @@ def create_class(data: ClassCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Tên lớp không được để trống.")
     if len(name) > 100:
         raise HTTPException(status_code=400, detail="Tên lớp tối đa 100 ký tự.")
+
+    school_id = _get_school_id(db)
+
     room_number = (data.room_number or "").strip() or None
     if room_number and len(room_number) > 20:
         raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
@@ -552,7 +577,6 @@ def create_class(data: ClassCreate, db: Session = Depends(get_db)):
     if data.capacity is not None and data.capacity <= 0:
         raise HTTPException(status_code=400, detail="Sĩ số tối đa phải là số dương.")
 
-    school_id = _get_school_id(db)
     existing = (
         db.query(Class_)
         .filter(Class_.school_id == school_id, Class_.name == name, Class_.is_active.is_(True))
@@ -560,6 +584,8 @@ def create_class(data: ClassCreate, db: Session = Depends(get_db)):
     )
     if existing:
         raise HTTPException(status_code=400, detail=f"Lớp '{name}' đã tồn tại trong trường.")
+
+    _assert_room_available(db, school_id, room_number)
 
     new_class = Class_(
         class_id=uuid.uuid4(),
@@ -612,6 +638,7 @@ def update_class(class_id: str, data: ClassUpdate, db: Session = Depends(get_db)
         room_number = (data.room_number or "").strip() or None
         if room_number and len(room_number) > 20:
             raise HTTPException(status_code=400, detail="Số phòng tối đa 20 ký tự.")
+        _assert_room_available(db, c.school_id, room_number, exclude_class_id=c.class_id)
         c.room_number = room_number
     if "capacity" in data.model_fields_set:
         if data.capacity is not None:

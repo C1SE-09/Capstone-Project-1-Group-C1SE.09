@@ -310,15 +310,6 @@ export async function parseExcelOrCsvDetailed(
 
   for (const sheetName of wb.SheetNames) {
     const sNameNorm = normalizeHeader(sheetName);
-    const isIgnoredSheet =
-      sNameNorm.includes("huong dan") ||
-      sNameNorm.includes("instruction") ||
-      sNameNorm.includes("template") ||
-      sNameNorm.includes("mau nhap") ||
-      sNameNorm.includes("ghi chu") ||
-      sNameNorm.includes("sample");
-
-    if (isIgnoredSheet) continue;
 
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
@@ -351,6 +342,15 @@ export async function parseExcelOrCsvDetailed(
       // Dòng 1 được coi là header nếu có ít nhất 1 ô khớp với các từ khóa nhận diện
       hasHeader = firstRow.some((cell) => detectFieldKey(cell) !== null);
     }
+
+    // Chỉ bỏ qua sheet nếu file có nhiều sheet VÀ sheet đó là trang hướng dẫn/ghi chú thuần túy (không chứa cột dữ liệu)
+    const isPureInstructionSheet =
+      (sNameNorm.includes("huong dan") ||
+        sNameNorm.includes("instruction") ||
+        sNameNorm.includes("ghi chu")) &&
+      !hasHeader;
+
+    if (wb.SheetNames.length > 1 && isPureInstructionSheet) continue;
 
     let dataRows = hasHeader ? cleanRows.slice(1) : cleanRows;
 
@@ -393,7 +393,10 @@ export async function parseExcelOrCsvDetailed(
       /^sheet\s*\d*$/i.test(sheetName) ||
       /^trang\s*tinh\s*\d*$/i.test(sNameNorm) ||
       sNameNorm === "hocsinh" ||
-      sNameNorm === "danh sach";
+      sNameNorm === "danh sach" ||
+      sNameNorm.includes("mau nhap") ||
+      sNameNorm.includes("template") ||
+      sNameNorm.includes("sample");
 
     const shouldUseSheetNameAsClass =
       (wb.SheetNames.length > 1 || !isGenericSheet) && sheetName.trim().length > 0;
@@ -437,3 +440,24 @@ export async function parseExcelOrCsv(
   return res.rows;
 }
 
+
+
+/**
+ * Tao mot doi tuong File Excel (.xlsx) trong bo nho tu mang cac hang du lieu (Array of Arrays).
+ * Dung cho tinh nang nhap truc tiep dang bang (Web Grid) de gui du lieu len cac API nhan file multipart.
+ */
+export function rowsToExcelFile(
+  filename: string,
+  sheetName: string,
+  headers: string[],
+  rows: (string | number)[][],
+): File {
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  applyTextFormatToSheet(ws);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new File([wbout], filename, {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+}

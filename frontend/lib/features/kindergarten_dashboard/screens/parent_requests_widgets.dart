@@ -3,7 +3,7 @@ import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 enum ParentRequestDestination { history, home }
 

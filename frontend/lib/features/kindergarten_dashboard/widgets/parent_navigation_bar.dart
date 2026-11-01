@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 /// Thanh hai tab gọn của phụ huynh, cùng hình thức với mẫu Figma.
 class ParentNavigationBar extends StatelessWidget {

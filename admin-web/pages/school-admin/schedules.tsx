@@ -12,15 +12,16 @@ import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
+  ClassFilterSelect,
+  ConfirmDialog,
   Drawer,
   FormField,
+  ImportModal,
+  ImportResult,
   Modal,
   Pill,
   Spinner,
   Toast,
-  ConfirmDialog,
-  ImportModal,
-  ImportResult,
 } from "@/components/ui-school";
 import { exportMultiSheetToExcel, exportToExcel, ExcelSheetData } from "@/lib/excel-helper";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
@@ -108,6 +109,7 @@ export default function SchoolAdminSchedulesPage() {
   const [roomSearch, setRoomSearch] = useState("");
   const [schoolConflictsModalOpen, setSchoolConflictsModalOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<"file" | "grid">("file");
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportConfig, setExportConfig] = useState<{
     scope: "current" | "all";
@@ -1103,11 +1105,25 @@ export default function SchoolAdminSchedulesPage() {
             📥 Xuất excel
           </button>
           <button
-            onClick={() => setImportOpen(true)}
+            onClick={() => {
+              setImportTab("file");
+              setImportOpen(true);
+            }}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập thời khóa biểu từ file Excel / CSV"
           >
             📤 Nhập file
+          </button>
+          <button
+            onClick={() => {
+              setImportTab("grid");
+              setImportOpen(true);
+            }}
+            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+            title="Nhập thời khóa biểu trực tiếp bằng bảng tính trên Web"
+          >
+            <span>📊</span>
+            <span>Nhập trực tiếp</span>
           </button>
           <button onClick={() => openCreate(selectedDay)} className="kbtn kbtn-primary">
             + Thêm hoạt động
@@ -1172,18 +1188,14 @@ export default function SchoolAdminSchedulesPage() {
           style={{ background: "#EFECE5" }}
         >
           <span className="text-sm font-semibold text-ink">Lớp:</span>
-          <select
-            className="kinput"
-            style={{ maxWidth: 280 }}
-            value={selectedClassId ?? ""}
-            onChange={(e) => setSelectedClassId(e.target.value || null)}
-          >
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.grade_label && `(${c.grade_label})`}
-              </option>
-            ))}
-          </select>
+          <div className="w-72">
+            <ClassFilterSelect
+              classes={classes}
+              value={selectedClassId ?? ""}
+              onChange={(val) => setSelectedClassId(val || null)}
+              placeholder="-- Chọn lớp --"
+            />
+          </div>
         </div>
       )}
 
@@ -1765,6 +1777,7 @@ export default function SchoolAdminSchedulesPage() {
 
       <ImportModal
         open={importOpen}
+        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập thời khóa biểu từ file Excel"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống cho phép nạp và tự động cảnh báo nếu có tiết học bị trùng phòng."

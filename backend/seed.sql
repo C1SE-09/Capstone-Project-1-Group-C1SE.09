@@ -1877,7 +1877,7 @@ INSERT INTO medication_log (
     CURRENT_DATE,
     'morning',
     true,
-    '22222222-0000-0000-0000-000000000001',
+    'bbbbbbbb-0000-0000-0000-000000000001',
     (CURRENT_DATE + TIME '08:30:00')::timestamp with time zone,
     'Bé uống ngoan, không trớ.',
     NOW(),
@@ -1889,7 +1889,7 @@ INSERT INTO medication_log (
     CURRENT_DATE,
     'morning',
     true,
-    '22222222-0000-0000-0000-000000000001',
+    'bbbbbbbb-0000-0000-0000-000000000001',
     (CURRENT_DATE + TIME '08:45:00')::timestamp with time zone,
     'Đã cho bé uống đủ 5ml sau giờ ăn sáng.',
     NOW(),
@@ -1920,7 +1920,6 @@ INSERT INTO health_incident (
     temperature,
     description,
     action_taken,
-    status,
     created_at,
     updated_at
 ) VALUES
@@ -1928,13 +1927,12 @@ INSERT INTO health_incident (
     '55555555-0000-0000-0000-000000000001',
     'dddddddd-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000001',
-    '22222222-0000-0000-0000-000000000001',
+    'bbbbbbbb-0000-0000-0000-000000000001',
     'high_fever',
     NOW() - INTERVAL '2 hours',
     39.2,
     'Bé Gia Bảo trán nóng ran, quấy khóc, đo nhiệt kế điện tử 39.2 độ C.',
     'Cô đã chườm ấm trán, nách, bẹn cho bé, cởi bớt áo khoác và gọi phụ huynh đến đón.',
-    'reported',
     NOW() - INTERVAL '2 hours',
     NOW()
 ),
@@ -1942,13 +1940,12 @@ INSERT INTO health_incident (
     '55555555-0000-0000-0000-000000000002',
     'dddddddd-0000-0000-0000-000000000002',
     'aaaaaaaa-0000-0000-0000-000000000001',
-    '22222222-0000-0000-0000-000000000001',
+    'bbbbbbbb-0000-0000-0000-000000000001',
     'acute_allergy',
     NOW() - INTERVAL '1 day',
     NULL,
     'Bé Ngọc Ánh xuất hiện mẩn đỏ ở cổ và quanh miệng sau giờ ăn xế.',
     'Cho bé uống nước lọc, bôi kem làm dịu da dị ứng theo hướng dẫn y tế của trường.',
-    'resolved',
     NOW() - INTERVAL '1 day',
     NOW()
 )
@@ -1956,6 +1953,5 @@ ON CONFLICT (incident_id) DO UPDATE SET
     temperature = EXCLUDED.temperature,
     description = EXCLUDED.description,
     action_taken = EXCLUDED.action_taken,
-    status = EXCLUDED.status,
     updated_at = NOW();
 

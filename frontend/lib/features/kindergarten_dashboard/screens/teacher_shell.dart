@@ -338,7 +338,10 @@ class _TeacherShellState extends State<TeacherShell> {
                       ),
                   };
                   return Scaffold(
-                    body: page,
+                    body: SafeArea(
+                      bottom: false,
+                      child: page,
+                    ),
                     bottomNavigationBar: _TeacherNavigation(
                       tab: tab,
                       onTab: (value) => setState(() {

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ===========================================================================
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 tiếng (admin web thường ngồi lâu)
+ACCESS_TOKEN_EXPIRE_MINUTES = 2 * 24 * 60  # 2 ngày (2880 phút)
 
 
 # ===========================================================================

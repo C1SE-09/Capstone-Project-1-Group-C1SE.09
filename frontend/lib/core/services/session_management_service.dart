@@ -166,7 +166,7 @@ class SessionManagementService {
       CrashLoggingService.instance.flushPendingReports();
 
       return _currentSession;
-    } catch (_) {
+    } on Exception catch (_) {
       // Trường hợp lỗi đọc storage, trả về null nhẹ nhàng, không gây crash
       _currentSession = null;
       return null;
@@ -205,7 +205,7 @@ class SessionManagementService {
 
       // Đồng bộ các crash log còn pending sau khi đăng nhập thành công
       CrashLoggingService.instance.flushPendingReports();
-    } catch (_) {
+    } on Exception catch (_) {
       // Bỏ qua lỗi phụ trợ
     }
   }
@@ -218,7 +218,7 @@ class SessionManagementService {
       final prefs = await SharedPreferences.getInstance();
       if (_currentSession?.sessionId != session.sessionId) return false;
       if (_canRestoreSession(prefs)) return false;
-    } catch (_) {
+    } on Exception catch (_) {
       // Không xác minh được thời hạn thì yêu cầu đăng nhập lại, không giữ phiên vô hạn.
     }
     await clearSession();
@@ -247,7 +247,7 @@ class SessionManagementService {
         prefs.setInt(_keyExpiresAt,
             DateTime.now().add(sessionTimeout).millisecondsSinceEpoch),
       ]);
-    } catch (_) {}
+    } on Exception catch (_) {}
   }
 
   /// Xóa phiên, giữ định danh thiết bị và thông tin nhớ đăng nhập độc lập.
@@ -266,7 +266,7 @@ class SessionManagementService {
         prefs.remove(_keyDeviceName),
         prefs.remove(_keyExpiresAt),
       ]);
-    } catch (_) {}
+    } on Exception catch (_) {}
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -365,7 +365,7 @@ class SessionManagementService {
       throw const UserFacingException(
         'Không thể làm mới phiên làm việc. Vui lòng thử lại sau.',
       );
-    } catch (e) {
+    } on Exception catch (e) {
       if (e is UserFacingException) rethrow;
       throw const UserFacingException(
         'Đã xảy ra sự cố xác thực. Vui lòng đăng nhập lại.',
@@ -429,7 +429,7 @@ class SessionManagementService {
               (onSessionExpired ?? onSessionExpiredGlobally)?.call();
             }
             return handler.reject(err);
-          } catch (_) {
+          } on Exception catch (_) {
             return handler.reject(err);
           }
         }

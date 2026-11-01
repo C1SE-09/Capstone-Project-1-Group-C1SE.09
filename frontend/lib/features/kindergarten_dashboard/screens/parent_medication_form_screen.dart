@@ -6,10 +6,10 @@ import 'package:adark_frontend/domain/entities/health/medication_request.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../theme.dart';
-import 'parent_medication_submitted_screen.dart';
-import 'parent_medication_widgets.dart';
-import 'parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_submitted_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 
 class ParentMedicationFormScreen extends StatefulWidget {
   const ParentMedicationFormScreen(

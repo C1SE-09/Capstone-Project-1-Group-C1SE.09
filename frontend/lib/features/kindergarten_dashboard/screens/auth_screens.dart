@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
@@ -135,18 +136,18 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       if (!mounted) return;
       final rawRole = user.role.toLowerCase();
-      final UserRole role;
       if (rawRole == 'admin') {
-        role = UserRole.admin;
-      } else if (rawRole == 'parent') {
-        role = UserRole.parent;
-      } else {
-        role = UserRole.teacher;
+        await _authRepository.logout();
+        await SessionManagementService.instance.clearSession();
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Tài khoản Quản trị viên chỉ hỗ trợ trên phiên bản Web máy tính. Vui lòng truy cập cổng quản trị trên trình duyệt web.';
+        });
+        return;
       }
-      if (role == UserRole.parent || role == UserRole.teacher) {
-        // Giáo viên cũng nhận push nhắc hoàn thành điểm danh.
-        PushNotificationService.instance.registerCurrentDevice();
-      }
+      final UserRole role = rawRole == 'parent' ? UserRole.parent : UserRole.teacher;
+      PushNotificationService.instance.registerCurrentDevice();
       widget.onLogin(role);
     } catch (e) {
       if (!mounted) return;

@@ -64,7 +64,7 @@ void main() {
   testWidgets('ReviewScreen handles integer unmatched_segments from backend without crashing',
       (WidgetTester tester) async {
     // Backend returns integer count for unmatched_segments, e.g. "unmatched_segments": 0
-    final extraction = ExtractionData(
+    final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.',
       rawJson: {
         'unmatched_segments': 0, // Integer from backend that previously caused type cast error
@@ -125,7 +125,7 @@ void main() {
 
   testWidgets('ReviewScreen expands analyzed text and shows unapprove button after approve',
       (WidgetTester tester) async {
-    final extraction = ExtractionData(
+    final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.',
       childExtractions: {
         'child-1': {
@@ -203,7 +203,7 @@ void main() {
 
   testWidgets('ReviewScreen allows editing observation content via edit sheet',
       (WidgetTester tester) async {
-    final extraction = ExtractionData(
+    final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan.',
       childExtractions: {
         'child-1': {
@@ -256,7 +256,7 @@ void main() {
 
   testWidgets('ReviewScreen does not display missing fields and leaves note empty',
       (WidgetTester tester) async {
-    final extraction = ExtractionData(
+    final extraction = const ExtractionData(
       transcript: 'Hôm nay bé ăn rất ngoan hết suất.',
       childExtractions: {
         'child-1': {
@@ -297,7 +297,7 @@ void main() {
 
   testWidgets('ReviewScreen displays audio player card above analyzed text card when recordedBytes is provided',
       (WidgetTester tester) async {
-    final extraction = ExtractionData(
+    final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan.',
       childExtractions: {
         'child-1': {'meals': 'Ăn hết suất'},
@@ -343,7 +343,7 @@ void main() {
   testWidgets(
       'ReviewScreen requires all items to be approved or discarded before enabling send button',
       (WidgetTester tester) async {
-    final extraction = ExtractionData(
+    final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan. Bé Lan vẽ hoa rất đẹp.',
       classWideExtraction: {
         'meals': 'Ăn hết cơm',

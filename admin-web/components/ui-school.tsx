@@ -4,12 +4,50 @@
  * UI components nhỏ dùng chung cho School Admin — y hệt pattern Flutter app.
  */
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DirectGridInput } from "@/components/DirectGridInput";
 import {
   downloadExcelTemplate,
   parseExcelOrCsvDetailed,
   DetectedSheetInfo,
 } from "@/lib/excel-helper";
+
+/* ════════ Helpers cho DateInput (dd/mm/yyyy) ════════ */
+
+/** Hôm nay theo giờ địa phương → ISO "YYYY-MM-DD" (không dùng toISOString vì lệch UTC+7). */
+export function todayIsoStr(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/** ISO "YYYY-MM-DD" → "dd/mm/yyyy". */
+export function toDmy(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/**
+ * "ddmmyyyy" hoặc "dd/mm/yyyy" → ISO "YYYY-MM-DD".
+ * Trả về "" nếu ngày không tồn tại trong lịch (vd 31/02).
+ */
+export function parseDmyToIso(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length !== 8) return "";
+  const dd = digits.slice(0, 2);
+  const mm = digits.slice(2, 4);
+  const yyyy = digits.slice(4, 8);
+  const d = Number(dd);
+  const m = Number(mm);
+  const y = Number(yyyy);
+  if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900) return "";
+  // Kiểm tra ngày có thực sự tồn tại (vd 31/02, 30/02).
+  const probe = new Date(y, m - 1, d);
+  if (probe.getFullYear() !== y || probe.getMonth() !== m - 1 || probe.getDate() !== d) return "";
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 /* ════════ Spinner ════════ */
 export function Spinner({ className = "" }: { className?: string }) {
@@ -304,6 +342,229 @@ export function Toast({
   );
 }
 
+/* ════════ DateInput (dd/mm/yyyy — hỗ trợ auto-mask và nút lịch native) ════════ */
+/**
+ * Input nhập ngày theo định dạng Việt Nam dd/mm/yyyy.
+ * - Tự động format thêm dấu gạch chéo '/' khi gõ số (vd: gõ 11 -> 11/, gõ 05 -> 11/05/).
+ * - Hỗ trợ cả phím xóa Backspace mượt mà không bị kẹt dấu gạch.
+ * - Tích hợp nút lịch 📅 bên phải: click mở date picker trực quan của trình duyệt.
+ * - Giá trị lưu truyền ra ngoài luôn là ISO "YYYY-MM-DD".
+ */
+export function DateInput({
+  value,
+  onChange,
+  max,
+  min,
+  placeholder = "dd/mm/yyyy",
+  className = "",
+  onInvalid,
+}: {
+  value: string; // ISO YYYY-MM-DD
+  onChange: (iso: string) => void;
+  max?: string; // ISO YYYY-MM-DD
+  min?: string; // ISO YYYY-MM-DD
+  placeholder?: string;
+  className?: string;
+  onInvalid?: (msg: string) => void;
+}) {
+  const [text, setText] = useState(value ? toDmy(value) : "");
+  const [isError, setIsError] = useState(false);
+  const pickerRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setText(value ? toDmy(value) : "");
+    setIsError(false);
+  }, [value]);
+
+  const commit = (rawDmy: string) => {
+    if (!rawDmy.trim()) {
+      setIsError(false);
+      onChange("");
+      return;
+    }
+    const iso = parseDmyToIso(rawDmy);
+    if (!iso) {
+      setIsError(true);
+      onInvalid?.("Ngày không hợp lệ hoặc không tồn tại, vui lòng nhập dd/mm/yyyy");
+      setText(value ? toDmy(value) : "");
+      onChange("");
+      return;
+    }
+    if (max && iso > max) {
+      setIsError(true);
+      const isToday = max === todayIsoStr();
+      onInvalid?.(
+        isToday
+          ? `Ngày không thể lớn hơn ngày hiện tại (${toDmy(max)}). Đã chặn nhập.`
+          : `Không thể chọn ngày sau ${toDmy(max)}. Đã chặn nhập.`
+      );
+      setText(value ? toDmy(value) : "");
+      onChange("");
+      return;
+    }
+    if (min && iso < min) {
+      setIsError(true);
+      onInvalid?.(`Không thể chọn ngày trước ${toDmy(min)}. Đã chặn nhập.`);
+      setText(value ? toDmy(value) : "");
+      onChange("");
+      return;
+    }
+    setIsError(false);
+    onChange(iso);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsError(false);
+    const raw = e.target.value;
+    const isDeleting = (e.nativeEvent as any)?.inputType?.startsWith("delete") || raw.length < text.length;
+
+    // Nếu người dùng xóa hết
+    if (!raw.trim()) {
+      setText("");
+      onChange("");
+      return;
+    }
+
+    // Xử lý auto-pad khi người dùng chủ động gõ dấu '/'
+    let digits = raw.replace(/\D/g, "").slice(0, 8);
+    if (!isDeleting && raw.endsWith("/") && !text.endsWith("/")) {
+      if (digits.length === 1) {
+        digits = "0" + digits;
+      } else if (digits.length === 3) {
+        digits = digits.slice(0, 2) + "0" + digits.slice(2);
+      }
+    }
+
+    // Áp dụng mask dd/mm/yyyy
+    let formatted = "";
+    if (digits.length < 2) {
+      formatted = digits;
+    } else if (digits.length === 2) {
+      formatted = isDeleting ? digits : `${digits}/`;
+    } else if (digits.length < 4) {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    } else if (digits.length === 4) {
+      formatted = isDeleting ? `${digits.slice(0, 2)}/${digits.slice(2)}` : `${digits.slice(0, 2)}/${digits.slice(2)}/`;
+    } else {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    }
+
+    setText(formatted);
+
+    // Khi đã nhập đủ 8 chữ số ngày/tháng/năm
+    if (digits.length === 8) {
+      commit(formatted);
+    }
+  };
+
+  const handleBlur = () => {
+    if (text.trim()) {
+      commit(text);
+    }
+  };
+
+  const handleOpenPicker = () => {
+    if (!pickerRef.current) return;
+    try {
+      if (typeof pickerRef.current.showPicker === "function") {
+        pickerRef.current.showPicker();
+      } else {
+        pickerRef.current.focus();
+        pickerRef.current.click();
+      }
+    } catch {
+      pickerRef.current.focus();
+    }
+  };
+
+  return (
+    <div className={`relative flex items-center ${className}`}>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={text}
+        placeholder={placeholder}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        className={`kinput w-full pr-9 font-medium transition-colors ${
+          isError ? "border-bad focus:border-bad focus:ring-bad/30 bg-bad/5" : ""
+        }`}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={handleOpenPicker}
+        title="Chọn ngày từ lịch"
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink w-7 h-7 flex items-center justify-center rounded-control hover:bg-black/5 transition-colors cursor-pointer"
+      >
+        <svg
+          className="w-4 h-4 text-ink-soft hover:text-brand"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      </button>
+
+      {/* Hidden native date input để mở picker của trình duyệt */}
+      <input
+        ref={pickerRef}
+        type="date"
+        tabIndex={-1}
+        aria-hidden="true"
+        value={value || ""}
+        max={max}
+        min={min}
+        onChange={(e) => {
+          const iso = e.target.value;
+          if (iso) {
+            if (max && iso > max) {
+              setIsError(true);
+              const isToday = max === todayIsoStr();
+              onInvalid?.(
+                isToday
+                  ? `Ngày không thể lớn hơn ngày hiện tại (${toDmy(max)}). Đã chặn nhập.`
+                  : `Không thể chọn ngày sau ${toDmy(max)}. Đã chặn nhập.`
+              );
+              setText(value ? toDmy(value) : "");
+              onChange("");
+              return;
+            }
+            if (min && iso < min) {
+              setIsError(true);
+              onInvalid?.(`Không thể chọn ngày trước ${toDmy(min)}. Đã chặn nhập.`);
+              setText(value ? toDmy(value) : "");
+              onChange("");
+              return;
+            }
+            setIsError(false);
+            setText(toDmy(iso));
+            onChange(iso);
+          }
+        }}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          right: 0,
+          width: 0,
+          height: 0,
+          opacity: 0,
+          pointerEvents: "none",
+          border: "none",
+          padding: 0,
+          margin: 0,
+        }}
+      />
+    </div>
+  );
+}
+
 /* ════════ FormField (label + input + helper) ════════ */
 export function FormField({
   label,
@@ -446,6 +707,247 @@ export function EmptyState({
   );
 }
 
+/* ════════ Helper: Chuyển tiếng Việt có dấu sang không dấu để tìm kiếm ════════ */
+function removeVietnameseTones(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .trim();
+}
+
+/* ════════ SearchableSelect ════════ */
+export interface SelectOption {
+  value: string;
+  label: string;
+  sublabel?: string;
+  badge?: string;
+}
+
+export function SearchableSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Chọn...",
+  searchPlaceholder = "Nhập tìm kiếm...",
+  prefixIcon,
+  className = "",
+  disabled = false,
+  allowClear = false,
+  renderOption,
+}: {
+  options: SelectOption[];
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  prefixIcon?: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  allowClear?: boolean;
+  renderOption?: (opt: SelectOption, isSelected: boolean) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Tìm option đang được chọn
+  const selectedOption = useMemo(
+    () => options.find((o) => o.value === value),
+    [options, value]
+  );
+
+  // Đóng khi click ra ngoài hoặc bấm Escape
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  // Reset từ khoá tìm kiếm khi đóng mở
+  useEffect(() => {
+    if (!open) {
+      setSearch("");
+    }
+  }, [open]);
+
+  // Lọc options dựa trên từ khóa tìm kiếm (hỗ trợ tiếng Việt không dấu & có dấu)
+  const filteredOptions = useMemo(() => {
+    const q = search.trim();
+    if (!q) return options;
+    const qNorm = removeVietnameseTones(q);
+    return options.filter((opt) => {
+      const labelNorm = removeVietnameseTones(opt.label);
+      const subNorm = opt.sublabel ? removeVietnameseTones(opt.sublabel) : "";
+      return (
+        labelNorm.includes(qNorm) ||
+        subNorm.includes(qNorm) ||
+        opt.label.toLowerCase().includes(q.toLowerCase()) ||
+        (opt.sublabel && opt.sublabel.toLowerCase().includes(q.toLowerCase()))
+      );
+    });
+  }, [options, search]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      {/* Nút bấm mở Drop box */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((prev) => !prev)}
+        className={`kinput !h-10 w-full flex items-center justify-between gap-2 text-left cursor-pointer bg-white transition-all ${
+          open ? "border-brand-500 ring-2 ring-brand-500/20" : ""
+        } ${disabled ? "opacity-60 cursor-not-allowed bg-sunken" : ""}`}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {prefixIcon && <span className="flex-shrink-0 text-ink-soft">{prefixIcon}</span>}
+          <span
+            className={`truncate text-sm ${
+              selectedOption && selectedOption.value !== ""
+                ? "font-medium text-ink"
+                : "text-ink-soft"
+            }`}
+          >
+            {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption?.sublabel && selectedOption.value !== "" && (
+              <span className="ml-1.5 text-xs text-ink-soft font-normal">
+                ({selectedOption.sublabel})
+              </span>
+            )}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {allowClear && value !== "" && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
+              title="Xóa lựa chọn"
+              className="text-ink-soft hover:text-ink w-5 h-5 flex items-center justify-center text-xs rounded-full hover:bg-black/5"
+            >
+              ✕
+            </span>
+          )}
+          <svg
+            className={`w-4 h-4 text-ink-soft transition-transform duration-200 ${
+              open ? "rotate-180 text-brand-600" : ""
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Menu thả xuống có ô input tìm kiếm */}
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1.5 w-full min-w-[240px] bg-white rounded-card border border-line shadow-xl z-50 overflow-hidden"
+          style={{ animation: "fadeIn 0.15s ease-out" }}
+        >
+          {/* Ô nhập tìm kiếm */}
+          <div className="p-2 border-b border-line bg-sunken/40">
+            <div className="relative flex items-center">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-soft select-none pointer-events-none">
+                🔍
+              </span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full pl-8 pr-7 py-1.5 text-xs sm:text-sm bg-white border border-line rounded-control text-ink placeholder:text-ink-soft focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink text-xs w-4 h-4 flex items-center justify-center rounded-full hover:bg-black/5"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Danh sách các item trong drop box */}
+          <div className="max-h-60 overflow-y-auto py-1">
+            {filteredOptions.length === 0 ? (
+              <div className="py-6 px-3 text-center text-xs text-ink-soft">
+                Không tìm thấy kết quả phù hợp cho &quot;{search}&quot;
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <div
+                    key={opt.value}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setOpen(false);
+                    }}
+                    className={`px-3.5 py-2 text-sm cursor-pointer flex items-center justify-between gap-2 transition-colors ${
+                      isSelected
+                        ? "bg-brand-50 text-brand-700 font-semibold"
+                        : "text-ink hover:bg-sunken"
+                    }`}
+                  >
+                    {renderOption ? (
+                      renderOption(opt, isSelected)
+                    ) : (
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="truncate">{opt.label}</span>
+                        {opt.sublabel && (
+                          <span className="text-xs text-ink-soft font-normal px-1.5 py-0.5 rounded bg-black/5 flex-shrink-0">
+                            {opt.sublabel}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {isSelected && (
+                      <span className="text-brand-600 text-xs font-bold flex-shrink-0">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ════════ ClassFilterSelect ════════ */
 export function ClassFilterSelect({
   classes,
@@ -454,45 +956,34 @@ export function ClassFilterSelect({
   placeholder = "Tất cả các lớp",
   className = "",
 }: {
-  classes: { id: string; name: string; room_number?: string }[];
+  classes: { id: string; name: string; room_number?: string; grade_label?: string }[];
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   className?: string;
 }) {
+  const options: SelectOption[] = useMemo(() => {
+    return [
+      { value: "", label: placeholder },
+      ...classes.map((c) => ({
+        value: c.id,
+        label: c.name,
+        sublabel: c.room_number ? c.room_number : (c.grade_label ? c.grade_label : undefined),
+      })),
+    ];
+  }, [classes, placeholder]);
+
   return (
-    <div className={`relative flex items-center ${className}`}>
-      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft text-sm pointer-events-none select-none z-10 leading-none">
-        🏫
-      </span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="kinput !pl-10 !pr-9 text-sm font-medium appearance-none cursor-pointer bg-white"
-        style={{ paddingLeft: "2.5rem", paddingRight: "2.25rem" }}
-      >
-        <option value="">{placeholder}</option>
-        {classes.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name} {c.room_number ? `(${c.room_number})` : ""}
-          </option>
-        ))}
-      </select>
-      {value ? (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          title="Bỏ lọc lớp"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink w-5 h-5 flex items-center justify-center text-xs rounded-full hover:bg-black/5 z-10"
-        >
-          ✕
-        </button>
-      ) : (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-soft text-xs select-none z-10">
-          ▼
-        </span>
-      )}
-    </div>
+    <SearchableSelect
+      options={options}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      searchPlaceholder="Tìm kiếm tên lớp, phòng..."
+      prefixIcon={<span className="text-sm select-none">🏫</span>}
+      className={`min-w-[200px] ${className}`}
+      allowClear={true}
+    />
   );
 }
 
@@ -513,6 +1004,7 @@ export function ImportModal({
   sampleHeaders,
   sampleRow,
   templateFilename,
+  initialTab = "file",
   allowOverwrite = false,
   overwriteLabel,
   overwriteHint,
@@ -529,18 +1021,30 @@ export function ImportModal({
   allowOverwrite?: boolean;
   overwriteLabel?: string;
   overwriteHint?: string;
+  initialTab?: "grid" | "file";
   onImportRows: (rows: string[][], options?: { overwrite?: boolean }) => Promise<ImportResult>;
   onSuccess?: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<"grid" | "file">("grid");
   const [file, setFile] = useState<File | null>(null);
   const [overwrite, setOverwrite] = useState(true);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
+  const [gridRows, setGridRows] = useState<string[][]>([]);
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheetInfo[]>([]);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Khởi tạo dòng trống cho Grid
+  const resetGridRows = useCallback(() => {
+    const emptyRows: string[][] = [];
+    for (let i = 0; i < 5; i++) {
+      emptyRows.push(sampleHeaders.map(() => ""));
+    }
+    setGridRows(emptyRows);
+  }, [sampleHeaders]);
 
   // Reset state when closing or opening
   useEffect(() => {
@@ -553,9 +1057,18 @@ export function ImportModal({
       setImporting(false);
       setResult(null);
       setErrorMsg(null);
+      resetGridRows();
+      setActiveTab(initialTab);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, [open]);
+  }, [open, initialTab, resetGridRows]);
+
+  // Lọc các dòng có ít nhất 1 ô có dữ liệu trong bảng Grid
+  const validGridRows = useMemo(() => {
+    return gridRows.filter((r) => r.some((c) => c && c.trim().length > 0));
+  }, [gridRows]);
+
+  const effectiveRowsToImport = activeTab === "grid" ? validGridRows : parsedRows;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
@@ -589,11 +1102,11 @@ export function ImportModal({
   }
 
   async function handleStartImport() {
-    if (parsedRows.length === 0) return;
+    if (effectiveRowsToImport.length === 0) return;
     setImporting(true);
     setErrorMsg(null);
     try {
-      const res = await onImportRows(parsedRows, { overwrite });
+      const res = await onImportRows(effectiveRowsToImport, { overwrite });
       setResult(res);
       if (res.success > 0 && onSuccess) {
         onSuccess();
@@ -610,7 +1123,7 @@ export function ImportModal({
       open={open}
       onClose={onClose}
       title={title}
-      size="lg"
+      size="xl"
       footer={
         <div className="flex items-center justify-between w-full">
           <button
@@ -633,7 +1146,7 @@ export function ImportModal({
               <button
                 type="button"
                 onClick={handleStartImport}
-                disabled={parsedRows.length === 0 || importing || parsing}
+                disabled={effectiveRowsToImport.length === 0 || importing || parsing}
                 className="kbtn kbtn-primary flex items-center gap-2"
               >
                 {importing && (
@@ -641,7 +1154,7 @@ export function ImportModal({
                 )}
                 {importing
                   ? "Đang nhập..."
-                  : `Nhập dữ liệu (${parsedRows.length} dòng)`}
+                  : `Nhập dữ liệu (${effectiveRowsToImport.length} dòng)`}
               </button>
             )}
           </div>
@@ -653,52 +1166,179 @@ export function ImportModal({
           <p className="text-sm text-ink-soft">{description}</p>
         )}
 
-        {/* Step 1: Template download instruction */}
-        <div className="rounded-card border border-line bg-sunken/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div>
-            <div className="font-bold text-ink mb-0.5">
-              Bước 1: Chuẩn bị file dữ liệu
-            </div>
-            <div className="text-ink-soft">
-              Hỗ trợ định dạng Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) hoặc <strong>.csv</strong>. Bạn có thể tải file mẫu để nhập đúng cấu trúc.
-            </div>
+        {/* Tab switcher: Nhập trực tiếp vs Tải file */}
+        {!result && (
+          <div className="flex border-b border-line gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("grid")}
+              className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === "grid"
+                  ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                  : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+              }`}
+            >
+              <span>📊</span>
+              <span>Bảng nhập trực tiếp (Web Grid)</span>
+              {validGridRows.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                  {validGridRows.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("file")}
+              className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
+                activeTab === "file"
+                  ? "border-brand text-brand bg-brand/5 rounded-t-sm"
+                  : "border-transparent text-ink-soft hover:text-ink hover:border-line"
+              }`}
+            >
+              <span>📁</span>
+              <span>Tải file Excel / CSV</span>
+              {parsedRows.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
+                  {parsedRows.length}
+                </span>
+              )}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleDownloadTemplate}
-            className="kbtn kbtn-secondary text-xs whitespace-nowrap self-start sm:self-auto shrink-0"
-          >
-            📄 Tải file mẫu
-          </button>
-        </div>
+        )}
 
-        {/* Step 2: Upload dropzone */}
-        <div>
-          <label className="klabel mb-1.5">Bước 2: Chọn file dữ liệu tải lên</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv,.txt"
-            onChange={handleFileChange}
-            className="hidden"
-            id="excel-file-upload-input"
-          />
-          <label
-            htmlFor="excel-file-upload-input"
-            className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
-          >
-            <div className="text-3xl mb-2">📁</div>
-            <div className="text-sm font-semibold text-ink">
-              {file ? file.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
-            </div>
-            <div className="text-xs text-ink-faint mt-1">
-              Hỗ trợ các định dạng .xlsx, .xls, .csv (tối đa 10MB)
-            </div>
-          </label>
-        </div>
+        {/* Nội dung Tab 1: Grid nhập trực tiếp */}
+        {activeTab === "grid" && !result && (
+          <div className="space-y-3">
+            <DirectGridInput
+              headers={sampleHeaders}
+              sampleRow={sampleRow}
+              rows={gridRows}
+              onChange={setGridRows}
+              disabled={importing}
+            />
+          </div>
+        )}
 
-        {/* Overwrite option */}
-        {allowOverwrite && (
+        {/* Nội dung Tab 2: Tải file Excel */}
+        {activeTab === "file" && !result && (
+          <div className="space-y-4">
+            {/* Step 1: Template download instruction */}
+            <div className="rounded-card border border-line bg-sunken/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <div className="font-bold text-ink mb-0.5">
+                  Bước 1: Chuẩn bị file dữ liệu
+                </div>
+                <div className="text-ink-soft">
+                  Hỗ trợ định dạng Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) hoặc <strong>.csv</strong>. Bạn có thể tải file mẫu để nhập đúng cấu trúc.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="kbtn kbtn-secondary text-xs whitespace-nowrap self-start sm:self-auto shrink-0"
+              >
+                📄 Tải file mẫu
+              </button>
+            </div>
+
+            {/* Step 2: Upload dropzone */}
+            <div>
+              <label className="klabel mb-1.5">Bước 2: Chọn file dữ liệu tải lên</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv,.txt"
+                onChange={handleFileChange}
+                className="hidden"
+                id="excel-file-upload-input"
+              />
+              <label
+                htmlFor="excel-file-upload-input"
+                className="border-2 border-dashed border-line hover:border-brand rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-white"
+              >
+                <div className="text-3xl mb-2">📁</div>
+                <div className="text-sm font-semibold text-ink">
+                  {file ? file.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
+                </div>
+                <div className="text-xs text-ink-faint mt-1">
+                  Hỗ trợ các định dạng .xlsx, .xls, .csv (tối đa 10MB)
+                </div>
+              </label>
+            </div>
+
+            {/* Parsing state */}
+            {parsing && (
+              <div className="flex items-center justify-center py-4 text-xs text-ink-soft gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                Đang phân tích file...
+              </div>
+            )}
+
+            {/* Preview parsed data */}
+            {parsedRows.length > 0 && !result && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-ink">
+                  <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
+                  <span className="text-ink-soft font-normal">Hiển thị trước tối đa 5 dòng</span>
+                </div>
+
+                {detectedSheets.length > 1 && (
+                  <div className="p-2.5 rounded-control bg-sunken/60 border border-line space-y-1.5 text-xs">
+                    <div className="font-semibold text-ink flex items-center justify-between">
+                      <span>📄 Tự động nhận diện dữ liệu từ {detectedSheets.length} sheet:</span>
+                      <span className="text-ink-soft text-[11px] font-normal">Mỗi sheet được chia theo lớp</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {detectedSheets.map((s, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-control bg-white border border-line-strong text-ink font-semibold text-[11px] shadow-sm flex items-center gap-1.5"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                          <span>{s.name}:</span>
+                          <span className="text-brand-strong">{s.count} dòng</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border border-line rounded-control overflow-x-auto max-h-48">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-sunken font-semibold text-ink border-b border-line sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 w-10">#</th>
+                        {sampleHeaders.map((h, i) => (
+                          <th key={i} className="px-3 py-2 whitespace-nowrap">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {parsedRows.slice(0, 5).map((row, idx) => (
+                        <tr key={idx} className="hover:bg-sunken/40">
+                          <td className="px-3 py-2 text-ink-faint">{idx + 1}</td>
+                          {sampleHeaders.map((_, colIdx) => (
+                            <td
+                              key={colIdx}
+                              className="px-3 py-2 whitespace-nowrap text-ink-soft"
+                            >
+                              {row[colIdx] || "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Overwrite option dùng chung */}
+        {allowOverwrite && !result && (
           <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-1.5 transition-colors">
             <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-ink select-none">
               <input
@@ -712,17 +1352,9 @@ export function ImportModal({
             <p className="text-[11px] text-ink-soft pl-6.5 leading-relaxed">
               {overwriteHint ||
                 (overwrite
-                  ? "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới từ file Excel sẽ cập nhật thay thế dữ liệu cũ."
-                  : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng trong file Excel.")}
+                  ? "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới sẽ cập nhật thay thế dữ liệu cũ."
+                  : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng.")}
             </p>
-          </div>
-        )}
-
-        {/* Parsing state */}
-        {parsing && (
-          <div className="flex items-center justify-center py-4 text-xs text-ink-soft gap-2">
-            <span className="inline-block w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-            Đang phân tích file...
           </div>
         )}
 
@@ -730,67 +1362,6 @@ export function ImportModal({
         {errorMsg && (
           <div className="rounded-control bg-bad/10 border border-bad/30 p-3 text-xs text-bad">
             ⚠ {errorMsg}
-          </div>
-        )}
-
-        {/* Preview parsed data */}
-        {parsedRows.length > 0 && !result && (
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-ink">
-              <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
-              <span className="text-ink-soft font-normal">Hiển thị trước tối đa 5 dòng</span>
-            </div>
-
-            {detectedSheets.length > 1 && (
-              <div className="p-2.5 rounded-control bg-sunken/60 border border-line space-y-1.5 text-xs">
-                <div className="font-semibold text-ink flex items-center justify-between">
-                  <span>📄 Tự động nhận diện dữ liệu từ {detectedSheets.length} sheet:</span>
-                  <span className="text-ink-soft text-[11px] font-normal">Mỗi sheet được chia theo lớp</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {detectedSheets.map((s, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2.5 py-1 rounded-control bg-white border border-line-strong text-ink font-semibold text-[11px] shadow-sm flex items-center gap-1.5"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-                      <span>{s.name}:</span>
-                      <span className="text-brand-strong">{s.count} dòng</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="border border-line rounded-control overflow-x-auto max-h-48">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-sunken font-semibold text-ink border-b border-line sticky top-0">
-                  <tr>
-                    <th className="px-3 py-2 w-10">#</th>
-                    {sampleHeaders.map((h, i) => (
-                      <th key={i} className="px-3 py-2 whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {parsedRows.slice(0, 5).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-sunken/40">
-                      <td className="px-3 py-2 text-ink-faint">{idx + 1}</td>
-                      {sampleHeaders.map((_, colIdx) => (
-                        <td
-                          key={colIdx}
-                          className="px-3 py-2 whitespace-nowrap text-ink-soft"
-                        >
-                          {row[colIdx] || "—"}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 
@@ -855,4 +1426,4 @@ export function ImportModal({
       </div>
     </Modal>
   );
-}
+}

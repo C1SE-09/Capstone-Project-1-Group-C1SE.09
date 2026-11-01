@@ -208,7 +208,7 @@ class AuthRepository {
           statusCode: status,
         );
       }
-      throw AuthException(
+      throw const AuthException(
         'Không thể kết nối đến máy chủ. Quý phụ huynh và thầy cô vui lòng kiểm tra lại kết nối mạng Wifi/4G.',
       );
     } catch (e) {
@@ -360,7 +360,7 @@ class AuthRepository {
       }
       throw AuthException(detailMsg ?? fallbackMsg, statusCode: status);
     }
-    throw AuthException(
+    throw const AuthException(
       'Không thể kết nối đến máy chủ. Quý phụ huynh và thầy cô vui lòng kiểm tra lại kết nối mạng Wifi/4G.',
     );
   }

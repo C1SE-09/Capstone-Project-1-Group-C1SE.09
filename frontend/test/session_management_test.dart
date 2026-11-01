@@ -11,7 +11,6 @@ import 'dart:typed_data';
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
-import 'package:adark_frontend/data/repositories/http_admin_repository.dart';
 import 'package:adark_frontend/data/repositories/http_bug_report_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
@@ -83,7 +82,7 @@ void main() {
     test('có phiên thì vào thẳng đúng màn theo vai trò', () {
       expect(initialRouteFor(sessionWithRole('teacher')), '/class-select');
       expect(initialRouteFor(sessionWithRole('parent')), '/parent');
-      expect(initialRouteFor(sessionWithRole('admin')), '/admin');
+      expect(initialRouteFor(sessionWithRole('admin')), '/login');
       expect(initialRouteFor(sessionWithRole('vai-tro-la')), '/login');
     });
 
@@ -419,7 +418,6 @@ void main() {
       HttpScheduleRepository(dio: dioFor('schedule'));
       HttpNotificationRepository(dio: dioFor('notification'));
       HttpBugReportRepository(dio: dioFor('bug_report'));
-      HttpAdminRepository(dio: dioFor('admin'));
 
       for (final entry in opened.entries) {
         expect(
