@@ -972,7 +972,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                             {(rowData.full_name || "P").charAt(0).toUpperCase()}
                           </div>
                           {isEditMode ? (
-                            <div className="space-y-1 flex-1 min-w-[170px]">
+                            <div className="flex flex-col gap-2 flex-1 min-w-[170px]">
                               <input
                                 type="text"
                                 className={`${editInputBase} font-semibold ${
@@ -1017,7 +1017,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                       {/* Cột SĐT / Quan hệ: View Mode vs Edit Mode */}
                       <td className="px-3.5 py-3">
                         {isEditMode ? (
-                          <div className="space-y-1 min-w-[130px]">
+                          <div className="flex flex-col gap-2 min-w-[130px]">
                             <input
                               type="tel"
                               className={`${editInputBase} font-semibold ${
@@ -1071,12 +1071,33 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                               }`}
                               title="Click để chọn danh sách con liên kết"
                             >
-                              <span className="truncate">
-                                {rowData.child_ids.length > 0
-                                  ? `Đã chọn ${rowData.child_ids.length} bé`
-                                  : "Chọn con liên kết..."}
-                              </span>
-                              <span className="text-slate-400 text-[10px] shrink-0">▼</span>
+                              <div className="truncate flex-1">
+                                {childObjects.length === 0 ? (
+                                  <span className="text-slate-400 italic text-xs">Chọn con liên kết...</span>
+                                ) : childObjects.length === 1 ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[140px]">
+                                    {childObjects[0].full_name}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[105px]"
+                                      title={childObjects[0].full_name}
+                                    >
+                                      {childObjects[0].full_name}
+                                    </span>
+                                    <span
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand/10 text-brand border border-brand/20 shrink-0"
+                                      title={childObjects
+                                        .map((c) => `${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`)
+                                        .join(", ")}
+                                    >
+                                      +{childObjects.length - 1}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-slate-400 text-[10px] shrink-0 ml-1.5">▼</span>
                             </button>
 
                             {/* Dropdown Multi-select Box */}
@@ -1208,11 +1229,13 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                       {/* Cột Tài khoản: View Mode vs Edit Mode */}
                       <td className="px-3.5 py-3">
                         {isEditMode ? (
-                          <div className="min-w-[120px] flex items-center">
-                            <span className="text-xs text-slate-400 font-medium pl-1 pr-0.5">@</span>
+                          <div className="min-w-[130px] relative flex items-center">
+                            <span className="absolute left-2.5 text-xs text-slate-400 font-medium pointer-events-none select-none">
+                              @
+                            </span>
                             <input
                               type="text"
-                              className={`${editInputBase} ${
+                              className={`${editInputBase} pl-6 ${
                                 isCellDirty(p, "username")
                                   ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
                                   : ""
