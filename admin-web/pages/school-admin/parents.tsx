@@ -698,7 +698,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           >
             📤 Nhập file
           </button>
-          {/* Nút bật/tắt Chế độ Sửa (Edit Mode Switch) */}
+          {/* Nút Chỉnh sửa */}
           <button
             onClick={() => {
               if (isEditMode && dirtyRows.length > 0) {
@@ -710,22 +710,15 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               setIsEditMode(!isEditMode);
               setOpenChildDropdownId(null);
             }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all shadow-2xs ${
+            className={`kbtn text-xs font-semibold flex items-center gap-1.5 transition-all ${
               isEditMode
                 ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-400/30"
-                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400"
+                : "kbtn-secondary hover:border-brand"
             }`}
-            title="Bật/tắt chế độ sửa hàng loạt trực tiếp trên bảng"
+            title="Bật/tắt chế độ chỉnh sửa trực tiếp trên bảng"
           >
-            <span className="text-sm">{isEditMode ? "📝" : "✏️"}</span>
-            <span>{isEditMode ? "Đang bật Chế độ Sửa" : "Bật Chế độ Sửa"}</span>
-            <span
-              className={`w-7 h-4 flex items-center rounded-full p-0.5 transition-colors ${
-                isEditMode ? "bg-amber-500 justify-end" : "bg-slate-300 justify-start"
-              }`}
-            >
-              <span className="w-3 h-3 rounded-full bg-white shadow-sm" />
-            </span>
+            <span>✏️</span>
+            <span>{isEditMode ? "Đang chỉnh sửa" : "Chỉnh sửa"}</span>
           </button>
 
           {/* Nút Lưu tất cả thay đổi khi ở Edit Mode hoặc có thay đổi */}
