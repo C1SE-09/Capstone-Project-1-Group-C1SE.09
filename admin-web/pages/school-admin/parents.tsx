@@ -129,6 +129,7 @@ export default function SchoolAdminParentsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [isEditingTable, setIsEditingTable] = useState(false);
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [tableEdits, setTableEdits] = useState<Record<string, {
     full_name: string;
     phone: string;
@@ -355,23 +356,26 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
     return { total: rows.length, success, failed, errors, warnings };
   }
 
-  function startTableEditing() {
-    const initial: Record<string, any> = {};
-    filtered.forEach((p) => {
-      initial[p.id] = {
-        full_name: p.full_name || "",
-        phone: p.phone || "",
-        email: p.email || "",
-        relationship: p.relationship || "Phụ huynh",
-        status: p.status || "active",
-      };
-    });
-    setTableEdits(initial);
+  function startEditRow(p: Parent) {
+    if (!tableEdits[p.id]) {
+      setTableEdits((prev) => ({
+        ...prev,
+        [p.id]: {
+          full_name: p.full_name || "",
+          phone: p.phone || "",
+          email: p.email || "",
+          relationship: p.relationship || "Phụ huynh",
+          status: p.status || "active",
+        },
+      }));
+    }
+    setEditingRowId(p.id);
     setIsEditingTable(true);
   }
 
   function cancelTableEditing() {
     setIsEditingTable(false);
+    setEditingRowId(null);
     setTableEdits({});
   }
 
@@ -442,6 +446,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
     }
     setSavingTable(false);
     setIsEditingTable(false);
+    setEditingRowId(null);
     mutate();
     if (failed === 0) {
       setToast({ msg: `Đã lưu thành công ${success} phụ huynh!`, tone: "ok" });
@@ -608,17 +613,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           >
             📤 Nhập file
           </button>
-          {!isEditingTable ? (
-            <button
-              onClick={startTableEditing}
-              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
-              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
-              disabled={filtered.length === 0}
-            >
-              <span>✏️</span>
-              <span>Chỉnh sửa bảng</span>
-            </button>
-          ) : (
+          {isEditingTable && (
             <>
               <button
                 onClick={cancelTableEditing}
@@ -647,11 +642,9 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               </button>
             </>
           )}
-          {!isEditingTable && (
-            <button onClick={openCreate} className="kbtn kbtn-primary">
-              + Thêm phụ huynh
-            </button>
-          )}
+          <button onClick={openCreate} className="kbtn kbtn-primary">
+            + Thêm phụ huynh
+          </button>
         </div>
       }
     >
@@ -774,53 +767,93 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               <tbody>
                 {filtered.map((p, idx) => {
                   const isSelected = selectedIds.includes(p.id);
+                  const isRowActive = editingRowId === p.id;
                   const edit = tableEdits[p.id];
+                  const hasDraftChanges = edit && (
+                    edit.full_name !== p.full_name ||
+                    edit.phone !== p.phone ||
+                    edit.email !== (p.email || "") ||
+                    edit.relationship !== (p.relationship || "Phụ huynh") ||
+                    edit.status !== p.status
+                  );
+
                   return (
                   <tr
                     key={p.id}
-                    className={`${idx > 0 ? "border-t border-line" : ""} ${
-                      isSelected && !isEditingTable ? "bg-[#FDF8F6]" : isEditingTable ? "bg-amber-50/20" : ""
+                    onClick={() => {
+                      if (!isRowActive) startEditRow(p);
+                    }}
+                    className={`${idx > 0 ? "border-t border-line" : ""} cursor-pointer transition-colors ${
+                      isRowActive
+                        ? "bg-brand/5 ring-1 ring-inset ring-brand/30"
+                        : isSelected
+                        ? "bg-[#FDF8F6]"
+                        : hasDraftChanges
+                        ? "bg-amber-50/40"
+                        : "hover:bg-sunken/40"
                     }`}
                   >
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         className="rounded cursor-pointer"
                         checked={isSelected}
                         onChange={() => toggleSelect(p.id)}
-                        disabled={isEditingTable}
                       />
                     </td>
+
+                    {/* Cột Họ tên: Plain Text, chỉ input khi dòng này active */}
                     <td className="px-4 py-2.5">
-                      {isEditingTable ? (
-                        <input
-                          type="text"
-                          className="kinput text-xs py-1 px-2 font-bold min-w-[150px] w-full"
-                          value={edit?.full_name ?? p.full_name}
-                          onChange={(e) => updateRowEdit(p.id, "full_name", e.target.value)}
-                          placeholder="Họ và tên phụ huynh..."
-                        />
+                      {isRowActive ? (
+                        <div className="space-y-1 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            autoFocus
+                            className="kinput text-xs py-1 px-2 font-bold w-full"
+                            value={edit?.full_name ?? p.full_name}
+                            onChange={(e) => updateRowEdit(p.id, "full_name", e.target.value)}
+                            placeholder="Họ và tên phụ huynh..."
+                          />
+                          <input
+                            type="email"
+                            className="kinput text-[11px] py-0.5 px-2 text-ink-soft w-full"
+                            value={edit?.email ?? p.email ?? ""}
+                            onChange={(e) => updateRowEdit(p.id, "email", e.target.value)}
+                            placeholder="Gmail..."
+                          />
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2.5">
                           <div
                             className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold shrink-0"
                             style={{ background: "#4B6F8C" }}
                           >
-                            {p.full_name.charAt(0).toUpperCase()}
+                            {(edit?.full_name || p.full_name).charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-bold text-ink">{p.full_name}</div>
-                            <div className="text-xs text-ink-soft">{p.email || "—"}</div>
+                            <div className="font-bold text-ink">
+                              {edit?.full_name || p.full_name}
+                              {hasDraftChanges && (
+                                <span className="ml-1.5 text-[10px] text-brand font-normal bg-brand/10 px-1 py-0.2 rounded">
+                                  chưa lưu
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-ink-soft">
+                              {edit?.email || p.email || "—"}
+                            </div>
                           </div>
                         </div>
                       )}
                     </td>
+
+                    {/* Cột SĐT / Quan hệ: Tách 2 dòng: Dòng 1 SĐT (font đậm), Dòng 2 Quan hệ (font nhỏ, xám mờ text-muted) */}
                     <td className="px-4 py-2.5">
-                      {isEditingTable ? (
-                        <div className="space-y-1 min-w-[140px]">
+                      {isRowActive ? (
+                        <div className="space-y-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="tel"
-                            className="kinput text-xs py-0.5 px-2 w-full font-semibold"
+                            className="kinput text-xs py-0.5 px-2 w-full font-bold"
                             value={edit?.phone ?? p.phone}
                             onChange={(e) => updateRowEdit(p.id, "phone", e.target.value)}
                             placeholder="Số điện thoại..."
@@ -834,70 +867,88 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           />
                         </div>
                       ) : (
-                        <>
-                          <div className="text-ink">{p.phone}</div>
-                          <div className="text-xs text-ink-soft">
-                            {p.relationship || "Phụ huynh"}
+                        <div>
+                          <div className="font-bold text-ink">
+                            {edit?.phone || p.phone}
                           </div>
-                        </>
+                          <div className="text-xs text-ink-soft mt-0.5">
+                            {edit?.relationship || p.relationship || "Phụ huynh"}
+                          </div>
+                        </div>
                       )}
                     </td>
+
+                    {/* Cột Con liên kết: Plain Text */}
                     <td className="px-4 py-2.5 text-ink-soft max-w-xs">
                       {getParentChildrenSummary(p, children)}
                     </td>
+
+                    {/* Cột Tài khoản: Plain Text hoàn toàn không viền, không background */}
                     <td className="px-4 py-2.5">
-                      {isEditingTable ? (
-                        <input
-                          type="email"
-                          className="kinput text-xs py-1 px-2 min-w-[150px] w-full"
-                          value={edit?.email ?? p.email ?? ""}
-                          onChange={(e) => updateRowEdit(p.id, "email", e.target.value)}
-                          placeholder="Gmail phụ huynh..."
-                        />
-                      ) : (
-                        p.username ? (
-                          <Pill tone="info">@{p.username}</Pill>
-                        ) : (
-                          <span className="text-xs text-ink-faint">—</span>
-                        )
-                      )}
+                      <div className="text-ink text-sm">
+                        {p.username ? `@${p.username}` : <span className="text-xs text-ink-faint">—</span>}
+                      </div>
                     </td>
+
+                    {/* Cột Trạng thái */}
                     <td className="px-4 py-2.5">
-                      {isEditingTable ? (
+                      {isRowActive ? (
                         <select
                           className="kinput text-xs py-1 px-2 min-w-[110px]"
                           value={edit?.status ?? p.status ?? "active"}
                           onChange={(e) => updateRowEdit(p.id, "status", e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <option value="active">Đang hoạt động</option>
                           <option value="inactive">Ngừng</option>
                         </select>
                       ) : (
-                        <Pill tone={p.status === "active" ? "ok" : "neutral"}>
-                          {p.status === "active" ? "Đang hoạt động" : "Ngừng"}
+                        <Pill tone={(edit?.status || p.status) === "active" ? "ok" : "neutral"}>
+                          {(edit?.status || p.status) === "active" ? "Đang hoạt động" : "Ngừng"}
                         </Pill>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      {isEditingTable ? (
-                        <span className="text-[11px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded">
-                          Đang sửa
-                        </span>
+
+                    {/* Cột Thao tác: Icon cây bút và nút Xong khi đang sửa dòng */}
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {isRowActive ? (
+                        <button
+                          type="button"
+                          onClick={() => setEditingRowId(null)}
+                          className="kbtn text-xs font-semibold py-1 px-2.5 text-brand bg-brand/10 border border-brand/30 rounded inline-flex items-center gap-1 shadow-sm"
+                          title="Hoàn tất sửa dòng này"
+                        >
+                          <span>✓</span>
+                          <span>Xong</span>
+                        </button>
                       ) : (
-                        <>
+                        <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => openEdit(p)}
-                            className="kbtn kbtn-ghost text-xs"
+                            type="button"
+                            onClick={() => startEditRow(p)}
+                            className="kbtn kbtn-ghost text-xs text-brand hover:bg-brand/10 font-medium inline-flex items-center gap-1"
+                            title="Sửa nhanh trực tiếp trên bảng"
                           >
-                            Sửa
+                            <span>✏️</span>
+                            <span>Sửa</span>
                           </button>
                           <button
+                            type="button"
+                            onClick={() => openEdit(p)}
+                            className="kbtn kbtn-ghost text-xs text-ink-soft hover:text-ink"
+                            title="Mở bảng chi tiết"
+                          >
+                            Chi tiết
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setConfirmDel(p)}
                             className="kbtn kbtn-ghost text-xs text-bad"
+                            title="Xóa phụ huynh này"
                           >
                             Xóa
                           </button>
-                        </>
+                        </div>
                       )}
                     </td>
                   </tr>
