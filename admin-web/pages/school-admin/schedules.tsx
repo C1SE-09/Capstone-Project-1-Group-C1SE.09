@@ -68,6 +68,42 @@ function isSharedLocation(name?: string | null, roomsList?: Room[]): boolean {
   return SHARED_KEYWORDS.some((kw) => n.includes(kw));
 }
 
+function isClassHomeroom(
+  roomName: string | null | undefined,
+  className: string | null | undefined,
+  roomsList?: Room[],
+  classId?: string | null,
+): boolean {
+  if (!roomName || !roomName.trim()) return true;
+  const r = roomName.trim().toLowerCase();
+  if (r === "phòng học" || r === "lớp học" || r === "tại lớp") return true;
+
+  if (className) {
+    const c = className.trim().toLowerCase();
+    const cleanC = c.replace(/^lớp\s+/, "");
+    if (
+      r === c ||
+      r === cleanC ||
+      r === `phòng học ${c}` ||
+      r === `phòng học ${cleanC}` ||
+      r === `phòng ${c}` ||
+      r === `phòng ${cleanC}` ||
+      r === `lớp ${cleanC}`
+    ) {
+      return true;
+    }
+  }
+
+  if (roomsList && classId) {
+    const matched = roomsList.find((rm) => rm.name.trim().toLowerCase() === r);
+    if (matched && matched.class_id === classId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 interface FormState {
   activity_name: string;
   content: string;
@@ -674,14 +710,17 @@ export default function SchoolAdminSchedulesPage() {
         if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
         return (a.start_time || "").localeCompare(b.start_time || "");
       });
-      const rows = sorted.map((s) => [
-        targetClassName,
-        DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
-        s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
-        s.activity_name,
-        s.room_name || "",
-        s.content || "",
-      ]);
+      const rows = sorted.map((s) => {
+        const isHomeroom = isClassHomeroom(s.room_name, targetClassName, rooms, s.class_id);
+        return [
+          targetClassName,
+          DAY_LABELS[s.day_of_week - 2] || `Thứ ${s.day_of_week}`,
+          s.time_range || (s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : ""),
+          s.activity_name,
+          isHomeroom ? "" : (s.room_name || ""),
+          s.content || "",
+        ];
+      });
       return { sheetName: targetClassName, headers, rows };
     }
 
@@ -718,7 +757,10 @@ export default function SchoolAdminSchedulesPage() {
           row.push("—");
         } else {
           const cellStr = matches
-            .map((s) => `${s.activity_name}${s.room_name ? ` (${s.room_name})` : ""}`)
+            .map((s) => {
+              const isHomeroom = isClassHomeroom(s.room_name, targetClassName, rooms, s.class_id);
+              return isHomeroom ? s.activity_name : `${s.activity_name} (${s.room_name})`;
+            })
             .join(" | ");
           row.push(cellStr);
         }
@@ -986,14 +1028,15 @@ export default function SchoolAdminSchedulesPage() {
         }
       }
 
-      // 5. Xác định địa điểm / phòng học (nếu trống tự lấy phòng chính của lớp)
+      // 5. Xác định địa điểm / phòng học (nếu trống hoặc học tại lớp thì tự động lấy phòng chính của lớp)
       const targetClassName = classMap.get(targetClassId) || currentClassName || "";
       const defaultRoom = targetClassName
         ? targetClassName.startsWith("Lớp ")
           ? `Phòng học ${targetClassName.replace("Lớp ", "")}`
           : `Phòng học ${targetClassName}`
         : "Phòng học";
-      const finalRoomName = roomName.trim() || defaultRoom;
+      const isHomeroom = !roomName.trim() || isClassHomeroom(roomName, targetClassName, rooms, targetClassId);
+      const finalRoomName = isHomeroom ? defaultRoom : roomName.trim();
 
       const payload: SchedulePayload = {
         class_id: targetClassId,
@@ -1467,9 +1510,18 @@ export default function SchoolAdminSchedulesPage() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-ink-soft mt-0.5">
-                        {s.time_range && `Khung giờ: ${s.time_range}`}
-                        {s.room_name && ` · Phòng: ${s.room_name}`}
+                      <div className="text-xs text-ink-soft mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        {s.time_range && <span>Khung giờ: {s.time_range}</span>}
+                        {s.room_name && (
+                          isClassHomeroom(s.room_name, currentClassName, rooms, s.class_id) ? (
+                            <span className="text-ink-faint">· Tại lớp</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#FAF1E4] text-[#8A5E12] border border-[#ECD9BA] flex items-center gap-1">
+                              <span>📍</span>
+                              <span>{s.room_name}</span>
+                            </span>
+                          )
+                        )}
                       </div>
                       {hasConflict && reason && (
                         <div className="mt-1.5 text-xs text-[#8A5E12] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FBF6ED] border border-[#E2BF81] inline-block">
@@ -1780,7 +1832,7 @@ export default function SchoolAdminSchedulesPage() {
         initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập thời khóa biểu từ file Excel"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống cho phép nạp và tự động cảnh báo nếu có tiết học bị trùng phòng."
+        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống hỗ trợ đọc nhiều sheet theo lớp. Cột 'Địa điểm / Phòng học' có thể để trống nếu học tại phòng của chính lớp (chỉ điền khi đổi địa điểm như Sân ngoài trời, Phòng Âm nhạc...)."
         templateFilename={
           currentClassName
             ? `mau_nhap_thoi_khoa_bieu_${currentClassName.replace(/\s+/g, "_")}.xlsx`
@@ -1799,12 +1851,12 @@ export default function SchoolAdminSchedulesPage() {
           "Thứ 2",
           "08:10 - 08:40",
           "Học hát & Vận động âm nhạc",
-          "Phòng Âm nhạc & Vận động",
-          "Tập bài hát Cháu yêu bà, vận động vỗ tay theo phách",
+          "",
+          "Tập bài hát Cháu yêu bà (để trống phòng nếu học tại lớp, chỉ điền khi đổi chỗ ra ngoài)",
         ]}
         allowOverwrite={true}
         overwriteLabel="Ghi đè hoạt động nếu lớp đã có lịch ở cùng khung giờ"
-        overwriteHint="Nếu bật: Cập nhật lại tiết học cũ ở cùng khung giờ. Nếu tắt: Vẫn tạo mới tiết học bình thường, hệ thống sẽ cảnh báo xung đột lịch trực quan ở ngoài bảng thời khóa biểu."
+        overwriteHint="Mẹo tinh gọn: Cột 'Địa điểm / Phòng học' có thể để trống cho các tiết học tại phòng của lớp. Hệ thống tự động gán phòng của lớp và chỉ cảnh báo khi trùng phòng chức năng / sân trường."
         onImportRows={handleImportRows}
         onSuccess={() => {
           setToast({ msg: "Đã nạp thời khóa biểu thành công", tone: "ok" });
@@ -1925,7 +1977,7 @@ export default function SchoolAdminSchedulesPage() {
                   </div>
                   <div className={`text-[11px] mt-1 leading-tight ${exportConfig.format === "matrix" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
                     }`}>
-                    Cột Thứ 2 → Thứ 6, hàng là các khung giờ
+                    Cột Thứ 2 → Thứ 6, hàng là các khung giờ (tự động tinh gọn: chỉ hiện tên phòng khi đổi chỗ ra sân/phòng chức năng)
                   </div>
                 </button>
                 <button

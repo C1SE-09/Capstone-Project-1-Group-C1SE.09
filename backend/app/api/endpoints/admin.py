@@ -1706,7 +1706,15 @@ def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
         day_of_week=data.day_of_week,
         activity_name=data.activity_name.strip(),
         content=data.content.strip() if data.content else None,
-        room_name=data.room_name.strip() if data.room_name else "Phòng học",
+        room_name=(
+            data.room_name.strip()
+            if data.room_name and data.room_name.strip()
+            else (
+                f"Phòng học {db.query(Class_).filter(Class_.class_id == target_class_id).first().name}"
+                if db.query(Class_).filter(Class_.class_id == target_class_id).first()
+                else "Phòng học"
+            )
+        ),
         is_active=True,
     )
     db.add(schedule)
