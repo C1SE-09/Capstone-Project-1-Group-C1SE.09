@@ -128,15 +128,17 @@ export default function SchoolAdminParentsPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [isEditingTable, setIsEditingTable] = useState(false);
-  const [editingRowId, setEditingRowId] = useState<string | null>(null);
-  const [tableEdits, setTableEdits] = useState<Record<string, {
+  // Chế độ Bulk Edit giống Excel: Toàn bộ bảng luôn ở chế độ có thể chỉnh sửa trực tiếp
+  interface RowEditState {
     full_name: string;
     phone: string;
     email: string;
     relationship: string;
+    username: string;
+    children_text: string;
     status: string;
-  }>>({});
+  }
+  const [tableEdits, setTableEdits] = useState<Record<string, RowEditState>>({});
   const [savingTable, setSavingTable] = useState(false);
   const [editing, setEditing] = useState<Parent | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -356,102 +358,152 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
     return { total: rows.length, success, failed, errors, warnings };
   }
 
-  function startEditRow(p: Parent) {
-    if (!tableEdits[p.id]) {
-      setTableEdits((prev) => ({
+  // Lấy chuỗi con liên kết ban đầu (loại bỏ nhãn 'Chưa liên kết')
+  function getInitialChildrenText(p: Parent): string {
+    const summary = getParentChildrenSummary(p, children);
+    return summary.includes("Chưa liên kết") || summary.includes("Chưa có liên kết") ? "" : summary;
+  }
+
+  // Lấy dữ liệu hiện tại của một dòng (ưu tiên dữ liệu đã sửa trong tableEdits, fallback về dữ liệu gốc)
+  function getRowData(p: Parent): RowEditState {
+    if (tableEdits[p.id]) return tableEdits[p.id];
+    return {
+      full_name: p.full_name || "",
+      phone: p.phone || "",
+      email: p.email || "",
+      relationship: p.relationship || "Phụ huynh",
+      username: p.username || "",
+      children_text: getInitialChildrenText(p),
+      status: p.status || "active",
+    };
+  }
+
+  // Cập nhật giá trị ô input phẳng
+  function updateCell(p: Parent, field: keyof RowEditState, val: string) {
+    setTableEdits((prev) => {
+      const current = prev[p.id] || getRowData(p);
+      return {
         ...prev,
         [p.id]: {
-          full_name: p.full_name || "",
-          phone: p.phone || "",
-          email: p.email || "",
-          relationship: p.relationship || "Phụ huynh",
-          status: p.status || "active",
+          ...current,
+          [field]: val,
         },
-      }));
-    }
-    setEditingRowId(p.id);
-    setIsEditingTable(true);
+      };
+    });
   }
 
-  function cancelTableEditing() {
-    setIsEditingTable(false);
-    setEditingRowId(null);
+  // Toggle nhanh trạng thái active / inactive trực tiếp trên bảng
+  function toggleRowStatus(p: Parent) {
+    const current = getRowData(p);
+    const nextStatus = current.status === "active" ? "inactive" : "active";
+    updateCell(p, "status", nextStatus);
+  }
+
+  // Kiểm tra xem 1 ô cụ thể có bị thay đổi so với dữ liệu gốc hay không
+  function isCellDirty(p: Parent, field: keyof RowEditState): boolean {
+    if (!tableEdits[p.id]) return false;
+    const current = tableEdits[p.id][field];
+    if (field === "full_name") return current.trim() !== (p.full_name || "").trim();
+    if (field === "phone") return current.trim() !== (p.phone || "").trim();
+    if (field === "email") return current.trim() !== (p.email || "").trim();
+    if (field === "relationship") return current.trim() !== (p.relationship || "Phụ huynh").trim();
+    if (field === "username") return current.trim() !== (p.username || "").trim();
+    if (field === "status") return current !== (p.status || "active");
+    if (field === "children_text") {
+      const cleanOrig = getInitialChildrenText(p);
+      return current.trim() !== cleanOrig.trim();
+    }
+    return false;
+  }
+
+  // Kiểm tra xem dòng có bất kỳ ô nào bị thay đổi hay không
+  function isRowDirty(p: Parent): boolean {
+    if (!tableEdits[p.id]) return false;
+    return (
+      isCellDirty(p, "full_name") ||
+      isCellDirty(p, "phone") ||
+      isCellDirty(p, "email") ||
+      isCellDirty(p, "relationship") ||
+      isCellDirty(p, "username") ||
+      isCellDirty(p, "status") ||
+      isCellDirty(p, "children_text")
+    );
+  }
+
+  // Danh sách các dòng đang có thay đổi chưa lưu
+  const dirtyRows = useMemo(() => {
+    return filtered.filter((p) => isRowDirty(p));
+  }, [filtered, tableEdits, children]);
+
+  // Hủy toàn bộ thay đổi chưa lưu
+  function cancelAllEdits() {
     setTableEdits({});
+    setToast({ msg: "Đã hủy bỏ mọi thay đổi chưa lưu", tone: "brand" });
   }
 
-  function updateRowEdit(id: string, field: string, val: any) {
-    setTableEdits((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: val,
-      },
-    }));
-  }
-
-  async function handleSaveTableEdits() {
-    const changedItems: { id: string; payload: ParentPayload }[] = [];
-    for (const p of filtered) {
-      const edit = tableEdits[p.id];
-      if (!edit) continue;
-      const isChanged =
-        edit.full_name.trim() !== (p.full_name || "").trim() ||
-        edit.phone.trim() !== (p.phone || "").trim() ||
-        edit.email.trim() !== (p.email || "").trim() ||
-        edit.relationship.trim() !== (p.relationship || "Phụ huynh").trim() ||
-        edit.status !== (p.status || "active");
-
-      if (isChanged) {
-        if (!edit.full_name.trim()) {
-          setToast({ msg: "Họ tên phụ huynh không được để trống", tone: "bad" });
-          return;
-        }
-        if (!edit.phone.trim()) {
-          setToast({ msg: `Vui lòng nhập SĐT cho phụ huynh ${edit.full_name}`, tone: "bad" });
-          return;
-        }
-        if (edit.email && !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(edit.email.trim())) {
-          setToast({ msg: `Email của ${edit.full_name} phải đúng định dạng Gmail`, tone: "bad" });
-          return;
-        }
-        changedItems.push({
-          id: p.id,
-          payload: {
-            full_name: edit.full_name.trim(),
-            phone: edit.phone.trim(),
-            email: edit.email.trim() || null,
-            relationship: edit.relationship.trim() || null,
-            status: edit.status,
-          },
-        });
-      }
+  // Lưu hàng loạt tất cả các dòng đã thay đổi cùng một lúc (Bulk Save)
+  async function handleSaveAllEdits() {
+    if (dirtyRows.length === 0) {
+      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
+      return;
     }
 
-    if (changedItems.length === 0) {
-      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
-      setIsEditingTable(false);
-      return;
+    // Kiểm tra tính hợp lệ trước khi gọi API
+    for (const p of dirtyRows) {
+      const edit = getRowData(p);
+      if (!edit.full_name.trim()) {
+        setToast({ msg: `Họ tên phụ huynh không được để trống (SĐT: ${edit.phone})`, tone: "bad" });
+        return;
+      }
+      if (!edit.phone.trim()) {
+        setToast({ msg: `Vui lòng nhập SĐT cho phụ huynh ${edit.full_name}`, tone: "bad" });
+        return;
+      }
+      if (edit.email && !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(edit.email.trim())) {
+        setToast({ msg: `Email của ${edit.full_name} phải đúng định dạng Gmail (@gmail.com)`, tone: "bad" });
+        return;
+      }
     }
 
     setSavingTable(true);
     let success = 0;
     let failed = 0;
-    for (const item of changedItems) {
+
+    for (const p of dirtyRows) {
+      const edit = getRowData(p);
+      // Nếu có sửa cột con liên kết thì map ra matchedIds
+      let child_ids: string[] | undefined = undefined;
+      if (isCellDirty(p, "children_text")) {
+        const { matchedIds } = findMatchingChildren(edit.children_text, children || []);
+        child_ids = matchedIds;
+      }
+
+      const payload: ParentPayload = {
+        full_name: edit.full_name.trim(),
+        phone: edit.phone.trim(),
+        email: edit.email.trim() || null,
+        relationship: edit.relationship.trim() || null,
+        username: edit.username.trim() || null,
+        status: edit.status,
+        ...(child_ids !== undefined ? { child_ids } : {}),
+      };
+
       try {
-        await updateParent(item.id, item.payload);
+        await updateParent(p.id, payload);
         success++;
       } catch (e) {
         failed++;
       }
     }
+
     setSavingTable(false);
-    setIsEditingTable(false);
-    setEditingRowId(null);
+    setTableEdits({});
     mutate();
+
     if (failed === 0) {
       setToast({ msg: `Đã lưu thành công ${success} phụ huynh!`, tone: "ok" });
     } else {
-      setToast({ msg: `Đã lưu ${success} phụ huynh (${failed} phụ huynh lỗi)`, tone: "warn" });
+      setToast({ msg: `Đã lưu ${success} phụ huynh (${failed} phụ huynh bị lỗi cập nhật)`, tone: "warn" });
     }
   }
 
@@ -609,34 +661,38 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             onClick={() => setImportOpen(true)}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập dữ liệu từ file Excel / CSV"
-            disabled={isEditingTable}
           >
             📤 Nhập file
           </button>
-          {isEditingTable && (
+          {dirtyRows.length > 0 && (
             <>
               <button
-                onClick={cancelTableEditing}
+                onClick={cancelAllEdits}
                 disabled={savingTable}
-                className="kbtn kbtn-secondary text-sm"
+                className="kbtn kbtn-secondary text-sm hover:border-bad hover:text-bad transition-colors"
+                title="Hủy bỏ mọi thay đổi chưa lưu trên bảng"
               >
-                ✕ Hủy bỏ
+                ✕ Hủy thay đổi
               </button>
               <button
-                onClick={handleSaveTableEdits}
+                onClick={handleSaveAllEdits}
                 disabled={savingTable}
-                className="kbtn text-sm font-bold text-white flex items-center gap-2"
+                className="kbtn text-sm font-bold text-white flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
                 style={{ background: "#16665a" }}
+                title="Lưu toàn bộ thay đổi của tất cả các dòng vào hệ thống"
               >
                 {savingTable ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu...</span>
+                    <span>Đang lưu ({dirtyRows.length})...</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu thay đổi</span>
+                    <span>Lưu tất cả thay đổi</span>
+                    <span className="bg-white/20 text-white text-xs px-1.5 py-0.2 rounded-full font-bold ml-1">
+                      {dirtyRows.length}
+                    </span>
                   </>
                 )}
               </button>
@@ -664,6 +720,34 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           />
         </div>
       </div>
+
+      {/* Banner thông báo các dòng có thay đổi chưa lưu (Excel-like alert) */}
+      {dirtyRows.length > 0 && (
+        <div className="mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg flex items-center justify-between shadow-sm animate-fadeIn">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+            <span className="font-semibold">Đang có {dirtyRows.length} phụ huynh có chỉnh sửa chưa lưu.</span>
+            <span className="text-xs text-amber-700 hidden sm:inline">(Các ô màu vàng là các ô đã thay đổi)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelAllEdits}
+              disabled={savingTable}
+              className="text-xs px-2.5 py-1 text-amber-800 hover:text-bad hover:underline font-medium"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              onClick={handleSaveAllEdits}
+              disabled={savingTable}
+              className="kbtn text-xs font-bold text-white py-1 px-3 shadow"
+              style={{ background: "#16665a" }}
+            >
+              {savingTable ? "Đang lưu..." : `Lưu tất cả (${dirtyRows.length})`}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card overflow-hidden">
         {!parents && !parentsError ? (
@@ -767,193 +851,194 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               <tbody>
                 {filtered.map((p, idx) => {
                   const isSelected = selectedIds.includes(p.id);
-                  const isRowActive = editingRowId === p.id;
-                  const edit = tableEdits[p.id];
-                  const hasDraftChanges = edit && (
-                    edit.full_name !== p.full_name ||
-                    edit.phone !== p.phone ||
-                    edit.email !== (p.email || "") ||
-                    edit.relationship !== (p.relationship || "Phụ huynh") ||
-                    edit.status !== p.status
-                  );
+                  const isDirty = isRowDirty(p);
+                  const rowData = getRowData(p);
+
+                  // Helper class cho ô input phẳng chuẩn Excel
+                  const baseCellClass =
+                    "w-full bg-transparent border border-transparent rounded px-2 py-1.5 text-xs text-ink transition-all hover:bg-slate-100/70 hover:border-slate-300/60 focus:bg-white focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none";
 
                   return (
-                  <tr
-                    key={p.id}
-                    onClick={() => {
-                      if (!isRowActive) startEditRow(p);
-                    }}
-                    className={`${idx > 0 ? "border-t border-line" : ""} cursor-pointer transition-colors ${
-                      isRowActive
-                        ? "bg-brand/5 ring-1 ring-inset ring-brand/30"
-                        : isSelected
-                        ? "bg-[#FDF8F6]"
-                        : hasDraftChanges
-                        ? "bg-amber-50/40"
-                        : "hover:bg-sunken/40"
-                    }`}
-                  >
-                    <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className="rounded cursor-pointer"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(p.id)}
-                      />
-                    </td>
-
-                    {/* Cột Họ tên: Plain Text, chỉ input khi dòng này active */}
-                    <td className="px-4 py-2.5">
-                      {isRowActive ? (
-                        <div className="space-y-1 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                    <tr
+                      key={p.id}
+                      className={`${idx > 0 ? "border-t border-line" : ""} transition-colors ${
+                        isSelected
+                          ? "bg-[#FDF8F6]"
+                          : isDirty
+                          ? "bg-amber-50/25"
+                          : "hover:bg-sunken/30"
+                      }`}
+                    >
+                      {/* Checkbox chọn dòng + Dấu chấm báo hiệu dòng có thay đổi chưa lưu */}
+                      <td className="px-3 py-2.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {isDirty ? (
+                            <span
+                              className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"
+                              title="Dòng này có thay đổi chưa lưu"
+                            />
+                          ) : (
+                            <span className="w-2 h-2 shrink-0" />
+                          )}
                           <input
-                            type="text"
-                            autoFocus
-                            className="kinput text-xs py-1 px-2 font-bold w-full"
-                            value={edit?.full_name ?? p.full_name}
-                            onChange={(e) => updateRowEdit(p.id, "full_name", e.target.value)}
-                            placeholder="Họ và tên phụ huynh..."
-                          />
-                          <input
-                            type="email"
-                            className="kinput text-[11px] py-0.5 px-2 text-ink-soft w-full"
-                            value={edit?.email ?? p.email ?? ""}
-                            onChange={(e) => updateRowEdit(p.id, "email", e.target.value)}
-                            placeholder="Gmail..."
+                            type="checkbox"
+                            className="rounded cursor-pointer"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(p.id)}
+                            title="Chọn dòng"
                           />
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2.5">
+                      </td>
+
+                      {/* Cột Họ tên: Avatar + Input Họ tên + Input Email */}
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
                           <div
-                            className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold shrink-0"
+                            className="w-8 h-8 flex items-center justify-center rounded-full text-white text-xs font-bold shrink-0 shadow-sm"
                             style={{ background: "#4B6F8C" }}
                           >
-                            {(edit?.full_name || p.full_name).charAt(0).toUpperCase()}
+                            {(rowData.full_name || "P").charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <div className="font-bold text-ink">
-                              {edit?.full_name || p.full_name}
-                              {hasDraftChanges && (
-                                <span className="ml-1.5 text-[10px] text-brand font-normal bg-brand/10 px-1 py-0.2 rounded">
-                                  chưa lưu
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-ink-soft">
-                              {edit?.email || p.email || "—"}
-                            </div>
+                          <div className="space-y-0.5 flex-1 min-w-[170px]">
+                            <input
+                              type="text"
+                              className={`${baseCellClass} font-bold ${
+                                isCellDirty(p, "full_name")
+                                  ? "bg-amber-100/80 border-amber-300 text-amber-950"
+                                  : ""
+                              }`}
+                              value={rowData.full_name}
+                              onChange={(e) => updateCell(p, "full_name", e.target.value)}
+                              placeholder="Họ và tên phụ huynh..."
+                            />
+                            <input
+                              type="email"
+                              className={`${baseCellClass} text-[11px] text-ink-soft py-0.5 ${
+                                isCellDirty(p, "email")
+                                  ? "bg-amber-100/80 border-amber-300 text-amber-950 font-medium"
+                                  : ""
+                              }`}
+                              value={rowData.email}
+                              onChange={(e) => updateCell(p, "email", e.target.value)}
+                              placeholder="Gmail (@gmail.com)..."
+                            />
                           </div>
                         </div>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Cột SĐT / Quan hệ: Tách 2 dòng: Dòng 1 SĐT (font đậm), Dòng 2 Quan hệ (font nhỏ, xám mờ text-muted) */}
-                    <td className="px-4 py-2.5">
-                      {isRowActive ? (
-                        <div className="space-y-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                      {/* Cột SĐT / Quan hệ: 2 ô input phẳng */}
+                      <td className="px-3 py-2">
+                        <div className="space-y-0.5 min-w-[130px]">
                           <input
                             type="tel"
-                            className="kinput text-xs py-0.5 px-2 w-full font-bold"
-                            value={edit?.phone ?? p.phone}
-                            onChange={(e) => updateRowEdit(p.id, "phone", e.target.value)}
+                            className={`${baseCellClass} font-bold ${
+                              isCellDirty(p, "phone")
+                                ? "bg-amber-100/80 border-amber-300 text-amber-950"
+                                : ""
+                            }`}
+                            value={rowData.phone}
+                            onChange={(e) => updateCell(p, "phone", e.target.value)}
                             placeholder="Số điện thoại..."
                           />
                           <input
                             type="text"
-                            className="kinput text-[11px] py-0.5 px-2 w-full text-ink-soft"
-                            value={edit?.relationship ?? p.relationship ?? "Phụ huynh"}
-                            onChange={(e) => updateRowEdit(p.id, "relationship", e.target.value)}
-                            placeholder="Mối quan hệ (Bố, Mẹ...)"
+                            className={`${baseCellClass} text-[11px] text-ink-soft py-0.5 ${
+                              isCellDirty(p, "relationship")
+                                ? "bg-amber-100/80 border-amber-300 text-amber-950 font-medium"
+                                : ""
+                            }`}
+                            value={rowData.relationship}
+                            onChange={(e) => updateCell(p, "relationship", e.target.value)}
+                            placeholder="Quan hệ (Bố, Mẹ...)"
                           />
                         </div>
-                      ) : (
-                        <div>
-                          <div className="font-bold text-ink">
-                            {edit?.phone || p.phone}
-                          </div>
-                          <div className="text-xs text-ink-soft mt-0.5">
-                            {edit?.relationship || p.relationship || "Phụ huynh"}
-                          </div>
+                      </td>
+
+                      {/* Cột Con liên kết: Ô input dạng text gõ trực tiếp tên con */}
+                      <td className="px-3 py-2">
+                        <div className="min-w-[180px]">
+                          <input
+                            type="text"
+                            className={`${baseCellClass} ${
+                              isCellDirty(p, "children_text")
+                                ? "bg-amber-100/80 border-amber-300 text-amber-950 font-medium"
+                                : ""
+                            }`}
+                            value={rowData.children_text}
+                            onChange={(e) => updateCell(p, "children_text", e.target.value)}
+                            placeholder="Nhập tên bé (ngăn cách bằng dấu phẩy)..."
+                            title="Gõ tên con để tự động liên kết (vd: Bé Nam, Bé An)"
+                          />
                         </div>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Cột Con liên kết: Plain Text */}
-                    <td className="px-4 py-2.5 text-ink-soft max-w-xs">
-                      {getParentChildrenSummary(p, children)}
-                    </td>
+                      {/* Cột Tài khoản: Ô input phẳng có tiền tố @ */}
+                      <td className="px-3 py-2">
+                        <div className="min-w-[130px] flex items-center">
+                          <span className="text-xs text-ink-soft font-medium pl-1">@</span>
+                          <input
+                            type="text"
+                            className={`${baseCellClass} ${
+                              isCellDirty(p, "username")
+                                ? "bg-amber-100/80 border-amber-300 text-amber-950 font-medium"
+                                : ""
+                            }`}
+                            value={rowData.username}
+                            onChange={(e) => updateCell(p, "username", e.target.value)}
+                            placeholder="username..."
+                          />
+                        </div>
+                      </td>
 
-                    {/* Cột Tài khoản: Plain Text hoàn toàn không viền, không background */}
-                    <td className="px-4 py-2.5">
-                      <div className="text-ink text-sm">
-                        {p.username ? `@${p.username}` : <span className="text-xs text-ink-faint">—</span>}
-                      </div>
-                    </td>
-
-                    {/* Cột Trạng thái */}
-                    <td className="px-4 py-2.5">
-                      {isRowActive ? (
-                        <select
-                          className="kinput text-xs py-1 px-2 min-w-[110px]"
-                          value={edit?.status ?? p.status ?? "active"}
-                          onChange={(e) => updateRowEdit(p.id, "status", e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <option value="active">Đang hoạt động</option>
-                          <option value="inactive">Ngừng</option>
-                        </select>
-                      ) : (
-                        <Pill tone={(edit?.status || p.status) === "active" ? "ok" : "neutral"}>
-                          {(edit?.status || p.status) === "active" ? "Đang hoạt động" : "Ngừng"}
-                        </Pill>
-                      )}
-                    </td>
-
-                    {/* Cột Thao tác: Icon cây bút và nút Xong khi đang sửa dòng */}
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      {isRowActive ? (
+                      {/* Cột Trạng thái: Toggle / Select phẳng click đổi trực tiếp */}
+                      <td className="px-3 py-2">
                         <button
                           type="button"
-                          onClick={() => setEditingRowId(null)}
-                          className="kbtn text-xs font-semibold py-1 px-2.5 text-brand bg-brand/10 border border-brand/30 rounded inline-flex items-center gap-1 shadow-sm"
-                          title="Hoàn tất sửa dòng này"
+                          onClick={() => toggleRowStatus(p)}
+                          className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all shadow-sm flex items-center gap-1.5 ${
+                            rowData.status === "active"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                              : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
+                          } ${
+                            isCellDirty(p, "status")
+                              ? "ring-2 ring-amber-400 font-bold"
+                              : ""
+                          }`}
+                          title="Click để đổi nhanh trạng thái"
                         >
-                          <span>✓</span>
-                          <span>Xong</span>
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              rowData.status === "active" ? "bg-emerald-500" : "bg-slate-400"
+                            }`}
+                          />
+                          <span>{rowData.status === "active" ? "Đang hoạt động" : "Ngừng"}</span>
                         </button>
-                      ) : (
+                      </td>
+
+                      {/* Cột Thao tác: Bỏ hoàn toàn 'Xong'/'Đang sửa', chỉ giữ Chi tiết & Xóa */}
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
-                            onClick={() => startEditRow(p)}
-                            className="kbtn kbtn-ghost text-xs text-brand hover:bg-brand/10 font-medium inline-flex items-center gap-1"
-                            title="Sửa nhanh trực tiếp trên bảng"
-                          >
-                            <span>✏️</span>
-                            <span>Sửa</span>
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => openEdit(p)}
-                            className="kbtn kbtn-ghost text-xs text-ink-soft hover:text-ink"
-                            title="Mở bảng chi tiết"
+                            className="kbtn kbtn-ghost text-xs text-ink-soft hover:text-ink px-2 py-1"
+                            title="Mở bảng chi tiết cấu hình nâng cao"
                           >
                             Chi tiết
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmDel(p)}
-                            className="kbtn kbtn-ghost text-xs text-bad"
+                            className="kbtn kbtn-ghost text-xs text-bad hover:bg-bad/10 px-2 py-1"
                             title="Xóa phụ huynh này"
                           >
                             Xóa
                           </button>
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
