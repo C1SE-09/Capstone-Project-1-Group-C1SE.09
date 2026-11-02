@@ -25,7 +25,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
-import { DirectGridInput } from "@/components/DirectGridInput";
 import {
   ClassFilterSelect,
   DateInput,
@@ -112,40 +111,19 @@ export default function HealthExamPage() {
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<HealthExamImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importMode, setImportMode] = useState<"grid" | "file">("grid");
-  const [gridRows, setGridRows] = useState<string[][]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const healthExamHeaders = useMemo(
-    () => [
-      "Họ và tên",
-      "Ngày sinh",
-      "Giới tính",
-      "Ngày ghi nhận",
-      "Chiều cao",
-      "Cân nặng",
-      "Kết luận chung",
-    ],
-    []
-  );
+  /* Chỉnh sửa trực tiếp trên bảng */
+  const [isEditingTable, setIsEditingTable] = useState(false);
+  const [tableEdits, setTableEdits] = useState<Record<string, {
+    examination_date: string;
+    height: string;
+    weight: string;
+    general_conclusion: string;
+  }>>({});
+  const [savingTable, setSavingTable] = useState(false);
 
-  const sampleHealthExamRow = useMemo(
-    () => [
-      "Nguyễn Bảo An (Bống)",
-      "15/05/2021",
-      "Nữ",
-      importDate ? formatDateToDmy(importDate) : "20/10/2026",
-      "102.5",
-      "16.8",
-      "Bình thường",
-    ],
-    [importDate]
-  );
 
-  const validGridRows = useMemo(
-    () => gridRows.filter((r) => r.some((c) => c && c.trim().length > 0)),
-    [gridRows]
-  );
 
   /* Drawer sửa số liệu 1 dòng */
   const [editing, setEditing] = useState<HealthExamRecord | null>(null);
@@ -154,6 +132,113 @@ export default function HealthExamPage() {
   const [editConclusion, setEditConclusion] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editBusy, setEditBusy] = useState(false);
+
+  function startTableEditing() {
+    const initial: Record<string, any> = {};
+    const defaultDate = examDate || todayIso();
+    filtered.forEach((r) => {
+      initial[r.child_id] = {
+        examination_date: r.examination_date ? toIsoDate(r.examination_date) || defaultDate : defaultDate,
+        height: r.height != null ? String(r.height) : "",
+        weight: r.weight != null ? String(r.weight) : "",
+        general_conclusion: r.general_conclusion || "",
+      };
+    });
+    setTableEdits(initial);
+    setIsEditingTable(true);
+  }
+
+  function cancelTableEditing() {
+    setIsEditingTable(false);
+    setTableEdits({});
+  }
+
+  function updateRowEdit(childId: string, field: string, val: string) {
+    setTableEdits((prev) => ({
+      ...prev,
+      [childId]: {
+        ...prev[childId],
+        [field]: val,
+      },
+    }));
+  }
+
+  async function handleSaveTableEdits() {
+    const changedItems: { record: HealthExamRecord; payload: any }[] = [];
+    for (const r of filtered) {
+      const edit = tableEdits[r.child_id];
+      if (!edit) continue;
+
+      const origH = r.height != null ? String(r.height) : "";
+      const origW = r.weight != null ? String(r.weight) : "";
+      const origC = r.general_conclusion || "";
+      const origD = r.examination_date ? toIsoDate(r.examination_date) : "";
+
+      const isChanged =
+        edit.height.trim() !== origH.trim() ||
+        edit.weight.trim() !== origW.trim() ||
+        edit.general_conclusion.trim() !== origC.trim() ||
+        edit.examination_date !== origD;
+
+      if (isChanged) {
+        const hVal = edit.height.trim() ? parseFloat(edit.height.trim()) : null;
+        const wVal = edit.weight.trim() ? parseFloat(edit.weight.trim()) : null;
+        if (hVal != null && (isNaN(hVal) || hVal <= 0 || hVal > 250)) {
+          setToast({ msg: `Chiều cao của ${r.full_name} không hợp lệ (0-250cm)`, tone: "bad" });
+          return;
+        }
+        if (wVal != null && (isNaN(wVal) || wVal <= 0 || wVal > 150)) {
+          setToast({ msg: `Cân nặng của ${r.full_name} không hợp lệ (0-150kg)`, tone: "bad" });
+          return;
+        }
+
+        changedItems.push({
+          record: r,
+          payload: {
+            child_id: r.child_id,
+            height: hVal,
+            weight: wVal,
+            general_conclusion: edit.general_conclusion.trim() || null,
+            examination_date: edit.examination_date || null,
+          },
+        });
+      }
+    }
+
+    if (changedItems.length === 0) {
+      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
+      setIsEditingTable(false);
+      return;
+    }
+
+    setSavingTable(true);
+    let success = 0;
+    let failed = 0;
+    for (const item of changedItems) {
+      try {
+        if (item.record.id) {
+          await updateHealthExamRecord(item.record.id, {
+            height: item.payload.height,
+            weight: item.payload.weight,
+            general_conclusion: item.payload.general_conclusion,
+          });
+        } else {
+          await createHealthExamRecord(item.payload);
+        }
+        success++;
+      } catch (e) {
+        failed++;
+      }
+    }
+    setSavingTable(false);
+    setIsEditingTable(false);
+    mutate();
+    if (failed === 0) {
+      setToast({ msg: `Đã lưu thành công số liệu sức khỏe cho ${success} học sinh!`, tone: "ok" });
+    } else {
+      setToast({ msg: `Đã lưu ${success} học sinh (${failed} học sinh lỗi)`, tone: "warn" });
+    }
+  }
 
   /* ── Auth guard + danh sách lớp ── */
   useEffect(() => {
@@ -369,11 +454,6 @@ export default function HealthExamPage() {
     setImportFile(null);
     setImportResult(null);
     setImportError(null);
-    const emptyRows: string[][] = [];
-    for (let i = 0; i < 5; i++) {
-      emptyRows.push(["", "", "", "", "", "", ""]);
-    }
-    setGridRows(emptyRows);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setImportOpen(true);
   }
@@ -433,25 +513,11 @@ export default function HealthExamPage() {
 
   /* ══ Gửi file lên backend ══ */
   async function handleImport() {
-    let fileToUpload: File | null = importFile;
-    if (importMode === "grid") {
-      if (validGridRows.length === 0) {
-        setImportError("Vui lòng nhập ít nhất 1 dòng số liệu vào bảng.");
-        return;
-      }
-      fileToUpload = rowsToExcelFile(
-        "so_suc_khoe_grid.xlsx",
-        "SoSucKhoe",
-        healthExamHeaders,
-        validGridRows
-      );
-    }
-
-    if (!fileToUpload) return;
+    if (!importFile) return;
     setImportBusy(true);
     setImportError(null);
     try {
-      const res = await importHealthExamFile(importClassId || null, fileToUpload);
+      const res = await importHealthExamFile(importClassId || null, importFile);
       setImportResult(res);
       mutate();
       if (res.failed_count === 0 && res.success_count > 0) {
@@ -499,26 +565,52 @@ export default function HealthExamPage() {
             📥 Xuất Excel
           </button>
           <button
-            onClick={() => {
-              setImportMode("file");
-              openImportModal();
-            }}
+            onClick={openImportModal}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập kết quả từ file Excel"
+            disabled={isEditingTable}
           >
             📤 Nhập file
           </button>
-          <button
-            onClick={() => {
-              setImportMode("grid");
-              openImportModal();
-            }}
-            className="kbtn kbtn-primary text-sm flex items-center gap-1.5"
-            title="Nhập số liệu sức khoẻ trực tiếp trên bảng tính"
-          >
-            <span>📊</span>
-            <span>Nhập trực tiếp</span>
-          </button>
+          {!isEditingTable ? (
+            <button
+              onClick={startTableEditing}
+              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+              title="Chỉnh sửa trực tiếp số liệu sức khỏe tất cả học sinh trên bảng"
+              disabled={filtered.length === 0}
+            >
+              <span>✏️</span>
+              <span>Chỉnh sửa bảng</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={cancelTableEditing}
+                disabled={savingTable}
+                className="kbtn kbtn-secondary text-sm"
+              >
+                ✕ Hủy bỏ
+              </button>
+              <button
+                onClick={handleSaveTableEdits}
+                disabled={savingTable}
+                className="kbtn text-sm font-bold text-white flex items-center gap-2"
+                style={{ background: "#16665a" }}
+              >
+                {savingTable ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span>
+                    <span>Lưu thay đổi</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
         </div>
       }
     >
@@ -655,9 +747,26 @@ export default function HealthExamPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r, idx) => (
-                  <tr key={r.child_id} className={idx > 0 ? "border-t border-line" : ""}>
-                    <td className="px-4 py-3">
+                {filtered.map((r, idx) => {
+                  const edit = tableEdits[r.child_id];
+                  const curH = edit ? parseFloat(edit.height) : (r.height ?? 0);
+                  const curW = edit ? parseFloat(edit.weight) : (r.weight ?? 0);
+                  let liveBmi: number | null = null;
+                  if (curH > 0 && curW > 0) {
+                    const hm = curH / 100;
+                    liveBmi = curW / (hm * hm);
+                  } else if (!isEditingTable && r.bmi != null) {
+                    liveBmi = r.bmi;
+                  }
+
+                  return (
+                  <tr
+                    key={r.child_id}
+                    className={`${idx > 0 ? "border-t border-line" : ""} ${
+                      isEditingTable ? "bg-amber-50/20" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2.5">
                         <div
                           className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold shrink-0"
@@ -681,22 +790,59 @@ export default function HealthExamPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-ink-soft whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-ink-soft whitespace-nowrap">
                       {r.class_name || "—"}
                     </td>
-                    <td className="px-4 py-3 text-ink-soft whitespace-nowrap">
-                      {r.examination_date || "—"}
+                    <td className="px-4 py-2.5 text-ink-soft whitespace-nowrap">
+                      {isEditingTable ? (
+                        <input
+                          type="date"
+                          className="kinput text-xs py-1 px-1.5 w-32"
+                          value={edit?.examination_date ?? ""}
+                          onChange={(e) => updateRowEdit(r.child_id, "examination_date", e.target.value)}
+                        />
+                      ) : (
+                        r.examination_date || "—"
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-right text-ink whitespace-nowrap">
-                      {r.height != null ? `${r.height} cm` : "—"}
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {isEditingTable ? (
+                        <input
+                          type="number"
+                          step="0.1"
+                          className="kinput text-xs py-1 px-1.5 w-20 text-right"
+                          value={edit?.height ?? ""}
+                          onChange={(e) => updateRowEdit(r.child_id, "height", e.target.value)}
+                          placeholder="cm"
+                        />
+                      ) : (
+                        r.height != null ? `${r.height} cm` : "—"
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-right text-ink whitespace-nowrap">
-                      {r.weight != null ? `${r.weight} kg` : "—"}
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {isEditingTable ? (
+                        <input
+                          type="number"
+                          step="0.1"
+                          className="kinput text-xs py-1 px-1.5 w-20 text-right"
+                          value={edit?.weight ?? ""}
+                          onChange={(e) => updateRowEdit(r.child_id, "weight", e.target.value)}
+                          placeholder="kg"
+                        />
+                      ) : (
+                        r.weight != null ? `${r.weight} kg` : "—"
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-ink whitespace-nowrap">
-                      {r.bmi != null ? r.bmi.toFixed(2) : "—"}
+                    <td className="px-4 py-2.5 text-right font-semibold text-ink whitespace-nowrap">
+                      {liveBmi != null ? (
+                        <span className={isEditingTable ? "text-brand font-bold" : ""}>
+                          {liveBmi.toFixed(2)}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       {r.health_category_label ? (
                         <Pill tone={CATEGORY_TONE[r.health_category || ""] ?? "neutral"}>
                           {r.health_category_label}
@@ -705,26 +851,43 @@ export default function HealthExamPage() {
                         <span className="text-[11px] text-ink-faint italic">Chưa có</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-ink-soft">
-                      <div className="max-w-[280px] truncate" title={r.general_conclusion || ""}>
-                        {r.general_conclusion || "—"}
-                      </div>
+                    <td className="px-4 py-2.5 text-ink-soft">
+                      {isEditingTable ? (
+                        <input
+                          type="text"
+                          className="kinput text-xs py-1 px-2 w-full min-w-[140px]"
+                          value={edit?.general_conclusion ?? ""}
+                          onChange={(e) => updateRowEdit(r.child_id, "general_conclusion", e.target.value)}
+                          placeholder="Kết luận chung..."
+                        />
+                      ) : (
+                        <div className="max-w-[280px] truncate" title={r.general_conclusion || ""}>
+                          {r.general_conclusion || "—"}
+                        </div>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => openEditModal(r)}
-                        className="kbtn kbtn-ghost text-xs"
-                        title={
-                          r.id
-                            ? "Sửa chiều cao, cân nặng và kết luận chung"
-                            : "Nhập số liệu sức khoẻ cho học sinh này"
-                        }
-                      >
-                        Sửa
-                      </button>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {isEditingTable ? (
+                        <span className="text-[11px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded">
+                          Đang sửa
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => openEditModal(r)}
+                          className="kbtn kbtn-ghost text-xs"
+                          title={
+                            r.id
+                              ? "Sửa chiều cao, cân nặng và kết luận chung"
+                              : "Nhập số liệu sức khoẻ cho học sinh này"
+                          }
+                        >
+                          Sửa
+                        </button>
+                      )}
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -759,20 +922,13 @@ export default function HealthExamPage() {
                 <button
                   type="button"
                   onClick={handleImport}
-                  disabled={
-                    importBusy ||
-                    (importMode === "grid" ? validGridRows.length === 0 : !importFile)
-                  }
+                  disabled={importBusy || !importFile}
                   className="kbtn kbtn-primary flex items-center gap-2"
                 >
                   {importBusy && (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  {importBusy
-                    ? "Đang nhập..."
-                    : importMode === "grid"
-                    ? `Nhập vào sổ sức khoẻ (${validGridRows.length} dòng)`
-                    : "Nhập vào sổ sức khoẻ"}
+                  {importBusy ? "Đang nhập..." : "Nhập vào sổ sức khoẻ"}
                 </button>
               )}
             </div>
@@ -785,47 +941,7 @@ export default function HealthExamPage() {
             Hệ thống tự tính BMI và báo rõ dòng nào bị lỗi để chỉnh sửa.
           </p>
 
-          {/* Tab switcher: Nhập trực tiếp vs Tải file */}
-          {!importResult && (
-            <div className="flex border-b border-line gap-2">
-              <button
-                type="button"
-                onClick={() => setImportMode("grid")}
-                className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
-                  importMode === "grid"
-                    ? "border-brand text-brand bg-brand/5 rounded-t-sm"
-                    : "border-transparent text-ink-soft hover:text-ink hover:border-line"
-                }`}
-              >
-                <span>📊</span>
-                <span>Bảng nhập trực tiếp (Web Grid)</span>
-                {validGridRows.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
-                    {validGridRows.length}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setImportMode("file")}
-                className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
-                  importMode === "file"
-                    ? "border-brand text-brand bg-brand/5 rounded-t-sm"
-                    : "border-transparent text-ink-soft hover:text-ink hover:border-line"
-                }`}
-              >
-                <span>📁</span>
-                <span>Tải file Excel</span>
-                {importFile && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
-                    1
-                  </span>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* Bước chọn lớp & ngày ghi nhận (dùng chung cho cả 2 tab) */}
+          {/* Bước chọn lớp & ngày ghi nhận */}
           <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-3">
             <div className="font-bold text-ink text-sm">Chọn lớp & ngày ghi nhận</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -862,21 +978,8 @@ export default function HealthExamPage() {
             )}
           </div>
 
-          {/* Nội dung Tab 1: Grid nhập trực tiếp */}
-          {importMode === "grid" && !importResult && (
-            <div className="space-y-3">
-              <DirectGridInput
-                headers={healthExamHeaders}
-                sampleRow={sampleHealthExamRow}
-                rows={gridRows}
-                onChange={setGridRows}
-                disabled={importBusy}
-              />
-            </div>
-          )}
-
-          {/* Nội dung Tab 2: Bước 2 chọn file Excel */}
-          {importMode === "file" && !importResult && (
+          {/* Chọn file Excel tải lên */}
+          {!importResult && (
             <div>
               <label className="klabel mb-1.5">Chọn file kết quả tải lên</label>
               <input

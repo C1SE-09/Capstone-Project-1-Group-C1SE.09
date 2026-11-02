@@ -65,7 +65,15 @@ export default function SchoolAdminTeachersPage() {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [importTab, setImportTab] = useState<"file" | "grid">("file");
+  const [isEditingTable, setIsEditingTable] = useState(false);
+  const [tableEdits, setTableEdits] = useState<Record<string, {
+    full_name: string;
+    email: string;
+    phone: string;
+    class_id: string | null;
+    status: string;
+  }>>({});
+  const [savingTable, setSavingTable] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [form, setForm] = useState<TeacherFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -209,6 +217,93 @@ export default function SchoolAdminTeachersPage() {
       mutate();
     }
     return { total: rows.length, success, failed, errors };
+  }
+
+  function startTableEditing() {
+    const initial: Record<string, any> = {};
+    filtered.forEach((t) => {
+      initial[t.id] = {
+        full_name: t.full_name || "",
+        email: t.email || "",
+        phone: t.phone || "",
+        class_id: t.class_id || null,
+        status: t.status || "active",
+      };
+    });
+    setTableEdits(initial);
+    setIsEditingTable(true);
+  }
+
+  function cancelTableEditing() {
+    setIsEditingTable(false);
+    setTableEdits({});
+  }
+
+  function updateRowEdit(id: string, field: string, val: any) {
+    setTableEdits((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: val,
+      },
+    }));
+  }
+
+  async function handleSaveTableEdits() {
+    const changedItems: { id: string; payload: TeacherPayload }[] = [];
+    for (const t of filtered) {
+      const edit = tableEdits[t.id];
+      if (!edit) continue;
+      const isChanged =
+        edit.full_name.trim() !== (t.full_name || "").trim() ||
+        edit.email.trim() !== (t.email || "").trim() ||
+        edit.phone.trim() !== (t.phone || "").trim() ||
+        edit.class_id !== (t.class_id || null) ||
+        edit.status !== (t.status || "active");
+
+      if (isChanged) {
+        if (!edit.full_name.trim()) {
+          setToast({ msg: "Họ tên giáo viên không được để trống", tone: "bad" });
+          return;
+        }
+        changedItems.push({
+          id: t.id,
+          payload: {
+            full_name: edit.full_name.trim(),
+            email: edit.email.trim(),
+            phone: edit.phone.trim(),
+            class_id: edit.class_id,
+            status: edit.status,
+          },
+        });
+      }
+    }
+
+    if (changedItems.length === 0) {
+      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
+      setIsEditingTable(false);
+      return;
+    }
+
+    setSavingTable(true);
+    let success = 0;
+    let failed = 0;
+    for (const item of changedItems) {
+      try {
+        await updateTeacher(item.id, item.payload);
+        success++;
+      } catch (e) {
+        failed++;
+      }
+    }
+    setSavingTable(false);
+    setIsEditingTable(false);
+    mutate();
+    if (failed === 0) {
+      setToast({ msg: `Đã lưu thành công ${success} giáo viên!`, tone: "ok" });
+    } else {
+      setToast({ msg: `Đã lưu ${success} giáo viên (${failed} giáo viên lỗi)`, tone: "warn" });
+    }
   }
 
   function openCreate() {
@@ -361,29 +456,57 @@ export default function SchoolAdminTeachersPage() {
             📥 Xuất Excel
           </button>
           <button
-            onClick={() => {
-              setImportTab("file");
-              setImportOpen(true);
-            }}
+            onClick={() => setImportOpen(true)}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập dữ liệu từ file Excel / CSV"
+            disabled={isEditingTable}
           >
             📤 Nhập file
           </button>
-          <button
-            onClick={() => {
-              setImportTab("grid");
-              setImportOpen(true);
-            }}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
-            title="Nhập dữ liệu trực tiếp bằng bảng tính trên Web"
-          >
-            <span>📊</span>
-            <span>Nhập trực tiếp</span>
-          </button>
-          <button onClick={openCreate} className="kbtn kbtn-primary">
-            + Thêm giáo viên
-          </button>
+          {!isEditingTable ? (
+            <button
+              onClick={startTableEditing}
+              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
+              disabled={filtered.length === 0}
+            >
+              <span>✏️</span>
+              <span>Chỉnh sửa bảng</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={cancelTableEditing}
+                disabled={savingTable}
+                className="kbtn kbtn-secondary text-sm"
+              >
+                ✕ Hủy bỏ
+              </button>
+              <button
+                onClick={handleSaveTableEdits}
+                disabled={savingTable}
+                className="kbtn text-sm font-bold text-white flex items-center gap-2"
+                style={{ background: "#16665a" }}
+              >
+                {savingTable ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span>
+                    <span>Lưu thay đổi</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
+          {!isEditingTable && (
+            <button onClick={openCreate} className="kbtn kbtn-primary">
+              + Thêm giáo viên
+            </button>
+          )}
         </div>
       }
     >
@@ -717,7 +840,6 @@ export default function SchoolAdminTeachersPage() {
 
       <ImportModal
         open={importOpen}
-        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách giáo viên từ file"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường. Nếu để trống Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (giáo viên có thể đăng nhập bằng cả Email hoặc Số điện thoại)."

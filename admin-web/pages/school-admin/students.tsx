@@ -360,7 +360,16 @@ export default function SchoolAdminStudentsPage() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [importTab, setImportTab] = useState<"file" | "grid">("file");
+  const [isEditingTable, setIsEditingTable] = useState(false);
+  const [tableEdits, setTableEdits] = useState<Record<string, {
+    full_name: string;
+    nickname: string;
+    class_id: string | null;
+    date_of_birth: string;
+    gender: string;
+    medical_allergies: string;
+  }>>({});
+  const [savingTable, setSavingTable] = useState(false);
   const [editing, setEditing] = useState<Child | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -834,6 +843,98 @@ export default function SchoolAdminStudentsPage() {
     return { total: rows.length, success, failed, errors, warnings };
   }
 
+  function startTableEditing() {
+    const initial: Record<string, any> = {};
+    filtered.forEach((c) => {
+      initial[c.id] = {
+        full_name: c.full_name || "",
+        nickname: c.nickname || "",
+        class_id: c.class_id || null,
+        date_of_birth: c.date_of_birth || "",
+        gender: c.gender || "male",
+        medical_allergies: c.note || "",
+      };
+    });
+    setTableEdits(initial);
+    setIsEditingTable(true);
+  }
+
+  function cancelTableEditing() {
+    setIsEditingTable(false);
+    setTableEdits({});
+  }
+
+  function updateRowEdit(id: string, field: string, val: any) {
+    setTableEdits((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: val,
+      },
+    }));
+  }
+
+  async function handleSaveTableEdits() {
+    const changedItems: { id: string; original: Child; payload: ChildPayload }[] = [];
+    for (const c of filtered) {
+      const edit = tableEdits[c.id];
+      if (!edit) continue;
+      const isChanged =
+        edit.full_name.trim() !== (c.full_name || "").trim() ||
+        edit.nickname.trim() !== (c.nickname || "").trim() ||
+        edit.class_id !== (c.class_id || null) ||
+        edit.date_of_birth !== (c.date_of_birth || "") ||
+        edit.gender !== (c.gender || "male") ||
+        edit.medical_allergies.trim() !== (c.note || "").trim();
+
+      if (isChanged) {
+        if (!edit.full_name.trim()) {
+          setToast({ msg: "Họ tên học sinh không được để trống", tone: "bad" });
+          return;
+        }
+        changedItems.push({
+          id: c.id,
+          original: c,
+          payload: {
+            full_name: edit.full_name.trim(),
+            nickname: edit.nickname.trim() || null,
+            class_id: edit.class_id,
+            date_of_birth: edit.date_of_birth || null,
+            gender: edit.gender,
+            medical_allergies: edit.medical_allergies.trim() || null,
+            status: c.status,
+          },
+        });
+      }
+    }
+
+    if (changedItems.length === 0) {
+      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
+      setIsEditingTable(false);
+      return;
+    }
+
+    setSavingTable(true);
+    let success = 0;
+    let failed = 0;
+    for (const item of changedItems) {
+      try {
+        await updateChild(item.id, item.payload);
+        success++;
+      } catch (e) {
+        failed++;
+      }
+    }
+    setSavingTable(false);
+    setIsEditingTable(false);
+    mutate();
+    if (failed === 0) {
+      setToast({ msg: `Đã lưu thành công ${success} học sinh!`, tone: "ok" });
+    } else {
+      setToast({ msg: `Đã lưu ${success} học sinh (${failed} học sinh lỗi)`, tone: "warn" });
+    }
+  }
+
   function openCreate() {
     setEditing(null);
     setForm({ ...EMPTY, class_id: classes[0]?.id ?? null });
@@ -1120,29 +1221,57 @@ export default function SchoolAdminStudentsPage() {
             📥 Xuất Excel
           </button>
           <button
-            onClick={() => {
-              setImportTab("file");
-              setImportOpen(true);
-            }}
+            onClick={() => setImportOpen(true)}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập dữ liệu từ file Excel / CSV"
+            disabled={isEditingTable}
           >
             📤 Nhập file
           </button>
-          <button
-            onClick={() => {
-              setImportTab("grid");
-              setImportOpen(true);
-            }}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
-            title="Nhập dữ liệu trực tiếp bằng bảng tính trên Web"
-          >
-            <span>📊</span>
-            <span>Nhập trực tiếp</span>
-          </button>
-          <button onClick={openCreate} className="kbtn kbtn-primary">
-            + Thêm học sinh
-          </button>
+          {!isEditingTable ? (
+            <button
+              onClick={startTableEditing}
+              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
+              disabled={filtered.length === 0}
+            >
+              <span>✏️</span>
+              <span>Chỉnh sửa bảng</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={cancelTableEditing}
+                disabled={savingTable}
+                className="kbtn kbtn-secondary text-sm"
+              >
+                ✕ Hủy bỏ
+              </button>
+              <button
+                onClick={handleSaveTableEdits}
+                disabled={savingTable}
+                className="kbtn text-sm font-bold text-white flex items-center gap-2"
+                style={{ background: "#16665a" }}
+              >
+                {savingTable ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span>
+                    <span>Lưu thay đổi</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
+          {!isEditingTable && (
+            <button onClick={openCreate} className="kbtn kbtn-primary">
+              + Thêm học sinh
+            </button>
+          )}
         </div>
       }
     >
@@ -1265,11 +1394,12 @@ export default function SchoolAdminStudentsPage() {
               <tbody>
                 {filtered.map((c, idx) => {
                   const isSelected = selectedIds.includes(c.id);
+                  const edit = tableEdits[c.id];
                   return (
                   <tr
                     key={c.id}
                     className={`${idx > 0 ? "border-t border-line" : ""} ${
-                      isSelected ? "bg-[#FDF8F6]" : ""
+                      isSelected && !isEditingTable ? "bg-[#FDF8F6]" : isEditingTable ? "bg-amber-50/20" : ""
                     }`}
                   >
                     <td className="px-3 py-3 text-center">
@@ -1278,30 +1408,65 @@ export default function SchoolAdminStudentsPage() {
                         className="rounded cursor-pointer"
                         checked={isSelected}
                         onChange={() => toggleSelect(c.id)}
+                        disabled={isEditingTable}
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold"
-                          style={{ background: "#8A5E12" }}
+                    <td className="px-4 py-2.5">
+                      {isEditingTable ? (
+                        <div className="space-y-1 min-w-[160px]">
+                          <input
+                            type="text"
+                            className="kinput text-xs py-1 px-2 font-bold w-full"
+                            value={edit?.full_name ?? c.full_name}
+                            onChange={(e) => updateRowEdit(c.id, "full_name", e.target.value)}
+                            placeholder="Họ và tên..."
+                          />
+                          <input
+                            type="text"
+                            className="kinput text-[11px] py-0.5 px-2 text-ink-soft w-full"
+                            value={edit?.nickname ?? c.nickname ?? ""}
+                            onChange={(e) => updateRowEdit(c.id, "nickname", e.target.value)}
+                            placeholder="Biệt danh..."
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold shrink-0"
+                            style={{ background: "#8A5E12" }}
+                          >
+                            {c.full_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-ink">{c.full_name}</div>
+                            {c.nickname && (
+                              <div className="text-xs text-ink-soft">
+                                Biệt danh: {c.nickname}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {isEditingTable ? (
+                        <select
+                          className="kinput text-xs py-1 px-2 min-w-[130px]"
+                          value={edit?.class_id ?? c.class_id ?? ""}
+                          onChange={(e) => updateRowEdit(c.id, "class_id", e.target.value || null)}
                         >
-                          {c.full_name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-bold text-ink">{c.full_name}</div>
-                          {c.nickname && (
-                            <div className="text-xs text-ink-soft">
-                              Biệt danh: {c.nickname}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                          <option value="">-- Chưa xếp lớp --</option>
+                          {classes.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Pill tone="warn">{c.class_name}</Pill>
+                      )}
                     </td>
-                    <td className="px-4 py-3">
-                      <Pill tone="warn">{c.class_name}</Pill>
-                    </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <div className="text-ink line-clamp-1">
                         {c.parents_summary || "Chưa liên kết"}
                       </div>
@@ -1309,30 +1474,69 @@ export default function SchoolAdminStudentsPage() {
                         <div className="text-xs text-ink-soft">{c.parent_phone}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-ink-soft">
-                      {c.date_of_birth ? formatDate(c.date_of_birth) : "—"}
+                    <td className="px-4 py-2.5 text-ink-soft">
+                      {isEditingTable ? (
+                        <div className="space-y-1 min-w-[130px]">
+                          <input
+                            type="date"
+                            className="kinput text-xs py-1 px-1.5 w-full"
+                            value={edit?.date_of_birth ?? c.date_of_birth ?? ""}
+                            onChange={(e) => updateRowEdit(c.id, "date_of_birth", e.target.value)}
+                          />
+                          <select
+                            className="kinput text-[11px] py-0.5 px-1.5 w-full"
+                            value={edit?.gender ?? c.gender ?? "male"}
+                            onChange={(e) => updateRowEdit(c.id, "gender", e.target.value)}
+                          >
+                            <option value="male">Nam</option>
+                            <option value="female">Nữ</option>
+                          </select>
+                        </div>
+                      ) : (
+                        c.date_of_birth ? formatDate(c.date_of_birth) : "—"
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-ink-soft max-w-xs">
-                      <div className="line-clamp-1">{c.note || "—"}</div>
-                      {c.care_notes && (
-                        <div className="text-xs mt-0.5 line-clamp-2">
-                          Lưu ý: {c.care_notes}
+                    <td className="px-4 py-2.5 text-ink-soft">
+                      {isEditingTable ? (
+                        <input
+                          type="text"
+                          className="kinput text-xs py-1 px-2 min-w-[150px] w-full"
+                          value={edit?.medical_allergies ?? c.note ?? ""}
+                          onChange={(e) => updateRowEdit(c.id, "medical_allergies", e.target.value)}
+                          placeholder="Ghi chú / dị ứng..."
+                        />
+                      ) : (
+                        <div className="max-w-xs">
+                          <div className="line-clamp-1">{c.note || "—"}</div>
+                          {c.care_notes && (
+                            <div className="text-xs mt-0.5 line-clamp-2">
+                              Lưu ý: {c.care_notes}
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => openEdit(c)}
-                        className="kbtn kbtn-ghost text-xs"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => setConfirmDel(c)}
-                        className="kbtn kbtn-ghost text-xs text-bad"
-                      >
-                        Xóa
-                      </button>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      {isEditingTable ? (
+                        <span className="text-[11px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded">
+                          Đang sửa
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => openEdit(c)}
+                            className="kbtn kbtn-ghost text-xs"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => setConfirmDel(c)}
+                            className="kbtn kbtn-ghost text-xs text-bad"
+                          >
+                            Xóa
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -1723,7 +1927,6 @@ export default function SchoolAdminStudentsPage() {
 
       <ImportModal
         open={importOpen}
-        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách học sinh từ file"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV. Hệ thống hỗ trợ đọc cùng lúc nhiều sheet (chia theo từng lớp), tự động nhận diện lớp theo tên sheet và tự động liên kết với phụ huynh theo số điện thoại."
