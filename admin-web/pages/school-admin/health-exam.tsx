@@ -1,25 +1,34 @@
 /**
  * pages/school-admin/health-exam.tsx
  * =====================================
- * Màn hình quản trị "Sổ sức khoẻ học sinh" — theo đúng pattern các trang khác
- * (Học sinh / Phụ huynh / Giáo viên / Thời khoá biểu):
+ * Màn hình quản trị "Sổ sức khoẻ học sinh" — Đồng bộ phong cách UI/UX SaaS chuẩn Excel
+ * (Bulk Edit) tương tự trang Quản lý phụ huynh và Quản lý học sinh.
  *
- *   1. Thanh tiêu đề có nút hành động: ↻ Làm mới · 📥 Xuất Excel · 📤 Nhập file · (nút phụ)
- *   2. Dải bộ lọc: tìm kiếm + chọn lớp + chọn ngày ghi nhận.
- *   3. Bảng dữ liệu các bản ghi đã ghi nhận trong sổ sức khoẻ.
- *   4. Modal nhập Excel (dùng chung `ImportModal`-style) để đẩy số liệu cả lớp.
+ * Tính năng chính:
+ *   1. Chế độ Xem (View Mode - Mặc định):
+ *      - Bảng text phẳng sạch sẽ, không viền input, không rối mắt.
+ *      - Cột Học sinh hiển thị Avatar chữ cái đầu, Họ tên (đậm), Biệt danh và Ngày sinh / Giới tính nhỏ mờ bên dưới.
+ *      - Cột Thể trạng hiển thị Badge bo tròn (Xanh lá: Bình thường, Vàng/Đỏ: Thiếu cân/Thừa cân, Xám: Chưa có).
+ *      - Cột Thao tác: Icon Sửa ✏️ (mở drawer chi tiết) và icon Xóa 🗑️ (xác nhận xóa bản ghi sức khỏe).
  *
- * Luồng nhập Excel (nút 📤 Nhập file):
- *   a. Tải file mẫu .xlsx do backend sinh ra (đã điền sẵn họ tên kèm biệt danh,
- *      ngày sinh, giới tính; nếu bé đã có số liệu sức khoẻ thì 3 cột chiều cao,
- *      cân nặng, kết luận chung cũng được điền sẵn).
- *   b. Cơ sở y tế điền số liệu đo vào file (file KHÔNG bị khóa bảo vệ).
- *   c. Tải file kết quả lên hệ thống → backend validate từng dòng, tự tính BMI +
- *      xếp loại thể trạng, lưu bản ghi hợp lệ và báo rõ dòng nào lỗi để sửa lại.
+ *   2. Chế độ Sửa (Bulk Edit - Chuẩn Excel):
+ *      - Bật bằng nút "✏️ Chỉnh sửa" trên Toolbar (không dùng switch gạt).
+ *      - Toàn bộ các dòng chuyển thành ô Input/Textarea viền mỏng xám mảnh (border-slate-300 rounded-md).
+ *      - Nút "Đang sửa" biến mất, thay bằng icon Xóa 🗑️ (xóa trắng dữ liệu đang nhập của dòng).
+ *      - Nút "💾 Lưu tất cả thay đổi" và "✕ Hủy thay đổi" trên Toolbar, kèm banner báo số dòng thay đổi chưa lưu.
  *
- * API: GET  /api/health-exam/records?class_id=&examination_date=
- *      GET  /api/health-exam/template?class_id=...   (trả file .xlsx)
- *      POST /api/health-exam/import  (multipart: class_id + file)
+ *   3. Ràng buộc dữ liệu y tế mầm non (Validation & Sanitization):
+ *      - Ngày ghi nhận: <input type="date"> chuẩn YYYY-MM-DD, hiển thị DD/MM/YYYY, chặn ngày tương lai (max={todayIso()}).
+ *      - Chiều cao (cm): Chỉ nhập số, dải hợp lệ 40 - 150 cm. Viền đỏ cảnh báo nếu vượt dải.
+ *      - Cân nặng (kg): Chỉ nhập số (cho phép số thập phân), dải hợp lệ 5 - 50 kg. Viền đỏ nếu vượt dải.
+ *      - Chỉ số BMI: Read-only (không cho nhập trực tiếp), tự động tính realtime: Cân nặng / (Chiều cao/100)^2.
+ *        Làm tròn và format gọn (ví dụ 15.8, loại bỏ số 0 thừa như 13.3 thay vì 13.30).
+ *      - Thể trạng realtime: Tự động phân loại ngay khi gõ chiều cao/cân nặng.
+ *      - Kết luận chung: Dùng <textarea rows={2}> nhiều dòng ở Edit Mode, line-clamp-2 chống tràn ở View Mode.
+ *
+ *   4. Xuất / Nhập Excel:
+ *      - Xuất file Excel toàn trường hoặc theo lớp.
+ *      - Nhập file Excel số liệu khám định kỳ từ cơ sở y tế.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -32,7 +41,6 @@ import {
   EmptyState,
   FormField,
   Modal,
-  Pill,
   SearchBar,
   Spinner,
   Toast,
@@ -44,13 +52,13 @@ import {
   exportMultiSheetToExcel,
   exportToExcel,
   formatDateToDmy,
-  rowsToExcelFile,
 } from "@/lib/excel-helper";
 import {
   HealthExamImportResult,
   HealthExamRecord,
   SchoolClass,
   createHealthExamRecord,
+  deleteHealthExamRecord,
   downloadHealthExamTemplate,
   getClasses,
   getHealthExamRecords,
@@ -58,19 +66,18 @@ import {
   updateHealthExamRecord,
 } from "@/lib/admin-api";
 
-/* ════════ Hằng số ════════ */
+/* ════════ Hằng số & Validation Y tế Mầm non ════════ */
 
 const ACCEPTED_EXT = [".xlsx", ".xls"];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — khớp giới hạn backend
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-/** Nhãn tiếng Việt của phân loại thể trạng. */
-const CATEGORY_TONE: Record<string, "ok" | "warn" | "bad" | "neutral"> = {
-  NORMAL: "ok",
-  UNDERWEIGHT: "warn",
-  OVERWEIGHT: "bad",
-};
+// Giới hạn hợp lệ của trẻ mầm non (1 - 6 tuổi)
+const MIN_CHILD_HEIGHT = 40;  // cm
+const MAX_CHILD_HEIGHT = 150; // cm
+const MIN_CHILD_WEIGHT = 5;   // kg
+const MAX_CHILD_WEIGHT = 50;  // kg
 
-/** Màu avatar theo tên học sinh (xoay vòng, giống trang học sinh). */
+/** Màu avatar xoay vòng theo tên học sinh */
 const AVATAR_COLORS = ["#8A5E12", "#16665a", "#4B6F8C", "#BB4A34", "#5B4B8A", "#2E7D6B"];
 
 function avatarColor(name: string) {
@@ -81,19 +88,115 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
-/** Chuyển "DD/MM/YYYY" → "YYYY-MM-DD" để đưa vào input type=date. */
-function toIsoDate(dmy: string) {
-  const m = dmy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!m) return "";
-  return `${m[3]}-${m[2]}-${m[1]}`;
+/** Chuyển "DD/MM/YYYY" hoặc ISO date string → "YYYY-MM-DD" */
+function toIsoDate(val: string): string {
+  if (!val) return "";
+  if (val.includes("T")) val = val.split("T")[0];
+  const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  const isoMatch = val.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if (isoMatch) return isoMatch[1];
+  return "";
 }
 
-/** Hôm nay theo giờ địa phương (không dùng toISOString vì lệch múi giờ UTC+7). */
+/** Hôm nay theo giờ địa phương */
 function todayIso() {
   return todayIsoStr();
 }
 
-/* ════════ Trang ════════ */
+/** Format số gọn gàng, loại bỏ số 0 thừa (ví dụ 13.3 thay vì 13.30, 95 thay vì 95.00) */
+function formatCompactNumber(val: number | null | undefined): string {
+  if (val == null || isNaN(val)) return "—";
+  return parseFloat(val.toFixed(2)).toString();
+}
+
+/** Kiểm tra chiều cao có hợp lệ trong dải mầm non hay không */
+function isValidHeight(val: string): boolean {
+  const trimmed = val.trim();
+  if (!trimmed) return true; // Cho phép để trống nếu chỉ ghi kết luận
+  const num = parseFloat(trimmed);
+  return !isNaN(num) && num >= MIN_CHILD_HEIGHT && num <= MAX_CHILD_HEIGHT;
+}
+
+/** Kiểm tra cân nặng có hợp lệ trong dải mầm non hay không */
+function isValidWeight(val: string): boolean {
+  const trimmed = val.trim();
+  if (!trimmed) return true; // Cho phép để trống
+  const num = parseFloat(trimmed);
+  return !isNaN(num) && num >= MIN_CHILD_WEIGHT && num <= MAX_CHILD_WEIGHT;
+}
+
+/**
+ * Tính toán chỉ số BMI và phân loại thể trạng theo thời gian thực (Real-time).
+ * Công thức: BMI = Cân nặng (kg) / (Chiều cao (cm) / 100)^2
+ */
+function calculateLiveBmiAndCategory(heightStr: string, weightStr: string) {
+  const h = parseFloat(heightStr.trim());
+  const w = parseFloat(weightStr.trim());
+
+  if (
+    isNaN(h) ||
+    isNaN(w) ||
+    h < MIN_CHILD_HEIGHT ||
+    h > MAX_CHILD_HEIGHT ||
+    w < MIN_CHILD_WEIGHT ||
+    w > MAX_CHILD_WEIGHT
+  ) {
+    return {
+      bmi: null,
+      bmiText: "—",
+      category: null,
+      categoryLabel: "Chưa có",
+      tone: "neutral" as const,
+    };
+  }
+
+  const hm = h / 100;
+  const bmiVal = w / (hm * hm);
+  const bmiFormatted = parseFloat(bmiVal.toFixed(2)).toString();
+
+  // Chuẩn xếp loại sơ bộ theo dải BMI mầm non
+  let category = "NORMAL";
+  let categoryLabel = "Bình thường";
+  let tone: "ok" | "warn" | "bad" | "neutral" = "ok";
+
+  if (bmiVal < 14) {
+    category = "UNDERWEIGHT";
+    categoryLabel = "Thiếu cân";
+    tone = "warn";
+  } else if (bmiVal > 17) {
+    category = "OVERWEIGHT";
+    categoryLabel = "Thừa cân";
+    tone = "bad";
+  }
+
+  return {
+    bmi: bmiVal,
+    bmiText: bmiFormatted,
+    category,
+    categoryLabel,
+    tone,
+  };
+}
+
+/** Lấy tone hiển thị cho badge thể trạng */
+function getCategoryTone(category?: string | null): "ok" | "warn" | "bad" | "neutral" {
+  if (!category) return "neutral";
+  const cat = category.toUpperCase();
+  if (cat === "NORMAL") return "ok";
+  if (cat === "UNDERWEIGHT") return "warn";
+  if (cat === "OVERWEIGHT") return "bad";
+  return "neutral";
+}
+
+/* ════════ State & Interface ════════ */
+
+interface RowEditState {
+  examination_date: string;
+  height: string;
+  weight: string;
+  general_conclusion: string;
+}
 
 export default function HealthExamPage() {
   const [ready, setReady] = useState(false);
@@ -113,19 +216,16 @@ export default function HealthExamPage() {
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* Chỉnh sửa trực tiếp trên bảng */
-  const [isEditingTable, setIsEditingTable] = useState(false);
-  const [tableEdits, setTableEdits] = useState<Record<string, {
-    examination_date: string;
-    height: string;
-    weight: string;
-    general_conclusion: string;
-  }>>({});
+  /* Chế độ Chỉnh sửa hàng loạt (Bulk Edit - Chuẩn Excel) */
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [tableEdits, setTableEdits] = useState<Record<string, RowEditState>>({});
   const [savingTable, setSavingTable] = useState(false);
 
+  /* Modal xác nhận xóa bản ghi sức khỏe */
+  const [confirmDel, setConfirmDel] = useState<HealthExamRecord | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
-
-  /* Drawer sửa số liệu 1 dòng */
+  /* Drawer sửa số liệu 1 dòng (khi click nút Sửa ở View Mode) */
   const [editing, setEditing] = useState<HealthExamRecord | null>(null);
   const [editHeight, setEditHeight] = useState("");
   const [editWeight, setEditWeight] = useState("");
@@ -133,114 +233,7 @@ export default function HealthExamPage() {
   const [editDate, setEditDate] = useState("");
   const [editBusy, setEditBusy] = useState(false);
 
-  function startTableEditing() {
-    const initial: Record<string, any> = {};
-    const defaultDate = examDate || todayIso();
-    filtered.forEach((r) => {
-      initial[r.child_id] = {
-        examination_date: r.examination_date ? toIsoDate(r.examination_date) || defaultDate : defaultDate,
-        height: r.height != null ? String(r.height) : "",
-        weight: r.weight != null ? String(r.weight) : "",
-        general_conclusion: r.general_conclusion || "",
-      };
-    });
-    setTableEdits(initial);
-    setIsEditingTable(true);
-  }
-
-  function cancelTableEditing() {
-    setIsEditingTable(false);
-    setTableEdits({});
-  }
-
-  function updateRowEdit(childId: string, field: string, val: string) {
-    setTableEdits((prev) => ({
-      ...prev,
-      [childId]: {
-        ...prev[childId],
-        [field]: val,
-      },
-    }));
-  }
-
-  async function handleSaveTableEdits() {
-    const changedItems: { record: HealthExamRecord; payload: any }[] = [];
-    for (const r of filtered) {
-      const edit = tableEdits[r.child_id];
-      if (!edit) continue;
-
-      const origH = r.height != null ? String(r.height) : "";
-      const origW = r.weight != null ? String(r.weight) : "";
-      const origC = r.general_conclusion || "";
-      const origD = r.examination_date ? toIsoDate(r.examination_date) : "";
-
-      const isChanged =
-        edit.height.trim() !== origH.trim() ||
-        edit.weight.trim() !== origW.trim() ||
-        edit.general_conclusion.trim() !== origC.trim() ||
-        edit.examination_date !== origD;
-
-      if (isChanged) {
-        const hVal = edit.height.trim() ? parseFloat(edit.height.trim()) : null;
-        const wVal = edit.weight.trim() ? parseFloat(edit.weight.trim()) : null;
-        if (hVal != null && (isNaN(hVal) || hVal <= 0 || hVal > 250)) {
-          setToast({ msg: `Chiều cao của ${r.full_name} không hợp lệ (0-250cm)`, tone: "bad" });
-          return;
-        }
-        if (wVal != null && (isNaN(wVal) || wVal <= 0 || wVal > 150)) {
-          setToast({ msg: `Cân nặng của ${r.full_name} không hợp lệ (0-150kg)`, tone: "bad" });
-          return;
-        }
-
-        changedItems.push({
-          record: r,
-          payload: {
-            child_id: r.child_id,
-            height: hVal,
-            weight: wVal,
-            general_conclusion: edit.general_conclusion.trim() || null,
-            examination_date: edit.examination_date || null,
-          },
-        });
-      }
-    }
-
-    if (changedItems.length === 0) {
-      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
-      setIsEditingTable(false);
-      return;
-    }
-
-    setSavingTable(true);
-    let success = 0;
-    let failed = 0;
-    for (const item of changedItems) {
-      try {
-        if (item.record.id) {
-          await updateHealthExamRecord(item.record.id, {
-            height: item.payload.height,
-            weight: item.payload.weight,
-            general_conclusion: item.payload.general_conclusion,
-          });
-        } else {
-          await createHealthExamRecord(item.payload);
-        }
-        success++;
-      } catch (e) {
-        failed++;
-      }
-    }
-    setSavingTable(false);
-    setIsEditingTable(false);
-    mutate();
-    if (failed === 0) {
-      setToast({ msg: `Đã lưu thành công số liệu sức khỏe cho ${success} học sinh!`, tone: "ok" });
-    } else {
-      setToast({ msg: `Đã lưu ${success} học sinh (${failed} học sinh lỗi)`, tone: "warn" });
-    }
-  }
-
-  /* ── Auth guard + danh sách lớp ── */
+  /* ── Auth guard & danh sách lớp ── */
   useEffect(() => {
     const stored = getStoredSchoolAdmin();
     if (!getToken("schoolAdmin") || !stored) {
@@ -268,8 +261,8 @@ export default function HealthExamPage() {
         examination_date: examDate || undefined,
       }),
     {
-      refreshInterval: editing || importOpen ? 0 : 30000,
-      revalidateOnFocus: !(editing || importOpen),
+      refreshInterval: editing || importOpen || isEditMode ? 0 : 30000,
+      revalidateOnFocus: !(editing || importOpen || isEditMode),
     }
   );
 
@@ -307,71 +300,253 @@ export default function HealthExamPage() {
 
   const stats = data?.stats ?? { normal: 0, underweight: 0, overweight: 0 };
 
-  /* ══ Xuất Excel (giống trang học sinh: toàn trường = mỗi lớp 1 sheet) ══ */
-  function handleExportExcel() {
-    if (filtered.length === 0) {
-      setToast({ msg: "Không có dữ liệu để xuất.", tone: "warn" });
-      return;
+  /* ════════ Helper Lấy và Kiểm Tra Dữ Liệu Dòng ════════ */
+
+  function getRowData(r: HealthExamRecord): RowEditState {
+    if (tableEdits[r.child_id]) return tableEdits[r.child_id];
+    const defaultDate = examDate || todayIso();
+    const origDate = r.examination_date ? toIsoDate(r.examination_date) || defaultDate : defaultDate;
+
+    // Lọc bỏ số liệu dị dạng trong database (ví dụ 1cm hoặc 160000 BMI)
+    let sanitizedHeight = "";
+    if (r.height != null) {
+      sanitizedHeight = formatCompactNumber(r.height);
     }
-    const headers = [
-      "Họ tên",
-      "Lớp",
-      "Ngày sinh",
-      "Giới tính",
-      "Ngày ghi nhận",
-      "Chiều cao (cm)",
-      "Cân nặng (kg)",
-      "BMI",
-      "Phân loại thể trạng",
-      "Kết luận chung",
-    ];
-    const toRow = (r: HealthExamRecord) => [
-      r.nickname ? `${r.full_name} (${r.nickname})` : r.full_name,
-      r.class_name || "",
-      r.date_of_birth || "",
-      r.gender === "male" ? "Nam" : r.gender === "female" ? "Nữ" : r.gender || "",
-      r.examination_date || "",
-      r.height != null ? String(r.height) : "",
-      r.weight != null ? String(r.weight) : "",
-      r.bmi != null ? String(r.bmi) : "",
-      r.health_category_label || "",
-      r.general_conclusion || "",
-    ];
-    // Toàn trường (không lọc lớp) → mỗi lớp 1 sheet
-    if (!selectedClassId) {
-      const sheets: ExcelSheetData[] = [];
-      for (const cl of classes) {
-        const classRows = filtered.filter((r) => r.class_id === cl.id);
-        if (classRows.length > 0) sheets.push({ sheetName: cl.name, headers, rows: classRows.map(toRow) });
-      }
-      const unassigned = filtered.filter((r) => !r.class_id || !classes.some((c) => c.id === r.class_id));
-      if (unassigned.length > 0) sheets.push({ sheetName: "Chưa xếp lớp", headers, rows: unassigned.map(toRow) });
-      if (sheets.length === 0) {
-        setToast({ msg: "Không có dữ liệu để xuất.", tone: "warn" });
-        return;
-      }
-      exportMultiSheetToExcel("so_suc_khoe_toan_truong.xlsx", sheets);
-      setToast({ msg: "Đã xuất sổ sức khoẻ toàn trường ra file Excel.", tone: "ok" });
-      return;
+
+    let sanitizedWeight = "";
+    if (r.weight != null) {
+      sanitizedWeight = formatCompactNumber(r.weight);
     }
-    const currentClass = classes.find((c) => c.id === selectedClassId);
-    const sheetName = currentClass ? currentClass.name : "SoSucKhoe";
-    const filename = currentClass ? `so_suc_khoe_${currentClass.name.replace(/\s+/g, "_")}.xlsx` : "so_suc_khoe.xlsx";
-    exportToExcel(filename, sheetName, headers, filtered.map(toRow));
-    setToast({ msg: `Đã xuất ${filtered.length} học sinh của lớp "${sheetName}" ra file Excel.`, tone: "ok" });
+
+    return {
+      examination_date: origDate,
+      height: sanitizedHeight === "—" ? "" : sanitizedHeight,
+      weight: sanitizedWeight === "—" ? "" : sanitizedWeight,
+      general_conclusion: r.general_conclusion || "",
+    };
   }
 
-  /* ══ Mở modal sửa 1 dòng sổ sức khoẻ ══ */
+  function updateRowCell(childId: string, field: keyof RowEditState, value: string) {
+    const targetRec = filtered.find((x) => x.child_id === childId);
+    const base = tableEdits[childId] || (targetRec ? getRowData(targetRec) : {
+      examination_date: examDate || todayIso(),
+      height: "",
+      weight: "",
+      general_conclusion: "",
+    });
+
+    setTableEdits((prev) => ({
+      ...prev,
+      [childId]: {
+        ...base,
+        [field]: value,
+      },
+    }));
+  }
+
+  function clearRowEdits(r: HealthExamRecord) {
+    setTableEdits((prev) => ({
+      ...prev,
+      [r.child_id]: {
+        examination_date: examDate || todayIso(),
+        height: "",
+        weight: "",
+        general_conclusion: "",
+      },
+    }));
+    setToast({ msg: `Đã xóa trắng số liệu dòng của học sinh ${r.full_name}`, tone: "brand" });
+  }
+
+  function isCellDirty(r: HealthExamRecord, field: keyof RowEditState): boolean {
+    if (!tableEdits[r.child_id]) return false;
+    const row = tableEdits[r.child_id];
+
+    if (field === "examination_date") {
+      const orig = r.examination_date ? toIsoDate(r.examination_date) : "";
+      return orig !== "" && row.examination_date !== orig;
+    }
+    if (field === "height") {
+      const orig = r.height != null ? formatCompactNumber(r.height) : "";
+      return row.height.trim() !== (orig === "—" ? "" : orig);
+    }
+    if (field === "weight") {
+      const orig = r.weight != null ? formatCompactNumber(r.weight) : "";
+      return row.weight.trim() !== (orig === "—" ? "" : orig);
+    }
+    if (field === "general_conclusion") {
+      const orig = r.general_conclusion || "";
+      return row.general_conclusion.trim() !== orig.trim();
+    }
+    return false;
+  }
+
+  function isRowDirty(r: HealthExamRecord): boolean {
+    return (
+      isCellDirty(r, "examination_date") ||
+      isCellDirty(r, "height") ||
+      isCellDirty(r, "weight") ||
+      isCellDirty(r, "general_conclusion")
+    );
+  }
+
+  const dirtyRows = useMemo(() => {
+    return filtered.filter((r) => isRowDirty(r));
+  }, [filtered, tableEdits]);
+
+  function cancelAllEdits() {
+    setTableEdits({});
+    setIsEditMode(false);
+    setToast({ msg: "Đã hủy bỏ mọi thay đổi chưa lưu", tone: "brand" });
+  }
+
+  /* ════════ Lưu Tất Cả Thay Đổi (Bulk Save) ════════ */
+
+  async function handleSaveAllEdits() {
+    if (dirtyRows.length === 0) {
+      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
+      setIsEditMode(false);
+      return;
+    }
+
+    // Validation chặt chẽ từng dòng trước khi gửi lên máy chủ
+    for (const r of dirtyRows) {
+      const edit = getRowData(r);
+
+      // 1. Kiểm tra ngày ghi nhận
+      if (!edit.examination_date) {
+        setToast({ msg: `Vui lòng chọn ngày ghi nhận cho học sinh ${r.full_name}`, tone: "bad" });
+        return;
+      }
+      if (edit.examination_date > todayIso()) {
+        setToast({
+          msg: `Ngày ghi nhận của học sinh ${r.full_name} không được là ngày tương lai`,
+          tone: "bad",
+        });
+        return;
+      }
+
+      // 2. Kiểm tra chiều cao
+      if (edit.height.trim()) {
+        const hVal = parseFloat(edit.height.trim());
+        if (isNaN(hVal) || hVal < MIN_CHILD_HEIGHT || hVal > MAX_CHILD_HEIGHT) {
+          setToast({
+            msg: `Chiều cao của học sinh ${r.full_name} không hợp lệ (phải từ ${MIN_CHILD_HEIGHT} đến ${MAX_CHILD_HEIGHT} cm)`,
+            tone: "bad",
+          });
+          return;
+        }
+      }
+
+      // 3. Kiểm tra cân nặng
+      if (edit.weight.trim()) {
+        const wVal = parseFloat(edit.weight.trim());
+        if (isNaN(wVal) || wVal < MIN_CHILD_WEIGHT || wVal > MAX_CHILD_WEIGHT) {
+          setToast({
+            msg: `Cân nặng của học sinh ${r.full_name} không hợp lệ (phải từ ${MIN_CHILD_WEIGHT} đến ${MAX_CHILD_WEIGHT} kg)`,
+            tone: "bad",
+          });
+          return;
+        }
+      }
+
+      // 4. Phải có ít nhất 1 thông tin
+      const hasH = edit.height.trim() !== "";
+      const hasW = edit.weight.trim() !== "";
+      const hasC = edit.general_conclusion.trim() !== "";
+      if (!hasH && !hasW && !hasC && !r.id) {
+        setToast({
+          msg: `Vui lòng nhập ít nhất chiều cao, cân nặng hoặc kết luận cho học sinh ${r.full_name}`,
+          tone: "bad",
+        });
+        return;
+      }
+    }
+
+    setSavingTable(true);
+    let successCount = 0;
+    let failedCount = 0;
+
+    for (const r of dirtyRows) {
+      const edit = getRowData(r);
+      const hVal = edit.height.trim() ? parseFloat(edit.height.trim()) : null;
+      const wVal = edit.weight.trim() ? parseFloat(edit.weight.trim()) : null;
+      const conclusion = edit.general_conclusion.trim() || null;
+
+      try {
+        if (r.id) {
+          await updateHealthExamRecord(r.id, {
+            height: hVal,
+            weight: wVal,
+            general_conclusion: conclusion,
+          });
+        } else {
+          await createHealthExamRecord({
+            child_id: r.child_id,
+            height: hVal,
+            weight: wVal,
+            general_conclusion: conclusion,
+            examination_date: edit.examination_date || null,
+          });
+        }
+        successCount++;
+      } catch (e) {
+        failedCount++;
+      }
+    }
+
+    setSavingTable(false);
+    setIsEditMode(false);
+    setTableEdits({});
+    mutate();
+
+    if (failedCount === 0) {
+      setToast({
+        msg: `Đã lưu thành công số liệu sức khỏe cho ${successCount} học sinh!`,
+        tone: "ok",
+      });
+    } else {
+      setToast({
+        msg: `Đã lưu ${successCount} học sinh (${failedCount} học sinh gặp lỗi)`,
+        tone: "warn",
+      });
+    }
+  }
+
+  /* ════════ Xóa Bản Ghi Sức Khỏe ════════ */
+
+  async function handleDeleteRecord(r: HealthExamRecord) {
+    if (!r.id) {
+      clearRowEdits(r);
+      setConfirmDel(null);
+      return;
+    }
+
+    setDeleteBusy(true);
+    try {
+      await deleteHealthExamRecord(r.id);
+      setToast({ msg: `Đã xóa bản ghi sức khỏe của học sinh ${r.full_name}`, tone: "ok" });
+      setConfirmDel(null);
+      setTableEdits((prev) => {
+        const copy = { ...prev };
+        delete copy[r.child_id];
+        return copy;
+      });
+      mutate();
+    } catch (err: any) {
+      setToast({ msg: err?.message || "Không thể xóa bản ghi sức khỏe", tone: "bad" });
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  /* ════════ Drawer Sửa 1 Bản Ghi (View Mode) ════════ */
+
   function openEditModal(r: HealthExamRecord) {
     setEditing(r);
-    setEditHeight(r.height != null ? String(r.height) : "");
-    setEditWeight(r.weight != null ? String(r.weight) : "");
+    setEditHeight(r.height != null ? formatCompactNumber(r.height) : "");
+    setEditWeight(r.weight != null ? formatCompactNumber(r.weight) : "");
     setEditConclusion(r.general_conclusion || "");
-    setEditDate(
-      r.examination_date
-        ? toIsoDate(r.examination_date)
-        : todayIso()
-    );
+    setEditDate(r.examination_date ? toIsoDate(r.examination_date) : todayIso());
   }
 
   function closeEditModal() {
@@ -381,34 +556,36 @@ export default function HealthExamPage() {
 
   async function handleSaveEdit() {
     if (!editing) return;
-    // Chỉ cần có 1 trong 3 thông tin: chiều cao, cân nặng, kết luận chung.
     const hasHeight = editHeight.trim() !== "";
     const hasWeight = editWeight.trim() !== "";
     const hasConclusion = editConclusion.trim() !== "";
+
     if (!hasHeight && !hasWeight && !hasConclusion) {
       setToast({
-        msg: "Vui lòng nhập ít nhất 1 thông tin: chiều cao, cân nặng hoặc kết luận chung",
+        msg: "Vui lòng nhập ít nhất chiều cao, cân nặng hoặc kết luận chung",
         tone: "bad",
       });
       return;
     }
+
     let height: number | null = null;
     if (hasHeight) {
-      height = Number(editHeight);
-      if (!Number.isFinite(height) || height <= 0 || height > 200) {
+      height = parseFloat(editHeight.trim());
+      if (isNaN(height) || height < MIN_CHILD_HEIGHT || height > MAX_CHILD_HEIGHT) {
         setToast({
-          msg: "Chiều cao phải là số lớn hơn 0 và không vượt quá 200 cm",
+          msg: `Chiều cao phải là số từ ${MIN_CHILD_HEIGHT} đến ${MAX_CHILD_HEIGHT} cm`,
           tone: "bad",
         });
         return;
       }
     }
+
     let weight: number | null = null;
     if (hasWeight) {
-      weight = Number(editWeight);
-      if (!Number.isFinite(weight) || weight <= 0 || weight > 100) {
+      weight = parseFloat(editWeight.trim());
+      if (isNaN(weight) || weight < MIN_CHILD_WEIGHT || weight > MAX_CHILD_WEIGHT) {
         setToast({
-          msg: "Cân nặng phải là số lớn hơn 0 và không vượt quá 100 kg",
+          msg: `Cân nặng phải là số từ ${MIN_CHILD_WEIGHT} đến ${MAX_CHILD_WEIGHT} kg`,
           tone: "bad",
         });
         return;
@@ -435,9 +612,7 @@ export default function HealthExamPage() {
       await mutate();
       setEditing(null);
       setToast({
-        msg: `Đã cập nhật số liệu sức khoẻ của ${
-          editing.nickname ? `${editing.full_name} (${editing.nickname})` : editing.full_name
-        }.`,
+        msg: `Đã cập nhật số liệu sức khoẻ của học sinh ${editing.full_name}.`,
         tone: "ok",
       });
     } catch (err: any) {
@@ -447,7 +622,64 @@ export default function HealthExamPage() {
     }
   }
 
-  /* ══ Mở modal nhập Excel ══ */
+  /* ════════ Xuất Excel ════════ */
+
+  function handleExportExcel() {
+    if (filtered.length === 0) {
+      setToast({ msg: "Không có dữ liệu để xuất.", tone: "warn" });
+      return;
+    }
+    const headers = [
+      "Họ tên",
+      "Lớp",
+      "Ngày sinh",
+      "Giới tính",
+      "Ngày ghi nhận",
+      "Chiều cao (cm)",
+      "Cân nặng (kg)",
+      "BMI",
+      "Phân loại thể trạng",
+      "Kết luận chung",
+    ];
+    const toRow = (r: HealthExamRecord) => [
+      r.nickname ? `${r.full_name} (${r.nickname})` : r.full_name,
+      r.class_name || "",
+      r.date_of_birth || "",
+      r.gender === "male" ? "Nam" : r.gender === "female" ? "Nữ" : r.gender || "",
+      r.examination_date || "",
+      r.height != null ? formatCompactNumber(r.height) : "",
+      r.weight != null ? formatCompactNumber(r.weight) : "",
+      r.bmi != null ? formatCompactNumber(r.bmi) : "",
+      r.health_category_label || "",
+      r.general_conclusion || "",
+    ];
+
+    if (!selectedClassId) {
+      const sheets: ExcelSheetData[] = [];
+      for (const cl of classes) {
+        const classRows = filtered.filter((r) => r.class_id === cl.id);
+        if (classRows.length > 0) sheets.push({ sheetName: cl.name, headers, rows: classRows.map(toRow) });
+      }
+      const unassigned = filtered.filter((r) => !r.class_id || !classes.some((c) => c.id === r.class_id));
+      if (unassigned.length > 0) sheets.push({ sheetName: "Chưa xếp lớp", headers, rows: unassigned.map(toRow) });
+      if (sheets.length === 0) {
+        setToast({ msg: "Không có dữ liệu để xuất.", tone: "warn" });
+        return;
+      }
+      exportMultiSheetToExcel("so_suc_khoe_toan_truong.xlsx", sheets);
+      setToast({ msg: "Đã xuất sổ sức khoẻ toàn trường ra file Excel.", tone: "ok" });
+      return;
+    }
+
+    const currentClass = classes.find((c) => c.id === selectedClassId);
+    const sheetName = currentClass ? currentClass.name : "SoSucKhoe";
+    const filename = currentClass ? `so_suc_khoe_${currentClass.name.replace(/\s+/g, "_")}.xlsx` : "so_suc_khoe.xlsx";
+    exportToExcel(filename, sheetName, headers, filtered.map(toRow));
+    setToast({ msg: `Đã xuất ${filtered.length} học sinh của lớp "${sheetName}" ra file Excel.`, tone: "ok" });
+  }
+
+  /* ════════ Modal Nhập Excel ════════ */
+
   function openImportModal() {
     setImportClassId(selectedClassId || "");
     setImportDate(todayIso());
@@ -463,7 +695,6 @@ export default function HealthExamPage() {
     setImportOpen(false);
   }
 
-  /* ══ Tải file mẫu (theo lớp đang chọn trong modal, trống = tất cả lớp) ══ */
   async function handleDownloadTemplate() {
     try {
       await downloadHealthExamTemplate(importClassId || undefined, importDate);
@@ -482,7 +713,6 @@ export default function HealthExamPage() {
     }
   }
 
-  /* ══ Chọn file kết quả ══ */
   function acceptFile(candidate: File | undefined | null) {
     if (!candidate) return;
     const name = candidate.name.toLowerCase();
@@ -511,7 +741,6 @@ export default function HealthExamPage() {
     setImportFile(candidate);
   }
 
-  /* ══ Gửi file lên backend ══ */
   async function handleImport() {
     if (!importFile) return;
     setImportBusy(true);
@@ -547,16 +776,19 @@ export default function HealthExamPage() {
       pageTitle="Sổ sức khoẻ học sinh"
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
+          {/* Nút Làm mới */}
           <button
             onClick={() => {
               mutate();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="kbtn kbtn-secondary"
+            className="kbtn kbtn-secondary text-sm"
             title="Làm mới"
           >
             ↻
           </button>
+
+          {/* Nút Xuất Excel */}
           <button
             onClick={handleExportExcel}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
@@ -564,48 +796,66 @@ export default function HealthExamPage() {
           >
             📥 Xuất Excel
           </button>
+
+          {/* Nút Nhập file */}
           <button
             onClick={openImportModal}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập kết quả từ file Excel"
-            disabled={isEditingTable}
+            disabled={isEditMode}
           >
             📤 Nhập file
           </button>
-          {!isEditingTable ? (
-            <button
-              onClick={startTableEditing}
-              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
-              title="Chỉnh sửa trực tiếp số liệu sức khỏe tất cả học sinh trên bảng"
-              disabled={filtered.length === 0}
-            >
-              <span>✏️</span>
-              <span>Chỉnh sửa bảng</span>
-            </button>
-          ) : (
+
+          {/* Nút Chế độ Sửa (Bulk Edit) - Bỏ switch toggle */}
+          <button
+            onClick={() => {
+              if (isEditMode && dirtyRows.length > 0) {
+                if (window.confirm(`Bạn có ${dirtyRows.length} thay đổi chưa lưu. Bạn có chắc muốn thoát mà không lưu?`)) {
+                  cancelAllEdits();
+                }
+                return;
+              }
+              setIsEditMode(!isEditMode);
+            }}
+            className={`kbtn text-sm flex items-center gap-1.5 transition-all ${
+              isEditMode
+                ? "bg-brand/10 text-brand border border-brand/30 shadow-sm"
+                : "kbtn-secondary hover:border-brand"
+            }`}
+            title="Bật/tắt chế độ chỉnh sửa trực tiếp số liệu trên bảng (Chuẩn Excel)"
+          >
+            <span>✏️</span>
+            <span>{isEditMode ? "Đang chỉnh sửa" : "Chỉnh sửa"}</span>
+          </button>
+
+          {/* Nút Lưu và Hủy thay đổi khi ở Edit Mode */}
+          {isEditMode && (
             <>
               <button
-                onClick={cancelTableEditing}
+                onClick={cancelAllEdits}
                 disabled={savingTable}
-                className="kbtn kbtn-secondary text-sm"
+                className="kbtn kbtn-secondary text-xs hover:border-bad hover:text-bad transition-colors"
+                title="Hủy bỏ mọi thay đổi chưa lưu"
               >
-                ✕ Hủy bỏ
+                ✕ Hủy thay đổi
               </button>
               <button
-                onClick={handleSaveTableEdits}
+                onClick={handleSaveAllEdits}
                 disabled={savingTable}
-                className="kbtn text-sm font-bold text-white flex items-center gap-2"
+                className="kbtn text-xs font-bold text-white flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg shadow-md hover:shadow-lg transition-all"
                 style={{ background: "#16665a" }}
+                title="Lưu toàn bộ thay đổi của tất cả các dòng đã sửa"
               >
                 {savingTable ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Đang lưu...</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu thay đổi</span>
+                    <span>Lưu tất cả thay đổi {dirtyRows.length > 0 ? `(${dirtyRows.length})` : ""}</span>
                   </>
                 )}
               </button>
@@ -614,6 +864,25 @@ export default function HealthExamPage() {
         </div>
       }
     >
+      {/* ══ Banner Cảnh báo Thay đổi Chưa Lưu ══ */}
+      {isEditMode && dirtyRows.length > 0 && (
+        <div className="mb-3 px-4 py-2.5 rounded-card bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between shadow-sm">
+          <span className="flex items-center gap-2">
+            <span className="text-sm">⚠️</span>
+            <span>
+              Có <strong>{dirtyRows.length}</strong> học sinh có thay đổi chưa lưu. Nhấn nút <strong>“Lưu tất cả thay đổi”</strong> để cập nhật dữ liệu.
+            </span>
+          </span>
+          <button
+            onClick={handleSaveAllEdits}
+            disabled={savingTable}
+            className="font-bold underline text-brand hover:opacity-80 transition-opacity ml-3"
+          >
+            Lưu ngay
+          </button>
+        </div>
+      )}
+
       {/* ══ Thống kê nhanh ══ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
         <div className="card p-3.5">
@@ -628,19 +897,19 @@ export default function HealthExamPage() {
         </div>
         <div className="card p-3.5">
           <div className="text-[11px] text-ink-soft font-semibold">Bình thường</div>
-          <div className="text-2xl font-bold mt-1" style={{ color: "#3F8B5C" }}>
+          <div className="text-2xl font-bold mt-1 text-emerald-600">
             {stats.normal ?? 0}
           </div>
         </div>
         <div className="card p-3.5">
           <div className="text-[11px] text-ink-soft font-semibold">Suy dinh dưỡng</div>
-          <div className="text-2xl font-bold mt-1" style={{ color: "#8A5E12" }}>
+          <div className="text-2xl font-bold mt-1 text-amber-600">
             {stats.underweight ?? 0}
           </div>
         </div>
         <div className="card p-3.5">
           <div className="text-[11px] text-ink-soft font-semibold">Thừa cân</div>
-          <div className="text-2xl font-bold mt-1" style={{ color: "#BB4A34" }}>
+          <div className="text-2xl font-bold mt-1 text-rose-600">
             {stats.overweight ?? 0}
           </div>
         </div>
@@ -652,7 +921,7 @@ export default function HealthExamPage() {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="Tìm theo tên học sinh, lớp, thể trạng, kết luận..."
+            placeholder="Tìm theo tên học sinh, biệt danh, lớp, thể trạng, kết luận..."
           />
         </div>
         <div className="w-full sm:w-56">
@@ -687,7 +956,7 @@ export default function HealthExamPage() {
         )}
       </div>
 
-      {/* ══ Bảng dữ liệu ══ */}
+      {/* ══ Bảng dữ liệu (View / Bulk Edit) ══ */}
       <div className="card overflow-hidden">
         {isLoading ? (
           <Spinner />
@@ -736,165 +1005,385 @@ export default function HealthExamPage() {
               >
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold">Học sinh</th>
-                  <th className="px-4 py-3 text-left font-semibold">Lớp</th>
-                  <th className="px-4 py-3 text-left font-semibold">Ngày ghi nhận</th>
-                  <th className="px-4 py-3 text-right font-semibold">Chiều cao</th>
-                  <th className="px-4 py-3 text-right font-semibold">Cân nặng</th>
-                  <th className="px-4 py-3 text-right font-semibold">BMI</th>
-                  <th className="px-4 py-3 text-left font-semibold">Thể trạng</th>
+                  <th className="px-3 py-3 text-left font-semibold">Lớp</th>
+                  <th className="px-3 py-3 text-left font-semibold">Ngày ghi nhận</th>
+                  <th className="px-3 py-3 text-right font-semibold">Chiều cao (cm)</th>
+                  <th className="px-3 py-3 text-right font-semibold">Cân nặng (kg)</th>
+                  <th className="px-3 py-3 text-right font-semibold">BMI</th>
+                  <th className="px-3 py-3 text-left font-semibold">Thể trạng</th>
                   <th className="px-4 py-3 text-left font-semibold">Kết luận chung</th>
                   <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>
-              <tbody>
-                {filtered.map((r, idx) => {
-                  const edit = tableEdits[r.child_id];
-                  const curH = edit ? parseFloat(edit.height) : (r.height ?? 0);
-                  const curW = edit ? parseFloat(edit.weight) : (r.weight ?? 0);
-                  let liveBmi: number | null = null;
-                  if (curH > 0 && curW > 0) {
-                    const hm = curH / 100;
-                    liveBmi = curW / (hm * hm);
-                  } else if (!isEditingTable && r.bmi != null) {
-                    liveBmi = r.bmi;
+              <tbody className="divide-y divide-line">
+                {filtered.map((r) => {
+                  const editData = getRowData(r);
+                  const rowDirty = isRowDirty(r);
+
+                  // Validation trạng thái các ô
+                  const validH = isValidHeight(editData.height);
+                  const validW = isValidWeight(editData.weight);
+
+                  // Tính BMI và Thể trạng Real-time trong chế độ Sửa
+                  const liveCalc = calculateLiveBmiAndCategory(editData.height, editData.weight);
+
+                  // Dữ liệu hiển thị ở chế độ Xem (đã lọc các số liệu vô lý như 1cm hay 160000 BMI)
+                  let viewHeight = "—";
+                  if (r.height != null) {
+                    if (r.height >= MIN_CHILD_HEIGHT && r.height <= MAX_CHILD_HEIGHT) {
+                      viewHeight = `${formatCompactNumber(r.height)} cm`;
+                    } else {
+                      viewHeight = `${formatCompactNumber(r.height)} cm ⚠`;
+                    }
                   }
 
+                  let viewWeight = "—";
+                  if (r.weight != null) {
+                    if (r.weight >= MIN_CHILD_WEIGHT && r.weight <= MAX_CHILD_WEIGHT) {
+                      viewWeight = `${formatCompactNumber(r.weight)} kg`;
+                    } else {
+                      viewWeight = `${formatCompactNumber(r.weight)} kg ⚠`;
+                    }
+                  }
+
+                  let viewBmi = "—";
+                  if (r.bmi != null && r.bmi >= 8 && r.bmi <= 40) {
+                    viewBmi = formatCompactNumber(r.bmi);
+                  }
+
+                  const viewTone = getCategoryTone(r.health_category);
+
                   return (
-                  <tr
-                    key={r.child_id}
-                    className={`${idx > 0 ? "border-t border-line" : ""} ${
-                      isEditingTable ? "bg-amber-50/20" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold shrink-0"
-                          style={{ background: avatarColor(r.full_name) }}
-                        >
-                          {r.full_name.charAt(0).toUpperCase()}
+                    <tr
+                      key={r.child_id}
+                      className={`transition-colors hover:bg-slate-50/70 ${
+                        rowDirty ? "bg-amber-50/20" : ""
+                      }`}
+                    >
+                      {/* Cột 1: Học sinh (Avatar, Tên in đậm, Biệt danh, Ngày sinh / Giới tính nhỏ mờ bên dưới) */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold text-sm shrink-0 shadow-sm"
+                            style={{ background: avatarColor(r.full_name) }}
+                          >
+                            {r.full_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 max-w-[200px]">
+                            <div className="font-semibold text-ink truncate text-sm">
+                              {r.full_name}
+                              {r.nickname && (
+                                <span className="font-normal text-ink-soft ml-1">({r.nickname})</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-ink-faint mt-0.5 truncate">
+                              {r.date_of_birth ? `${r.date_of_birth}` : "Chưa có ngày sinh"}
+                              {r.gender && (
+                                <span> · {r.gender === "male" ? "Nam" : r.gender === "female" ? "Nữ" : r.gender}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <div className="font-semibold text-ink truncate">
-                            {r.full_name}
-                            {r.nickname && (
-                              <span className="font-normal text-ink-soft"> ({r.nickname})</span>
+                      </td>
+
+                      {/* Cột 2: Lớp */}
+                      <td className="px-3 py-3 text-ink-soft whitespace-nowrap text-xs">
+                        {r.class_name ? (
+                          <span className="font-medium text-ink">{r.class_name}</span>
+                        ) : (
+                          <span className="italic text-ink-faint">Chưa xếp lớp</span>
+                        )}
+                      </td>
+
+                      {/* Cột 3: Ngày ghi nhận */}
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {isEditMode ? (
+                          <input
+                            type="date"
+                            max={todayIso()}
+                            className={`kinput text-xs py-1.5 px-2.5 w-36 rounded-md shadow-sm transition-all ${
+                              isCellDirty(r, "examination_date")
+                                ? "border-amber-400 bg-amber-50/40"
+                                : "border-slate-300 bg-white"
+                            }`}
+                            value={editData.examination_date}
+                            onChange={(e) => updateRowCell(r.child_id, "examination_date", e.target.value)}
+                          />
+                        ) : (
+                          <span className="text-ink text-xs font-medium">
+                            {r.examination_date || "—"}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Cột 4: Chiều cao (cm) */}
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        {isEditMode ? (
+                          <div className="inline-flex flex-col items-end">
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder="cm"
+                              className={`kinput text-xs py-1.5 px-2 w-20 text-right rounded-md shadow-sm transition-all ${
+                                !validH
+                                  ? "border-red-500 bg-red-50/50 text-red-700 focus:border-red-500 focus:ring-red-200"
+                                  : isCellDirty(r, "height")
+                                  ? "border-amber-400 bg-amber-50/40"
+                                  : "border-slate-300 bg-white"
+                              }`}
+                              value={editData.height}
+                              onChange={(e) => updateRowCell(r.child_id, "height", e.target.value)}
+                              title={`Chiều cao hợp lệ: ${MIN_CHILD_HEIGHT} - ${MAX_CHILD_HEIGHT} cm`}
+                            />
+                            {!validH && (
+                              <span className="text-[10px] text-red-600 mt-0.5">
+                                {MIN_CHILD_HEIGHT}-{MAX_CHILD_HEIGHT}cm
+                              </span>
                             )}
                           </div>
-                          {r.date_of_birth && (
-                            <div className="text-[11px] text-ink-faint">
-                              {r.date_of_birth} ·{" "}
-                              {r.gender === "male" ? "Nam" : r.gender === "female" ? "Nữ" : ""}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5 text-ink-soft whitespace-nowrap">
-                      {r.class_name || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-ink-soft whitespace-nowrap">
-                      {isEditingTable ? (
-                        <input
-                          type="date"
-                          className="kinput text-xs py-1 px-1.5 w-32"
-                          value={edit?.examination_date ?? ""}
-                          onChange={(e) => updateRowEdit(r.child_id, "examination_date", e.target.value)}
-                        />
-                      ) : (
-                        r.examination_date || "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      {isEditingTable ? (
-                        <input
-                          type="number"
-                          step="0.1"
-                          className="kinput text-xs py-1 px-1.5 w-20 text-right"
-                          value={edit?.height ?? ""}
-                          onChange={(e) => updateRowEdit(r.child_id, "height", e.target.value)}
-                          placeholder="cm"
-                        />
-                      ) : (
-                        r.height != null ? `${r.height} cm` : "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      {isEditingTable ? (
-                        <input
-                          type="number"
-                          step="0.1"
-                          className="kinput text-xs py-1 px-1.5 w-20 text-right"
-                          value={edit?.weight ?? ""}
-                          onChange={(e) => updateRowEdit(r.child_id, "weight", e.target.value)}
-                          placeholder="kg"
-                        />
-                      ) : (
-                        r.weight != null ? `${r.weight} kg` : "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-ink whitespace-nowrap">
-                      {liveBmi != null ? (
-                        <span className={isEditingTable ? "text-brand font-bold" : ""}>
-                          {liveBmi.toFixed(2)}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {r.health_category_label ? (
-                        <Pill tone={CATEGORY_TONE[r.health_category || ""] ?? "neutral"}>
-                          {r.health_category_label}
-                        </Pill>
-                      ) : (
-                        <span className="text-[11px] text-ink-faint italic">Chưa có</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-ink-soft">
-                      {isEditingTable ? (
-                        <input
-                          type="text"
-                          className="kinput text-xs py-1 px-2 w-full min-w-[140px]"
-                          value={edit?.general_conclusion ?? ""}
-                          onChange={(e) => updateRowEdit(r.child_id, "general_conclusion", e.target.value)}
-                          placeholder="Kết luận chung..."
-                        />
-                      ) : (
-                        <div className="max-w-[280px] truncate" title={r.general_conclusion || ""}>
-                          {r.general_conclusion || "—"}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      {isEditingTable ? (
-                        <span className="text-[11px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded">
-                          Đang sửa
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => openEditModal(r)}
-                          className="kbtn kbtn-ghost text-xs"
-                          title={
-                            r.id
-                              ? "Sửa chiều cao, cân nặng và kết luận chung"
-                              : "Nhập số liệu sức khoẻ cho học sinh này"
-                          }
-                        >
-                          Sửa
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                        ) : (
+                          <span className="text-ink text-xs font-medium">
+                            {viewHeight}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Cột 5: Cân nặng (kg) */}
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        {isEditMode ? (
+                          <div className="inline-flex flex-col items-end">
+                            <input
+                              type="number"
+                              step="0.1"
+                              placeholder="kg"
+                              className={`kinput text-xs py-1.5 px-2 w-20 text-right rounded-md shadow-sm transition-all ${
+                                !validW
+                                  ? "border-red-500 bg-red-50/50 text-red-700 focus:border-red-500 focus:ring-red-200"
+                                  : isCellDirty(r, "weight")
+                                  ? "border-amber-400 bg-amber-50/40"
+                                  : "border-slate-300 bg-white"
+                              }`}
+                              value={editData.weight}
+                              onChange={(e) => updateRowCell(r.child_id, "weight", e.target.value)}
+                              title={`Cân nặng hợp lệ: ${MIN_CHILD_WEIGHT} - ${MAX_CHILD_WEIGHT} kg`}
+                            />
+                            {!validW && (
+                              <span className="text-[10px] text-red-600 mt-0.5">
+                                {MIN_CHILD_WEIGHT}-{MAX_CHILD_WEIGHT}kg
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-ink text-xs font-medium">
+                            {viewWeight}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Cột 6: Chỉ số BMI (Read-only, Real-time calculation) */}
+                      <td className="px-3 py-3 text-right font-bold whitespace-nowrap">
+                        {isEditMode ? (
+                          <span
+                            className={`text-xs px-2 py-1 rounded bg-slate-100 ${
+                              liveCalc.bmi != null ? "text-brand" : "text-ink-faint"
+                            }`}
+                            title="Chỉ số BMI được tính tự động từ Chiều cao và Cân nặng"
+                          >
+                            {liveCalc.bmiText}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-ink">{viewBmi}</span>
+                        )}
+                      </td>
+
+                      {/* Cột 7: Thể trạng (Badge bo tròn - Real-time) */}
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {isEditMode ? (
+                          liveCalc.category ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                liveCalc.tone === "ok"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : liveCalc.tone === "warn"
+                                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                  : liveCalc.tone === "bad"
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-slate-100 text-slate-500 border border-slate-200"
+                              }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  liveCalc.tone === "ok"
+                                    ? "bg-emerald-500"
+                                    : liveCalc.tone === "warn"
+                                    ? "bg-amber-500"
+                                    : liveCalc.tone === "bad"
+                                    ? "bg-rose-500"
+                                    : "bg-slate-400"
+                                }`}
+                              />
+                              {liveCalc.categoryLabel}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-ink-faint italic bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                              Chưa có
+                            </span>
+                          )
+                        ) : r.health_category_label ? (
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                              viewTone === "ok"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : viewTone === "warn"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : viewTone === "bad"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-slate-100 text-slate-500 border border-slate-200"
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                viewTone === "ok"
+                                  ? "bg-emerald-500"
+                                  : viewTone === "warn"
+                                  ? "bg-amber-500"
+                                  : viewTone === "bad"
+                                  ? "bg-rose-500"
+                                  : "bg-slate-400"
+                              }`}
+                            />
+                            {r.health_category_label}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-ink-faint italic bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                            Chưa có
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Cột 8: Kết luận chung (Textarea nhiều dòng khi sửa, line-clamp-2 khi xem) */}
+                      <td className="px-4 py-3">
+                        {isEditMode ? (
+                          <textarea
+                            rows={2}
+                            className={`kinput text-xs py-1.5 px-2.5 w-full min-w-[160px] max-w-sm rounded-md shadow-sm resize-y transition-all ${
+                              isCellDirty(r, "general_conclusion")
+                                ? "border-amber-400 bg-amber-50/40"
+                                : "border-slate-300 bg-white"
+                            }`}
+                            value={editData.general_conclusion}
+                            onChange={(e) =>
+                              updateRowCell(r.child_id, "general_conclusion", e.target.value)
+                            }
+                            placeholder="Nhập kết luận sức khỏe..."
+                          />
+                        ) : (
+                          <div
+                            className="max-w-[220px] line-clamp-2 text-xs text-ink-soft"
+                            title={r.general_conclusion || ""}
+                          >
+                            {r.general_conclusion || "—"}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Cột 9: Thao tác */}
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {isEditMode ? (
+                          <button
+                            type="button"
+                            onClick={() => clearRowEdits(r)}
+                            className="p-1.5 text-slate-400 hover:text-bad rounded hover:bg-bad/10 transition-colors inline-flex items-center gap-1 text-xs"
+                            title="Xóa trắng số liệu dòng này"
+                          >
+                            <span>🗑️</span>
+                          </button>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(r)}
+                              className="p-1.5 text-slate-500 hover:text-brand rounded hover:bg-brand/10 transition-colors"
+                              title={r.id ? "Chỉnh sửa số liệu sức khỏe" : "Nhập số liệu sức khỏe"}
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDel(r)}
+                              className={`p-1.5 rounded transition-colors ${
+                                r.id
+                                  ? "text-slate-400 hover:text-bad hover:bg-bad/10"
+                                  : "text-slate-300 cursor-not-allowed"
+                              }`}
+                              disabled={!r.id}
+                              title={
+                                r.id
+                                  ? "Xóa bản ghi sức khỏe của học sinh này"
+                                  : "Học sinh này chưa có bản ghi sức khỏe để xóa"
+                              }
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-            {/* ══ Modal nhập kết quả vào sổ sức khoẻ (Grid + Excel) ══ */}
+      {/* ══ Modal Xác nhận Xóa Bản Ghi Sức Khỏe ══ */}
+      <Modal
+        open={!!confirmDel}
+        onClose={() => !deleteBusy && setConfirmDel(null)}
+        title="Xác nhận xóa bản ghi sức khỏe"
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setConfirmDel(null)}
+              disabled={deleteBusy}
+              className="kbtn kbtn-secondary text-xs"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={() => confirmDel && handleDeleteRecord(confirmDel)}
+              disabled={deleteBusy}
+              className="kbtn text-xs font-bold text-white bg-bad hover:bg-bad/90 flex items-center gap-1.5"
+            >
+              {deleteBusy ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Đang xóa...</span>
+                </>
+              ) : (
+                <>
+                  <span>🗑️</span>
+                  <span>Xác nhận xóa</span>
+                </>
+              )}
+            </button>
+          </div>
+        }
+      >
+        <div className="py-2 text-sm text-ink-soft leading-relaxed">
+          Bạn có chắc chắn muốn xóa bản ghi sức khỏe của học sinh{" "}
+          <strong className="text-ink">{confirmDel?.full_name}</strong>?
+          <p className="mt-2 text-xs text-bad">
+            ⚠️ Thao tác này sẽ xóa toàn bộ số liệu chiều cao, cân nặng, BMI và kết luận của học sinh này khỏi hệ thống.
+          </p>
+        </div>
+      </Modal>
+
+      {/* ══ Modal Nhập kết quả vào sổ sức khoẻ từ Excel ══ */}
       <Modal
         open={importOpen}
         onClose={closeImportModal}
@@ -937,11 +1426,10 @@ export default function HealthExamPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-ink-soft">
-            Hỗ trợ nhập trực tiếp số liệu khám vào bảng bên dưới hoặc tải file Excel lên.
-            Hệ thống tự tính BMI và báo rõ dòng nào bị lỗi để chỉnh sửa.
+            Hỗ trợ nhập trực tiếp số liệu khám vào bảng hoặc tải file Excel lên.
+            Hệ thống tự động tính BMI và kiểm tra các số liệu hợp lệ.
           </p>
 
-          {/* Bước chọn lớp & ngày ghi nhận */}
           <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-3">
             <div className="font-bold text-ink text-sm">Chọn lớp & ngày ghi nhận</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -978,7 +1466,6 @@ export default function HealthExamPage() {
             )}
           </div>
 
-          {/* Chọn file Excel tải lên */}
           {!importResult && (
             <div>
               <label className="klabel mb-1.5">Chọn file kết quả tải lên</label>
@@ -1013,7 +1500,6 @@ export default function HealthExamPage() {
             </div>
           )}
 
-          {/* Kết quả import */}
           {importResult && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
@@ -1054,22 +1540,22 @@ export default function HealthExamPage() {
                   </div>
                   <div className="max-h-64 overflow-y-auto rounded-control border border-bad/25 bg-bad/5 divide-y divide-bad/10">
                     {importResult.errors.map((issue) => (
-                      <div key={`${issue.sheet_name || "x"}-${issue.row_number}-${issue.child_id || "x"}`} className="p-3">
+                      <div
+                        key={`${issue.sheet_name || "x"}-${issue.row_number}-${issue.child_id || "x"}`}
+                        className="p-3"
+                      >
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`px-2 py-0.5 rounded-full text-white text-[11px] font-bold ${
                               issue.errors.length > 0 ? "bg-bad" : "bg-warn"
                             }`}
                           >
-                            {issue.sheet_name ? `${issue.sheet_name} · Dòng ${issue.row_number}` : `Dòng ${issue.row_number}`}
+                            {issue.sheet_name
+                              ? `${issue.sheet_name} · Dòng ${issue.row_number}`
+                              : `Dòng ${issue.row_number}`}
                           </span>
                           {issue.full_name && (
                             <span className="text-xs font-semibold text-ink">{issue.full_name}</span>
-                          )}
-                          {issue.errors.length === 0 && (
-                            <span className="text-[11px] text-warn font-semibold">
-                              ⚠ Đã lưu kèm cảnh báo
-                            </span>
                           )}
                         </div>
                         {issue.errors.length > 0 && (
@@ -1081,23 +1567,8 @@ export default function HealthExamPage() {
                             ))}
                           </ul>
                         )}
-                        {issue.warnings.length > 0 && (
-                          <ul className="mt-1 space-y-0.5">
-                            {issue.warnings.map((w, i) => (
-                              <li key={i} className="text-[11px] text-warn">
-                                ⚠ {w}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
                       </div>
                     ))}
-                  </div>
-                  <div className="text-[11px] text-ink-soft leading-relaxed">
-                    💡 <strong>Cách xử lý:</strong> các dòng có nền đỏ bị từ chối — sửa trong
-                    file Excel gốc (đúng số dòng như báo cáo) rồi tải lại file lên. Các dòng
-                    chỉ có cảnh báo (màu vàng) vẫn đã được lưu, hãy kiểm tra lại số liệu để chắc
-                    chắn không nhập nhầm.
                   </div>
                 </div>
               )}
@@ -1106,7 +1577,7 @@ export default function HealthExamPage() {
         </div>
       </Modal>
 
-      {/* ══ Drawer chỉnh sửa số liệu 1 dòng ══ */}
+      {/* ══ Drawer Chỉnh sửa số liệu 1 dòng (View Mode) ══ */}
       <Drawer
         open={!!editing}
         onClose={closeEditModal}
@@ -1121,12 +1592,17 @@ export default function HealthExamPage() {
           <>
             <button
               onClick={closeEditModal}
-              className="kbtn kbtn-secondary"
+              className="kbtn kbtn-secondary text-xs"
               disabled={editBusy}
             >
               Hủy
             </button>
-            <button onClick={handleSaveEdit} className="kbtn kbtn-primary" disabled={editBusy}>
+            <button
+              onClick={handleSaveEdit}
+              className="kbtn text-xs font-bold text-white"
+              style={{ background: "#16665a" }}
+              disabled={editBusy}
+            >
               {editBusy ? "Đang lưu..." : editing?.id ? "Lưu thay đổi" : "Lưu số liệu"}
             </button>
           </>
@@ -1168,25 +1644,31 @@ export default function HealthExamPage() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Chiều cao (cm)" hint="Có thể để trống nếu chỉ nhập kết luận">
+              <FormField
+                label="Chiều cao (cm)"
+                hint={`Dải hợp lệ: ${MIN_CHILD_HEIGHT} - ${MAX_CHILD_HEIGHT} cm`}
+              >
                 <input
-                  className="kinput"
+                  className="kinput text-xs"
                   type="number"
                   step="0.1"
-                  min="1"
-                  max="200"
+                  min={MIN_CHILD_HEIGHT}
+                  max={MAX_CHILD_HEIGHT}
                   value={editHeight}
                   onChange={(e) => setEditHeight(e.target.value)}
                   placeholder="95.5"
                 />
               </FormField>
-              <FormField label="Cân nặng (kg)" hint="Có thể để trống nếu chỉ nhập kết luận">
+              <FormField
+                label="Cân nặng (kg)"
+                hint={`Dải hợp lệ: ${MIN_CHILD_WEIGHT} - ${MAX_CHILD_WEIGHT} kg`}
+              >
                 <input
-                  className="kinput"
+                  className="kinput text-xs"
                   type="number"
                   step="0.1"
-                  min="1"
-                  max="100"
+                  min={MIN_CHILD_WEIGHT}
+                  max={MAX_CHILD_WEIGHT}
                   value={editWeight}
                   onChange={(e) => setEditWeight(e.target.value)}
                   placeholder="14.2"
@@ -1194,25 +1676,28 @@ export default function HealthExamPage() {
               </FormField>
             </div>
 
-            <FormField label="Kết luận chung" hint="Có thể để trống nếu đã nhập chiều cao và cân nặng">
+            <FormField
+              label="Kết luận chung"
+              hint="Có thể để trống nếu đã nhập chiều cao và cân nặng"
+            >
               <textarea
-                className="kinput resize-y"
+                className="kinput resize-y text-xs"
                 value={editConclusion}
                 onChange={(e) => setEditConclusion(e.target.value)}
-                rows={4}
+                rows={3}
                 maxLength={2000}
                 placeholder="Nhập kết luận của đợt ghi nhận..."
               />
             </FormField>
 
-            <div className="text-xs text-ink-faint">
-              💡 Hệ thống tự tính BMI và xếp loại thể trạng theo chuẩn WHO dựa trên tuổi và
-              giới tính của học sinh.
+            <div className="text-xs text-ink-faint leading-relaxed bg-sunken/50 p-2.5 rounded-control">
+              💡 Hệ thống tự động tính chỉ số BMI và xếp loại thể trạng dựa trên tuổi và giới tính của học sinh.
             </div>
           </>
         )}
       </Drawer>
 
+      {/* Toast thông báo */}
       {toast && <Toast message={toast.msg} tone={toast.tone} onClose={() => setToast(null)} />}
     </SchoolAdminLayout>
   );
