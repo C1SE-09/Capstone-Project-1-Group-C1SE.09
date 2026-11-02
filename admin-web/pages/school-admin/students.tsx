@@ -360,16 +360,21 @@ export default function SchoolAdminStudentsPage() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [isEditingTable, setIsEditingTable] = useState(false);
-  const [tableEdits, setTableEdits] = useState<Record<string, {
+  // Chế độ Chỉnh sửa hàng loạt (Bulk Edit) & Dropdown Multi-select Phụ huynh
+  interface RowEditState {
     full_name: string;
     nickname: string;
     class_id: string | null;
+    parent_ids: string[];
     date_of_birth: string;
     gender: string;
     medical_allergies: string;
-  }>>({});
+  }
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [tableEdits, setTableEdits] = useState<Record<string, RowEditState>>({});
   const [savingTable, setSavingTable] = useState(false);
+  const [openParentDropdownId, setOpenParentDropdownId] = useState<string | null>(null);
+  const [parentSearchQuery, setParentSearchQuery] = useState("");
   const [editing, setEditing] = useState<Child | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -843,95 +848,175 @@ export default function SchoolAdminStudentsPage() {
     return { total: rows.length, success, failed, errors, warnings };
   }
 
-  function startTableEditing() {
-    const initial: Record<string, any> = {};
-    filtered.forEach((c) => {
-      initial[c.id] = {
-        full_name: c.full_name || "",
-        nickname: c.nickname || "",
-        class_id: c.class_id || null,
-        date_of_birth: c.date_of_birth || "",
-        gender: c.gender || "male",
-        medical_allergies: c.note || "",
+  // Lấy danh sách ID phụ huynh ban đầu của học sinh
+  function getOriginalParentIds(c: Child): string[] {
+    const ids: string[] = [];
+    if (c.parent_ids && Array.isArray(c.parent_ids)) {
+      ids.push(...c.parent_ids);
+    } else if (c.parent_id) {
+      ids.push(c.parent_id);
+    } else if (parents && parents.length > 0) {
+      const matched = parents.filter(
+        (p) =>
+          (p.child_ids && p.child_ids.includes(c.id)) ||
+          (p.children && p.children.some((k: any) => k.id === c.id)),
+      );
+      ids.push(...matched.map((p) => p.id));
+    }
+    return Array.from(new Set(ids));
+  }
+
+  // Lấy dữ liệu hiện tại của dòng
+  function getRowData(c: Child): RowEditState {
+    if (tableEdits[c.id]) return tableEdits[c.id];
+    let dob = c.date_of_birth || "";
+    if (dob.includes("T")) {
+      dob = dob.split("T")[0];
+    }
+    return {
+      full_name: c.full_name || "",
+      nickname: c.nickname || "",
+      class_id: c.class_id || null,
+      parent_ids: getOriginalParentIds(c),
+      date_of_birth: dob,
+      gender: c.gender || "male",
+      medical_allergies: c.note || "",
+    };
+  }
+
+  // Lấy danh sách đối tượng phụ huynh của học sinh
+  function getChildParentObjects(c: Child, currentParentIds?: string[]): Parent[] {
+    const ids = currentParentIds || getRowData(c).parent_ids;
+    if (!parents || parents.length === 0) return [];
+    return parents.filter((p) => ids.includes(p.id));
+  }
+
+  // Cập nhật giá trị ô input
+  function updateCell(c: Child, field: keyof RowEditState, val: any) {
+    setTableEdits((prev) => {
+      const current = prev[c.id] || getRowData(c);
+      return {
+        ...prev,
+        [c.id]: {
+          ...current,
+          [field]: val,
+        },
       };
     });
-    setTableEdits(initial);
-    setIsEditingTable(true);
   }
 
-  function cancelTableEditing() {
-    setIsEditingTable(false);
+  // Thêm / Bớt phụ huynh trong Dropdown Multi-select
+  function toggleParentSelection(c: Child, parentId: string) {
+    const current = getRowData(c);
+    const exists = current.parent_ids.includes(parentId);
+    const nextIds = exists
+      ? current.parent_ids.filter((id) => id !== parentId)
+      : [...current.parent_ids, parentId];
+    updateCell(c, "parent_ids", nextIds);
+  }
+
+  // Kiểm tra ô có bị sửa đổi so với dữ liệu gốc không
+  function isCellDirty(c: Child, field: keyof RowEditState): boolean {
+    if (!tableEdits[c.id]) return false;
+    const row = tableEdits[c.id];
+    if (field === "full_name") return row.full_name.trim() !== (c.full_name || "").trim();
+    if (field === "nickname") return row.nickname.trim() !== (c.nickname || "").trim();
+    if (field === "class_id") return row.class_id !== (c.class_id || null);
+    if (field === "gender") return row.gender !== (c.gender || "male");
+    if (field === "medical_allergies") return row.medical_allergies.trim() !== (c.note || "").trim();
+    if (field === "date_of_birth") {
+      let origDob = c.date_of_birth || "";
+      if (origDob.includes("T")) origDob = origDob.split("T")[0];
+      return row.date_of_birth !== origDob;
+    }
+    if (field === "parent_ids") {
+      const origIds = getOriginalParentIds(c);
+      const curIds = row.parent_ids;
+      if (origIds.length !== curIds.length) return true;
+      const setOrig = new Set(origIds);
+      return curIds.some((id) => !setOrig.has(id));
+    }
+    return false;
+  }
+
+  // Kiểm tra xem dòng có bất kỳ ô nào bị thay đổi hay không
+  function isRowDirty(c: Child): boolean {
+    if (!tableEdits[c.id]) return false;
+    return (
+      isCellDirty(c, "full_name") ||
+      isCellDirty(c, "nickname") ||
+      isCellDirty(c, "class_id") ||
+      isCellDirty(c, "parent_ids") ||
+      isCellDirty(c, "date_of_birth") ||
+      isCellDirty(c, "gender") ||
+      isCellDirty(c, "medical_allergies")
+    );
+  }
+
+  // Danh sách các dòng đang có thay đổi chưa lưu
+  const dirtyRows = useMemo(() => {
+    return filtered.filter((c) => isRowDirty(c));
+  }, [filtered, tableEdits, parents]);
+
+  // Hủy toàn bộ thay đổi chưa lưu
+  function cancelAllEdits() {
     setTableEdits({});
+    setIsEditMode(false);
+    setOpenParentDropdownId(null);
+    setToast({ msg: "Đã hủy bỏ mọi thay đổi chưa lưu", tone: "brand" });
   }
 
-  function updateRowEdit(id: string, field: string, val: any) {
-    setTableEdits((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: val,
-      },
-    }));
-  }
-
-  async function handleSaveTableEdits() {
-    const changedItems: { id: string; original: Child; payload: ChildPayload }[] = [];
-    for (const c of filtered) {
-      const edit = tableEdits[c.id];
-      if (!edit) continue;
-      const isChanged =
-        edit.full_name.trim() !== (c.full_name || "").trim() ||
-        edit.nickname.trim() !== (c.nickname || "").trim() ||
-        edit.class_id !== (c.class_id || null) ||
-        edit.date_of_birth !== (c.date_of_birth || "") ||
-        edit.gender !== (c.gender || "male") ||
-        edit.medical_allergies.trim() !== (c.note || "").trim();
-
-      if (isChanged) {
-        if (!edit.full_name.trim()) {
-          setToast({ msg: "Họ tên học sinh không được để trống", tone: "bad" });
-          return;
-        }
-        changedItems.push({
-          id: c.id,
-          original: c,
-          payload: {
-            full_name: edit.full_name.trim(),
-            nickname: edit.nickname.trim() || null,
-            class_id: edit.class_id,
-            date_of_birth: edit.date_of_birth || null,
-            gender: edit.gender,
-            medical_allergies: edit.medical_allergies.trim() || null,
-            status: c.status,
-          },
-        });
-      }
+  // Lưu hàng loạt tất cả các dòng đã thay đổi (Bulk Save)
+  async function handleSaveAllEdits() {
+    if (dirtyRows.length === 0) {
+      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
+      setIsEditMode(false);
+      return;
     }
 
-    if (changedItems.length === 0) {
-      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
-      setIsEditingTable(false);
-      return;
+    for (const c of dirtyRows) {
+      const edit = getRowData(c);
+      if (!edit.full_name.trim()) {
+        setToast({ msg: "Họ tên học sinh không được để trống", tone: "bad" });
+        return;
+      }
     }
 
     setSavingTable(true);
     let success = 0;
     let failed = 0;
-    for (const item of changedItems) {
+
+    for (const c of dirtyRows) {
+      const edit = getRowData(c);
+      const payload: Partial<ChildPayload> = {
+        full_name: edit.full_name.trim(),
+        nickname: edit.nickname.trim() || null,
+        class_id: edit.class_id,
+        date_of_birth: edit.date_of_birth || null,
+        gender: edit.gender,
+        medical_allergies: edit.medical_allergies.trim() || null,
+        parent_ids: edit.parent_ids,
+        parent_id: edit.parent_ids[0] || null,
+      };
+
       try {
-        await updateChild(item.id, item.payload);
+        await updateChild(c.id, payload);
         success++;
       } catch (e) {
         failed++;
       }
     }
+
     setSavingTable(false);
-    setIsEditingTable(false);
+    setTableEdits({});
+    setIsEditMode(false);
+    setOpenParentDropdownId(null);
     mutate();
+
     if (failed === 0) {
       setToast({ msg: `Đã lưu thành công ${success} học sinh!`, tone: "ok" });
     } else {
-      setToast({ msg: `Đã lưu ${success} học sinh (${failed} học sinh lỗi)`, tone: "warn" });
+      setToast({ msg: `Đã lưu ${success} học sinh (${failed} học sinh bị lỗi)`, tone: "warn" });
     }
   }
 
@@ -1224,54 +1309,73 @@ export default function SchoolAdminStudentsPage() {
             onClick={() => setImportOpen(true)}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập dữ liệu từ file Excel / CSV"
-            disabled={isEditingTable}
           >
             📤 Nhập file
           </button>
-          {!isEditingTable ? (
-            <button
-              onClick={startTableEditing}
-              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
-              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
-              disabled={filtered.length === 0}
-            >
-              <span>✏️</span>
-              <span>Chỉnh sửa bảng</span>
-            </button>
-          ) : (
+          {/* Nút Chỉnh sửa */}
+          <button
+            onClick={() => {
+              if (isEditMode && dirtyRows.length > 0) {
+                if (window.confirm("Bạn đang có thay đổi chưa lưu. Bạn có muốn thoát chế độ sửa và hủy thay đổi không?")) {
+                  cancelAllEdits();
+                }
+                return;
+              }
+              setIsEditMode(!isEditMode);
+              setOpenParentDropdownId(null);
+            }}
+            className={`kbtn text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              isEditMode
+                ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-400/30"
+                : "kbtn-secondary hover:border-brand"
+            }`}
+            title="Bật/tắt chế độ chỉnh sửa trực tiếp trên bảng"
+          >
+            <span>✏️</span>
+            <span>{isEditMode ? "Đang chỉnh sửa" : "Chỉnh sửa"}</span>
+          </button>
+
+          {/* Nút Lưu tất cả thay đổi khi ở Edit Mode */}
+          {isEditMode && (
             <>
               <button
-                onClick={cancelTableEditing}
+                onClick={cancelAllEdits}
                 disabled={savingTable}
-                className="kbtn kbtn-secondary text-sm"
+                className="kbtn kbtn-secondary text-xs hover:border-bad hover:text-bad transition-colors"
+                title="Hủy bỏ mọi thay đổi chưa lưu"
               >
-                ✕ Hủy bỏ
+                ✕ Hủy thay đổi
               </button>
               <button
-                onClick={handleSaveTableEdits}
+                onClick={handleSaveAllEdits}
                 disabled={savingTable}
-                className="kbtn text-sm font-bold text-white flex items-center gap-2"
+                className="kbtn text-xs font-bold text-white flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg shadow-md hover:shadow-lg transition-all"
                 style={{ background: "#16665a" }}
+                title="Lưu tất cả thay đổi trên mọi dòng"
               >
                 {savingTable ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu...</span>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Đang lưu ({dirtyRows.length})...</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu thay đổi</span>
+                    <span>Lưu tất cả thay đổi</span>
+                    {dirtyRows.length > 0 && (
+                      <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-1">
+                        {dirtyRows.length}
+                      </span>
+                    )}
                   </>
                 )}
               </button>
             </>
           )}
-          {!isEditingTable && (
-            <button onClick={openCreate} className="kbtn kbtn-primary">
-              + Thêm học sinh
-            </button>
-          )}
+
+          <button onClick={openCreate} className="kbtn kbtn-primary">
+            + Thêm học sinh
+          </button>
         </div>
       }
     >
@@ -1291,6 +1395,34 @@ export default function SchoolAdminStudentsPage() {
           />
         </div>
       </div>
+
+      {/* Banner thông báo các dòng có thay đổi chưa lưu */}
+      {isEditMode && dirtyRows.length > 0 && (
+        <div className="mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg flex items-center justify-between shadow-sm animate-fadeIn">
+          <div className="flex items-center gap-2 text-xs sm:text-sm">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <span className="font-semibold">Đang có {dirtyRows.length} học sinh có chỉnh sửa chưa lưu.</span>
+            <span className="text-xs text-amber-700 hidden sm:inline">(Các ô có viền vàng là các trường đã thay đổi)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelAllEdits}
+              disabled={savingTable}
+              className="text-xs px-2.5 py-1 text-amber-800 hover:text-bad hover:underline font-medium"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              onClick={handleSaveAllEdits}
+              disabled={savingTable}
+              className="kbtn text-xs font-bold text-white py-1 px-3 shadow"
+              style={{ background: "#16665a" }}
+            >
+              {savingTable ? "Đang lưu..." : `Lưu tất cả (${dirtyRows.length})`}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card overflow-hidden">
         {!children && !childrenError ? (
@@ -1394,153 +1526,394 @@ export default function SchoolAdminStudentsPage() {
               <tbody>
                 {filtered.map((c, idx) => {
                   const isSelected = selectedIds.includes(c.id);
-                  const edit = tableEdits[c.id];
+                  const isDirty = isRowDirty(c);
+                  const rowData = getRowData(c);
+                  const parentObjects = getChildParentObjects(c, rowData.parent_ids);
+
+                  // Lọc danh sách phụ huynh trong dropdown
+                  const qParent = parentSearchQuery.trim().toLowerCase();
+                  const filteredParentsForDropdown = (parents || []).filter((p) => {
+                    if (!qParent) return true;
+                    const pName = (p.full_name || "").toLowerCase();
+                    const pPhone = (p.phone || "").toLowerCase();
+                    const pRel = (p.relationship || "").toLowerCase();
+                    return pName.includes(qParent) || pPhone.includes(qParent) || pRel.includes(qParent);
+                  });
+
+                  // Class ô input ở Chế độ Sửa: viền mỏng xám nhạt, padding thoải mái
+                  const editInputBase =
+                    "w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 transition-all focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none";
+
                   return (
-                  <tr
-                    key={c.id}
-                    className={`${idx > 0 ? "border-t border-line" : ""} ${
-                      isSelected && !isEditingTable ? "bg-[#FDF8F6]" : isEditingTable ? "bg-amber-50/20" : ""
-                    }`}
-                  >
-                    <td className="px-3 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        className="rounded cursor-pointer"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(c.id)}
-                        disabled={isEditingTable}
-                      />
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {isEditingTable ? (
-                        <div className="space-y-1 min-w-[160px]">
+                    <tr
+                      key={c.id}
+                      className={`${idx > 0 ? "border-t border-slate-100" : ""} transition-colors ${
+                        isSelected
+                          ? "bg-[#FDF8F6]"
+                          : isDirty
+                          ? "bg-amber-50/25"
+                          : "hover:bg-slate-50/80"
+                      }`}
+                    >
+                      {/* Checkbox chọn dòng + Chấm tròn báo dirty */}
+                      <td className="px-3 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {isDirty ? (
+                            <span
+                              className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"
+                              title="Dòng này có thay đổi chưa lưu"
+                            />
+                          ) : (
+                            <span className="w-2 h-2 shrink-0" />
+                          )}
                           <input
-                            type="text"
-                            className="kinput text-xs py-1 px-2 font-bold w-full"
-                            value={edit?.full_name ?? c.full_name}
-                            onChange={(e) => updateRowEdit(c.id, "full_name", e.target.value)}
-                            placeholder="Họ và tên..."
-                          />
-                          <input
-                            type="text"
-                            className="kinput text-[11px] py-0.5 px-2 text-ink-soft w-full"
-                            value={edit?.nickname ?? c.nickname ?? ""}
-                            onChange={(e) => updateRowEdit(c.id, "nickname", e.target.value)}
-                            placeholder="Biệt danh..."
+                            type="checkbox"
+                            className="rounded cursor-pointer text-brand focus:ring-brand/30"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(c.id)}
+                            title="Chọn dòng"
                           />
                         </div>
-                      ) : (
+                      </td>
+
+                      {/* Cột Họ tên: Avatar + Tên (đậm) + Biệt danh */}
+                      <td className="px-3.5 py-3">
                         <div className="flex items-center gap-2.5">
                           <div
-                            className="w-9 h-9 flex items-center justify-center rounded-full text-white font-bold shrink-0"
+                            className="w-8 h-8 flex items-center justify-center rounded-full text-white text-xs font-semibold shrink-0 shadow-2xs"
                             style={{ background: "#8A5E12" }}
                           >
-                            {c.full_name.charAt(0).toUpperCase()}
+                            {(rowData.full_name || "B").charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <div className="font-bold text-ink">{c.full_name}</div>
-                            {c.nickname && (
-                              <div className="text-xs text-ink-soft">
-                                Biệt danh: {c.nickname}
+                          {isEditMode ? (
+                            <div className="flex flex-col gap-2 flex-1 min-w-[160px]">
+                              <input
+                                type="text"
+                                className={`${editInputBase} font-semibold ${
+                                  isCellDirty(c, "full_name")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950"
+                                    : ""
+                                }`}
+                                value={rowData.full_name}
+                                onChange={(e) => updateCell(c, "full_name", e.target.value)}
+                                placeholder="Họ và tên học sinh..."
+                              />
+                              <input
+                                type="text"
+                                className={`${editInputBase} text-[11px] text-slate-500 py-1 ${
+                                  isCellDirty(c, "nickname")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : ""
+                                }`}
+                                value={rowData.nickname}
+                                onChange={(e) => updateCell(c, "nickname", e.target.value)}
+                                placeholder="Biệt danh (ở nhà)..."
+                              />
+                            </div>
+                          ) : (
+                            <div className="max-w-[170px] truncate">
+                              <div className="font-semibold text-slate-800 text-sm truncate">
+                                {c.full_name}
+                                {isDirty && (
+                                  <span className="ml-1.5 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
+                                    chưa lưu
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {isEditingTable ? (
-                        <select
-                          className="kinput text-xs py-1 px-2 min-w-[130px]"
-                          value={edit?.class_id ?? c.class_id ?? ""}
-                          onChange={(e) => updateRowEdit(c.id, "class_id", e.target.value || null)}
-                        >
-                          <option value="">-- Chưa xếp lớp --</option>
-                          {classes.map((cls) => (
-                            <option key={cls.id} value={cls.id}>
-                              {cls.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <Pill tone="warn">{c.class_name}</Pill>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="text-ink line-clamp-1">
-                        {c.parents_summary || "Chưa liên kết"}
-                      </div>
-                      {c.parent_phone && (
-                        <div className="text-xs text-ink-soft">{c.parent_phone}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-ink-soft">
-                      {isEditingTable ? (
-                        <div className="space-y-1 min-w-[130px]">
-                          <input
-                            type="date"
-                            className="kinput text-xs py-1 px-1.5 w-full"
-                            value={edit?.date_of_birth ?? c.date_of_birth ?? ""}
-                            onChange={(e) => updateRowEdit(c.id, "date_of_birth", e.target.value)}
-                          />
-                          <select
-                            className="kinput text-[11px] py-0.5 px-1.5 w-full"
-                            value={edit?.gender ?? c.gender ?? "male"}
-                            onChange={(e) => updateRowEdit(c.id, "gender", e.target.value)}
-                          >
-                            <option value="male">Nam</option>
-                            <option value="female">Nữ</option>
-                          </select>
-                        </div>
-                      ) : (
-                        c.date_of_birth ? formatDate(c.date_of_birth) : "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-ink-soft">
-                      {isEditingTable ? (
-                        <input
-                          type="text"
-                          className="kinput text-xs py-1 px-2 min-w-[150px] w-full"
-                          value={edit?.medical_allergies ?? c.note ?? ""}
-                          onChange={(e) => updateRowEdit(c.id, "medical_allergies", e.target.value)}
-                          placeholder="Ghi chú / dị ứng..."
-                        />
-                      ) : (
-                        <div className="max-w-xs">
-                          <div className="line-clamp-1">{c.note || "—"}</div>
-                          {c.care_notes && (
-                            <div className="text-xs mt-0.5 line-clamp-2">
-                              Lưu ý: {c.care_notes}
+                              <div className="text-xs text-slate-500 font-normal mt-0.5 truncate">
+                                {c.nickname ? `Biệt danh: ${c.nickname}` : "—"}
+                              </div>
                             </div>
                           )}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      {isEditingTable ? (
-                        <span className="text-[11px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded">
-                          Đang sửa
-                        </span>
-                      ) : (
-                        <>
+                      </td>
+
+                      {/* Cột Lớp: Tag/Pill ở View Mode vs Select ở Edit Mode */}
+                      <td className="px-3.5 py-3">
+                        {isEditMode ? (
+                          <select
+                            className={`${editInputBase} min-w-[130px] ${
+                              isCellDirty(c, "class_id")
+                                ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                : ""
+                            }`}
+                            value={rowData.class_id ?? ""}
+                            onChange={(e) => updateCell(c, "class_id", e.target.value || null)}
+                          >
+                            <option value="">-- Chưa xếp lớp --</option>
+                            {classes.map((cls) => (
+                              <option key={cls.id} value={cls.id}>
+                                {cls.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs truncate max-w-[120px]">
+                            {c.class_name || "Chưa xếp lớp"}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Cột Phụ huynh: Dropdown Multi-select ở Edit Mode vs Tag Badge ở View Mode */}
+                      <td className="px-3.5 py-3 relative">
+                        {isEditMode ? (
+                          <div className="min-w-[190px] relative">
+                            {/* Nút mở Dropdown chọn Phụ huynh */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenParentDropdownId(openParentDropdownId === c.id ? null : c.id);
+                                setParentSearchQuery("");
+                              }}
+                              className={`w-full text-left bg-white border rounded px-2.5 py-1.5 text-xs flex items-center justify-between gap-1 transition-all ${
+                                isCellDirty(c, "parent_ids")
+                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                  : "border-slate-300 hover:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 text-slate-800"
+                              }`}
+                              title="Click để chọn danh sách phụ huynh liên kết"
+                            >
+                              <div className="truncate flex-1">
+                                {parentObjects.length === 0 ? (
+                                  <span className="text-slate-400 italic text-xs">Chọn phụ huynh...</span>
+                                ) : parentObjects.length === 1 ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[140px]">
+                                    {parentObjects[0].full_name}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[105px]"
+                                      title={parentObjects[0].full_name}
+                                    >
+                                      {parentObjects[0].full_name}
+                                    </span>
+                                    <span
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand/10 text-brand border border-brand/20 shrink-0"
+                                      title={parentObjects.map((p) => `${p.full_name} (${p.phone})`).join(", ")}
+                                    >
+                                      +{parentObjects.length - 1}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-slate-400 text-[10px] shrink-0 ml-1.5">▼</span>
+                            </button>
+
+                            {/* Dropdown Multi-select Box Phụ huynh */}
+                            {openParentDropdownId === c.id && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-40"
+                                  onClick={() => setOpenParentDropdownId(null)}
+                                />
+                                <div
+                                  className="absolute left-0 top-full mt-1.5 w-76 bg-white rounded-lg shadow-xl border border-slate-200 z-50 p-2.5 space-y-2 animate-fadeIn"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {/* Thanh tìm kiếm phụ huynh */}
+                                  <div className="relative">
+                                    <input
+                                      type="text"
+                                      value={parentSearchQuery}
+                                      onChange={(e) => setParentSearchQuery(e.target.value)}
+                                      placeholder="Tìm tên phụ huynh, SĐT..."
+                                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:border-[#4B6F8C] focus:outline-none"
+                                      autoFocus
+                                    />
+                                    {parentSearchQuery && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setParentSearchQuery("")}
+                                        className="absolute right-2 top-1.5 text-xs text-slate-400 hover:text-slate-600"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Danh sách phụ huynh kèm checkbox */}
+                                  <div className="max-h-48 overflow-y-auto space-y-0.5 divide-y divide-slate-50">
+                                    {filteredParentsForDropdown.length === 0 ? (
+                                      <div className="text-center py-3 text-xs text-slate-400">
+                                        Không tìm thấy phụ huynh nào
+                                      </div>
+                                    ) : (
+                                      filteredParentsForDropdown.map((p) => {
+                                        const isChecked = rowData.parent_ids.includes(p.id);
+                                        return (
+                                          <label
+                                            key={p.id}
+                                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer text-xs"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isChecked}
+                                              onChange={() => toggleParentSelection(c, p.id)}
+                                              className="rounded text-brand focus:ring-brand/30 cursor-pointer"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-slate-800 truncate">
+                                                {p.full_name}
+                                                {p.relationship && (
+                                                  <span className="text-slate-500 text-[11px] ml-1">({p.relationship})</span>
+                                                )}
+                                              </div>
+                                              <div className="text-[11px] text-slate-400">{p.phone}</div>
+                                            </div>
+                                          </label>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+
+                                  {/* Footer Dropdown */}
+                                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[11px]">
+                                    <span className="text-slate-500">
+                                      Đã chọn: <strong className="text-slate-700">{rowData.parent_ids.length}</strong> PH
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setOpenParentDropdownId(null)}
+                                      className="text-brand font-semibold hover:underline"
+                                    >
+                                      Xong
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          /* View Mode: Hiển thị Phụ huynh dạng text + tag sạch sẽ */
+                          <div className="max-w-xs">
+                            {parentObjects.length === 0 ? (
+                              <div className="text-ink line-clamp-1">
+                                {c.parents_summary || <span className="text-slate-400 italic text-xs">Chưa liên kết</span>}
+                              </div>
+                            ) : parentObjects.length === 1 ? (
+                              <div className="truncate">
+                                <div className="font-semibold text-slate-800 text-xs truncate">
+                                  {parentObjects[0].full_name}
+                                  {parentObjects[0].relationship && (
+                                    <span className="text-slate-500 font-normal ml-1">({parentObjects[0].relationship})</span>
+                                  )}
+                                </div>
+                                {parentObjects[0].phone && (
+                                  <div className="text-xs text-slate-500 font-normal mt-0.5 truncate">
+                                    {parentObjects[0].phone}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 truncate">
+                                <div className="truncate max-w-[130px]">
+                                  <span className="font-semibold text-slate-800 text-xs truncate">
+                                    {parentObjects[0].full_name}
+                                  </span>
+                                </div>
+                                <span
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-brand/10 text-brand border border-brand/20 cursor-help shrink-0"
+                                  title={parentObjects.map((p) => `${p.full_name} (${p.phone || "Chưa có SĐT"})`).join(", ")}
+                                >
+                                  +{parentObjects.length - 1}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Cột Ngày sinh / Giới tính: Input date chuẩn + Dropdown nhỏ gọn ở Edit Mode */}
+                      <td className="px-3.5 py-3 text-ink-soft">
+                        {isEditMode ? (
+                          <div className="flex flex-col gap-1.5 min-w-[130px]">
+                            <input
+                              type="date"
+                              className={`${editInputBase} py-1 px-2 ${
+                                isCellDirty(c, "date_of_birth")
+                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                  : ""
+                              }`}
+                              value={rowData.date_of_birth}
+                              onChange={(e) => updateCell(c, "date_of_birth", e.target.value)}
+                              title="Ngày sinh (DD/MM/YYYY)"
+                            />
+                            <select
+                              className={`${editInputBase} py-1 px-2 text-[11px] ${
+                                isCellDirty(c, "gender")
+                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                  : ""
+                              }`}
+                              value={rowData.gender}
+                              onChange={(e) => updateCell(c, "gender", e.target.value)}
+                            >
+                              <option value="male">Nam</option>
+                              <option value="female">Nữ</option>
+                            </select>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-700 text-xs font-medium">
+                              {c.date_of_birth ? formatDate(c.date_of_birth) : "—"}
+                            </span>
+                            {c.gender === "female" ? (
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-pink-50 text-pink-700 border border-pink-200 font-medium">
+                                Nữ
+                              </span>
+                            ) : (
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+                                Nam
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Cột Ghi chú: Text tĩnh ở View Mode vs Input ở Edit Mode */}
+                      <td className="px-3.5 py-3 text-ink-soft">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            className={`${editInputBase} min-w-[140px] ${
+                              isCellDirty(c, "medical_allergies")
+                                ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                : ""
+                            }`}
+                            value={rowData.medical_allergies}
+                            onChange={(e) => updateCell(c, "medical_allergies", e.target.value)}
+                            placeholder="Ghi chú / dị ứng..."
+                          />
+                        ) : (
+                          <div className="max-w-xs truncate text-xs text-slate-600" title={c.note || ""}>
+                            {c.note || "—"}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Cột Thao tác: Icon Sửa ✏️ & Xóa 🗑️ (màu đỏ) */}
+                      <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
                           <button
+                            type="button"
                             onClick={() => openEdit(c)}
-                            className="kbtn kbtn-ghost text-xs"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-brand hover:bg-slate-100 transition-colors"
+                            title="Chỉnh sửa chi tiết học sinh"
                           >
-                            Sửa
+                            <span className="text-sm">✏️</span>
                           </button>
                           <button
+                            type="button"
                             onClick={() => setConfirmDel(c)}
-                            className="kbtn kbtn-ghost text-xs text-bad"
+                            className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                            title="Xóa học sinh này"
                           >
-                            Xóa
+                            <span className="text-sm">🗑️</span>
                           </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
