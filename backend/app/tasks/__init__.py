@@ -28,6 +28,15 @@ try:
 except ImportError:
     process_audio_task = None  # PhoWhisper / CTranslate2 not installed on local host
 
+# LƯU Ý: không import `app.tasks.redispatch_stuck_audio` ở đây.
+#
+# `redispatch_stuck_audio` phụ thuộc `app.services.stt_dispatch_service`, mà
+# service đó import ngược lại `app.tasks.process_audio` → khiến `app.tasks`
+# bị import lại giữa chừng (circular import) và task đăng ký sai.
+#
+# Task vẫn được đăng ký đúng qua `celery_app.conf.include` trong
+# `app/tasks/celery_app.py` – Celery tự import module đó khi worker khởi động.
+
 __all__ = [
     "celery_app",
     "process_audio_task",

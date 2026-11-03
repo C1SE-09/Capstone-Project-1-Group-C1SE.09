@@ -58,6 +58,8 @@ from app.models.report import (
     DailyReportStatus,
     DailyReportType,
     VoiceRecord,
+    VoiceRecordingSession,
+    VoiceRecordingSessionStatus,
     VoiceRecordScope,
     VoiceRecordStatus,
 )
@@ -130,6 +132,8 @@ __all__ = [
     "UserRole",
     "UserStatus",
     "VoiceRecord",
+    "VoiceRecordingSession",
+    "VoiceRecordingSessionStatus",
     "VoiceRecordScope",
     "VoiceRecordStatus",
 ]

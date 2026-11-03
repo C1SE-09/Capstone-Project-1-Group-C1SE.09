@@ -56,6 +56,7 @@ if TYPE_CHECKING:
         ClassBroadcastReport,
         DailyReport,
         VoiceRecord,
+        VoiceRecordingSession,
     )
 
 
@@ -412,6 +413,13 @@ class Class_(Base, TimestampMixin):
         lazy="select",
         order_by="VoiceRecord.recorded_at",
     )
+    recording_sessions: Mapped[list[VoiceRecordingSession]] = relationship(
+        "VoiceRecordingSession",
+        back_populates="class_",
+        cascade="save-update, merge",  # FK is SET NULL – do NOT delete-orphan
+        lazy="select",
+        order_by="VoiceRecordingSession.created_at",
+    )
     broadcast_reports: Mapped[list[ClassBroadcastReport]] = relationship(
         "ClassBroadcastReport",
         back_populates="class_",
@@ -541,6 +549,13 @@ class Teacher(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="select",
         order_by="VoiceRecord.recorded_at",
+    )
+    recording_sessions: Mapped[list[VoiceRecordingSession]] = relationship(
+        "VoiceRecordingSession",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="VoiceRecordingSession.created_at",
     )
     daily_reports: Mapped[list[DailyReport]] = relationship(
         "DailyReport",

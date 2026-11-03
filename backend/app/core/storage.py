@@ -13,6 +13,7 @@ import shutil
 from urllib.parse import unquote, urlsplit
 
 from minio import Minio
+from minio.error import S3Error
 
 from app.config import settings
 from app.core.public_url import build_public_url
@@ -138,6 +139,34 @@ def object_name_from_url(url: str) -> str | None:
         return path[len(bucket_prefix) :]
     # URL trỏ sang bucket khác → bỏ segment đầu tiên (tên bucket).
     return path.split("/", 1)[1]
+
+
+def delete_audio_from_minio(url: str) -> bool:
+    """
+    Xoá 1 object audio khỏi MinIO theo URL.
+
+    Dùng khi giáo viên xoá 1 bản ghi âm trong phiên ghi âm (nút X trên
+    thanh ghi âm kiểu Messenger).
+
+    Returns:
+        True nếu xoá thành công, False nếu object không tồn tại.
+    """
+    object_name = object_name_from_url(url)
+    if not object_name:
+        logger.warning("[MinIO] Không phân tích được object key từ URL: %s", url)
+        return False
+
+    try:
+        minio_client.remove_object(settings.minio_bucket, object_name)
+        logger.info("[MinIO] Đã xoá object %s", object_name)
+        return True
+    except S3Error as exc:
+        code = getattr(exc, "code", "")
+        if code in ("NoSuchKey", "NoSuchObject", "NoSuchBucket"):
+            logger.info("[MinIO] Object %s không tồn tại (đã xoá trước đó)", object_name)
+            return False
+        logger.warning("[MinIO] Lỗi khi xoá object %s: %s", object_name, exc)
+        return False
 
 
 def fetch_audio_from_minio(url: str, local_path: str) -> None:

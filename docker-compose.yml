@@ -92,6 +92,23 @@ services:
       --concurrency=1
       -Q notifications
 
+  # Celery Beat: chạy các task theo lịch (nhắc thuốc, nhắc điểm danh,
+  # quét bản ghi âm bị kẹt và đẩy lại). Worker ở trên chỉ nghe queue
+  # `notifications` nên beat phải gửi task vào đúng queue đó.
+  beat:
+    build: ./backend
+    container_name: kinderlog_beat
+    env_file: .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A app.tasks.celery_app.celery_app beat
+      --loglevel=info
+      --scheduler=celery.beat:PersistentScheduler
+
 volumes:
   postgres_data:
   minio_data:
