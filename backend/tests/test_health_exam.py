@@ -993,6 +993,36 @@ def test_update_record_invalid_height(mock_db, admin_user):
     app.dependency_overrides.clear()
 
 
+def test_delete_record_success(mock_db, admin_user, sample_children):
+    """Xoa ban ghi suc khoe thanh cong -> 200."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+
+    c1 = sample_children[0]
+    rec = _build_exam_record(c1, None)
+    mock_db.scalar.return_value = rec
+
+    client = TestClient(app)
+    resp = client.delete(f"/api/health-exam/records/{rec.examination_id}")
+    assert resp.status_code == 200
+    assert "Đã xoá" in resp.json()["message"]
+    mock_db.delete.assert_called_once_with(rec)
+    mock_db.commit.assert_called_once()
+    app.dependency_overrides.clear()
+
+
+def test_delete_record_not_found(mock_db, admin_user):
+    """Xoa ban ghi khong ton tai -> 404."""
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    mock_db.scalar.return_value = None
+
+    client = TestClient(app)
+    resp = client.delete(f"/api/health-exam/records/{uuid.uuid4()}")
+    assert resp.status_code == 404
+    app.dependency_overrides.clear()
+
+
 def test_create_record_for_child_without_data(mock_db, admin_user, sample_children):
     """Tao moi ban ghi cho be chua co so lieu -> tao record va tu tinh BMI."""
     app.dependency_overrides[get_db] = lambda: mock_db

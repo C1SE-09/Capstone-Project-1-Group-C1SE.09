@@ -145,7 +145,15 @@ export default function SchoolAdminSchedulesPage() {
   const [roomSearch, setRoomSearch] = useState("");
   const [schoolConflictsModalOpen, setSchoolConflictsModalOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [importTab, setImportTab] = useState<"file" | "grid">("file");
+  const [isEditingTable, setIsEditingTable] = useState(false);
+  const [tableEdits, setTableEdits] = useState<Record<string, {
+    activity_name: string;
+    start_time: string;
+    end_time: string;
+    room_name: string;
+    content: string;
+  }>>({});
+  const [savingTable, setSavingTable] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportConfig, setExportConfig] = useState<{
     scope: "current" | "all";
@@ -524,6 +532,107 @@ export default function SchoolAdminSchedulesPage() {
         (s.start_time || "").toLowerCase().includes(search),
     );
   }, [schedules, query]);
+
+  function startTableEditing() {
+    const initial: Record<string, any> = {};
+    filteredSchedules.forEach((s) => {
+      initial[s.id] = {
+        activity_name: s.activity_name || "",
+        start_time: s.start_time || "08:00",
+        end_time: s.end_time || "09:00",
+        room_name: s.room_name || "Phòng học",
+        content: s.content || "",
+      };
+    });
+    setTableEdits(initial);
+    setIsEditingTable(true);
+  }
+
+  function cancelTableEditing() {
+    setIsEditingTable(false);
+    setTableEdits({});
+  }
+
+  function updateRowEdit(id: string, field: string, val: string) {
+    setTableEdits((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: val,
+      },
+    }));
+  }
+
+  async function handleSaveTableEdits() {
+    if (!selectedClassId) {
+      setToast({ msg: "Vui lòng chọn lớp", tone: "bad" });
+      return;
+    }
+    const changedItems: { id: string; original: Schedule; payload: SchedulePayload }[] = [];
+    for (const s of filteredSchedules) {
+      const edit = tableEdits[s.id];
+      if (!edit) continue;
+
+      const isChanged =
+        edit.activity_name.trim() !== (s.activity_name || "").trim() ||
+        edit.start_time !== (s.start_time || "") ||
+        edit.end_time !== (s.end_time || "") ||
+        edit.room_name.trim() !== (s.room_name || "Phòng học").trim() ||
+        edit.content.trim() !== (s.content || "").trim();
+
+      if (isChanged) {
+        if (!edit.activity_name.trim()) {
+          setToast({ msg: "Tên hoạt động không được để trống", tone: "bad" });
+          return;
+        }
+        if (edit.start_time && edit.end_time && edit.end_time <= edit.start_time) {
+          setToast({ msg: `Giờ kết thúc của hoạt động "${edit.activity_name}" phải sau giờ bắt đầu`, tone: "bad" });
+          return;
+        }
+
+        changedItems.push({
+          id: s.id,
+          original: s,
+          payload: {
+            class_id: selectedClassId,
+            day_of_week: s.day_of_week,
+            activity_name: edit.activity_name.trim(),
+            start_time: edit.start_time,
+            end_time: edit.end_time,
+            room_name: edit.room_name.trim() || "Phòng học",
+            content: edit.content.trim() || null,
+          },
+        });
+      }
+    }
+
+    if (changedItems.length === 0) {
+      setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
+      setIsEditingTable(false);
+      return;
+    }
+
+    setSavingTable(true);
+    let success = 0;
+    let failed = 0;
+    for (const item of changedItems) {
+      try {
+        await updateSchedule(item.id, item.payload);
+        success++;
+      } catch (e) {
+        failed++;
+      }
+    }
+    setSavingTable(false);
+    setIsEditingTable(false);
+    mutateDay();
+    mutateAll();
+    if (failed === 0) {
+      setToast({ msg: `Đã lưu thành công ${success} hoạt động!`, tone: "ok" });
+    } else {
+      setToast({ msg: `Đã lưu ${success} hoạt động (${failed} hoạt động lỗi)`, tone: "warn" });
+    }
+  }
 
   function openCreate(forDay: number) {
     setEditing(null);
@@ -1148,29 +1257,57 @@ export default function SchoolAdminSchedulesPage() {
             📥 Xuất excel
           </button>
           <button
-            onClick={() => {
-              setImportTab("file");
-              setImportOpen(true);
-            }}
+            onClick={() => setImportOpen(true)}
             className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
             title="Nhập thời khóa biểu từ file Excel / CSV"
+            disabled={isEditingTable}
           >
             📤 Nhập file
           </button>
-          <button
-            onClick={() => {
-              setImportTab("grid");
-              setImportOpen(true);
-            }}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
-            title="Nhập thời khóa biểu trực tiếp bằng bảng tính trên Web"
-          >
-            <span>📊</span>
-            <span>Nhập trực tiếp</span>
-          </button>
-          <button onClick={() => openCreate(selectedDay)} className="kbtn kbtn-primary">
-            + Thêm hoạt động
-          </button>
+          {!isEditingTable ? (
+            <button
+              onClick={startTableEditing}
+              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+              title="Chỉnh sửa trực tiếp tất cả các hoạt động trên bảng"
+              disabled={filteredSchedules.length === 0}
+            >
+              <span>✏️</span>
+              <span>Chỉnh sửa bảng</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={cancelTableEditing}
+                disabled={savingTable}
+                className="kbtn kbtn-secondary text-sm"
+              >
+                ✕ Hủy bỏ
+              </button>
+              <button
+                onClick={handleSaveTableEdits}
+                disabled={savingTable}
+                className="kbtn text-sm font-bold text-white flex items-center gap-2"
+                style={{ background: "#16665a" }}
+              >
+                {savingTable ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span>
+                    <span>Lưu thay đổi</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
+          {!isEditingTable && (
+            <button onClick={() => openCreate(selectedDay)} className="kbtn kbtn-primary">
+              + Thêm hoạt động
+            </button>
+          )}
         </div>
       }
     >
@@ -1442,7 +1579,7 @@ export default function SchoolAdminSchedulesPage() {
                     <button
                       onClick={() => setSelectedIds([])}
                       className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
-                      disabled={bulkDeleting}
+                      disabled={bulkDeleting || isEditingTable}
                     >
                       Bỏ chọn
                     </button>
@@ -1450,7 +1587,7 @@ export default function SchoolAdminSchedulesPage() {
                       onClick={() => setConfirmBulkDel(true)}
                       className="kbtn text-[11px] py-1 px-2.5 h-auto leading-none text-white font-medium flex items-center gap-1.5"
                       style={{ background: "#BB4A34" }}
-                      disabled={bulkDeleting}
+                      disabled={bulkDeleting || isEditingTable}
                     >
                       <span>🗑️</span>
                       <span>Xóa đã chọn ({selectedIds.length})</span>
@@ -1487,68 +1624,119 @@ export default function SchoolAdminSchedulesPage() {
                         onChange={() => toggleSelect(s.id)}
                       />
                     </div>
-                    <div
-                      className="flex flex-col items-center justify-center rounded-control px-2.5 py-1 min-w-[80px]"
-                      style={{ background: isHighlighted ? "#FCEBCB" : "#E6EFEC" }}
-                    >
-                      <div className="font-bold text-sm" style={{ color: isHighlighted ? "#8A5E12" : "#16665a" }}>
-                        {s.start_time || "--:--"}
-                      </div>
-                      <div className="text-[10px]" style={{ color: "#605D57" }}>
-                        {s.end_time || "--:--"}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="font-bold text-ink">{s.activity_name}</div>
-                        {hasConflict && (
-                          <Pill tone="warn">⚠️ Xung đột</Pill>
-                        )}
-                        {isHighlighted && (
-                          <span className="text-[11px] px-2 py-0.5 rounded font-bold bg-[#B0791B] text-white animate-pulse">
-                            Đang xem xung đột
+                    {isEditingTable ? (
+                      <>
+                        <div className="flex flex-col gap-1 min-w-[110px]">
+                          <input
+                            type="time"
+                            className="kinput text-xs py-0.5 px-1 font-bold text-center"
+                            value={tableEdits[s.id]?.start_time ?? s.start_time ?? "08:00"}
+                            onChange={(e) => updateRowEdit(s.id, "start_time", e.target.value)}
+                          />
+                          <input
+                            type="time"
+                            className="kinput text-xs py-0.5 px-1 text-center text-ink-soft"
+                            value={tableEdits[s.id]?.end_time ?? s.end_time ?? "09:00"}
+                            onChange={(e) => updateRowEdit(s.id, "end_time", e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1.5 min-w-[200px]">
+                          <input
+                            type="text"
+                            className="kinput text-xs py-1 px-2 font-bold w-full"
+                            value={tableEdits[s.id]?.activity_name ?? s.activity_name}
+                            onChange={(e) => updateRowEdit(s.id, "activity_name", e.target.value)}
+                            placeholder="Tên hoạt động..."
+                          />
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              className="kinput text-xs py-0.5 px-2 w-1/3"
+                              value={tableEdits[s.id]?.room_name ?? s.room_name ?? "Phòng học"}
+                              onChange={(e) => updateRowEdit(s.id, "room_name", e.target.value)}
+                              placeholder="Phòng học..."
+                            />
+                            <input
+                              type="text"
+                              className="kinput text-xs py-0.5 px-2 flex-1 text-ink-soft"
+                              value={tableEdits[s.id]?.content ?? s.content ?? ""}
+                              onChange={(e) => updateRowEdit(s.id, "content", e.target.value)}
+                              placeholder="Ghi chú nội dung..."
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center pt-2">
+                          <span className="text-[11px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded">
+                            Đang sửa
                           </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-ink-soft mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        {s.time_range && <span>Khung giờ: {s.time_range}</span>}
-                        {s.room_name && (
-                          isClassHomeroom(s.room_name, currentClassName, rooms, s.class_id) ? (
-                            <span className="text-ink-faint">· Tại lớp</span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#FAF1E4] text-[#8A5E12] border border-[#ECD9BA] flex items-center gap-1">
-                              <span>📍</span>
-                              <span>{s.room_name}</span>
-                            </span>
-                          )
-                        )}
-                      </div>
-                      {hasConflict && reason && (
-                        <div className="mt-1.5 text-xs text-[#8A5E12] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FBF6ED] border border-[#E2BF81] inline-block">
-                          <span>⚠️</span>
-                          <span>{reason}</span>
                         </div>
-                      )}
-                      {s.content && (
-                        <div className="text-xs text-ink-soft mt-1 line-clamp-2">
-                          {s.content}
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          className="flex flex-col items-center justify-center rounded-control px-2.5 py-1 min-w-[80px]"
+                          style={{ background: isHighlighted ? "#FCEBCB" : "#E6EFEC" }}
+                        >
+                          <div className="font-bold text-sm" style={{ color: isHighlighted ? "#8A5E12" : "#16665a" }}>
+                            {s.start_time || "--:--"}
+                          </div>
+                          <div className="text-[10px]" style={{ color: "#605D57" }}>
+                            {s.end_time || "--:--"}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex items-start gap-1">
-                      <button
-                        onClick={() => openEdit(s, selectedDay)}
-                        className="kbtn kbtn-ghost text-xs"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => setConfirmDel(s)}
-                        className="kbtn kbtn-ghost text-xs text-bad"
-                      >
-                        Xóa
-                      </button>
-                    </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="font-bold text-ink">{s.activity_name}</div>
+                            {hasConflict && (
+                              <Pill tone="warn">⚠️ Xung đột</Pill>
+                            )}
+                            {isHighlighted && (
+                              <span className="text-[11px] px-2 py-0.5 rounded font-bold bg-[#B0791B] text-white animate-pulse">
+                                Đang xem xung đột
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-ink-soft mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            {s.time_range && <span>Khung giờ: {s.time_range}</span>}
+                            {s.room_name && (
+                              isClassHomeroom(s.room_name, currentClassName, rooms, s.class_id) ? (
+                                <span className="text-ink-faint">· Tại lớp</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#FAF1E4] text-[#8A5E12] border border-[#ECD9BA] flex items-center gap-1">
+                                  <span>📍</span>
+                                  <span>{s.room_name}</span>
+                                </span>
+                              )
+                            )}
+                          </div>
+                          {hasConflict && reason && (
+                            <div className="mt-1.5 text-xs text-[#8A5E12] font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FBF6ED] border border-[#E2BF81] inline-block">
+                              <span>⚠️</span>
+                              <span>{reason}</span>
+                            </div>
+                          )}
+                          {s.content && (
+                            <div className="text-xs text-ink-soft mt-1 line-clamp-2">
+                              {s.content}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-start gap-1">
+                          <button
+                            onClick={() => openEdit(s, selectedDay)}
+                            className="kbtn kbtn-ghost text-xs"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => setConfirmDel(s)}
+                            className="kbtn kbtn-ghost text-xs text-bad"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </li>
                 );
               })}
@@ -1829,7 +2017,6 @@ export default function SchoolAdminSchedulesPage() {
 
       <ImportModal
         open={importOpen}
-        initialTab={importTab}
         onClose={() => setImportOpen(false)}
         title="Nhập thời khóa biểu từ file Excel"
         description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống hỗ trợ đọc nhiều sheet theo lớp. Cột 'Địa điểm / Phòng học' có thể để trống nếu học tại phòng của chính lớp (chỉ điền khi đổi địa điểm như Sân ngoài trời, Phòng Âm nhạc...)."

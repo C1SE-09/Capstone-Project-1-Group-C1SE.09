@@ -5,7 +5,6 @@
  */
 
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DirectGridInput } from "@/components/DirectGridInput";
 import {
   downloadExcelTemplate,
   parseExcelOrCsvDetailed,
@@ -1004,8 +1003,7 @@ export function ImportModal({
   sampleHeaders,
   sampleRow,
   templateFilename,
-  initialTab = "file",
-  allowOverwrite = false,
+  allowOverwrite = true,
   overwriteLabel,
   overwriteHint,
   onImportRows,
@@ -1021,30 +1019,18 @@ export function ImportModal({
   allowOverwrite?: boolean;
   overwriteLabel?: string;
   overwriteHint?: string;
-  initialTab?: "grid" | "file";
   onImportRows: (rows: string[][], options?: { overwrite?: boolean }) => Promise<ImportResult>;
   onSuccess?: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<"grid" | "file">("grid");
   const [file, setFile] = useState<File | null>(null);
   const [overwrite, setOverwrite] = useState(true);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
-  const [gridRows, setGridRows] = useState<string[][]>([]);
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheetInfo[]>([]);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Khởi tạo dòng trống cho Grid
-  const resetGridRows = useCallback(() => {
-    const emptyRows: string[][] = [];
-    for (let i = 0; i < 5; i++) {
-      emptyRows.push(sampleHeaders.map(() => ""));
-    }
-    setGridRows(emptyRows);
-  }, [sampleHeaders]);
 
   // Reset state when closing or opening
   useEffect(() => {
@@ -1057,18 +1043,9 @@ export function ImportModal({
       setImporting(false);
       setResult(null);
       setErrorMsg(null);
-      resetGridRows();
-      setActiveTab(initialTab);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, [open, initialTab, resetGridRows]);
-
-  // Lọc các dòng có ít nhất 1 ô có dữ liệu trong bảng Grid
-  const validGridRows = useMemo(() => {
-    return gridRows.filter((r) => r.some((c) => c && c.trim().length > 0));
-  }, [gridRows]);
-
-  const effectiveRowsToImport = activeTab === "grid" ? validGridRows : parsedRows;
+  }, [open]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
@@ -1102,11 +1079,11 @@ export function ImportModal({
   }
 
   async function handleStartImport() {
-    if (effectiveRowsToImport.length === 0) return;
+    if (parsedRows.length === 0) return;
     setImporting(true);
     setErrorMsg(null);
     try {
-      const res = await onImportRows(effectiveRowsToImport, { overwrite });
+      const res = await onImportRows(parsedRows, { overwrite });
       setResult(res);
       if (res.success > 0 && onSuccess) {
         onSuccess();
@@ -1146,7 +1123,7 @@ export function ImportModal({
               <button
                 type="button"
                 onClick={handleStartImport}
-                disabled={effectiveRowsToImport.length === 0 || importing || parsing}
+                disabled={parsedRows.length === 0 || importing || parsing}
                 className="kbtn kbtn-primary flex items-center gap-2"
               >
                 {importing && (
@@ -1154,7 +1131,7 @@ export function ImportModal({
                 )}
                 {importing
                   ? "Đang nhập..."
-                  : `Nhập dữ liệu (${effectiveRowsToImport.length} dòng)`}
+                  : `Nhập dữ liệu (${parsedRows.length} dòng)`}
               </button>
             )}
           </div>
@@ -1166,61 +1143,7 @@ export function ImportModal({
           <p className="text-sm text-ink-soft">{description}</p>
         )}
 
-        {/* Tab switcher: Nhập trực tiếp vs Tải file */}
         {!result && (
-          <div className="flex border-b border-line gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("grid")}
-              className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
-                activeTab === "grid"
-                  ? "border-brand text-brand bg-brand/5 rounded-t-sm"
-                  : "border-transparent text-ink-soft hover:text-ink hover:border-line"
-              }`}
-            >
-              <span>📊</span>
-              <span>Bảng nhập trực tiếp (Web Grid)</span>
-              {validGridRows.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
-                  {validGridRows.length}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("file")}
-              className={`px-4 py-2 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all ${
-                activeTab === "file"
-                  ? "border-brand text-brand bg-brand/5 rounded-t-sm"
-                  : "border-transparent text-ink-soft hover:text-ink hover:border-line"
-              }`}
-            >
-              <span>📁</span>
-              <span>Tải file Excel / CSV</span>
-              {parsedRows.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand text-white font-bold">
-                  {parsedRows.length}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Nội dung Tab 1: Grid nhập trực tiếp */}
-        {activeTab === "grid" && !result && (
-          <div className="space-y-3">
-            <DirectGridInput
-              headers={sampleHeaders}
-              sampleRow={sampleRow}
-              rows={gridRows}
-              onChange={setGridRows}
-              disabled={importing}
-            />
-          </div>
-        )}
-
-        {/* Nội dung Tab 2: Tải file Excel */}
-        {activeTab === "file" && !result && (
           <div className="space-y-4">
             {/* Step 1: Template download instruction */}
             <div className="rounded-card border border-line bg-sunken/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -1275,7 +1198,7 @@ export function ImportModal({
             )}
 
             {/* Preview parsed data */}
-            {parsedRows.length > 0 && !result && (
+            {parsedRows.length > 0 && (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-ink">
                   <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
@@ -1370,53 +1293,67 @@ export function ImportModal({
           <div className="rounded-card border border-line p-4 space-y-3 bg-sunken/20">
             <div className="flex items-center gap-2">
               <span className="text-xl">
-                {result.failed === 0 ? "🎉" : "ℹ"}
+                {result.failed === 0 ? "🎉" : result.success > 0 ? "⚠️" : "❌"}
               </span>
-              <span className="font-bold text-sm text-ink">
-                Kết quả nhập dữ liệu
-              </span>
+              <div className="font-bold text-sm text-ink">
+                {result.failed === 0
+                  ? "Nhập dữ liệu thành công hoàn toàn!"
+                  : result.success > 0
+                  ? "Nhập dữ liệu hoàn tất một phần"
+                  : "Không thể nhập dữ liệu"}
+              </div>
             </div>
+
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="card p-2 bg-white">
+              <div className="p-2.5 rounded-control bg-white border border-line">
                 <div className="text-ink-soft">Tổng số dòng</div>
                 <div className="text-base font-bold text-ink mt-0.5">
                   {result.total}
                 </div>
               </div>
-              <div className="card p-2 bg-white">
-                <div className="text-ok">Thành công</div>
+              <div className="p-2.5 rounded-control bg-ok/10 border border-ok/20">
+                <div className="text-ok font-semibold">Thành công</div>
                 <div className="text-base font-bold text-ok mt-0.5">
                   {result.success}
                 </div>
               </div>
-              <div className="card p-2 bg-white">
-                <div className="text-bad">Thất bại</div>
+              <div className="p-2.5 rounded-control bg-bad/10 border border-bad/20">
+                <div className="text-bad font-semibold">Thất bại</div>
                 <div className="text-base font-bold text-bad mt-0.5">
                   {result.failed}
                 </div>
               </div>
             </div>
+
+            {/* Warnings list */}
             {result.warnings && result.warnings.length > 0 && (
-              <div className="text-xs space-y-1">
-                <div className="font-semibold text-warn flex items-center gap-1">
-                  <span>⚠️</span>
-                  <span>Cảnh báo & Ghi chú ({result.warnings.length}):</span>
+              <div className="rounded-control bg-warn/10 border border-warn/30 p-3 space-y-1.5 text-xs">
+                <div className="font-bold text-warn flex items-center gap-1.5">
+                  <span>ℹ️</span>
+                  <span>Cảnh báo lưu ý ({result.warnings.length}):</span>
                 </div>
-                <div className="max-h-36 overflow-y-auto bg-warn/10 border border-warn/30 rounded p-2 text-ink space-y-1">
-                  {result.warnings.map((warn, i) => (
-                    <div key={i} className="text-xs">
-                      • {warn}
+                <div className="max-h-32 overflow-y-auto space-y-1 pl-5 list-disc">
+                  {result.warnings.map((w, i) => (
+                    <div key={i} className="text-ink-soft">
+                      • {w}
                     </div>
                   ))}
                 </div>
               </div>
             )}
-            {result.errors.length > 0 && (
-              <div className="text-xs space-y-1">
-                <div className="font-semibold text-bad">Chi tiết lỗi ({result.errors.length}):</div>
-                <div className="max-h-32 overflow-y-auto bg-bad/5 border border-bad/20 rounded p-2 text-bad space-y-1">
+
+            {/* Errors list */}
+            {result.errors && result.errors.length > 0 && (
+              <div className="rounded-control bg-bad/10 border border-bad/30 p-3 space-y-1.5 text-xs">
+                <div className="font-bold text-bad flex items-center gap-1.5">
+                  <span>⚠</span>
+                  <span>Chi tiết lỗi ({result.errors.length}):</span>
+                </div>
+                <div className="max-h-36 overflow-y-auto space-y-1 pl-5">
                   {result.errors.map((err, i) => (
-                    <div key={i}>• {err}</div>
+                    <div key={i} className="text-bad">
+                      • {err}
+                    </div>
                   ))}
                 </div>
               </div>

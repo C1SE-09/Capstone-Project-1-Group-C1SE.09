@@ -384,6 +384,34 @@ def update_health_exam_record(
     )
 
 
+@router.delete(
+    "/records/{examination_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Xoá bản ghi sức khoẻ",
+    description="Xoá bản ghi sức khoẻ định kỳ của học sinh khỏi hệ thống.",
+)
+def delete_health_exam_record(
+    examination_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    verify_admin_access(current_user=current_user)
+
+    exam = db.scalar(
+        select(HealthExamination).where(HealthExamination.examination_id == examination_id)
+    )
+    if exam is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy bản ghi sức khoẻ cần xoá.",
+        )
+
+    db.delete(exam)
+    db.commit()
+    logger.info("Xoá bản ghi sức khoẻ %s (bởi %s)", examination_id, current_user.username)
+    return {"message": "Đã xoá bản ghi sức khoẻ thành công."}
+
+
 def load_existing_exams(
     db: Session,
     children: list[Child],

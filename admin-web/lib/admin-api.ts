@@ -544,3 +544,11 @@ export function createHealthExamRecord(data: {
     account: "schoolAdmin",
   });
 }
+
+/** Xoá bản ghi sức khoẻ định kỳ của học sinh khỏi hệ thống. */
+export function deleteHealthExamRecord(id: string) {
+  return apiFetch<{ message: string }>(`/api/health-exam/records/${id}`, {
+    method: "DELETE",
+    account: "schoolAdmin",
+  });
+}
