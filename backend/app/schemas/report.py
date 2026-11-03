@@ -457,3 +457,127 @@ class DeleteDraftsRequest(BaseModel):
 
     report_ids: list[uuid.UUID] = Field(default_factory=list)
 
+
+# ===========================================================================
+# Voice Recording Session Schemas
+# (User story: giữ nhiều lần ghi âm rồi gửi trích xuất một lần)
+# ===========================================================================
+
+
+class VoiceClipResponse(BaseModel):
+    """1 bản ghi âm trong phiên ghi âm."""
+
+    voice_record_id: uuid.UUID = Field(..., description="UUID của VoiceRecord")
+    status: str = Field(..., description="pending | processing | completed | failed")
+    audio_url: str | None = Field(None, description="URL file audio trên MinIO")
+    audio_duration: float | None = Field(None, description="Thời lượng (giây)")
+    file_size_bytes: int | None = Field(None, description="Kích thước file (bytes)")
+    transcript: str | None = Field(None, description="Transcript đã STT xong")
+    error_message: str | None = Field(None, description="Lỗi nếu status = failed")
+    is_representative: bool = Field(
+        False, description="True nếu đây là bản ghi đại diện (chứa extraction)"
+    )
+    created_at: datetime | None = Field(None, description="Thời điểm upload")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VoiceSessionResponse(BaseModel):
+    """Response trả về thông tin 1 phiên ghi âm."""
+
+    session_id: uuid.UUID = Field(..., description="UUID của phiên ghi âm")
+    teacher_id: uuid.UUID | None = None
+    class_id: uuid.UUID | None = None
+    child_id: uuid.UUID | None = None
+    scope: str = Field(..., description="single_child | whole_class")
+    status: str = Field(..., description="active | merged | discarded")
+    recorded_at: date | None = Field(None, description="Ngày ghi âm của phiên")
+    merged_transcript: str | None = Field(
+        None, description="Transcript gộp (NULL trước khi bấm Gửi)"
+    )
+    representative_voice_record_id: uuid.UUID | None = Field(
+        None, description="Bản ghi đại diện (chứa extraction_result)"
+    )
+    clips: list[VoiceClipResponse] = Field(
+        default_factory=list, description="Các bản ghi thuộc phiên (theo thứ tự ghi)"
+    )
+    pending_count: int = Field(
+        0,
+        description=(
+            "Số bản ghi CHƯA STT xong (pending/processing/failed). "
+            "FE nên disable nút 'Gửi' khi > 0 vì các bản này sẽ bị bỏ qua khi gộp."
+        ),
+    )
+    completed_count: int = Field(
+        0, description="Số bản ghi đã STT xong thành công (sẽ được gộp)"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CreateVoiceSessionRequest(BaseModel):
+    """Payload cho POST /api/teacher/voice/sessions."""
+
+    teacher_id: uuid.UUID = Field(..., description="UUID của giáo viên")
+    class_id: uuid.UUID = Field(..., description="UUID của lớp học")
+    child_id: uuid.UUID | None = Field(
+        None, description="UUID của bé (chỉ khi scope = single_child)"
+    )
+    scope: str = Field(
+        "whole_class",
+        description="single_child | whole_class",
+        pattern="^(single_child|whole_class)$",
+    )
+    recorded_at: date | None = Field(
+        None, description="Ngày ghi âm (mặc định = hôm nay theo giờ VN)"
+    )
+    force_new: bool = Field(
+        False,
+        description=(
+            "False (mặc định) → tái sử dụng phiên ACTIVE của (teacher, lớp, ngày) "
+            "nếu đã có, để mở lại màn hình ghi âm không sinh phiên rác. "
+            "True → luôn tạo phiên mới."
+        ),
+    )
+
+
+class MergeVoiceSessionRequest(BaseModel):
+    """Payload cho POST /api/teacher/voice/sessions/{id}/merge."""
+
+    teacher_id: uuid.UUID = Field(..., description="UUID của giáo viên")
+    edited_transcript: str | None = Field(
+        None,
+        description=(
+            "Transcript gộp do giáo viên chỉnh sửa. "
+            "Nếu None → backend tự gộp từ các bản ghi đã STT xong."
+        ),
+    )
+
+
+class MergeVoiceSessionResponse(BaseModel):
+    """Response cho endpoint merge."""
+
+    session_id: uuid.UUID = Field(..., description="UUID của phiên ghi âm")
+    merged_transcript: str = Field(..., description="Transcript đã gộp")
+    clip_count: int = Field(0, description="Số bản ghi được gộp")
+    skipped_clips: int = Field(
+        0, description="Số bản ghi bị bỏ qua (chưa STT xong hoặc rỗng)"
+    )
+    representative_voice_record_id: uuid.UUID | None = Field(
+        None, description="Bản ghi đại diện – dùng cho /voice/{id}/analyze"
+    )
+
+
+class DeleteVoiceClipResponse(BaseModel):
+    """Response cho DELETE /api/teacher/voice/{voice_id}."""
+
+    voice_record_id: uuid.UUID = Field(..., description="UUID của bản ghi đã xoá")
+    deleted: bool = Field(True, description="True nếu đã xoá")
+    audio_deleted: bool = Field(
+        False, description="True nếu file trên MinIO cũng đã bị xoá"
+    )
+    session_id: uuid.UUID | None = Field(
+        None, description="Phiên chứa bản ghi (nếu có)"
+    )
+
+

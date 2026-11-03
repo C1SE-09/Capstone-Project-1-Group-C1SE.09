@@ -33,7 +33,7 @@ import subprocess
 import tempfile
 import unicodedata
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from fastapi import (
@@ -58,6 +58,8 @@ from app.models.report import (
     DailyReport,
     DailyReportStatus,
     VoiceRecord,
+    VoiceRecordingSession,
+    VoiceRecordingSessionStatus,
     VoiceRecordScope,
     VoiceRecordStatus,
 )
@@ -66,10 +68,14 @@ from app.schemas.report import (
     ActivityEntryResponse,
     ApproveItemRequest,
     ApproveItemResponse,
+    CreateVoiceSessionRequest,
     DailyReportDetailResponse,
     DeleteDraftsRequest,
+    DeleteVoiceClipResponse,
     DraftReportCreateRequest,
     ManualReportCreateRequest,
+    MergeVoiceSessionRequest,
+    MergeVoiceSessionResponse,
     SendAllItemResult,
     SendAllRequest,
     SendAllResponse,
@@ -78,14 +84,29 @@ from app.schemas.report import (
     SendBatchResponse,
     SendReportResponse,
     TranscriptUpdateRequest,
+    VoiceClipResponse,
     VoiceRecordDetailResponse,
     VoiceRecordUploadResponse,
+    VoiceSessionResponse,
 )
 from app.services.draft_report_service import (
     FIELDS_MAPPING,
     create_child_draft,
     create_classwide_drafts,
     create_unmatched_drafts,
+)
+from app.services.voice_session_service import (
+    attach_clip_to_session,
+    create_session,
+    delete_clip,
+    discard_session,
+    get_or_create_active_session,
+    list_sessions,
+    mark_session_merged,
+    merge_transcripts,
+    resolve_child_id,
+    resolve_teacher_id,
+    sorted_clips,
 )
 from app.services.extraction_service import (
     extract_multi_person,
@@ -95,8 +116,8 @@ from app.services.notification_service import (
     parent_device_tokens,
 )
 from app.services.validation_service import ValidationError, validate_transcript_content
+from app.services.stt_dispatch_service import dispatch_stt_task, redispatch_stuck_records
 from app.tasks.notifications import send_report_notifications
-from app.tasks.process_audio import process_audio_task
 from app.config import get_today
 
 logger = logging.getLogger(__name__)
@@ -220,6 +241,13 @@ def upload_voice_record(
     teacher_id: uuid.UUID = Form(..., description="UUID của teacher đang upload"),
     class_id: uuid.UUID = Form(..., description="UUID của lớp học liên quan"),
     child_id: uuid.UUID | None = Form(None, description="UUID của child liên quan"),
+    session_id: uuid.UUID | None = Form(
+        None,
+        description=(
+            "UUID của phiên ghi âm để gom bản ghi này vào cùng 1 phiên. "
+            "Nếu không truyền → tự tạo/lấy phiên ACTIVE của (teacher, lớp, hôm nay)."
+        ),
+    ),
     db: Session = Depends(get_db),
 ) -> VoiceRecordUploadResponse:
     # ------------------------------------------------------------------
@@ -315,21 +343,65 @@ def upload_voice_record(
         audio_duration=duration,
         file_size_bytes=file_size,
         status=VoiceRecordStatus.PENDING,
+        recorded_at=get_today(),
     )
+
+    # ------------------------------------------------------------------
+    # 6b. Gắn bản ghi vào phiên ghi âm (nhiều bản → gộp 1 lần)
+    # ------------------------------------------------------------------
+    scope = (
+        VoiceRecordScope.SINGLE_CHILD
+        if child_id is not None
+        else VoiceRecordScope.WHOLE_CLASS
+    )
+    session = None
+    if session_id is not None:
+        session = (
+            db.query(VoiceRecordingSession)
+            .filter(VoiceRecordingSession.session_id == session_id)
+            .first()
+        )
+        if session is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Recording session not found.",
+            )
+        if session.teacher_id is not None and session.teacher_id != teacher_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to add clips to this session.",
+            )
+
     db.add(voice_record)
+    db.flush()
+
+    if session is None:
+        session = get_or_create_active_session(
+            db=db,
+            teacher_id=teacher_id,
+            class_id=class_id,
+            child_id=child_id,
+            scope=scope,
+        )
+    attach_clip_to_session(db=db, voice_record=voice_record, session=session)
+
     db.commit()
     db.refresh(voice_record)
 
     logger.info(
-        "VoiceRecord created: id=%s teacher_id=%s",
+        "VoiceRecord created: id=%s teacher_id=%s session_id=%s",
         voice_record.voice_record_id,
         teacher_id,
+        session.session_id,
     )
 
     # ------------------------------------------------------------------
     # 7. Dispatch Celery task
     # ------------------------------------------------------------------
-    process_audio_task.delay(str(voice_record.voice_record_id))
+    # Dùng wrapper an toàn: lỗi broker (Redis down) không được làm hỏng
+    # request upload — file đã lên MinIO, record đã có trong DB, và task
+    # sẽ được đẩy lại bởi cơ chế re-dispatch.
+    dispatch_stt_task(voice_record.voice_record_id, db=db)
 
     # ------------------------------------------------------------------
     # 8. Trả về 201
@@ -338,6 +410,48 @@ def upload_voice_record(
         id=voice_record.voice_record_id,
         status=voice_record.status.value,
     )
+
+
+@router.get(
+    "/voice/sessions",
+    response_model=list[VoiceSessionResponse],
+    summary="List recording sessions",
+    description=(
+        "Liệt kê các phiên ghi âm của giáo viên. Dùng để app mở lại phiên ghi "
+        "âm cũ trong ngày (ví dụ cô ấy đóng app rồi mở lại)."
+    ),
+)
+def list_voice_sessions(
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    class_id: uuid.UUID | None = Query(None, description="Lọc theo lớp"),
+    recorded_at: date | None = Query(None, description="Lọc theo ngày"),
+    session_status: VoiceRecordingSessionStatus | None = Query(
+        None,
+        alias="status",
+        description="Lọc theo trạng thái (active | merged | discarded)",
+    ),
+    db: Session = Depends(get_db),
+) -> list[VoiceSessionResponse]:
+    # ------------------------------------------------------------------
+    # Fallback: đẩy lại các clip đang bị kẹt (PENDING quá lâu).
+    # ------------------------------------------------------------------
+    # Nếu worker audio (RunPod) tắt lúc cô ấy upload, task nằm im trong
+    # Redis và clip kẹt ở PENDING. Lần gọi API này là lúc cô ấy mở app
+    # lại → đẩy lại ngay thay vì bắt cô chờ chờ.
+    # Bỏ qua lỗi: đẩy task là việc phụ, không được làm hỏng danh sách.
+    try:
+        redispatch_stuck_records(db=db, teacher_id=teacher_id)
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Không re-dispatch được clip kẹt: %s", exc)
+
+    sessions = list_sessions(
+        db=db,
+        teacher_id=teacher_id,
+        class_id=class_id,
+        recorded_at=recorded_at,
+        status=session_status,
+    )
+    return [_serialize_session(s) for s in sessions]
 
 
 @router.get(
@@ -378,6 +492,316 @@ def get_voice_record(
         edited_transcript=voice_record.edited_transcript,
         transcription=effective_transcript,
         error_message=voice_record.error_message,
+    )
+
+
+# ===========================================================================
+# Recording Session endpoints
+# ---------------------------------------------------------------------------
+# User story: "Giữ nhiều lần ghi âm rồi thực hiện gửi trích xuất một lần".
+#
+#   POST   /voice/sessions              → tạo phiên ghi âm (mở màn hình ghi)
+#   GET    /voice/sessions              → liệt kê phiên (mở lại phiên cũ)
+#   GET    /voice/sessions/{id}         → chi tiết phiên + các bản ghi
+#   POST   /voice/sessions/{id}/merge   → gộp transcript của N bản thành 1
+#   DELETE /voice/sessions/{id}         → huỷ phiên (giữ lại các bản ghi)
+#   DELETE /voice/{voice_id}            → xoá 1 bản ghi (nút X trên thanh)
+# ===========================================================================
+
+
+def _serialize_session(
+    session: VoiceRecordingSession,
+) -> VoiceSessionResponse:
+    """Chuyển model ORM → response schema (kèm danh sách bản ghi)."""
+    clips = sorted_clips(session)
+
+    completed = [
+        c
+        for c in clips
+        if c.status == VoiceRecordStatus.COMPLETED
+        and (c.edited_transcript or c.raw_transcript or "").strip()
+    ]
+    pending = [c for c in clips if c not in completed]
+
+    return VoiceSessionResponse(
+        session_id=session.session_id,
+        teacher_id=session.teacher_id,
+        class_id=session.class_id,
+        child_id=session.child_id,
+        scope=session.scope.value,
+        status=session.status.value,
+        recorded_at=session.recorded_at,
+        merged_transcript=session.merged_transcript,
+        representative_voice_record_id=session.representative_voice_record_id,
+        pending_count=len(pending),
+        completed_count=len(completed),
+        clips=[
+            VoiceClipResponse(
+                voice_record_id=clip.voice_record_id,
+                status=clip.status.value,
+                audio_url=clip.audio_url,
+                audio_duration=clip.audio_duration,
+                file_size_bytes=clip.file_size_bytes,
+                transcript=clip.edited_transcript or clip.raw_transcript,
+                error_message=clip.error_message,
+                is_representative=(
+                    session.representative_voice_record_id == clip.voice_record_id
+                ),
+                created_at=clip.created_at,
+            )
+            for clip in clips
+        ],
+    )
+
+
+@router.post(
+    "/voice/sessions",
+    status_code=status.HTTP_201_CREATED,
+    response_model=VoiceSessionResponse,
+    summary="Create a recording session",
+    description=(
+        "Tạo 1 phiên ghi âm để gom nhiều bản ghi âm của cùng 1 lớp/ngày. "
+        "Sau đó mỗi bản ghi âm upload kèm `session_id` sẽ được gom vào phiên này."
+    ),
+)
+def create_voice_session(
+    payload: CreateVoiceSessionRequest,
+    db: Session = Depends(get_db),
+) -> VoiceSessionResponse:
+    """
+    Tạo (hoặc mở lại) phiên ghi âm.
+
+    Mặc định (``force_new = False``) → tái sử dụng phiên ACTIVE của
+    ``(teacher, lớp, ngày)`` nếu đã có. Nhờ vậy khi giáo viên thoát app rồi
+    vào lại màn hình ghi âm, các bản ghi cũ vẫn hiện và không bị sinh phiên
+    rác.
+
+    ``force_new = True`` → luôn tạo phiên mới (dùng khi cố ý bắt đầu phiên
+    khác trong cùng 1 ngày).
+    """
+    teacher_id = resolve_teacher_id(db, payload.teacher_id)
+    child_id = resolve_child_id(db, payload.child_id)
+
+    scope = (
+        VoiceRecordScope.SINGLE_CHILD
+        if payload.scope == VoiceRecordScope.SINGLE_CHILD.value
+        else VoiceRecordScope.WHOLE_CLASS
+    )
+
+    if payload.force_new:
+        session = create_session(
+            db=db,
+            teacher_id=teacher_id,
+            class_id=payload.class_id,
+            child_id=child_id if scope == VoiceRecordScope.SINGLE_CHILD else None,
+            scope=scope,
+            recorded_at=payload.recorded_at,
+        )
+    else:
+        session = get_or_create_active_session(
+            db=db,
+            teacher_id=teacher_id,
+            class_id=payload.class_id,
+            child_id=child_id if scope == VoiceRecordScope.SINGLE_CHILD else None,
+            scope=scope,
+            recorded_at=payload.recorded_at,
+        )
+
+    db.commit()
+    db.refresh(session)
+
+    logger.info(
+        "[VoiceSession] API create session=%s teacher=%s force_new=%s",
+        session.session_id,
+        teacher_id,
+        payload.force_new,
+    )
+    return _serialize_session(session)
+
+
+@router.get(
+    "/voice/sessions/{session_id}",
+    response_model=VoiceSessionResponse,
+    summary="Get recording session detail",
+    description="Trả về phiên ghi âm kèm danh sách bản ghi (để app render thanh ghi âm).",
+)
+def get_voice_session(
+    session_id: uuid.UUID,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    db: Session = Depends(get_db),
+) -> VoiceSessionResponse:
+    session = (
+        db.query(VoiceRecordingSession)
+        .filter(VoiceRecordingSession.session_id == session_id)
+        .first()
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail="Recording session not found")
+
+    if session.teacher_id is not None and session.teacher_id != teacher_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this recording session",
+        )
+
+    return _serialize_session(session)
+
+
+@router.post(
+    "/voice/sessions/{session_id}/merge",
+    response_model=MergeVoiceSessionResponse,
+    summary="Merge all clips of a session into one transcript",
+    description=(
+        "Gộp transcript của tất cả bản ghi đã STT xong trong phiên thành 1 text "
+        "duy nhất (nối bằng newline). Sau đó app gọi "
+        "`POST /voice/{representative_voice_record_id}/analyze` để chạy NLP "
+        "1 lần trên transcript gộp."
+    ),
+)
+def merge_voice_session(
+    session_id: uuid.UUID,
+    payload: MergeVoiceSessionRequest,
+    db: Session = Depends(get_db),
+) -> MergeVoiceSessionResponse:
+    session = (
+        db.query(VoiceRecordingSession)
+        .filter(VoiceRecordingSession.session_id == session_id)
+        .first()
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail="Recording session not found")
+
+    if session.teacher_id is not None and session.teacher_id != payload.teacher_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to merge this recording session",
+        )
+
+    # Transcript do giáo viên chỉnh sửa được ưu tiên; nếu không thì backend tự gộp.
+    if payload.edited_transcript and payload.edited_transcript.strip():
+        merged = payload.edited_transcript.strip()
+    else:
+        merged = merge_transcripts(session)
+
+    if not merged:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Chưa có bản ghi âm nào được nhận dạng giọng nói thành công. "
+                "Vui lòng đợi hoặc ghi âm lại."
+            ),
+        )
+
+    # Bản ghi đại diện = bản đầu tiên trong phiên (nơi lưu extraction_result).
+    clips = sorted_clips(session)
+    representative_id = (
+        clips[0].voice_record_id if clips else session.representative_voice_record_id
+    )
+
+    completed_clips = [
+        c
+        for c in clips
+        if c.status == VoiceRecordStatus.COMPLETED
+        and (c.edited_transcript or c.raw_transcript or "").strip()
+    ]
+
+    mark_session_merged(
+        db=db,
+        session=session,
+        merged_transcript=merged,
+        representative_voice_record_id=representative_id,
+    )
+    db.commit()
+    db.refresh(session)
+
+    logger.info(
+        "[VoiceSession] API merge session=%s clips=%d skipped=%d",
+        session_id,
+        len(completed_clips),
+        len(clips) - len(completed_clips),
+    )
+
+    return MergeVoiceSessionResponse(
+        session_id=session_id,
+        merged_transcript=merged,
+        clip_count=len(completed_clips),
+        skipped_clips=len(clips) - len(completed_clips),
+        representative_voice_record_id=representative_id,
+    )
+
+
+@router.delete(
+    "/voice/sessions/{session_id}",
+    summary="Discard a recording session",
+    description=(
+        "Huỷ 1 phiên ghi âm. Các bản ghi vẫn được giữ lại để tham khảo/audit, "
+        "chỉ phiên bị đánh dấu discarded."
+    ),
+)
+def delete_voice_session(
+    session_id: uuid.UUID,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        discarded = discard_session(db, session_id, teacher_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    if not discarded:
+        raise HTTPException(status_code=404, detail="Recording session not found")
+
+    db.commit()
+    return {
+        "session_id": str(session_id),
+        "status": VoiceRecordingSessionStatus.DISCARDED.value,
+        "deleted": True,
+    }
+
+
+@router.delete(
+    "/voice/{voice_id}",
+    response_model=DeleteVoiceClipResponse,
+    summary="Delete a voice clip",
+    description=(
+        "Xoá 1 bản ghi âm trong phiên (nút X trên thanh ghi âm kiểu Messenger). "
+        "Xoá cả row trong DB lẫn file audio trên MinIO."
+    ),
+)
+def delete_voice_clip(
+    voice_id: uuid.UUID,
+    teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
+    db: Session = Depends(get_db),
+) -> DeleteVoiceClipResponse:
+    clip = db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
+    if clip is None:
+        raise HTTPException(status_code=404, detail="VoiceRecord not found")
+
+    if clip.teacher_id is not None and clip.teacher_id != teacher_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to delete this recording",
+        )
+
+    session_id = clip.session_id
+
+    try:
+        deleted = delete_clip(db=db, clip_id=voice_id, teacher_id=teacher_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="VoiceRecord not found")
+
+    db.commit()
+
+    logger.info("[VoiceSession] API delete clip=%s session=%s", voice_id, session_id)
+
+    return DeleteVoiceClipResponse(
+        voice_record_id=voice_id,
+        deleted=True,
+        audio_deleted=True,
+        session_id=session_id,
     )
 
 

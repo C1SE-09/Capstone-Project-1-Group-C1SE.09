@@ -65,7 +65,6 @@ if TYPE_CHECKING:
     from app.models.child import Child
     from app.models.user import Class_, Teacher
 
-
 # ===========================================================================
 # Enums
 # ===========================================================================
@@ -95,6 +94,19 @@ class VoiceRecordStatus(str, enum.Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class VoiceRecordingSessionStatus(str, enum.Enum):
+    """Lifecycle of a VoiceRecordingSession (một phiên ghi âm gồm nhiều bản).
+
+    ACTIVE     – đang thu thập bản ghi (có thể thêm/xoá bản ghi).
+    MERGED     – đã gộp transcript và gửi đi phân tích.
+    DISCARDED  – phiên bị huỷ, các bản ghi vẫn giữ để tham khảo.
+    """
+
+    ACTIVE = "active"
+    MERGED = "merged"
+    DISCARDED = "discarded"
 
 
 class BroadcastReportStatus(str, enum.Enum):
@@ -155,6 +167,177 @@ class ActivityCategory(str, enum.Enum):
 
 
 # ===========================================================================
+# VoiceRecordingSession
+# ===========================================================================
+
+
+class VoiceRecordingSession(Base, TimestampMixin):
+    """Một phiên ghi âm gồm N bản ghi, gộp lại để phân tích 1 lần.
+
+    User story: giáo viên ghi âm nhiều lần trong ngày (mỗi lần 1 bản, hiển
+    thị như Messenger) rồi bấm "Gửi" 1 lần → hệ thống gộp transcript của các
+    bản thành 1 text rồi chạy NLP một lần.
+
+    Mỗi bản ghi là 1 row ``VoiceRecord`` với ``session_id`` trỏ về đây.
+
+    Columns
+    -------
+    session_id    : UUID PK (auto-generated)
+    teacher_id    : FK → teacher.teacher_id  (SET NULL on teacher deletion)
+    class_id      : FK → class.class_id      (SET NULL on class deletion)
+    child_id      : FK → child.child_id      (SET NULL, cho phiên ghi 1 bé)
+    scope         : VoiceRecordScope – single_child hay whole_class
+    recorded_at   : Ngày ghi âm của phiên (dùng để mở lại phiên cũ)
+    status        : VoiceRecordingSessionStatus – active / merged / discarded
+    merged_transcript : Text gộp của tất cả bản (NULL cho tới khi "Gửi")
+    representative_voice_record_id : Bản ghi đại diện, nơi lưu extraction
+                                     sau khi phân tích transcript gộp
+
+    Relationships
+    -------------
+    voice_records : List[VoiceRecord] – các bản ghi thuộc phiên
+    """
+
+    __tablename__ = "voice_recording_session"
+
+    __table_args__ = (
+        Index("ix_voice_recording_session_teacher_id", "teacher_id"),
+        Index("ix_voice_recording_session_class_id", "class_id"),
+        Index("ix_voice_recording_session_recorded_at", "recorded_at"),
+        Index("ix_voice_recording_session_status", "status"),
+        {"comment": "Recording sessions that group multiple voice clips for one merge"},
+    )
+
+    # --- Primary key ---
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        comment="Surrogate primary key (UUID v4)",
+    )
+
+    # --- Foreign keys ---
+    teacher_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "teacher.teacher_id",
+            ondelete="SET NULL",
+            name="fk_voice_recording_session_teacher_id",
+        ),
+        nullable=True,
+        comment="Teacher who owns the session – NULL if teacher is deleted",
+    )
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "class.class_id",
+            ondelete="SET NULL",
+            name="fk_voice_recording_session_class_id",
+        ),
+        nullable=True,
+        comment="Target class of the session – NULL for single_child sessions",
+    )
+    child_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "child.child_id",
+            ondelete="SET NULL",
+            name="fk_voice_recording_session_child_id",
+        ),
+        nullable=True,
+        comment="Subject child for single_child sessions – NULL for whole_class",
+    )
+
+    # --- Session metadata ---
+    scope: Mapped[VoiceRecordScope] = mapped_column(
+        SAEnum(
+            VoiceRecordScope,
+            values_callable=lambda x: [e.value for e in x],
+            name="voice_record_scope_enum",
+            create_type=True,
+        ),
+        nullable=False,
+        default=VoiceRecordScope.WHOLE_CLASS,
+        server_default=VoiceRecordScope.WHOLE_CLASS.value,
+        comment="Scope of the session: single_child or whole_class",
+    )
+    recorded_at: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+        comment="Date the session belongs to (defaults to today in VN timezone)",
+    )
+    status: Mapped[VoiceRecordingSessionStatus] = mapped_column(
+        SAEnum(
+            VoiceRecordingSessionStatus,
+            values_callable=lambda x: [e.value for e in x],
+            name="voice_recording_session_status_enum",
+            create_type=True,
+        ),
+        nullable=False,
+        default=VoiceRecordingSessionStatus.ACTIVE,
+        server_default=VoiceRecordingSessionStatus.ACTIVE.value,
+        comment="Session lifecycle: active → merged | discarded",
+    )
+    merged_transcript: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Transcript gộp của tất cả bản ghi trong phiên (NULL trước khi gửi)",
+    )
+    representative_voice_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "voice_record.voice_record_id",
+            ondelete="SET NULL",
+            name="fk_voice_recording_session_representative_voice_record_id",
+            # Quan hệ FK hai chiều với voice_record.session_id tạo vòng.
+            # Postgres cần ALTER riêng cho 1 trong 2 FK.
+            use_alter=True,
+        ),
+        nullable=True,
+        comment="Bản ghi đại diện – nơi lưu extraction_result sau khi phân tích",
+    )
+
+    # --- Relationships ---
+    teacher: Mapped[Teacher | None] = relationship(
+        "Teacher",
+        back_populates="recording_sessions",
+        lazy="joined",
+    )
+    class_: Mapped[Class_ | None] = relationship(
+        "Class_",
+        back_populates="recording_sessions",
+        lazy="joined",
+    )
+    child: Mapped[Child | None] = relationship(
+        "Child",
+        back_populates="recording_sessions",
+        lazy="joined",
+    )
+    voice_records: Mapped[list[VoiceRecord]] = relationship(
+        "VoiceRecord",
+        back_populates="session",
+        # 2 đường FK nối 2 bảng này (session_id ↔ representative_voice_record_id)
+        # → phải chỉ định rõ cột FK để SQLAlchemy không bị mơ hồ.
+        foreign_keys="VoiceRecord.session_id",
+        cascade="save-update, merge",  # FK is SET NULL – do NOT delete-orphan
+        lazy="select",
+        order_by="VoiceRecord.created_at",
+    )
+    representative_voice_record: Mapped[VoiceRecord | None] = relationship(
+        "VoiceRecord",
+        foreign_keys=[representative_voice_record_id],
+        lazy="joined",
+    )
+
+    # --- Dunder ---
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"<VoiceRecordingSession id={self.session_id!s} "
+            f"teacher_id={self.teacher_id!s} status={self.status.value!r}>"
+        )
+
+
+# ===========================================================================
 # VoiceRecord
 # ===========================================================================
 
@@ -197,6 +380,7 @@ class VoiceRecord(Base, TimestampMixin):
         Index("ix_voice_record_scope", "scope"),
         Index("ix_voice_record_status", "status"),
         Index("ix_voice_record_recorded_at", "recorded_at"),
+        Index("ix_voice_record_session_id", "session_id"),
         {"comment": "Raw audio recordings uploaded by teachers for AI transcription"},
     )
 
@@ -238,6 +422,28 @@ class VoiceRecord(Base, TimestampMixin):
         ),
         nullable=True,
         comment="Target class for whole_class recording – NULL for single_child",
+    )
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "voice_recording_session.session_id",
+            ondelete="SET NULL",
+            name="fk_voice_record_session_id",
+        ),
+        nullable=True,
+        comment=(
+            "Phiên ghi âm chứa bản ghi này – NULL cho bản ghi đơn lẻ (legacy) "
+            "hoặc khi phiên đã bị xoá"
+        ),
+    )
+    clip_order: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment=(
+            "Thứ tự bản ghi trong phiên (0, 1, 2...). Dùng để gộp transcript "
+            "theo đúng thứ tự ghi – created_at không đủ tin cậy vì nhiều bản "
+            "có thể trùng timestamp."
+        ),
     )
 
     # --- Scope & Audio metadata ---
@@ -297,6 +503,22 @@ class VoiceRecord(Base, TimestampMixin):
         nullable=True,
         comment="Error detail when status = FAILED; used for debugging and retries",
     )
+    stt_dispatch_attempts: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+        comment=(
+            "Số lần đã đẩy task STT vào queue. Dùng để giới hạn số lần "
+            "re-dispatch cho bản ghi kẹt (worker audio không chạy) và tránh "
+            "spam queue."
+        ),
+    )
+    last_stt_dispatch_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Thời điểm đẩy task STT gần nhất (dùng để tính bản ghi bị kẹt)",
+    )
     # --- AI extraction ---
     extraction_result: Mapped[dict | None] = mapped_column(
         JSON,
@@ -324,6 +546,13 @@ class VoiceRecord(Base, TimestampMixin):
     class_: Mapped[Class_ | None] = relationship(
         "Class_",
         back_populates="voice_records",
+        lazy="joined",
+    )
+    session: Mapped[VoiceRecordingSession | None] = relationship(
+        "VoiceRecordingSession",
+        back_populates="voice_records",
+        # Xem giải thích ở VoiceRecordingSession.voice_records — 2 đường FK.
+        foreign_keys="VoiceRecord.session_id",
         lazy="joined",
     )
     daily_report: Mapped[DailyReport | None] = relationship(

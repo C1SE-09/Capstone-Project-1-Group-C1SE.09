@@ -108,7 +108,7 @@ def client(mock_db):
             return_value=f"http://minio:9000/audio/teacher_{TEACHER_ID}_abc123.m4a",
         ),
         patch("app.api.teacher._extract_duration_ffprobe", return_value=42.0),
-        patch("app.api.teacher.process_audio_task.delay"),  # don't hit Celery
+        patch("app.api.teacher.dispatch_stt_task", return_value=True),  # don't hit Celery
     ):
         yield TestClient(app)
 

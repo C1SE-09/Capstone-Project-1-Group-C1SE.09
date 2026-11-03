@@ -60,6 +60,7 @@ if TYPE_CHECKING:
     from app.models.report import (
         DailyReport,
         VoiceRecord,
+        VoiceRecordingSession,
     )
     from app.models.user import Class_
 
@@ -250,6 +251,13 @@ class Child(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="select",
         order_by="VoiceRecord.recorded_at",
+    )
+    recording_sessions: Mapped[list[VoiceRecordingSession]] = orm_relationship(
+        "VoiceRecordingSession",
+        back_populates="child",
+        cascade="save-update, merge",  # FK is SET NULL – do NOT delete-orphan
+        lazy="select",
+        order_by="VoiceRecordingSession.created_at",
     )
     daily_reports: Mapped[list[DailyReport]] = orm_relationship(
         "DailyReport",
