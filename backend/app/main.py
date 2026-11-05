@@ -27,6 +27,7 @@ from app.api.endpoints.schedule import (
     time_slot_router,
 )
 from app.api.endpoints.stt import router as stt_router
+from app.api.endpoints.report_responses import router as report_responses_router
 from app.api.parent import router as parent_router
 from app.api.teacher import reports_router
 from app.api.teacher import router as teacher_router
@@ -102,6 +103,7 @@ app.include_router(leave_requests_router, prefix="/api")
 app.include_router(health_exam_router, prefix="/api")
 app.include_router(health_incident_router, prefix="/api")
 app.include_router(medication_router, prefix="/api")
+app.include_router(report_responses_router)
 
 
 @app.get("/")

@@ -15,7 +15,7 @@ MVP Note:
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -102,6 +102,19 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
             if e.description:
                 category_map[cat.lower()] = e.description
 
+    # Phản hồi của phụ huynh (phẳng, cũ → mới) — đính kèm luôn để client
+    # không phải gọi thêm 1 request khi mở báo cáo.
+    responses_payload = [
+        _response_dict(r) for r in sorted(
+            getattr(report, "responses", []) or [],
+            key=lambda r: (r.created_at or datetime.min.replace(tzinfo=UTC), r.response_id),
+        )
+    ]
+    unread_count = sum(
+        1 for r in (getattr(report, "responses", []) or [])
+        if r.author_role == "parent" and not r.is_read
+    )
+
     return {
         "daily_report_id": str(report.daily_report_id),
         "teacher_id": str(report.teacher_id) if report.teacher_id else None,
@@ -134,6 +147,49 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
         "health": category_map.get("health"),
         "activities_text": category_map.get("play") or category_map.get("learning"),
         "mood": category_map.get("behavior"),
+        # --- Phản hồi của phụ huynh (phẳng) ---
+        "responses": responses_payload,
+        "response_count": len(responses_payload),
+        "unread_response_count": unread_count,
+    }
+
+
+def _response_dict(response: Any) -> dict[str, Any]:
+    """Chuyển 1 ReportResponse → dict cho client (dùng chung shape với schema)."""
+    author = getattr(response, "author", None)
+    author_name = "Người dùng đã xoá"
+    author_avatar = None
+    if author is not None:
+        if author.teacher is not None and author.teacher.full_name:
+            author_name = author.teacher.full_name
+        elif author.parent is not None and author.parent.full_name:
+            author_name = author.parent.full_name
+        else:
+            author_name = author.username
+        if author.teacher is not None:
+            author_avatar = author.teacher.avatar_url
+        elif author.parent is not None:
+            author_avatar = author.parent.avatar_url
+
+    return {
+        "response_id": str(response.response_id),
+        "daily_report_id": str(response.daily_report_id),
+        "child_id": str(response.child_id) if response.child_id else None,
+        "author_user_id": (
+            str(response.author_user_id) if response.author_user_id else None
+        ),
+        "author_role": response.author_role,
+        "author_name": author_name,
+        "author_avatar_url": author_avatar,
+        "content": response.content,
+        "has_image": bool(response.image_url),
+        "is_read": response.is_read,
+        "is_resolved": response.is_resolved,
+        "resolved_at": (
+            response.resolved_at.isoformat() if response.resolved_at else None
+        ),
+        "created_at": response.created_at.isoformat() if response.created_at else None,
+        "updated_at": response.updated_at.isoformat() if response.updated_at else None,
     }
 
 

@@ -31,6 +31,7 @@ celery_app = Celery(
         "app.tasks.medication_notifications",
         "app.tasks.incident_notifications",
         "app.tasks.redispatch_stuck_audio",
+        "app.tasks.report_response_notifications",
     ],
 )
 
@@ -110,6 +111,9 @@ celery_app.conf.update(
         "send_health_incident_alert_task": {"queue": "notifications"},
         # Task quét bản ghi kẹt: chạy trên worker notifications (nhẹ, không cần GPU).
         "redispatch_stuck_voice_records": {"queue": "notifications"},
+        # Phản hồi báo cáo (parent ↔ teacher): nhẹ, chạy cùng worker notifications.
+        "notify_teacher_report_response": {"queue": "notifications"},
+        "notify_parent_report_response_reply": {"queue": "notifications"},
     },
 )
 

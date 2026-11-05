@@ -63,6 +63,12 @@ from app.models.base import Base, TimestampMixin
 # ---------------------------------------------------------------------------
 if TYPE_CHECKING:
     from app.models.child import Child
+    from app.models.report import (
+        DailyReport,
+        ReportResponse,
+        VoiceRecord,
+        VoiceRecordingSession,
+    )
     from app.models.user import Class_, Teacher
 
 # ===========================================================================
@@ -948,6 +954,13 @@ class DailyReport(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="select",
         order_by="ActivityEntry.entry_order",
+    )
+    responses: Mapped[list[ReportResponse]] = relationship(
+        "ReportResponse",
+        back_populates="daily_report",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="ReportResponse.created_at",
     )
 
     # --- Dunder ---
