@@ -59,6 +59,7 @@ if TYPE_CHECKING:
     from app.models.health_examination import HealthExamination
     from app.models.report import (
         DailyReport,
+        ReportResponse,
         VoiceRecord,
         VoiceRecordingSession,
     )
@@ -272,6 +273,13 @@ class Child(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="select",
         order_by="HealthExamination.examination_date.desc()",
+    )
+    report_responses: Mapped[list[ReportResponse]] = orm_relationship(
+        "ReportResponse",
+        back_populates="child",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="ReportResponse.created_at",
     )
 
     # --- Dunder ---

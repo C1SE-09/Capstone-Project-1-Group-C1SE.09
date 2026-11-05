@@ -63,6 +63,10 @@ from app.models.report import (
     VoiceRecordScope,
     VoiceRecordStatus,
 )
+from app.models.report_response import (
+    ReportResponse,
+    ResponseAuthorRole,
+)
 from app.models.schedule import (
     ClassSchedule,
     Room,
@@ -136,4 +140,6 @@ __all__ = [
     "VoiceRecordingSessionStatus",
     "VoiceRecordScope",
     "VoiceRecordStatus",
+    "ReportResponse",
+    "ResponseAuthorRole",
 ]
