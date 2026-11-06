@@ -142,7 +142,6 @@ def test_classify_uses_who_thresholds_not_flat():
         sd1 + 0.01, birth_date=birth, exam_date=exam, gender="male"
     ) == HealthCategory.OVERWEIGHT
 
-
 def test_classify_gender_specific_thresholds():
     """Be trai va be gai cung tuoi co nguong khac nhau."""
     birth = date(2021, 1, 1)
@@ -192,4 +191,3 @@ def test_classify_children_under_5_uses_standards_2006():
     assert classify_bmi_who(
         sd1 + 0.01, birth_date=birth, exam_date=exam, gender="male"
     ) == HealthCategory.OVERWEIGHT
-

@@ -41,6 +41,20 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
     'noon': 'Buổi trưa',
     'afternoon': 'Buổi chiều'
   };
+  static const _sessionNames = {
+    'morning': 'Sáng',
+    'noon': 'Trưa',
+    'afternoon': 'Chiều'
+  };
+  static const _weekdays = [
+    'Thứ 2',
+    'Thứ 3',
+    'Thứ 4',
+    'Thứ 5',
+    'Thứ 6',
+    'Thứ 7',
+    'Chủ nhật'
+  ];
   @override
   void initState() {
     super.initState();
@@ -183,12 +197,6 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
   @override
   Widget build(BuildContext context) => ParentRequestLayout(
       title: 'Uống thuốc hôm nay',
-      actions: [
-        IconButton(
-            onPressed: _refresh,
-            tooltip: 'Làm mới',
-            icon: const Icon(Icons.refresh)),
-      ],
       child: FutureBuilder<MedicationsTodayData>(
           future: _future,
           builder: (context, snapshot) {
@@ -212,32 +220,32 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                     children: [
-                      Align(
-                          alignment: Alignment.centerLeft,
-                          child: MedicationBadge(
-                              date == null
-                                  ? 'Chưa xác định ngày'
-                                  : '${widget.initialDate == null ? 'Hôm nay' : 'Ngày'} · ${requestDate(date)}',
-                              status: 'given')),
-                      const SizedBox(height: 9),
-                      Text(
-                          '${data.className ?? 'Lớp học'} · Đã uống: ${data.completedCount} · Chờ uống: ${data.pendingCount}',
-                          style: TextStyle(
-                              fontSize: 11.5, color: context.k.inkSoft)),
-                      const SizedBox(height: 9),
-                      Wrap(spacing: 7, children: [
+                      _dateChip(date),
+                      const SizedBox(height: 13),
+                      Wrap(spacing: 7, runSpacing: 7, children: [
                         for (final entry in _labels.entries)
                           ChoiceChip(
-                              label: Text(entry.value,
-                                  style: const TextStyle(fontSize: 11)),
+                              label: Text(entry.value),
                               selected: _filter == entry.key,
                               selectedColor: context.k.brand,
                               backgroundColor: context.k.surface,
+                              surfaceTintColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              elevation: 0,
+                              pressElevation: 0,
+                              labelPadding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              padding: EdgeInsets.zero,
+                              showCheckmark: false,
+                              side: BorderSide.none,
+                              shape: const StadiumBorder(),
+                              visualDensity: VisualDensity.compact,
                               labelStyle: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                   color: _filter == entry.key
                                       ? Theme.of(context).colorScheme.onPrimary
                                       : context.k.inkSoft),
-                              showCheckmark: false,
                               onSelected: (_) => setState(() {
                                     _filter = entry.key;
                                   }))
@@ -265,22 +273,78 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                             _card(item, data.date),
                             const SizedBox(height: 13),
                           ],
+                          if (data.allItems.any((item) =>
+                              item.session == entry.key && item.isGiven))
+                            _lockNote(
+                                entry.key,
+                                data.allItems.firstWhere((item) =>
+                                    item.session == entry.key && item.isGiven)),
                         ],
                       const SizedBox(height: 13),
-                      OutlinedButton(
+                      FilledButton(
                           onPressed: _openingEmergency
                               ? null
                               : () => _emergency(data.classId),
-                          style: OutlinedButton.styleFrom(
-                              foregroundColor: context.k.bad,
-                              side: BorderSide(color: context.k.bad),
+                          style: FilledButton.styleFrom(
+                              backgroundColor: context.k.bad,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 11),
+                              minimumSize: const Size(0, 48),
                               shape: const StadiumBorder(),
-                              minimumSize: const Size(0, 48)),
-                          child: Text(_openingEmergency
-                              ? 'Đang tải danh sách lớp...'
-                              : 'Báo cáo sự cố khẩn cấp')),
+                              textStyle: const TextStyle(
+                                  fontFamily: 'BeVietnamPro',
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700)),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.warning_amber_rounded, size: 18),
+                            const SizedBox(width: 6),
+                            Text(_openingEmergency
+                                ? 'Đang tải danh sách lớp...'
+                                : 'Báo cáo sự cố khẩn cấp')
+                          ])),
                     ]));
           }));
+  Widget _dateChip(DateTime? date) => Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+              color: context.k.brand, borderRadius: BorderRadius.circular(999)),
+          child: Text(
+              date == null
+                  ? 'Chưa xác định ngày'
+                  : '${_isToday(date) ? 'Hôm nay' : 'Ngày'} · '
+                      '${_weekdays[date.weekday - 1]}, '
+                      '${DateFormat(_isToday(date) ? 'dd/MM' : 'dd/MM/yyyy').format(date)}',
+              style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onPrimary))));
+
+  // Ngày Việt Nam, không lấy múi giờ máy giáo viên.
+  bool _isToday(DateTime date) {
+    final vn = DateTime.now().toUtc().add(const Duration(hours: 7));
+    return DateUtils.isSameDay(date, DateTime(vn.year, vn.month, vn.day));
+  }
+
+  Widget _lockNote(String session, MedicationItem given) {
+    final stamp = given.givenAt == null
+        ? null
+        : DateFormat('HH:mm')
+            .format(given.givenAt!.toUtc().add(const Duration(hours: 7)));
+    return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+            color: context.k.warnTint, borderRadius: BorderRadius.circular(14)),
+        child: Text(
+            'Lớp có 2 cô: cô còn lại mở cùng màn hình sẽ thấy trạng thái này và nút xác nhận bị khóa. Nếu cố xác nhận lại, backend trả lỗi 409: "Cảnh báo trùng liều: Bé đã được ${given.givenByName ?? 'một cô'} cho uống thuốc buổi ${_sessionNames[session]}${stamp == null ? '' : ' lúc $stamp'} rồi!" — chống uống trùng liều.',
+            style: TextStyle(fontSize: 11.5, color: context.k.ink)));
+  }
+
   Widget _card(MedicationItem item, String date) {
     final words = item.childName
         .trim()
@@ -322,33 +386,30 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
             Text(item.childNickname!,
                 style: TextStyle(fontSize: 11, color: context.k.inkSoft)),
           Text(
-              '${item.medicationName} · ${item.dosage}${item.timeSlot == null ? '' : ' · ${item.timeSlot}'}',
+              '${item.medicationName} · ${item.dosage}'
+              '${item.timeSlot == null ? '' : ' · ${item.timeSlot}'}'
+              '${item.instructions?.isNotEmpty == true ? ' · ${item.instructions}' : ''}',
               style: TextStyle(fontSize: 11, color: context.k.inkSoft)),
         ]))
       ]),
-      if (item.instructions?.isNotEmpty == true) ...[
-        const SizedBox(height: 9),
-        Text('Dặn dò: ${item.instructions}',
-            style: TextStyle(fontSize: 11.5, color: context.k.inkSoft))
-      ],
       if (item.notes?.isNotEmpty == true &&
           item.notes != item.instructions) ...[
         const SizedBox(height: 9),
         Text('Ghi chú: ${item.notes}',
-            style: TextStyle(fontSize: 11.5, color: context.k.inkSoft))
+            style: TextStyle(fontSize: 11, color: context.k.inkSoft))
       ],
       const SizedBox(height: 9),
       if (item.isGiven)
         Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
-                color: context.k.brandTint,
+                color: context.k.okTint,
                 borderRadius: BorderRadius.circular(12)),
             child: Text(
                 '✓ ${item.givenByName ?? 'Chưa rõ người xác nhận'} đã cho uống'
                 '${stamp == null ? '. Chưa có thời điểm xác nhận.' : ' lúc $stamp'}',
                 style: TextStyle(
-                    color: context.k.brand,
+                    color: context.k.ok,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)))
       else

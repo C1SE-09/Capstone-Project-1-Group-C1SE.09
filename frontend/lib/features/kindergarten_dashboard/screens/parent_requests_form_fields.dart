@@ -16,14 +16,20 @@ class _ParentRequestFormFields extends StatelessWidget {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (form._late) ...[
-              Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                      color: k.warnTint,
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Text('Báo trước để giáo viên nắm lịch đến lớp của bé',
-                      style: TextStyle(fontSize: 11, color: k.warnDeep))),
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                          color: k.warnTint,
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Text(
+                          'Loại đơn mới — báo trước để giáo viên nắm lịch đến lớp của bé',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: k.warnDeep)))),
               const SizedBox(height: 12),
             ],
             _label(context, 'Loại đơn'),
@@ -41,12 +47,12 @@ class _ParentRequestFormFields extends StatelessWidget {
                 teacherName: form.widget.teacherName),
             const SizedBox(height: 12),
             _label(context, form._late ? 'Ngày đi trễ' : 'Từ ngày'),
-            _date(context, requestDate(form._from),
+            _date(context, requestDayLabel(form._from),
                 disabled ? null : () => form._pickDate()),
             if (!form._late) ...[
               const SizedBox(height: 12),
               _label(context, 'Đến ngày'),
-              _date(context, requestDate(form._to),
+              _date(context, requestDayLabel(form._to),
                   disabled ? null : () => form._pickDate(end: true)),
               const SizedBox(height: 12),
               Align(
@@ -69,7 +75,8 @@ class _ParentRequestFormFields extends StatelessWidget {
                   context,
                   '${form._eta.hour.toString().padLeft(2, '0')}:${form._eta.minute.toString().padLeft(2, '0')}',
                   'Chọn giờ',
-                  disabled ? null : form._pickTime),
+                  disabled ? null : form._pickTime,
+                  strong: true),
               SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(children: [
@@ -83,6 +90,7 @@ class _ParentRequestFormFields extends StatelessWidget {
                           label:
                               '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
                           selected: form._eta == time,
+                          brandTone: true,
                           onPressed:
                               disabled ? null : () => form._changeEta(time)),
                       const SizedBox(width: 6),
@@ -127,7 +135,7 @@ class _ParentRequestFormFields extends StatelessWidget {
                   return null;
                 }),
             const SizedBox(height: 4),
-            Text('Lý do tối thiểu 3 ký tự — hệ thống kiểm tra khi gửi.',
+            Text('Lý do tối thiểu 3 ký tự – hệ thống kiểm tra khi gửi.',
                 style: TextStyle(color: k.inkSoft, fontSize: 11)),
             const SizedBox(height: 12),
             OutlinedButton(
@@ -137,7 +145,7 @@ class _ParentRequestFormFields extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
                     backgroundColor: k.surface,
-                    foregroundColor: k.brand,
+                    foregroundColor: k.ink,
                     side: BorderSide(color: k.lineStrong),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10))),
@@ -151,7 +159,7 @@ class _ParentRequestFormFields extends StatelessWidget {
                               ? 'Đang mở ảnh…'
                               : '+ Thêm ảnh giấy khám / đơn thuốc',
                           style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w600)),
+                              fontSize: 12.5, fontWeight: FontWeight.w600)),
                       Text('Không bắt buộc',
                           style: TextStyle(fontSize: 11, color: k.inkSoft)),
                     ])),
@@ -179,23 +187,44 @@ class _ParentRequestFormFields extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: k.inkSoft)),
             if (form._error != null) ...[
               const SizedBox(height: 12),
-              Semantics(
-                  liveRegion: true,
-                  child: Text(form._error!, style: TextStyle(color: k.bad))),
+              Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                      color: k.badTint,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.error_outline, size: 18, color: k.bad),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Semantics(
+                                liveRegion: true,
+                                child: Text(form._error!,
+                                    style: TextStyle(
+                                        fontSize: 12.5, color: k.ink)))),
+                      ])),
               if (form._overlap)
-                TextButton(
-                    onPressed: disabled
-                        ? null
-                        : () => form._discard(ParentRequestDestination.history),
-                    child: const Text('Xem lịch sử đơn')),
+                Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                        onPressed: disabled
+                            ? null
+                            : () =>
+                                form._discard(ParentRequestDestination.history),
+                        child: const Text('Xem lịch sử đơn'))),
             ],
             const SizedBox(height: 12),
             ParentRequestButton(
-                label: 'GỬI ĐƠN',
+                label: form._late ? 'GỬI THÔNG BÁO' : 'GỬI ĐƠN',
                 onPressed: disabled ? null : form._submit,
                 busy: form._busy),
             const SizedBox(height: 8),
-            Text('Đơn sẽ được gửi tới giáo viên chủ nhiệm để duyệt.',
+            Text(
+                form._late
+                    ? 'Giáo viên sẽ thấy ghi chú đi trễ khi điểm danh buổi sáng.'
+                    : 'Đơn sẽ được gửi tới giáo viên chủ nhiệm để duyệt.',
                 style: TextStyle(fontSize: 11, color: k.inkSoft)),
           ]),
         ));
@@ -254,7 +283,7 @@ class _ParentRequestFormFields extends StatelessWidget {
       _control(context, value, 'Chọn ngày', onTap);
 
   Widget _control(BuildContext context, String value, String action,
-          VoidCallback? onTap) =>
+          VoidCallback? onTap, {bool strong = false}) =>
       OutlinedButton(
           onPressed: onTap,
           style: OutlinedButton.styleFrom(
@@ -268,7 +297,11 @@ class _ParentRequestFormFields extends StatelessWidget {
           child: Row(children: [
             Expanded(
                 flex: 3,
-                child: Text(value, style: const TextStyle(fontSize: 13))),
+                child: Text(value,
+                    style: TextStyle(
+                        fontSize: strong ? 18 : 13.5,
+                        fontWeight:
+                            strong ? FontWeight.w700 : FontWeight.w400))),
             const SizedBox(width: 8),
             Flexible(
                 flex: 2,

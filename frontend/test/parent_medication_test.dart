@@ -80,7 +80,7 @@ void main() {
     await tapVisible(tester, find.text('Hủy cữ này'));
     await tapVisible(tester, find.text('Hủy cữ'));
     await tester.pumpAndSettle();
-    expect(find.text('Đã uống'), findsOneWidget);
+    expect(find.text('✓ Đã uống'), findsOneWidget);
     expect(find.textContaining('Cô Mai'), findsOneWidget);
     expect(find.text('Đã hủy'), findsNothing);
     expect(
@@ -280,7 +280,7 @@ void main() {
     await tapVisible(tester, find.text('Gửi đơn dặn thuốc'));
     await tester.pumpAndSettle();
     expect(find.text('Đã tạo đơn dặn thuốc'), findsOneWidget);
-    expect(find.text('Hệ thống đã tạo 2 cữ riêng:'), findsOneWidget);
+    expect(find.text('Hệ thống đã tách thành 2 đơn riêng:'), findsOneWidget);
     expect(
         transport.requests.where((r) => r.method == 'POST').map((r) => r.path),
         ['/api/medication-requests/attachments', '/api/medication-requests']);

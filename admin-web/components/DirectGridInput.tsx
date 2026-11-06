@@ -8,7 +8,6 @@ export interface DirectGridInputProps {
   minRows?: number;
   disabled?: boolean;
 }
-
 /**
  * Component bảng nhập dữ liệu trực tiếp trên Web (Spreadsheet Grid).
  * Hỗ trợ:
@@ -394,4 +393,3 @@ export function DirectGridInput({
     </div>
   );
 }
-

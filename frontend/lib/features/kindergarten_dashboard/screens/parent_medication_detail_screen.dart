@@ -72,20 +72,67 @@ class _ParentMedicationDetailScreenState
     _dialog = true;
     final agreed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-                title: Text('Hủy cữ thuốc ${dose.timeSlot}?'),
-                content: Text(
-                    'Cữ ${dose.name ?? 'thuốc'} lúc ${dose.timeSlot} ngày ${requestDate(dose.requestDate!)} của bé ${widget.child.fullName} sẽ bị hủy khỏi danh sách chờ uống của cô.'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Giữ lại')),
-                  FilledButton(
-                      style: FilledButton.styleFrom(
-                          backgroundColor: context.k.bad),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Hủy cữ'))
-                ]));
+        builder: (context) => Dialog(
+            backgroundColor: context.k.surface,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Hủy cữ thuốc ${dose.timeSlot}?',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 9),
+                      Text(
+                          'Cữ ${dose.name ?? 'thuốc'} lúc ${dose.timeSlot} '
+                          '${medicationDay(dose.requestDate)} của bé '
+                          '${widget.child.fullName} sẽ bị hủy và biến mất khỏi '
+                          'danh sách chờ uống của cô giáo.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              height: 1.4,
+                              color: context.k.inkSoft)),
+                      const SizedBox(height: 9),
+                      Row(children: [
+                        Expanded(
+                            child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                style: OutlinedButton.styleFrom(
+                                    backgroundColor: context.k.surface,
+                                    foregroundColor: context.k.inkSoft,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 11),
+                                    side: BorderSide(
+                                        color: context.k.line, width: 1.5),
+                                    shape: const StadiumBorder(),
+                                    textStyle: const TextStyle(
+                                        fontFamily: 'BeVietnamPro',
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700)),
+                                child: const Text('Giữ lại'))),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: FilledButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: FilledButton.styleFrom(
+                                    backgroundColor: context.k.bad,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 11),
+                                    shape: const StadiumBorder(),
+                                    textStyle: const TextStyle(
+                                        fontFamily: 'BeVietnamPro',
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700)),
+                                child: const Text('Hủy cữ'))),
+                      ]),
+                    ]))));
     _dialog = false;
     if (agreed != true || !mounted || version != _version) return;
     setState(() {
@@ -150,7 +197,19 @@ class _ParentMedicationDetailScreenState
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          MedicationCard(child: MedicationBatchHeading(batch)),
+                          MedicationCard(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                MedicationBatchHeading(batch, showRange: false),
+                                const SizedBox(height: 9),
+                                Text(
+                                    '${batchRange(batch)} · '
+                                    '${batchCreator(batch)}',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: context.k.inkSoft)),
+                              ])),
                           const SizedBox(height: 13),
                           if (_error != null) ...[
                             Semantics(
@@ -172,26 +231,35 @@ class _ParentMedicationDetailScreenState
                                     children: [
                                   Row(children: [
                                     Expanded(
-                                        child: Text(doseWhen(dose),
+                                        child: Text(doseTitle(dose),
                                             style: const TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w700))),
+                                    const SizedBox(width: 8),
                                     Flexible(
                                         child: MedicationBadge(
-                                            doseStatus(dose.status),
+                                            dose.isGiven
+                                                ? '✓ ${doseStatus(dose.status)}'
+                                                : doseStatus(dose.status),
                                             status: dose.status))
                                   ]),
-                                  const SizedBox(height: 9),
-                                  if (dose.isGiven)
+                                  if (dose.isGiven) ...[
+                                    const SizedBox(height: 9),
                                     Text(
                                         '${dose.givenByName ?? 'Chưa rõ người xác nhận'} đã cho uống'
-                                        '${dose.givenAt == null ? ' · chưa có thời điểm trong hồ sơ' : ' lúc ${requestTimestamp(dose.givenAt!)}'}',
+                                        '${dose.givenAt == null ? ' — chưa có thời điểm trong hồ sơ' : ' lúc ${medicationClock(dose.givenAt!)}'}',
                                         style: TextStyle(
                                             fontSize: 11.5,
                                             color: context.k.inkSoft)),
-                                  if (dose.isLegacy)
+                                  ],
+                                  if (dose.isLegacy) ...[
+                                    const SizedBox(height: 9),
                                     Text(
-                                        'Buổi: ${dose.sessions.join(', ')}. Lịch cũ không ghi giờ cụ thể; liên hệ giáo viên khi cần thay đổi.'),
+                                        'Buổi: ${dose.sessions.join(', ')}. Lịch cũ không ghi giờ cụ thể; liên hệ giáo viên khi cần thay đổi.',
+                                        style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: context.k.inkSoft)),
+                                  ],
                                   if (!dose.isLegacy) ...[
                                     const SizedBox(height: 9),
                                     MedicationAction(
@@ -204,10 +272,10 @@ class _ParentMedicationDetailScreenState
                                     const SizedBox(height: 9),
                                     Text(
                                         dose.isGiven
-                                            ? 'Đã cho uống — không thể hủy cữ đã được xác nhận.'
+                                            ? '🔒 Đã cho uống rồi — nút Hủy bị khóa (backend cũng từ chối hủy).'
                                             : dose.status == 'cancelled'
                                                 ? 'Cữ đã được hủy.'
-                                                : 'Chỉ hủy được khi cô chưa xác nhận cho uống.',
+                                                : 'Hủy được khi cữ đang chờ / cô chưa xác nhận. Cữ bị hủy sẽ biến mất khỏi danh sách chờ uống của cô.',
                                         style: TextStyle(
                                             fontSize: 11,
                                             color: dose.isGiven

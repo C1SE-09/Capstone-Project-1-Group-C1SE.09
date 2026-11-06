@@ -121,11 +121,14 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
           IconButton(
               tooltip: 'Tạo đơn mới',
               onPressed: _create,
-              icon: CircleAvatar(
-                  radius: 15,
-                  backgroundColor: context.k.brand,
+              icon: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                      color: context.k.brand,
+                      borderRadius: BorderRadius.circular(15)),
                   child: Icon(Icons.add,
-                      size: 18,
+                      size: 16,
                       color: Theme.of(context).colorScheme.onPrimary)))
         ],
         child: RefreshIndicator(
@@ -145,9 +148,10 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
                         child: Text(
                             'Bé ${widget.child.fullName}${widget.className.isEmpty ? '' : ' · ${widget.className}'}',
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: context.k.brand)))),
+                const SizedBox(height: 12),
                 SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(children: [
@@ -165,6 +169,7 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
                         const SizedBox(width: 6),
                       ],
                     ])),
+                const SizedBox(height: 12),
                 for (final item in _items) ...[
                   _HistoryCard(item: item, onTap: () => _detail(item)),
                   const SizedBox(height: 12),
@@ -245,16 +250,21 @@ class _HistoryCard extends StatelessWidget {
                     if (item.status == LeaveStatus.rejected &&
                         item.rejectReason?.isNotEmpty == true) ...[
                       const SizedBox(height: 6),
-                      ParentRequestCard(
-                          color: context.k.badTint,
+                      Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                              color: context.k.badTint,
+                              borderRadius: BorderRadius.circular(8)),
                           child: Text('Lý do từ chối: ${item.rejectReason}',
                               style: TextStyle(
-                                  fontSize: 12, color: context.k.bad))),
+                                  fontSize: 12.5, color: context.k.ink))),
                     ],
                     const SizedBox(height: 6),
                     Text(
                         item.status == LeaveStatus.pending
-                            ? 'Gửi ${requestTimestamp(item.createdAt)}${item.attachmentUrl == null ? '' : ' · Có ảnh y tế đính kèm'}'
+                            ? 'Gửi ${requestTimestamp(item.createdAt)}${item.attachmentUrl == null ? '' : ' · Có đính kèm giấy khám'}'
                             : '${item.status == LeaveStatus.cancelled ? 'Phụ huynh đã hủy đơn' : '${item.reviewerName ?? 'Giáo viên'} ${item.status == LeaveStatus.approved ? 'đã duyệt' : 'đã từ chối'}'}${item.reviewedAt == null ? '' : ' · ${requestTimestamp(item.reviewedAt!)}'}',
                         style:
                             TextStyle(fontSize: 11, color: context.k.inkSoft)),

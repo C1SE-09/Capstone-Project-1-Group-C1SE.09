@@ -4,9 +4,9 @@ abstract final class KColors {
   // Light theme colors
   static const canvas = Color(0xFFF6F4EF);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceSunken = Color(0xFFEFECE5);
+  static const surfaceSunken = Color(0xFFEDE9E2);
   static const ink = Color(0xFF2A2926);
-  static const inkSoft = Color(0xFF605D57);
+  static const inkSoft = Color(0xFF6E6B63);
   static const inkFaint = Color(0xFF757169); // Darkened for WCAG AA contrast
   static const line = Color(0xFFE7E3DA);
   static const lineStrong = Color(0xFFD9D4C9);
@@ -14,10 +14,10 @@ abstract final class KColors {
   static const brandStrong = Color(0xFF114F46);
   static const brandTint = Color(0xFFE6EFEC);
   static const ok = Color(0xFF3F8B5C);
-  static const okTint = Color(0xFFE7F1EA);
+  static const okTint = Color(0xFFE4F0E7);
   static const warn = Color(0xFFB0791B);
   static const warnDeep = Color(0xFF8A5E12);
-  static const warnTint = Color(0xFFF6EED9);
+  static const warnTint = Color(0xFFF7ECD2);
   static const bad = Color(0xFFBB4A34);
   static const badTint = Color(0xFFF6E6E1);
   static const info = Color(0xFF4B6F8C);

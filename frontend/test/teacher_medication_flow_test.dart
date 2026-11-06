@@ -120,7 +120,7 @@ void main() {
     await tester.tap(find
         .textContaining(RegExp(r'^(ĐÃ CHO UỐNG THUỐC|Đã cho uống thuốc)$')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('08:32'), findsOneWidget);
+    expect(find.textContaining('08:32'), findsWidgets);
     expect(find.textContaining('Cô Mai'), findsWidgets);
     expect(find.text('Đã cho uống thuốc'), findsNothing);
     expect(transport.requests.where((r) => r.method == 'PUT'), hasLength(1));

@@ -2,11 +2,11 @@
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_widgets.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 class TeacherEmergencySheet extends StatefulWidget {
@@ -188,100 +188,183 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                           MediaQuery.viewInsetsOf(context).bottom + 20),
                       child: _result == null ? _form() : _success())))));
 
+  InputDecoration _input(String hint) => InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(fontSize: 13, color: context.k.inkFaint),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.k.line)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.k.line)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.k.brand)));
+
+  Widget _childRow(Child child) {
+    final words = child.name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    final initials = words.isEmpty
+        ? ''
+        : words.length == 1
+            ? words.first[0]
+            : '${words.first[0]}${words.last[0]}';
+    return Row(children: [
+      Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration:
+              BoxDecoration(color: context.k.badTint, shape: BoxShape.circle),
+          child: Text(initials.toUpperCase(),
+              style: TextStyle(
+                  fontSize: 12.6,
+                  fontWeight: FontWeight.w700,
+                  color: context.k.bad))),
+      const SizedBox(width: 10),
+      Expanded(
+          child: Text(child.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w700))),
+    ]);
+  }
+
   Widget _form() => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(children: [
-              Expanded(
-                  child: Text('Báo cáo sự cố khẩn cấp',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: context.k.bad))),
               IconButton(
                   tooltip: 'Đóng',
+                  padding: EdgeInsets.zero,
                   onPressed: () => Navigator.maybePop(context),
-                  icon: const Icon(Icons.close))
+                  icon: const Icon(Icons.chevron_left, size: 28)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text('Báo cáo sự cố tại lớp',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: context.k.ink))),
             ]),
             const SizedBox(height: 13),
             MedicationCard(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                  const Text('Chọn bé gặp sự cố',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  DropdownButton<String>(
-                      value: _childId,
-                      isExpanded: true,
-                      hint: const Text('Chọn học sinh...'),
-                      items: widget.children
-                          .map((child) => DropdownMenuItem(
-                              value: child.id, child: Text(child.name)))
-                          .toList(),
-                      onChanged:
-                          _busy ? null : (id) => setState(() => _childId = id)),
+                  DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                          value: _childId,
+                          isExpanded: true,
+                          hint: Text('Chọn học sinh...',
+                              style: TextStyle(
+                                  fontSize: 14, color: context.k.inkSoft)),
+                          icon: Icon(Icons.chevron_right,
+                              size: 20, color: context.k.inkFaint),
+                          items: widget.children
+                              .map((child) => DropdownMenuItem(
+                                  value: child.id, child: _childRow(child)))
+                              .toList(),
+                          onChanged: _busy
+                              ? null
+                              : (id) => setState(() => _childId = id))),
                   const SizedBox(height: 9),
                   const Text('Loại sự cố',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  Wrap(spacing: 7, runSpacing: 6, children: [
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 9),
+                  Wrap(spacing: 7, runSpacing: 7, children: [
                     for (final type in _types.entries)
                       ChoiceChip(
-                          label: Text(type.value,
-                              style: const TextStyle(fontSize: 11)),
+                          label: Text(type.value),
                           selected: _type == type.key,
                           showCheckmark: false,
                           selectedColor: context.k.bad,
-                          backgroundColor: context.k.surfaceSunken,
+                          backgroundColor: context.k.surface,
+                          surfaceTintColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          elevation: 0,
+                          pressElevation: 0,
+                          labelPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          padding: EdgeInsets.zero,
+                          side: BorderSide(
+                              color: _type == type.key
+                                  ? Colors.transparent
+                                  : context.k.line),
+                          shape: const StadiumBorder(),
+                          visualDensity: VisualDensity.compact,
                           labelStyle: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                               color: _type == type.key
                                   ? Theme.of(context).colorScheme.onPrimary
-                                  : context.k.ink),
+                                  : context.k.inkSoft),
                           onSelected: _busy
                               ? null
                               : (_) => setState(() => _type = type.key))
                   ]),
+                  const SizedBox(height: 9),
+                  const Text('Nhiệt độ (không bắt buộc)',
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 9),
+                  TextField(
+                      controller: _temperature,
+                      enabled: !_busy,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(fontSize: 13),
+                      decoration: _input('Ví dụ: 38.5').copyWith(
+                          suffixText: '°C',
+                          suffixStyle: TextStyle(
+                              fontSize: 13, color: context.k.inkSoft))),
+                  const SizedBox(height: 9),
+                  const Text('Mô tả nhanh',
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 9),
+                  TextField(
+                      controller: _notes,
+                      enabled: !_busy,
+                      maxLines: 3,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: _input(
+                          'Tình trạng và biện pháp đã xử lý (không bắt buộc)')),
+                  if (_error != null) ...[
+                    const SizedBox(height: 9),
+                    Semantics(
+                        liveRegion: true,
+                        child: Text(_error!,
+                            style: TextStyle(
+                                fontSize: 11.5, color: context.k.bad)))
+                  ],
+                  const SizedBox(height: 9),
+                  MedicationAction(
+                      label: 'Phát cảnh báo khẩn cấp',
+                      danger: true,
+                      busy: _busy,
+                      onPressed: _submit),
                 ])),
             const SizedBox(height: 13),
-            TextField(
-                controller: _temperature,
-                enabled: !_busy,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                    labelText: 'Nhiệt độ (không bắt buộc)',
-                    suffixText: '°C',
-                    border: OutlineInputBorder())),
-            const SizedBox(height: 13),
-            TextField(
-                controller: _notes,
-                enabled: !_busy,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                    labelText: 'Mô tả / biện pháp đã thực hiện (tùy chọn)',
-                    border: OutlineInputBorder())),
-            const SizedBox(height: 13),
             Text(
-                'Lưu biên bản và yêu cầu hệ thống gửi cảnh báo. Không cần nhập mô tả để gửi; hãy gọi trực tiếp gia đình khi cần.',
+                'Một chạm: cảnh báo + thông báo đẩy tới phụ huynh ngay, kèm đầu mối liên hệ khẩn cấp của bé.',
                 style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
-            if (_error != null) ...[
-              const SizedBox(height: 13),
-              Semantics(
-                  liveRegion: true,
-                  child: Text(_error!, style: TextStyle(color: context.k.bad)))
-            ],
-            const SizedBox(height: 13),
-            MedicationAction(
-                label: 'Phát cảnh báo khẩn cấp',
-                danger: true,
-                busy: _busy,
-                onPressed: _submit),
           ]);
   Widget _success() {
     final result = _result!;
     final stamp = DateTime.tryParse(result['reported_at']?.toString() ?? '');
+    final clock = stamp == null
+        ? null
+        : DateFormat('HH:mm')
+            .format(stamp.toUtc().add(const Duration(hours: 7)));
+    final description = (result['description'] ?? '').toString().trim();
     return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -292,7 +375,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                   color: context.k.badTint,
                   borderRadius: BorderRadius.circular(18)),
               child: Column(children: [
-                Text('Đã ghi nhận sự cố khẩn cấp',
+                Text('Đã phát cảnh báo khẩn cấp',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontSize: 15,
@@ -301,7 +384,8 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 const SizedBox(height: 5),
                 Text(
                     '${result['child_name']} · ${result['incident_type_label'] ?? _types[result['incident_type']] ?? 'Sự cố sức khỏe'}'
-                    '${result['temperature'] == null ? '' : ' ${result['temperature']}°C'}${stamp == null ? '' : ' · ${requestTimestamp(stamp)}'}',
+                    '${result['temperature'] == null ? '' : ' ${result['temperature']}°C'}'
+                    '${clock == null ? '' : ' · $clock hôm nay'}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 12.5)),
                 const SizedBox(height: 5),
@@ -325,7 +409,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                     style: TextStyle(color: context.k.bad)))
           ],
           for (final contact in _contacts) ...[
-            const SizedBox(height: 13),
+            const SizedBox(height: 9),
             MedicationCard(
                 child: LayoutBuilder(builder: (context, constraints) {
               final phone = contact['phone'] as String? ?? '';
@@ -343,14 +427,22 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                         style:
                             TextStyle(fontSize: 12, color: context.k.inkSoft)),
                   ]);
-              final button = FilledButton(
+              final button = FilledButton.icon(
                   onPressed:
                       phoneCallUri(phone) == null ? null : () => _call(phone),
+                  icon: const Icon(Icons.phone, size: 16),
+                  label: const Text('Gọi ngay'),
                   style: FilledButton.styleFrom(
                       backgroundColor: context.k.brand,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 11),
                       minimumSize: const Size(0, 48),
-                      shape: const StadiumBorder()),
-                  child: const Text('Gọi ngay'));
+                      shape: const StadiumBorder(),
+                      textStyle: const TextStyle(
+                          fontFamily: 'BeVietnamPro',
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700)));
               return constraints.maxWidth < 300 ||
                       MediaQuery.textScalerOf(context).scale(1) > 1.3
                   ? Column(
@@ -364,6 +456,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
             }))
           ],
           TextButton(
+              style: TextButton.styleFrom(foregroundColor: context.k.inkSoft),
               onPressed: _loadingContacts ? null : _reloadContacts,
               child: Text(_loadingContacts
                   ? 'Đang tải danh bạ...'
@@ -372,7 +465,8 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
           MedicationCard(
               child: Text(
                   '${result['reported_by_name'] ?? 'Chưa rõ người báo cáo'}'
-                  '${stamp == null ? '' : ' · ${requestTimestamp(stamp)}'}\n${result['description'] ?? ''}',
+                  '${clock == null ? '' : ' báo lúc $clock'}'
+                  '${description.isEmpty ? '' : ' · $description'}',
                   style: const TextStyle(fontSize: 12.5))),
           const SizedBox(height: 13),
           MedicationAction(

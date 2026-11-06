@@ -102,7 +102,7 @@ class _ParentMedicationScreenState extends State<ParentMedicationScreen> {
                           alignment: Alignment.centerLeft,
                           child: MedicationBadge(
                               'Bé ${widget.child.fullName} · ${widget.className}',
-                              status: 'given')),
+                              tone: MedicationTone.brand)),
                       const SizedBox(height: 13),
                       if (snapshot.hasError)
                         ParentRequestError(medicationError(snapshot.error!),
@@ -125,36 +125,55 @@ class _ParentMedicationScreenState extends State<ParentMedicationScreen> {
                               fontSize: 11, color: context.k.inkSoft)),
                     ]));
           }));
-  Widget _batch(MedicationBatch batch) => MedicationCard(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        MedicationBatchHeading(batch),
-        if (batch.isLegacy) ...[
+  Widget _batch(MedicationBatch batch) {
+    // Đợt đã xong: Figma chỉ hiện một dòng ngày · người tạo, không có cữ/nút.
+    final done = !batch.isLegacy && !batch.doses.any((d) => d.canCancel);
+    if (done) {
+      return InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _detail(batch),
+          child: MedicationCard(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                MedicationBatchHeading(batch, showRange: false),
+                const SizedBox(height: 9),
+                Text('${batchRange(batch)} · ${batchCreator(batch)}',
+                    style: TextStyle(fontSize: 11, color: context.k.inkSoft)),
+              ])));
+    }
+    return MedicationCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      MedicationBatchHeading(batch),
+      if (batch.isLegacy) ...[
+        const SizedBox(height: 9),
+        Text('Hồ sơ cũ theo buổi; không có giờ uống cụ thể.',
+            style: TextStyle(fontSize: 11.5, color: context.k.inkSoft))
+      ] else
+        for (final dose in batch.doses.take(3)) ...[
           const SizedBox(height: 9),
-          const Text('Hồ sơ cũ theo buổi; không có giờ uống cụ thể.')
-        ] else
-          for (final dose in batch.doses.take(3)) ...[
-            const SizedBox(height: 9),
-            Row(children: [
-              Expanded(
-                  child: Text(doseWhen(dose),
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700))),
-              Flexible(
-                  child: MedicationBadge(doseStatus(dose.status),
-                      status: dose.status))
-            ]),
-            if (dose.isGiven)
-              Text(
-                  '${dose.givenByName ?? 'Chưa rõ người xác nhận'}${dose.givenAt == null ? '' : ' · ${requestTimestamp(dose.givenAt!)}'}',
-                  style: TextStyle(fontSize: 11, color: context.k.inkSoft)),
-          ],
-        if (batch.doses.length > 3) ...[
-          const SizedBox(height: 8),
-          Text('Đợt có ${batch.doses.length} cữ; xem đầy đủ trong chi tiết.')
+          Row(children: [
+            Expanded(
+                child: Text(dose.timeSlot ?? '',
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700))),
+            const SizedBox(width: 8),
+            Flexible(
+                child:
+                    MedicationBadge(doseBadgeLabel(dose), status: dose.status))
+          ]),
         ],
-        const SizedBox(height: 12),
-        MedicationAction(
-            label: 'Xem chi tiết đợt', onPressed: () => _detail(batch)),
-      ]));
+      if (batch.doses.length > 3) ...[
+        const SizedBox(height: 8),
+        Text('Đợt có ${batch.doses.length} cữ; xem đầy đủ trong chi tiết.',
+            style: TextStyle(fontSize: 11, color: context.k.inkSoft))
+      ],
+      const SizedBox(height: 9),
+      Text(batchCreator(batch),
+          style: TextStyle(fontSize: 10.5, color: context.k.inkFaint)),
+      const SizedBox(height: 9),
+      MedicationAction(
+          label: 'Xem chi tiết đợt', onPressed: () => _detail(batch)),
+    ]));
+  }
 }

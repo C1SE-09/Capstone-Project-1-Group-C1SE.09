@@ -71,24 +71,18 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
         className = widget.className;
     final repository = _repository;
     _dialog = true;
-    final agreed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-                title: const Text('Hủy đơn xin phép?'),
-                content: Text(
-                    'Hủy ${requestTypeLabel(request.requestType).toLowerCase()} của bé ${child.fullName}, ${requestRange(request)}? Điểm danh thực tế được giữ nguyên.'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Giữ đơn')),
-                  FilledButton(
-                      style: FilledButton.styleFrom(
-                          backgroundColor: context.k.bad),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Hủy đơn'))
-                ]));
+    final range = request.totalDays == 1
+        ? 'ngày ${requestDate(request.fromDate)}'
+        : 'từ ${requestDate(request.fromDate)} đến ${requestDate(request.toDate)}';
+    final agreed = await showParentRequestDialog(context,
+        title: 'Hủy đơn xin nghỉ?',
+        message:
+            'Đơn ${requestTypeLabel(request.requestType).toLowerCase()} $range của bé ${child.fullName} sẽ bị hủy. Điểm danh thực tế được giữ nguyên.',
+        cancelLabel: 'Giữ đơn',
+        confirmLabel: 'Hủy đơn',
+        danger: true);
     _dialog = false;
-    if (!mounted || version != _version || agreed != true) return;
+    if (!mounted || version != _version || !agreed) return;
     setState(() {
       _cancelling = true;
       _cancelError = null;
@@ -258,23 +252,33 @@ class _ReviewStatus extends StatelessWidget {
     final k = context.k;
     final (ink, tint) = switch (request.status) {
       LeaveStatus.pending => (k.warnDeep, k.warnTint),
-      LeaveStatus.approved => (k.brand, k.brandTint),
+      LeaveStatus.approved => (k.ok, k.okTint),
       LeaveStatus.rejected => (k.bad, k.badTint),
       LeaveStatus.cancelled => (k.inkSoft, k.surfaceSunken),
     };
     return ParentRequestCard(
         color: tint,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(requestStatusLabel(request.status),
-              style: TextStyle(color: ink, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(
-              request.status == LeaveStatus.pending
-                  ? 'Đơn đã gửi, đang chờ giáo viên duyệt.'
-                  : request.status == LeaveStatus.cancelled
-                      ? 'Phụ huynh đã hủy đơn'
-                      : '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}',
-              style: TextStyle(fontSize: 11, color: ink)),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (request.status == LeaveStatus.pending) ...[
+            Icon(Icons.schedule, size: 18, color: ink),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(requestStatusLabel(request.status),
+                    style: TextStyle(
+                        color: ink, fontSize: 14, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(
+                    request.status == LeaveStatus.pending
+                        ? 'Đã gửi lúc ${requestTimestamp(request.createdAt)}'
+                        : request.status == LeaveStatus.cancelled
+                            ? 'Phụ huynh đã hủy đơn'
+                            : '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}',
+                    style: TextStyle(fontSize: 11.5, color: ink)),
+              ])),
         ]));
   }
 }
@@ -309,6 +313,10 @@ class _Timeline extends StatelessWidget {
                   request.reviewerName != null)
                 request.reviewerName!
             ].join(' · ')),
+        if (request.status == LeaveStatus.pending) ...[
+          const SizedBox(height: 8),
+          _step(context, 'Kết quả duyệt', 'Chưa có'),
+        ],
       ]));
 
   Widget _step(BuildContext context, String title, String detail) =>
