@@ -556,7 +556,12 @@ def _assert_room_available(
     if dup is not None and (exclude_class_id is None or dup.class_id != exclude_class_id):
         raise HTTPException(
             status_code=400,
-            detail=f"Phòng '{room_number}' đã được dùng cho lớp '{dup.name}'.",
+            # Wording phải khớp với toast ở admin-web (classes.tsx) để test
+            # và UI hiển thị giống nhau.
+            detail=(
+                f"Phòng '{room_number}' đã được sử dụng cho lớp '{dup.name}'. "
+                "Vui lòng chọn phòng khác."
+            ),
         )
 
 

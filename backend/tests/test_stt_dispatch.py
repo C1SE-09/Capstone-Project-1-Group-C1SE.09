@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models.base import Base
@@ -127,7 +127,7 @@ def test_dispatch_missing_record_still_queues_task(db):
 
 def test_redispatch_skips_recent_pending_records(db):
     """Bản ghi PENDING mới → không đẩy lại (worker có thể đang xử lý)."""
-    record = _make_record(db, created_minutes_ago=1, last_dispatch_minutes_ago=1)
+    _make_record(db, created_minutes_ago=1, last_dispatch_minutes_ago=1)
 
     with patch("app.services.stt_dispatch_service.publish_stt_task") as mock_task:
         mock_task.return_value = None
@@ -177,7 +177,7 @@ def test_redispatch_ignores_non_pending_statuses(db):
 
 def test_redispatch_respects_max_attempts(db):
     """Đã đẩy quá số lần tối đa → bỏ qua (không spam queue)."""
-    record = _make_record(
+    _make_record(
         db,
         created_minutes_ago=600,
         last_dispatch_minutes_ago=600,

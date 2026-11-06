@@ -55,6 +55,15 @@ ufw allow 9000/tcp   # MinIO
 exit
 ```
 
+> **Redis có password.** `docker-compose.yml` chạy Redis với `--requirepass`
+> vì cổng 6379 được mở ra Internet cho pod. Lấy mật khẩu từ `.env` trên VPS
+> (`REDIS_PASSWORD`) và dùng cho `REDIS_URL` trong pod:
+> `redis://:<REDIS_PASSWORD>@<VPS_IP>:6379/0`
+
+> **Đừng bind port về `127.0.0.1`** trong `docker-compose.yml` — làm vậy pod
+> RunPod sẽ không kết nối được (`Error 111 connection refused`). Pod nằm ngoài
+> Internet nên cần bind mọi interface; an toàn nhờ password + ufw.
+
 ## Cài trên pod (chạy 1 lần / mỗi pod mới)
 
 ```bash
@@ -89,9 +98,10 @@ Lấy giá trị thật từ VPS bằng cách SSH vào VPS và chạy:
 cat /root/Capstone-Project-1-Group-C1SE.09/.env
 ```
 
-Mở file `.env` trong pod, sửa 3 dòng:
+Mở file `.env` trong pod, sửa 4 dòng:
 
 - `DATABASE_URL` — thay `CHANGE_ME_DB` bằng mật khẩu Postgres
+- `REDIS_URL` — thay `CHANGE_ME_REDIS` bằng `REDIS_PASSWORD` trong `.env` trên VPS
 - `SECRET_KEY`
 - `JWT_SECRET_KEY`
 
