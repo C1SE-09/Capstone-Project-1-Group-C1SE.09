@@ -6,8 +6,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Bind mọi interface: worker RunPod (ngoài Internet) cần kết nối tới DB.
+    # An toàn nhờ PostgreSQL password + ufw chỉ cho IP RunPod.
     ports:
-      - "127.0.0.1:${POSTGRES_HOST_PORT}:5432"
+      - "${POSTGRES_HOST_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,11 +23,16 @@ services:
     container_name: kinderlog_redis
     # --appendonly yes + volume: phiên đăng nhập (session:*) sống qua `docker compose
     # down`, không thì mọi máy bị đăng xuất sau mỗi lần restart stack.
-    command: redis-server --appendonly yes
+    # --requirepass: bắt buộc vì Redis được mở ra Internet cho worker RunPod.
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
+    # Bind mọi interface: worker RunPod cần kết nối tới Redis (queue audio).
     ports:
-      - "127.0.0.1:6379:6379"
+      - "6379:6379"
+    environment:
+      # REDISCLI_AUTH cho phép `redis-cli ping` không cần -a (không in warning).
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -55,8 +62,9 @@ services:
     build: ./backend
     container_name: kinderlog_api
     env_file: .env
+    # Bind mọi interface: app Flutter chạy ngoài Internet cần gọi API.
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     volumes:
       - ./backend:/app
     depends_on:

@@ -248,7 +248,10 @@ if [[ ! -f .env ]]; then
 # Host đã đổi từ tên service Docker (db/redis/minio) sang IP VPS
 # để pod ngoài Internet gọi được.
 DATABASE_URL=postgresql+psycopg://kinderlog:CHANGE_ME_DB@${VPS_IP}:5432/kinderlog
-REDIS_URL=redis://${VPS_IP}:6379/0
+# Redis có PASSWORD (docker-compose bật --requirepass vì Redis được mở ra
+# Internet cho pod này). Thay CHANGE_ME_REDIS bằng đúng REDIS_PASSWORD
+# trong .env trên VPS.
+REDIS_URL=redis://:CHANGE_ME_REDIS@${VPS_IP}:6379/0
 SECRET_KEY=CHANGE_ME_SECRET
 JWT_SECRET_KEY=CHANGE_ME_JWT
 MINIO_ENDPOINT=${VPS_IP}:9000
@@ -260,6 +263,7 @@ PHOWHISPER_MODEL_ID=vudang449/PhoWhisper-large-ct2
 EOF
   echo "    Đã tạo .env — SỬA 4 dòng CHANGE_ME trước khi chạy worker:"
   echo "      - DATABASE_URL (mật khẩu DB)"
+  echo "      - REDIS_URL (mật khẩu Redis)"
   echo "      - SECRET_KEY"
   echo "      - JWT_SECRET_KEY"
 else
