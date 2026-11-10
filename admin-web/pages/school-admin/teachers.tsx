@@ -7,7 +7,7 @@
  *   - Drawer chỉnh sửa với các trường: Họ tên, Email, SĐT, Lớp, Username, Password.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
@@ -58,6 +58,80 @@ const EMPTY_FORM: TeacherFormState = {
   status: "active",
 };
 
+interface TeacherRowEditState {
+  full_name: string;
+  email: string;
+  phone: string;
+  class_ids: string[];
+  username: string;
+  status: string;
+}
+
+interface ClassDropdownAnchor {
+  teacherId: string;
+  top?: number;
+  bottom?: number;
+  left: number;
+  minWidth: number;
+}
+
+function getOriginalClassIds(t: Teacher): string[] {
+  if (Array.isArray(t.class_ids) && t.class_ids.length > 0) {
+    return Array.from(new Set(t.class_ids));
+  }
+  if (Array.isArray(t.classes) && t.classes.length > 0) {
+    return Array.from(new Set(t.classes.map((c) => c.id)));
+  }
+  return t.class_id ? [t.class_id] : [];
+}
+
+function buildInitialRowEdit(t: Teacher): TeacherRowEditState {
+  return {
+    full_name: t.full_name || "",
+    email: t.email || "",
+    phone: t.phone || "",
+    class_ids: getOriginalClassIds(t),
+    username: t.username || "",
+    status: t.status || "active",
+  };
+}
+
+function isTeacherCellDirty(
+  t: Teacher,
+  edit: TeacherRowEditState | undefined,
+  field: keyof TeacherRowEditState,
+): boolean {
+  if (!edit) return false;
+  if (field === "full_name") return edit.full_name.trim() !== (t.full_name || "").trim();
+  if (field === "email") return edit.email.trim() !== (t.email || "").trim();
+  if (field === "phone") return edit.phone.trim() !== (t.phone || "").trim();
+  if (field === "username") return edit.username.trim() !== (t.username || "").trim();
+  if (field === "status") return edit.status !== (t.status || "active");
+  if (field === "class_ids") {
+    const origIds = getOriginalClassIds(t);
+    const curIds = edit.class_ids;
+    if (origIds.length !== curIds.length) return true;
+    const origSet = new Set(origIds);
+    return curIds.some((id) => !origSet.has(id));
+  }
+  return false;
+}
+
+function isTeacherRowDirty(
+  t: Teacher,
+  edit: TeacherRowEditState | undefined,
+): boolean {
+  if (!edit) return false;
+  return (
+    isTeacherCellDirty(t, edit, "full_name") ||
+    isTeacherCellDirty(t, edit, "email") ||
+    isTeacherCellDirty(t, edit, "phone") ||
+    isTeacherCellDirty(t, edit, "class_ids") ||
+    isTeacherCellDirty(t, edit, "username") ||
+    isTeacherCellDirty(t, edit, "status")
+  );
+}
+
 export default function SchoolAdminTeachersPage() {
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
@@ -66,14 +140,11 @@ export default function SchoolAdminTeachersPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [isEditingTable, setIsEditingTable] = useState(false);
-  const [tableEdits, setTableEdits] = useState<Record<string, {
-    full_name: string;
-    email: string;
-    phone: string;
-    class_id: string | null;
-    status: string;
-  }>>({});
+  const [tableEdits, setTableEdits] = useState<Record<string, TeacherRowEditState>>({});
   const [savingTable, setSavingTable] = useState(false);
+  const [openClassDropdown, setOpenClassDropdown] = useState<ClassDropdownAnchor | null>(null);
+  const [classSearchQuery, setClassSearchQuery] = useState("");
+  const classDropdownRef = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [form, setForm] = useState<TeacherFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -94,10 +165,41 @@ export default function SchoolAdminTeachersPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!openClassDropdown) return;
+    const handleScrollOrResize = (e: Event) => {
+      if (
+        e.type === "scroll" &&
+        classDropdownRef.current &&
+        e.target instanceof Node &&
+        classDropdownRef.current.contains(e.target)
+      ) {
+        return;
+      }
+      setOpenClassDropdown(null);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenClassDropdown(null);
+      }
+    };
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openClassDropdown]);
+
   const { data: teachers, error: teachersError, mutate } = useSWR<Teacher[]>(
     ready ? "teachers" : null,
     () => getTeachers(),
-    { refreshInterval: 30000 },
+    {
+      refreshInterval: drawerOpen || importOpen || isEditingTable ? 0 : 30000,
+      revalidateOnFocus: !(drawerOpen || importOpen || isEditingTable),
+    },
   );
 
   useEffect(() => {
@@ -219,90 +321,181 @@ export default function SchoolAdminTeachersPage() {
     return { total: rows.length, success, failed, errors };
   }
 
+  const dirtyRows = useMemo(() => {
+    return (teachers ?? []).filter((t) => isTeacherRowDirty(t, tableEdits[t.id]));
+  }, [teachers, tableEdits]);
+
+  const activeDropdownTeacher = useMemo(() => {
+    if (!openClassDropdown) return null;
+    return (teachers ?? []).find((t) => t.id === openClassDropdown.teacherId) ?? null;
+  }, [openClassDropdown, teachers]);
+
+  function getRowData(t: Teacher): TeacherRowEditState {
+    return tableEdits[t.id] ?? buildInitialRowEdit(t);
+  }
+
   function startTableEditing() {
-    const initial: Record<string, any> = {};
-    filtered.forEach((t) => {
-      initial[t.id] = {
-        full_name: t.full_name || "",
-        email: t.email || "",
-        phone: t.phone || "",
-        class_id: t.class_id || null,
-        status: t.status || "active",
-      };
-    });
-    setTableEdits(initial);
+    setTableEdits({});
+    setOpenClassDropdown(null);
     setIsEditingTable(true);
   }
 
   function cancelTableEditing() {
+    const hadChanges = dirtyRows.length > 0;
     setIsEditingTable(false);
     setTableEdits({});
+    setOpenClassDropdown(null);
+    if (hadChanges) {
+      setToast({ msg: "Đã hủy bỏ mọi thay đổi chưa lưu", tone: "brand" });
+    }
   }
 
-  function updateRowEdit(id: string, field: string, val: any) {
-    setTableEdits((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: val,
-      },
-    }));
+  function updateRowEdit<K extends keyof TeacherRowEditState>(
+    t: Teacher,
+    field: K,
+    val: TeacherRowEditState[K],
+  ) {
+    setTableEdits((prev) => {
+      const current = prev[t.id] ?? buildInitialRowEdit(t);
+      return {
+        ...prev,
+        [t.id]: {
+          ...current,
+          [field]: val,
+        },
+      };
+    });
+  }
+
+  function toggleRowClassSelection(t: Teacher, classId: string) {
+    setTableEdits((prev) => {
+      const current = prev[t.id] ?? buildInitialRowEdit(t);
+      const exists = current.class_ids.includes(classId);
+      const nextIds = exists
+        ? current.class_ids.filter((id) => id !== classId)
+        : [...current.class_ids, classId];
+      return {
+        ...prev,
+        [t.id]: {
+          ...current,
+          class_ids: nextIds,
+        },
+      };
+    });
   }
 
   async function handleSaveTableEdits() {
-    const changedItems: { id: string; payload: TeacherPayload }[] = [];
-    for (const t of filtered) {
-      const edit = tableEdits[t.id];
-      if (!edit) continue;
-      const isChanged =
-        edit.full_name.trim() !== (t.full_name || "").trim() ||
-        edit.email.trim() !== (t.email || "").trim() ||
-        edit.phone.trim() !== (t.phone || "").trim() ||
-        edit.class_id !== (t.class_id || null) ||
-        edit.status !== (t.status || "active");
-
-      if (isChanged) {
-        if (!edit.full_name.trim()) {
-          setToast({ msg: "Họ tên giáo viên không được để trống", tone: "bad" });
-          return;
-        }
-        changedItems.push({
-          id: t.id,
-          payload: {
-            full_name: edit.full_name.trim(),
-            email: edit.email.trim(),
-            phone: edit.phone.trim(),
-            class_id: edit.class_id,
-            status: edit.status,
-          },
-        });
-      }
-    }
-
-    if (changedItems.length === 0) {
+    if (dirtyRows.length === 0) {
       setToast({ msg: "Không có thay đổi nào để lưu", tone: "brand" });
       setIsEditingTable(false);
+      setOpenClassDropdown(null);
       return;
+    }
+
+    const changedItems: { id: string; payload: Partial<TeacherPayload> }[] = [];
+    for (const t of dirtyRows) {
+      const edit = getRowData(t);
+      if (!edit.full_name.trim()) {
+        setToast({ msg: "Họ tên giáo viên không được để trống", tone: "bad" });
+        return;
+      }
+
+      const emailDirty = isTeacherCellDirty(t, edit, "email");
+      if (emailDirty) {
+        if (!edit.email.trim()) {
+          setToast({ msg: `Email của ${edit.full_name.trim()} không được để trống`, tone: "bad" });
+          return;
+        }
+        if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(edit.email.trim())) {
+          setToast({
+            msg: `Email của ${edit.full_name.trim()} phải đúng định dạng Gmail (@gmail.com)`,
+            tone: "bad",
+          });
+          return;
+        }
+      }
+
+      const phoneDirty = isTeacherCellDirty(t, edit, "phone");
+      if (phoneDirty) {
+        if (!edit.phone.trim()) {
+          setToast({
+            msg: `Số điện thoại của ${edit.full_name.trim()} không được để trống`,
+            tone: "bad",
+          });
+          return;
+        }
+        if (!/^0\d{9}$/.test(edit.phone.trim())) {
+          setToast({
+            msg: `Số điện thoại của ${edit.full_name.trim()} phải gồm 10 chữ số bắt đầu bằng 0`,
+            tone: "bad",
+          });
+          return;
+        }
+      }
+
+      const usernameDirty = isTeacherCellDirty(t, edit, "username");
+      if (usernameDirty && (t.username || "").trim() && !edit.username.trim()) {
+        setToast({
+          msg: `Tên đăng nhập của ${edit.full_name.trim()} không được để trống`,
+          tone: "bad",
+        });
+        return;
+      }
+
+      const payload: Partial<TeacherPayload> = {};
+      if (isTeacherCellDirty(t, edit, "full_name")) payload.full_name = edit.full_name.trim();
+      if (emailDirty) payload.email = edit.email.trim();
+      if (phoneDirty) payload.phone = edit.phone.trim();
+      if (isTeacherCellDirty(t, edit, "class_ids")) payload.class_ids = edit.class_ids;
+      if (usernameDirty) payload.username = edit.username.trim() || null;
+      if (isTeacherCellDirty(t, edit, "status")) payload.status = edit.status;
+
+      changedItems.push({ id: t.id, payload });
     }
 
     setSavingTable(true);
     let success = 0;
     let failed = 0;
+    let firstErrorMsg = "";
+    const succeededIds = new Set<string>();
+
     for (const item of changedItems) {
       try {
         await updateTeacher(item.id, item.payload);
         success++;
-      } catch (e) {
+        succeededIds.add(item.id);
+      } catch (err: unknown) {
         failed++;
+        if (!firstErrorMsg) {
+          firstErrorMsg =
+            err instanceof Error
+              ? err.message
+              : "Lỗi cập nhật giáo viên";
+        }
       }
     }
+
     setSavingTable(false);
-    setIsEditingTable(false);
-    mutate();
+    if (succeededIds.size > 0) {
+      setTableEdits((prev) => {
+        const next = { ...prev };
+        succeededIds.forEach((id) => delete next[id]);
+        return next;
+      });
+      await mutate();
+    }
+
     if (failed === 0) {
+      setIsEditingTable(false);
+      setOpenClassDropdown(null);
       setToast({ msg: `Đã lưu thành công ${success} giáo viên!`, tone: "ok" });
+    } else if (success > 0) {
+      setToast({
+        msg: `Đã lưu ${success} giáo viên (${failed} giáo viên lỗi: ${firstErrorMsg})`,
+        tone: "warn",
+      });
     } else {
-      setToast({ msg: `Đã lưu ${success} giáo viên (${failed} giáo viên lỗi)`, tone: "warn" });
+      setToast({ msg: firstErrorMsg || "Không thể lưu thay đổi", tone: "bad" });
     }
   }
 
@@ -314,12 +507,13 @@ export default function SchoolAdminTeachersPage() {
 
   function openEdit(t: Teacher) {
     setEditing(t);
+    const origClassIds = getOriginalClassIds(t);
     setForm({
       full_name: t.full_name,
       email: t.email,
       phone: t.phone,
-      class_id: t.class_id,
-      class_ids: t.class_ids,
+      class_id: origClassIds[0] ?? t.class_id,
+      class_ids: origClassIds,
       username: t.username || "",
       password: "",
       status: t.status,
@@ -353,6 +547,12 @@ export default function SchoolAdminTeachersPage() {
       };
       if (editing) {
         await updateTeacher(editing.id, payload);
+        setTableEdits((prev) => {
+          if (!prev[editing.id]) return prev;
+          const next = { ...prev };
+          delete next[editing.id];
+          return next;
+        });
         setToast({ msg: "Đã cập nhật giáo viên", tone: "ok" });
       } else {
         await createTeacher(payload);
@@ -372,6 +572,12 @@ export default function SchoolAdminTeachersPage() {
       await deleteTeacher(t.id);
       setToast({ msg: `Đã xóa giáo viên ${t.full_name}`, tone: "ok" });
       setSelectedIds((prev) => prev.filter((id) => id !== t.id));
+      setTableEdits((prev) => {
+        if (!prev[t.id]) return prev;
+        const next = { ...prev };
+        delete next[t.id];
+        return next;
+      });
       mutate();
     } catch (err: any) {
       setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
@@ -406,6 +612,17 @@ export default function SchoolAdminTeachersPage() {
       setToast({
         msg: res.message || `Đã xóa ${selectedIds.length} giáo viên`,
         tone: "ok",
+      });
+      setTableEdits((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        selectedIds.forEach((id) => {
+          if (id in next) {
+            delete next[id];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
       });
       setSelectedIds([]);
       mutate();
@@ -445,6 +662,7 @@ export default function SchoolAdminTeachersPage() {
             }}
             className="kbtn kbtn-secondary"
             title="Làm mới"
+            disabled={isEditingTable}
           >
             ↻
           </button>
@@ -466,7 +684,7 @@ export default function SchoolAdminTeachersPage() {
           {!isEditingTable ? (
             <button
               onClick={startTableEditing}
-              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand disabled:opacity-50 disabled:cursor-not-allowed"
               title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
               disabled={filtered.length === 0}
             >
@@ -491,12 +709,17 @@ export default function SchoolAdminTeachersPage() {
                 {savingTable ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu...</span>
+                    <span>Đang lưu ({dirtyRows.length})...</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
                     <span>Lưu thay đổi</span>
+                    {dirtyRows.length > 0 && (
+                      <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {dirtyRows.length}
+                      </span>
+                    )}
                   </>
                 )}
               </button>
@@ -526,6 +749,38 @@ export default function SchoolAdminTeachersPage() {
           />
         </div>
       </div>
+
+      {/* Banner thông báo khi đang ở chế độ chỉnh sửa bảng */}
+      {isEditingTable && dirtyRows.length > 0 && (
+        <div className="mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 text-xs sm:text-sm">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <span className="font-semibold">
+              Đang có {dirtyRows.length} giáo viên có chỉnh sửa chưa lưu.
+            </span>
+            <span className="text-xs text-amber-700 hidden sm:inline">
+              (Các ô có viền vàng là các trường đã thay đổi)
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelTableEditing}
+              disabled={savingTable}
+              className="text-xs px-2.5 py-1 text-amber-800 hover:text-bad hover:underline font-medium"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              onClick={handleSaveTableEdits}
+              disabled={savingTable}
+              className="kbtn text-xs font-bold text-white py-1 px-3 shadow"
+              style={{ background: "#16665a" }}
+            >
+              {savingTable ? "Đang lưu..." : `Lưu tất cả (${dirtyRows.length})`}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card overflow-hidden">
         {!teachers && !teachersError ? (
@@ -632,81 +887,376 @@ export default function SchoolAdminTeachersPage() {
                 <tbody>
                   {filtered.map((t, idx) => {
                     const isSelected = selectedIds.includes(t.id);
+                    const rowEdit = tableEdits[t.id];
+                    const rowData = getRowData(t);
+                    const isDirty = isTeacherRowDirty(t, rowEdit);
+                    const selectedClassObjs = rowData.class_ids.map((cid) => {
+                      const found =
+                        classes.find((c) => c.id === cid) ||
+                        t.classes?.find((c) => c.id === cid);
+                      return { id: cid, name: found?.name || cid };
+                    });
+                    const editInputBase =
+                      "w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 transition-all focus:border-[#16665a] focus:ring-1 focus:ring-[#16665a]/30 focus:outline-none";
+
                     return (
-                    <tr
-                      key={t.id}
-                      className={`${idx > 0 ? "border-t border-line" : ""} ${
-                        isSelected ? "bg-[#FDF8F6]" : ""
-                      }`}
-                    >
-                      <td className="px-3 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          className="rounded cursor-pointer"
-                          checked={isSelected}
-                          onChange={() => toggleSelect(t.id)}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-white"
-                            style={{ background: "#16665a" }}
-                          >
-                            {t.full_name.charAt(0).toUpperCase()}
+                      <tr
+                        key={t.id}
+                        className={`${idx > 0 ? "border-t border-line" : ""} transition-colors ${
+                          isSelected
+                            ? "bg-[#FDF8F6]"
+                            : isDirty
+                              ? "bg-amber-50/30"
+                              : "hover:bg-slate-50/60"
+                        }`}
+                      >
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {isEditingTable &&
+                              (isDirty ? (
+                                <span
+                                  className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"
+                                  title="Dòng này có thay đổi chưa lưu"
+                                />
+                              ) : (
+                                <span className="w-2 h-2 shrink-0" />
+                              ))}
+                            <input
+                              type="checkbox"
+                              className="rounded cursor-pointer"
+                              checked={isSelected}
+                              onChange={() => toggleSelect(t.id)}
+                            />
                           </div>
-                          <div>
-                            <div className="font-bold text-ink">
-                              {t.full_name}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-white shrink-0"
+                              style={{ background: "#16665a" }}
+                            >
+                              {(rowData.full_name.trim() || t.full_name || "G")
+                                .charAt(0)
+                                .toUpperCase()}
                             </div>
+                            {isEditingTable ? (
+                              <input
+                                type="text"
+                                className={`${editInputBase} min-w-[160px] font-semibold ${
+                                  isTeacherCellDirty(t, rowEdit, "full_name")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950"
+                                    : ""
+                                }`}
+                                value={rowData.full_name}
+                                onChange={(e) =>
+                                  updateRowEdit(t, "full_name", e.target.value)
+                                }
+                                placeholder="Họ và tên giáo viên..."
+                              />
+                            ) : (
+                              <div>
+                                <div className="font-bold text-ink">
+                                  {t.full_name}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-ink">{t.email}</div>
-                        <div className="text-xs text-ink-soft">{t.phone}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-ink">{t.class_name || "Chưa phân lớp"}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {t.username ? (
-                          <Pill tone="brand">@{t.username}</Pill>
-                        ) : (
-                          <span className="text-xs text-ink-faint">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Pill tone={t.status === "active" ? "ok" : t.status === "on_leave" ? "warn" : "neutral"}>
-                          {t.status === "active"
-                            ? "Đang dạy"
-                            : t.status === "on_leave"
-                              ? "Nghỉ phép"
-                              : "Ngừng"}
-                        </Pill>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => openEdit(t)}
-                          className="kbtn kbtn-ghost text-xs"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => setConfirmDel(t)}
-                          className="kbtn kbtn-ghost text-xs text-bad"
-                        >
-                          Xóa
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditingTable ? (
+                            <div className="flex flex-col gap-1.5 min-w-[190px]">
+                              <input
+                                type="email"
+                                className={`${editInputBase} ${
+                                  isTeacherCellDirty(t, rowEdit, "email")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : ""
+                                }`}
+                                value={rowData.email}
+                                onChange={(e) =>
+                                  updateRowEdit(t, "email", e.target.value)
+                                }
+                                placeholder="Email (@gmail.com)..."
+                              />
+                              <input
+                                type="tel"
+                                className={`${editInputBase} text-[11px] py-1 ${
+                                  isTeacherCellDirty(t, rowEdit, "phone")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : ""
+                                }`}
+                                value={rowData.phone}
+                                onChange={(e) =>
+                                  updateRowEdit(t, "phone", e.target.value)
+                                }
+                                placeholder="Số điện thoại (10 số)..."
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-ink">{t.email}</div>
+                              <div className="text-xs text-ink-soft">{t.phone}</div>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditingTable ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                if (openClassDropdown?.teacherId === t.id) {
+                                  setOpenClassDropdown(null);
+                                  return;
+                                }
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const spaceBelow = window.innerHeight - rect.bottom;
+                                const openUpward = spaceBelow < 300 && rect.top > 300;
+                                const minWidth = Math.max(rect.width, 250);
+                                const left = Math.max(
+                                  8,
+                                  Math.min(rect.left, window.innerWidth - minWidth - 8),
+                                );
+                                setClassSearchQuery("");
+                                setOpenClassDropdown({
+                                  teacherId: t.id,
+                                  top: openUpward ? undefined : rect.bottom + 6,
+                                  bottom: openUpward
+                                    ? window.innerHeight - rect.top + 6
+                                    : undefined,
+                                  left,
+                                  minWidth,
+                                });
+                              }}
+                              className={`min-w-[165px] w-full text-left bg-white border rounded px-2.5 py-1.5 text-xs flex items-center justify-between gap-1.5 transition-all ${
+                                isTeacherCellDirty(t, rowEdit, "class_ids")
+                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                  : "border-slate-300 hover:border-[#16665a] text-slate-800"
+                              }`}
+                              title={
+                                selectedClassObjs.length > 0
+                                  ? selectedClassObjs.map((c) => c.name).join(", ")
+                                  : "Click để chọn lớp phụ trách"
+                              }
+                            >
+                              <div className="truncate flex-1">
+                                {selectedClassObjs.length === 0 ? (
+                                  <span className="text-slate-400 italic">
+                                    Chưa phân lớp
+                                  </span>
+                                ) : selectedClassObjs.length === 1 ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[120px]">
+                                    {selectedClassObjs[0].name}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[95px]">
+                                      {selectedClassObjs[0].name}
+                                    </span>
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand/10 text-brand border border-brand/20 shrink-0">
+                                      +{selectedClassObjs.length - 1}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-slate-400 text-[10px] shrink-0">
+                                ▼
+                              </span>
+                            </button>
+                          ) : (
+                            <div className="text-ink">
+                              {t.class_name || "Chưa phân lớp"}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditingTable ? (
+                            <div className="min-w-[125px] relative flex items-center">
+                              <span className="absolute left-2.5 text-xs text-slate-400 font-medium pointer-events-none select-none">
+                                @
+                              </span>
+                              <input
+                                type="text"
+                                className={`${editInputBase} pl-6 ${
+                                  isTeacherCellDirty(t, rowEdit, "username")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : ""
+                                }`}
+                                value={rowData.username}
+                                onChange={(e) =>
+                                  updateRowEdit(t, "username", e.target.value)
+                                }
+                                placeholder="username..."
+                              />
+                            </div>
+                          ) : t.username ? (
+                            <Pill tone="brand">@{t.username}</Pill>
+                          ) : (
+                            <span className="text-xs text-ink-faint">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditingTable ? (
+                            <select
+                              className={`${editInputBase} min-w-[115px] ${
+                                isTeacherCellDirty(t, rowEdit, "status")
+                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                  : ""
+                              }`}
+                              value={rowData.status}
+                              onChange={(e) =>
+                                updateRowEdit(t, "status", e.target.value)
+                              }
+                            >
+                              <option value="active">Đang dạy</option>
+                              <option value="on_leave">Nghỉ phép</option>
+                              <option value="inactive">Ngừng</option>
+                            </select>
+                          ) : (
+                            <Pill
+                              tone={
+                                t.status === "active"
+                                  ? "ok"
+                                  : t.status === "on_leave"
+                                    ? "warn"
+                                    : "neutral"
+                              }
+                            >
+                              {t.status === "active"
+                                ? "Đang dạy"
+                                : t.status === "on_leave"
+                                  ? "Nghỉ phép"
+                                  : "Ngừng"}
+                            </Pill>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => openEdit(t)}
+                            className="kbtn kbtn-ghost text-xs"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => setConfirmDel(t)}
+                            className="kbtn kbtn-ghost text-xs text-bad"
+                          >
+                            Xóa
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
         )}
       </div>
+
+      {/* Popover multi-select Lớp phụ trách (fixed để không bị overflow-hidden cắt) */}
+      {isEditingTable && openClassDropdown && activeDropdownTeacher && (() => {
+        const activeRowData = getRowData(activeDropdownTeacher);
+        const qCls = classSearchQuery.trim().toLowerCase();
+        const filteredClasses = classes.filter((c) => {
+          if (!qCls) return true;
+          return (
+            c.name.toLowerCase().includes(qCls) ||
+            (c.grade_label || "").toLowerCase().includes(qCls)
+          );
+        });
+        return (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setOpenClassDropdown(null)}
+            />
+            <div
+              ref={classDropdownRef}
+              style={{
+                top: openClassDropdown.top,
+                bottom: openClassDropdown.bottom,
+                left: openClassDropdown.left,
+                width: openClassDropdown.minWidth,
+              }}
+              className="fixed bg-white rounded-lg shadow-xl border border-slate-200 z-50 p-2.5 space-y-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative">
+                <input
+                  type="text"
+                  value={classSearchQuery}
+                  onChange={(e) => setClassSearchQuery(e.target.value)}
+                  placeholder="Tìm tên lớp..."
+                  className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:border-[#16665a] focus:outline-none"
+                  autoFocus
+                />
+                {classSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setClassSearchQuery("")}
+                    className="absolute right-2 top-1.5 text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <div className="max-h-48 overflow-y-auto space-y-0.5 divide-y divide-slate-50">
+                {filteredClasses.length === 0 ? (
+                  <div className="text-center py-3 text-xs text-slate-400">
+                    {classes.length === 0
+                      ? "Chưa có lớp nào"
+                      : "Không tìm thấy lớp phù hợp"}
+                  </div>
+                ) : (
+                  filteredClasses.map((c) => {
+                    const isChecked = activeRowData.class_ids.includes(c.id);
+                    return (
+                      <label
+                        key={c.id}
+                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer text-xs"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() =>
+                            toggleRowClassSelection(activeDropdownTeacher, c.id)
+                          }
+                          className="rounded text-brand focus:ring-brand/30 cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0 truncate">
+                          <span className="font-medium text-slate-800">
+                            {c.name}
+                          </span>
+                          {c.grade_label && (
+                            <span className="text-[11px] text-slate-400 ml-1">
+                              ({c.grade_label})
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[11px]">
+                <span className="text-slate-500">
+                  Đã chọn:{" "}
+                  <strong className="text-slate-700">
+                    {activeRowData.class_ids.length}
+                  </strong>{" "}
+                  lớp
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOpenClassDropdown(null)}
+                  className="text-brand font-semibold hover:underline"
+                >
+                  Xong
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       <div className="text-xs text-ink-faint mt-2">
         Tổng: <span className="font-bold text-ink">{filtered.length}</span> giáo viên

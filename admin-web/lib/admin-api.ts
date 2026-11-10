@@ -96,7 +96,7 @@ export function createTeacher(data: TeacherPayload) {
   });
 }
 
-export function updateTeacher(id: string, data: TeacherPayload) {
+export function updateTeacher(id: string, data: Partial<TeacherPayload>) {
   return apiFetch<{ message: string }>(`/api/admin/teachers/${id}`, {
     method: "PUT",
     body: data,
