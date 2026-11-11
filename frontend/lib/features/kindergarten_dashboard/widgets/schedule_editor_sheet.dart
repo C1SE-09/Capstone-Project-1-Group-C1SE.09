@@ -121,10 +121,13 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
         );
         widget.onSaved('Đã thêm hoạt động', _day);
       } else {
+        final keepingCustomTime = existing.isCustomTime &&
+            _slot != null &&
+            _slot!.slotId == existing.scheduleId;
         await widget.repository.updateSchedule(
           existing.scheduleId,
           subjectId: _subject!.subjectId,
-          slotId: _slot!.slotId,
+          slotId: keepingCustomTime ? null : _slot!.slotId,
           dayOfWeek: _day + 2,
           activityName: name,
           roomName: _roomController.text,
@@ -142,10 +145,17 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final clashes = _slot == null
+    final selectedTimeKey = _slot == null
+        ? null
+        : (widget.existing != null &&
+                widget.existing!.isCustomTime &&
+                _slot!.slotId == widget.existing!.scheduleId
+            ? widget.existing!.timeKey
+            : _slot!.slotId);
+    final clashes = selectedTimeKey == null
         ? const <ClassSchedule>[]
         : widget.data.items
-            .where((i) => i.scheduleId != widget.existing?.scheduleId && i.dayIndex == _day && i.slotId == _slot!.slotId)
+            .where((i) => i.scheduleId != widget.existing?.scheduleId && i.dayIndex == _day && i.timeKey == selectedTimeKey)
             .toList();
 
     return SingleChildScrollView(
@@ -353,7 +363,11 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
 
   Widget _buildSlotScrollSelector(BuildContext context) {
     final slots = widget.data.slots;
-    if (slots.isEmpty) {
+    final existing = widget.existing;
+    final keepingCustom = existing != null &&
+        existing.isCustomTime &&
+        _slot?.slotId == existing.scheduleId;
+    if (slots.isEmpty && !keepingCustom) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -367,7 +381,26 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
       );
     }
 
-    return Scrollbar(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (keepingCustom)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: context.k.brandTint,
+              borderRadius: BorderRadius.circular(KRadii.control),
+              border: Border.all(color: context.k.brand.withValues(alpha: 0.4)),
+            ),
+            child: Text(
+              'Đang giữ giờ tự do: ${existing.startTime} – ${existing.endTime} (chọn khung chuẩn bên dưới nếu muốn đổi)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand),
+            ),
+          ),
+        if (slots.isNotEmpty)
+          Scrollbar(
       controller: _slotScrollController,
       thumbVisibility: true,
       trackVisibility: true,
@@ -452,6 +485,8 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
           ],
         ),
       ),
+    ),
+      ],
     );
   }
 

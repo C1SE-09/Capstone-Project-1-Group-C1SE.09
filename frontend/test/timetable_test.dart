@@ -64,22 +64,28 @@ void main() {
     String name,
     String slotId, {
     int dayOfWeek = 2,
+    String? customStartTime,
+    String? customEndTime,
+    TimeSlot? customSlot,
   }) =>
       ClassSchedule(
         scheduleId: id,
         classId: 'c1',
         subjectId: 's1',
         slotId: slotId,
+        customStartTime: customStartTime,
+        customEndTime: customEndTime,
         dayOfWeek: dayOfWeek,
         activityName: name,
         teacherName: 'Cô Mai',
         roomName: 'Phòng tạo hình',
-        timeSlot: TimeSlot(
-          slotId: slotId,
-          name: slotId == 'slot1' ? '07:30 - 08:10' : '09:00 - 09:40',
-          startTime: slotId == 'slot1' ? '07:30' : '09:00',
-          endTime: slotId == 'slot1' ? '08:10' : '09:40',
-        ),
+        timeSlot: customSlot ??
+            TimeSlot(
+              slotId: slotId,
+              name: slotId == 'slot1' ? '07:30 - 08:10' : '09:00 - 09:40',
+              startTime: slotId == 'slot1' ? '07:30' : '09:00',
+              endTime: slotId == 'slot1' ? '08:10' : '09:40',
+            ),
         subject: const Subject(
             subjectId: 's1', name: 'Vẽ sáng tạo', colorCode: '#4CAF50'),
       );
@@ -372,4 +378,146 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+      'hai hoạt động giờ tự do khác giờ trong cùng ngày không bị báo trùng giờ giả',
+      (tester) async {
+    final customEarly = buildItem(
+      'c-early',
+      'Thể dục sáng tự do',
+      '',
+      customStartTime: '07:15',
+      customEndTime: '07:45',
+      customSlot: const TimeSlot(
+        slotId: 'c-early',
+        name: '07:15 - 07:45',
+        startTime: '07:15',
+        endTime: '07:45',
+      ),
+    );
+    final customLate = buildItem(
+      'c-late',
+      'Đọc truyện tự do',
+      '',
+      customStartTime: '10:15',
+      customEndTime: '10:45',
+      customSlot: const TimeSlot(
+        slotId: 'c-late',
+        name: '10:15 - 10:45',
+        startTime: '10:15',
+        endTime: '10:45',
+      ),
+    );
+    final repo = _FakeScheduleRepository([customLate, customEarly]);
+
+    await tester.pumpWidget(wrap(TimetableScreen(
+      classId: 'c1',
+      className: 'Lớp Mầm 1',
+      repository: repo,
+      isReadOnly: true,
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('T2'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Thể dục sáng tự do'), findsOneWidget);
+    expect(find.text('Đọc truyện tự do'), findsOneWidget);
+    expect(find.textContaining('Trùng giờ'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('editor giữ nguyên giờ tự do (slotId null) khi chỉnh sửa tên hoạt động',
+      (tester) async {
+    const standardSlot = TimeSlot(
+      slotId: 'slot1',
+      name: '07:30 - 08:10',
+      startTime: '07:30',
+      endTime: '08:10',
+    );
+    const subject = Subject(
+      subjectId: 's1',
+      name: 'Mỹ thuật',
+      colorCode: '#328DD3',
+    );
+    final existingCustom = ClassSchedule(
+      scheduleId: 'sched-custom-1',
+      classId: 'c1',
+      subjectId: subject.subjectId,
+      slotId: '',
+      customStartTime: '07:15',
+      customEndTime: '07:45',
+      dayOfWeek: 2,
+      activityName: 'Hoạt động sáng',
+      timeSlot: const TimeSlot(
+        slotId: 'sched-custom-1',
+        name: '07:15 - 07:45',
+        startTime: '07:15',
+        endTime: '07:45',
+      ),
+      subject: subject,
+    );
+
+    String? capturedSlotId = 'UNSET';
+    String? capturedActivity;
+    final repo = _RecordingUpdateScheduleRepository(
+      [existingCustom],
+      slots: const [standardSlot],
+      subjects: const [subject],
+      onUpdate: ({String? slotId, String? activityName}) {
+        capturedSlotId = slotId;
+        capturedActivity = activityName;
+      },
+    );
+
+    await tester.pumpWidget(gardenVoiceWrap(Scaffold(
+      body: ScheduleEditorSheet(
+        data: TimetableData(
+          items: [existingCustom],
+          slots: const [standardSlot],
+          subjects: const [subject],
+        ),
+        existing: existingCustom,
+        classId: 'c1',
+        repository: repo,
+        onSaved: (_, __) {},
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Đang giữ giờ tự do: 07:15 – 07:45'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'Hoạt động sáng mới');
+    final saveFinder = find.text('Lưu hoạt động');
+    await tester.ensureVisible(saveFinder);
+    await tester.tap(saveFinder);
+    await tester.pumpAndSettle();
+
+    expect(capturedActivity, 'Hoạt động sáng mới');
+    expect(capturedSlotId, isNull);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+class _RecordingUpdateScheduleRepository extends _FakeScheduleRepository {
+  _RecordingUpdateScheduleRepository(
+    super.items, {
+    super.slots,
+    super.subjects,
+    required this.onUpdate,
+  });
+
+  final void Function({String? slotId, String? activityName}) onUpdate;
+
+  @override
+  Future<ClassSchedule> updateSchedule(
+    String scheduleId, {
+    String? subjectId,
+    String? slotId,
+    int? dayOfWeek,
+    String? activityName,
+    String? roomName,
+    bool? isActive,
+  }) async {
+    onUpdate(slotId: slotId, activityName: activityName);
+    return items.first;
+  }
 }

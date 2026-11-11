@@ -12,6 +12,11 @@ from app.services.health_profile_service import (
     ensure_within_limits,
     normalize_health_values,
 )
+from app.services.schedule_service import (
+    get_schedule_effective_times,
+    resolve_schedule_time_selection,
+    schedule_sort_key,
+)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, text
@@ -1596,13 +1601,19 @@ def list_schedules(
     if day_of_week is not None:
         query = query.filter(ClassSchedule.day_of_week == day_of_week)
 
-    schedules = query.order_by(TimeSlot.order_index.asc(), ClassSchedule.created_at.asc()).all()
+    schedules = sorted(query.all(), key=lambda s: schedule_sort_key(s, include_day=False))
 
     results = []
     for s in schedules:
-        slot_name = s.time_slot.name if s.time_slot else "07:00 - 08:00"
-        start_time = s.time_slot.start_time if s.time_slot else "07:00"
-        end_time = s.time_slot.end_time if s.time_slot else "08:00"
+        start_time, end_time = get_schedule_effective_times(s)
+        has_custom_times = bool(
+            getattr(s, "custom_start_time", None) and getattr(s, "custom_end_time", None)
+        )
+        slot_name = (
+            s.time_slot.name
+            if s.time_slot and not has_custom_times
+            else f"{start_time} - {end_time}"
+        )
         results.append(
             {
                 "id": str(s.schedule_id),
@@ -1621,62 +1632,26 @@ def list_schedules(
     return results
 
 
-def _to_minutes(t_str: str) -> int:
-    try:
-        parts = t_str.strip().split(":")
-        return int(parts[0]) * 60 + int(parts[1])
-    except (ValueError, IndexError, AttributeError):
-        return 0
-
-
-def _resolve_and_validate_slot(
+def _resolve_schedule_times_or_400(
     db: Session,
     slot_id: str | None,
     start_time: str | None,
     end_time: str | None,
-    day_of_week: int,
-    class_id: uuid.UUID | None = None,
-    exclude_schedule_id: uuid.UUID | None = None,
-) -> TimeSlot:
-    slot = None
-    if slot_id and slot_id.strip():
-        slot = db.query(TimeSlot).filter(TimeSlot.slot_id == uuid.UUID(slot_id.strip())).first()
-
-    if not slot and start_time and end_time:
-        st = start_time.strip()
-        et = end_time.strip()
-        st_min = _to_minutes(st)
-        et_min = _to_minutes(et)
-        if et_min <= st_min:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Khung giờ không hợp lệ: Giờ kết thúc ({et}) phải sau giờ bắt đầu ({st}).",
-            )
-        if st_min < 7 * 60 or et_min > 17 * 60:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Khung giờ ({st} - {et}) nằm ngoài giờ làm việc của trường (chỉ cho phép từ 07:00 đến 17:00 - hết giờ trả trẻ).",
-            )
-
-        slot = db.query(TimeSlot).filter(TimeSlot.start_time == st, TimeSlot.end_time == et).first()
-        if not slot:
-            slot = TimeSlot(
-                slot_id=uuid.uuid4(),
-                name=f"{st} - {et}",
-                start_time=st,
-                end_time=et,
-                order_index=st_min,
-            )
-            db.add(slot)
-            db.flush()
-
-    if not slot:
-        slot = db.query(TimeSlot).first()
-
-    if not slot:
-        raise HTTPException(status_code=400, detail="Không tìm thấy khung giờ phù hợp.")
-
-    return slot
+    *,
+    fallback_to_first_slot: bool = False,
+) -> tuple[TimeSlot | None, str | None, str | None]:
+    """Resolve slot/custom timing and convert ValueError into HTTP 400."""
+    try:
+        return resolve_schedule_time_selection(
+            db,
+            slot_id=slot_id,
+            start_time=start_time,
+            end_time=end_time,
+            enforce_working_hours=True,
+            fallback_to_first_slot=fallback_to_first_slot,
+        )
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
 
 
 @router.post("/schedules", status_code=status.HTTP_201_CREATED)
@@ -1693,20 +1668,21 @@ def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
 
     target_class_id = uuid.UUID(data.class_id) if data.class_id else (first_class.class_id if first_class else uuid.uuid4())
 
-    target_slot = _resolve_and_validate_slot(
+    target_slot, custom_start, custom_end = _resolve_schedule_times_or_400(
         db,
         slot_id=data.slot_id,
         start_time=data.start_time,
         end_time=data.end_time,
-        day_of_week=data.day_of_week,
-        class_id=target_class_id,
+        fallback_to_first_slot=True,
     )
 
     schedule = ClassSchedule(
         schedule_id=uuid.uuid4(),
         class_id=target_class_id,
         subject_id=first_subject.subject_id if first_subject else uuid.uuid4(),
-        slot_id=target_slot.slot_id,
+        slot_id=target_slot.slot_id if target_slot else None,
+        custom_start_time=custom_start,
+        custom_end_time=custom_end,
         teacher_id=uuid.UUID(data.teacher_id) if data.teacher_id else (first_teacher.teacher_id if first_teacher else None),
         day_of_week=data.day_of_week,
         activity_name=data.activity_name.strip(),
@@ -1752,17 +1728,17 @@ def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Session = Depend
             )
         s.day_of_week = data.day_of_week
 
-    if data.slot_id is not None or (data.start_time is not None and data.end_time is not None):
-        target_slot = _resolve_and_validate_slot(
+    has_slot_id = bool(data.slot_id and data.slot_id.strip())
+    if has_slot_id or data.start_time is not None or data.end_time is not None:
+        target_slot, custom_start, custom_end = _resolve_schedule_times_or_400(
             db,
             slot_id=data.slot_id,
             start_time=data.start_time,
             end_time=data.end_time,
-            day_of_week=s.day_of_week,
-            class_id=s.class_id,
-            exclude_schedule_id=s.schedule_id,
         )
-        s.slot_id = target_slot.slot_id
+        s.slot_id = target_slot.slot_id if target_slot else None
+        s.custom_start_time = custom_start
+        s.custom_end_time = custom_end
 
     db.commit()
     return {"message": "Cập nhật lịch sinh hoạt thành công"}
