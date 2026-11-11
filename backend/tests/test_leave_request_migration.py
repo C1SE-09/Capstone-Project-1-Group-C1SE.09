@@ -63,9 +63,12 @@ def test_migration_merges_existing_heads_into_one_head():
     assert set(migration.down_revision) == {"4d8e9f1a2b3c", "c0b673468361"}
     assert len(scripts.get_heads()) == 1, "Bản ghép phải có một head, không làm mất nhánh health/medicine"
     final = scripts.get_revision(scripts.get_heads()[0])
-    # Head hien tai: migration them bang "phan hoi bao cao" (parent <-> teacher).
-    assert final.revision == "d9f0a1b2c3d4"
-    assert final.down_revision == "c8e9f0a1b2c4"
+    # Head hien tai: migration luu gio tu do tren class_schedule va don 2 slot du.
+    assert final.revision == "e1f2a3b4c5d6"
+    assert final.down_revision == "d9f0a1b2c3d4"
+    # Migration ngay ben duoi van phai la migration them bang "phan hoi bao cao" (parent <-> teacher).
+    report_response = scripts.get_revision("d9f0a1b2c3d4")
+    assert report_response.down_revision == "c8e9f0a1b2c4"
     # Migration ngay ben duoi van phai la migration theo doi dispatch STT.
     stt_dispatch = scripts.get_revision("c8e9f0a1b2c4")
     assert stt_dispatch.down_revision == "b7d8e9f0a1b3"
