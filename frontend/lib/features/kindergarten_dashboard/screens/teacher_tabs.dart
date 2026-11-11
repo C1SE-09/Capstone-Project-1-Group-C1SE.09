@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
-import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
+import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_overview.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_class_header.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_account_screen.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_account_screen.dart' show TeacherAccountScreen;
 
@@ -24,9 +30,14 @@ class OverviewScreen extends StatefulWidget {
     this.onOpenAttendance,
     this.onOpenMedications,
     this.onEmergencyAlert,
+    this.onOpenNotifications,
+    this.onStartReport,
+    this.notificationCount,
     this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
     this.repository,
     this.scheduleRepository,
+    this.attendanceRepository,
+    this.medicationRepository,
   });
   final ValueChanged<String>? onOpenReport;
   final VoidCallback? onHistory;
@@ -36,336 +47,104 @@ class OverviewScreen extends StatefulWidget {
   final VoidCallback? onOpenAttendance;
   final VoidCallback? onOpenMedications;
   final VoidCallback? onEmergencyAlert;
+  final VoidCallback? onOpenNotifications;
+  final VoidCallback? onStartReport;
+  final int? notificationCount;
   final String classId;
   final HttpDashboardRepository? repository;
   final ScheduleRepository? scheduleRepository;
+  final HttpAttendanceRepository? attendanceRepository;
+  final HttpMedicationRepository? medicationRepository;
   @override
   State<OverviewScreen> createState() => _OverviewScreenState();
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
   late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
-  late final ScheduleRepository scheduleRepository = widget.scheduleRepository ?? HttpScheduleRepository();
+  late final HttpAttendanceRepository attendanceRepository =
+      widget.attendanceRepository ?? HttpAttendanceRepository();
+  late final HttpMedicationRepository medicationRepository =
+      widget.medicationRepository ?? HttpMedicationRepository();
   late Future<_OverviewData> future;
   @override
   void initState() { super.initState(); future = _load(); }
-  // Loads live teacher, class summary, and today's timetable.
+  // Tải dữ liệu thật cho các khối Garden Voice; số không có nguồn không được suy diễn.
   Future<_OverviewData> _load() async {
-    final values = await Future.wait([
+    final today = DateTime.now();
+    final values = await Future.wait<dynamic>([
       repository.getCurrentTeacher(),
-      repository.getClassDashboard(widget.classId, DateTime.now()),
-      scheduleRepository.getClassSchedule(widget.classId).catchError((_) => <ClassSchedule>[]),
+      repository.getClassDashboard(widget.classId, today),
+      attendanceRepository.getClassAttendanceDetails(widget.classId, today),
+      _loadMedications(),
     ]);
-    final now = DateTime.now();
-    final todayIndex = now.weekday - 1;
-    final nowMinutes = now.hour * 60 + now.minute;
-    final todayAll = (values[2] as List<ClassSchedule>)
-        .where((item) => item.isActive && item.dayIndex == todayIndex)
-        .toList()
-      ..sort((a, b) => (_timeToMinutes(a.startTime) ?? 0).compareTo(_timeToMinutes(b.startTime) ?? 0));
-    final upcoming = todayAll.where((item) => (_timeToMinutes(item.endTime) ?? 0) > nowMinutes).toList();
-    final todayItems = upcoming.isNotEmpty ? upcoming : todayAll;
     return _OverviewData(
       values[0] as Teacher,
       values[1] as ClassDashboardSummary,
-      todayItems.take(3).toList(growable: false),
+      values[2] as Map<String, AttendanceChildRecord>,
+      values[3] as MedicationsTodayData?,
     );
   }
 
-  void _handleOpenTimetable() {
-    widget.onOpenTimetable?.call();
-    if (mounted) setState(() => future = _load());
+  Future<MedicationsTodayData?> _loadMedications() async {
+    try {
+      return await medicationRepository.getTodayMedications();
+    } catch (_) {
+      return null;
+    }
   }
   // Renders overview loading, error and data states.
   @override
-  Widget build(BuildContext context) => FutureBuilder<_OverviewData>(future: future, builder: (context, snapshot) {
-    if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-    if (snapshot.hasError || snapshot.data == null) {
-      return Center(
-        child: TextButton(
-          onPressed: () => setState(() => future = _load()),
-          child: const Text('Không tải được tổng quan · Thử lại'),
+  Widget build(BuildContext context) => GardenVoiceScope(
+        child: FutureBuilder<_OverviewData>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return Center(
+                child: TextButton(
+                  onPressed: () => setState(() => future = _load()),
+                  child: const Text('Không tải được tổng quan · Thử lại'),
+                ),
+              );
+            }
+            final data = snapshot.data!;
+            return GardenVoiceTeacherOverview(
+              teacher: data.teacher,
+              dashboard: data.dashboard,
+              attendance: data.attendance,
+              medications: data.medications,
+              notificationCount: widget.notificationCount,
+              onStartReport: widget.onStartReport,
+              onOpenNotifications: widget.onOpenNotifications,
+              onOpenAttendance: widget.onOpenAttendance,
+              onOpenMedications: widget.onOpenMedications,
+              onEmergencyAlert: widget.onEmergencyAlert,
+              onHealth: widget.onHealth,
+              onRefresh: () async {
+                final refreshed = await _load();
+                if (mounted) setState(() => future = Future.value(refreshed));
+              },
+            );
+          },
         ),
       );
-    }
-    final data = snapshot.data;
-    if (data == null) return const Center(child: Text('Không có dữ liệu tổng quan.'));
-    final total = data.dashboard.totalChildren;
-    final healthCount = data.dashboard.pendingChildren.where((item) => item.child.medicalAllergies?.trim().isNotEmpty == true).length;
-    final nowMinutes = DateTime.now().hour * 60 + DateTime.now().minute;
-    return RefreshIndicator(
-      onRefresh: () async {
-        final d = await _load();
-        if (mounted) setState(() => future = Future.value(d));
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_longDate(DateTime.now()), style: Theme.of(context).textTheme.bodyMedium),
-                  Text('Chào ${data.teacher.fullName}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
-                ],
-              ),
-            ),
-            if (data.dashboard.classInfo.name.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: context.k.brandTint,
-                  borderRadius: BorderRadius.circular(99),
-                  border: Border.all(color: context.k.brand.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.school_outlined, size: 15, color: context.k.brand),
-                    const SizedBox(width: 5),
-                    Text(
-                      data.dashboard.classInfo.name,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        KCard(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              ProgressRing(value: data.dashboard.completedCount, total: total),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Tiến độ hôm nay', style: Theme.of(context).textTheme.bodyMedium),
-                    Text('${data.dashboard.completedCount}/$total báo cáo đã gửi', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                    Text.rich(
-                      TextSpan(children: [
-                        const TextSpan(text: 'Còn '),
-                        TextSpan(text: '${data.dashboard.notCompletedCount} trẻ', style: TextStyle(fontWeight: FontWeight.w600, color: context.k.ink)),
-                        const TextSpan(text: ' chưa có báo cáo.'),
-                      ]),
-                      style: TextStyle(fontSize: 13, color: context.k.inkSoft),
-                    ),
-                  ],
-                ),
-              ),
-
-            ],
-          ),
-        ),
-        if (widget.onOpenAttendance != null) ...[
-          const SizedBox(height: 12),
-          KCard(
-            onTap: widget.onOpenAttendance,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: context.k.okTint,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.how_to_reg_outlined, size: 20, color: context.k.ok),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Điểm danh hôm nay',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        'Điểm danh nhanh học sinh có mặt, vắng hoặc đến trễ',
-                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
-              ],
-            ),
-          ),
-        ],
-        if (widget.onOpenMedications != null) ...[
-          const SizedBox(height: 12),
-          KCard(
-            onTap: widget.onOpenMedications,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F5FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.medication_outlined, size: 20, color: Color(0xFF2F54EB)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Lịch uống thuốc hôm nay',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        'Theo dõi và xác nhận thuốc phụ huynh gửi theo buổi',
-                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
-              ],
-            ),
-          ),
-        ],
-        if (widget.onEmergencyAlert != null) ...[
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: widget.onEmergencyAlert,
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF1F0),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFFFA39E)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD32F2F),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.warning_amber_rounded, size: 20, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Báo động sự cố khẩn cấp',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFD32F2F),
-                          ),
-                        ),
-                        Text(
-                          'Phát tín hiệu còi hú tới phụ huynh & gọi nhanh 1 chạm',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF8C8C8C)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFFD32F2F)),
-                ],
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 20),
-        Text('Hôm nay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink)),
-        const SizedBox(height: 10),
-        KCard(
-          child: Column(
-            children: [
-              if (data.todayItems.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Hôm nay chưa có hoạt động', style: TextStyle(fontSize: 13, color: context.k.inkFaint)),
-                  ),
-                )
-              else
-                for (final item in data.todayItems)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    child: Row(
-                      children: [
-                        Text(item.startTime, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink)),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(item.displayName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
-                        if (_timeToMinutes(item.startTime) != null &&
-                            _timeToMinutes(item.startTime)! <= nowMinutes &&
-                            nowMinutes < (_timeToMinutes(item.endTime) ?? 0))
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: context.k.okTint, borderRadius: BorderRadius.circular(99)),
-                            child: Text('Đang diễn ra', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.ok)),
-                          )
-                        else if (item.teacherLabel.isNotEmpty)
-                          Text(item.teacherLabel, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
-                      ],
-                    ),
-                  ),
-              const Divider(),
-              InkWell(
-                onTap: _handleOpenTimetable,
-                child: SizedBox(
-                  height: 44,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text('Xem thời khóa biểu', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.brand)),
-                        ),
-                        Icon(Icons.chevron_right, size: 18, color: context.k.brand),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.45,
-          children: [
-            StatCard(value: total, label: 'Tổng số trẻ', icon: Icons.groups_outlined),
-            StatCard(value: data.dashboard.completedCount, label: 'Đã gửi', icon: Icons.check_circle_outline, tone: context.k.ok),
-            StatCard(value: data.dashboard.draftCount, label: 'Bản nháp', icon: Icons.edit_outlined, tone: context.k.info),
-            StatCard(value: healthCount, label: 'Cảnh báo sức khỏe', icon: Icons.monitor_heart_outlined, tone: context.k.warn),
-          ],
-        ),
-      ],
-    ),
-  );
-  });
 }
 
-class _OverviewData { const _OverviewData(this.teacher, this.dashboard, this.todayItems); final Teacher teacher; final ClassDashboardSummary dashboard; final List<ClassSchedule> todayItems; }
+class _OverviewData {
+  const _OverviewData(
+    this.teacher,
+    this.dashboard,
+    this.attendance,
+    this.medications,
+  );
+
+  final Teacher teacher;
+  final ClassDashboardSummary dashboard;
+  final Map<String, AttendanceChildRecord> attendance;
+  final MedicationsTodayData? medications;
+}
 
 class ClassListScreen extends StatefulWidget {
   const ClassListScreen({
@@ -377,7 +156,12 @@ class ClassListScreen extends StatefulWidget {
     this.onSelectClass,
     this.onOpenTimetable,
     this.onOpenAttendance,
+    this.onOpenLeaveRequests,
+    this.onOpenNotifications,
     this.onRefresh,
+    this.teacherName,
+    this.notificationCount,
+    this.pendingLeaveCount,
     this.className = 'Lớp',
     this.schoolName = 'Chưa có thông tin trường',
     this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
@@ -389,7 +173,12 @@ class ClassListScreen extends StatefulWidget {
   final VoidCallback? onSelectClass;
   final VoidCallback? onOpenTimetable;
   final VoidCallback? onOpenAttendance;
+  final VoidCallback? onOpenLeaveRequests;
+  final VoidCallback? onOpenNotifications;
   final Future<void> Function()? onRefresh;
+  final String? teacherName;
+  final int? notificationCount;
+  final int? pendingLeaveCount;
   final String classId;
   final String className;
   final String schoolName;
@@ -405,7 +194,9 @@ class _ClassListScreenState extends State<ClassListScreen> {
   @override
   void didUpdateWidget(covariant ClassListScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialHealthOnly != oldWidget.initialHealthOnly) healthOnly = widget.initialHealthOnly;
+    if (widget.initialHealthOnly != oldWidget.initialHealthOnly) {
+      healthOnly = widget.initialHealthOnly;
+    }
   }
 
   @override
@@ -414,167 +205,277 @@ class _ClassListScreenState extends State<ClassListScreen> {
       final matches = child.name.toLowerCase().contains(query.toLowerCase());
       return matches && (!healthOnly || child.severity != Severity.none);
     }).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+    final subtitleText = (widget.teacherName != null &&
+            widget.teacherName!.trim().isNotEmpty)
+        ? widget.teacherName!.trim()
+        : widget.schoolName;
+    final content = Builder(
+      builder: (context) {
+        final k = context.k;
+        return ColoredBox(
+          color: k.canvas,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.className, style: Theme.of(context).textTheme.headlineMedium),
-                        Text(widget.schoolName, style: Theme.of(context).textTheme.bodyMedium),
-                      ],
-                    ),
-                  ),
-
-                ],
+              GardenVoiceClassHeader(
+                className: widget.className,
+                subtitle: subtitleText,
+                selectedTab: GardenVoiceClassTab.roster,
+                notificationCount: widget.notificationCount,
+                pendingLeaveCount: widget.pendingLeaveCount,
+                onSelectClass: widget.onSelectClass,
+                onOpenNotifications: widget.onOpenNotifications,
+                onTabSelected: (tab) {
+                  switch (tab) {
+                    case GardenVoiceClassTab.roster:
+                      if (healthOnly) setState(() => healthOnly = false);
+                    case GardenVoiceClassTab.attendance:
+                      widget.onOpenAttendance?.call();
+                    case GardenVoiceClassTab.leaveRequests:
+                      widget.onOpenLeaveRequests?.call();
+                    case GardenVoiceClassTab.timetable:
+                      widget.onOpenTimetable?.call();
+                  }
+                },
               ),
-              if (widget.onOpenAttendance != null) ...[
-                const SizedBox(height: 14),
-                KCard(
-                  onTap: widget.onOpenAttendance,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 15, 14, 15),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 39),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: k.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: k.lineStrong),
+                  ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(color: context.k.okTint, borderRadius: BorderRadius.circular(8)),
-                        child: Icon(Icons.how_to_reg_outlined, size: 18, color: context.k.ok),
+                      SvgPicture.asset(
+                        'assets/garden_voice/class_search.svg',
+                        width: 24,
+                        height: 24,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Điểm danh hôm nay', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                            Text('Điểm danh học sinh đến lớp, vắng hoặc trễ', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
-                          ],
+                        child: TextField(
+                          onChanged: (value) => setState(() => query = value),
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.24,
+                            color: k.ink,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Tìm tên bé…',
+                            hintStyle: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              height: 1.24,
+                              color: k.inkSoft,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
-                      Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
                     ],
                   ),
                 ),
-              ],
-              const SizedBox(height: 10),
-              KCard(
-                onTap: widget.onOpenTimetable,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(color: context.k.brandTint, borderRadius: BorderRadius.circular(8)),
-                      child: Icon(Icons.calendar_month_outlined, size: 18, color: context.k.brand),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Thời khóa biểu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                          Text('Xem lịch học cả tuần của lớp', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
-                  ],
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: widget.onRefresh ?? () async {},
+                  child: list.isEmpty
+                      ? LayoutBuilder(
+                          builder: (context, constraints) =>
+                              SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight),
+                              child: Center(
+                                child: Text(
+                                  'Không tìm thấy trẻ phù hợp.',
+                                  style: TextStyle(color: k.inkFaint),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: k.reviewSurface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: k.lineStrong),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0D102737),
+                                    blurRadius: 24,
+                                    offset: Offset(0, 8),
+                                  ),
+                                  BoxShadow(
+                                    color: Color(0x08102737),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  for (var index = 0;
+                                      index < list.length;
+                                      index++) ...[
+                                    _ChildRow(
+                                      child: list[index],
+                                      onTap: () => _showActions(list[index]),
+                                    ),
+                                    if (index < list.length - 1)
+                                      Divider(
+                                          height: 1,
+                                          thickness: 1,
+                                          color: k.line),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SearchField(hint: 'Tìm theo tên bé…', onChanged: (value) => setState(() => query = value)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children: [
-                  FilterChipButton(label: 'Tất cả', selected: !healthOnly, onTap: () => setState(() => healthOnly = false)),
-                  FilterChipButton(label: 'Cảnh báo sức khỏe', warn: true, selected: healthOnly, onTap: () => setState(() => healthOnly = true)),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(child: Text('${widget.children.length} trẻ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.inkSoft))),
-                  Text('${widget.children.where((c) => {ReportStatus.none, ReportStatus.draft, ReportStatus.attention}.contains(c.status)).length} chưa xong', style: Theme.of(context).textTheme.bodySmall),
-                ],
               ),
             ],
           ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: widget.onRefresh ?? () async {},
-            child: list.isEmpty
-                ? LayoutBuilder(
-                    builder: (context, constraints) => SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Center(
-                          child: Text('Không tìm thấy trẻ phù hợp.', style: TextStyle(color: context.k.inkFaint)),
-                        ),
-                      ),
-                    ),
-                  )
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    children: [
-                      KCard(
-                        child: Column(
-                          children: [
-                            for (var index = 0; index < list.length; index++) ...[
-                              _ChildRow(child: list[index], onTap: () => _showActions(list[index])),
-                              if (index < list.length - 1) const Divider(),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ],
+        );
+      },
     );
+    return context.k.isGardenVoice
+        ? content
+        : GardenVoiceScope(child: content);
   }
 
   void _showActions(Child child) {
-    showKSheet(
-      context,
-      Column(
-        children: [
-          Row(
-            children: [
-              Avatar(name: child.name, size: 44),
-              const SizedBox(width: 12),
-              Expanded(child: Text(child.name, style: Theme.of(context).textTheme.titleMedium)),
-              StatusBadge(child.status),
-            ],
-          ),
-          const SizedBox(height: 20),
-          KButton(label: 'Ghi âm', icon: Icons.mic_none, large: true, onPressed: () {
-            Navigator.pop(context);
-            widget.onRecord(child);
-          }),
-          const SizedBox(height: 10),
-          KButton(label: 'Soạn báo cáo', icon: Icons.edit_outlined, secondary: true, onPressed: () {
-            Navigator.pop(context);
-            widget.onEdit(child);
-          }),
-        ],
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => _ChildActionsScreen(
+        child: child,
+        className: widget.className,
+        onRecord: () => widget.onRecord(child),
+        onEdit: () => widget.onEdit(child),
       ),
-    );
+    ));
   }
+}
+
+class _ChildActionsScreen extends StatelessWidget {
+  const _ChildActionsScreen({
+    required this.child,
+    required this.className,
+    required this.onRecord,
+    required this.onEdit,
+  });
+
+  final Child child;
+  final String className;
+  final VoidCallback onRecord;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) => GardenVoiceScope(
+        child: Builder(
+          builder: (context) {
+            final k = context.k;
+            final allergy = (child.allergy ?? '').trim();
+            final careNotes = (child.careNotes ?? '').trim();
+            final note = allergy.isNotEmpty
+                ? allergy.toLowerCase().startsWith('dị ứng')
+                    ? allergy
+                    : 'Dị ứng ${allergy[0].toLowerCase()}${allergy.substring(1)}'
+                : careNotes.isNotEmpty
+                    ? careNotes
+                    : 'Chưa có lưu ý chăm sóc.';
+            return Scaffold(
+              backgroundColor: k.canvas,
+              appBar: KAppBar(
+                title: child.name,
+                onBack: () => Navigator.of(context).pop(),
+              ),
+              body: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        className,
+                        style: TextStyle(
+                          color: k.inkSoft,
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: k.surfaceSunken,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Ghi nhận trong ngày',
+                              style: TextStyle(
+                                color: k.brandStrong,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              note,
+                              style: TextStyle(
+                                color: k.ink,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      KButton(
+                        label: 'Ghi âm cho bé',
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onRecord();
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      KButton(
+                        label: 'Soạn báo cáo',
+                        secondary: true,
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onEdit();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
 }
 
 class _ChildRow extends StatelessWidget {
@@ -584,34 +485,66 @@ class _ChildRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final k = context.k;
+    final allergyText = (child.allergy ?? '').trim();
+    final careNotesText = (child.careNotes ?? '').trim();
+    String? subtitle;
+    Color subtitleColor = k.inkSoft;
+    if (allergyText.isNotEmpty) {
+      subtitle = allergyText.toLowerCase().startsWith('dị ứng')
+          ? allergyText
+          : 'Dị ứng: $allergyText';
+      subtitleColor = k.warn;
+    } else if (careNotesText.isNotEmpty) {
+      subtitle = careNotesText;
+      subtitleColor = k.inkSoft;
+    } else if (child.severity != Severity.none) {
+      subtitle = 'Sức khỏe: ${child.severity.label}';
+      subtitleColor = k.warn;
+    }
+    final statusLabel = switch (child.status) {
+      ReportStatus.none => 'Chưa ghi',
+      ReportStatus.submitted || ReportStatus.read => 'Đã ghi',
+      _ => null,
+    };
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            Avatar(name: child.name),
+            Avatar(name: child.name, size: 40),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(child: Text(child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-                      if (child.allergy != null) Padding(padding: const EdgeInsets.only(left: 5), child: Icon(Icons.warning_amber_rounded, size: 15, color: context.k.warn)),
-                    ],
+                  Text(
+                    child.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      height: 1.4,
+                      color: k.ink,
+                    ),
                   ),
-                  if (child.severity != Severity.none)
-                    Text('Sức khỏe: ${child.severity.label}', style: Theme.of(context).textTheme.bodySmall)
-                  else if (child.allergy != null)
-                    Text('Dị ứng: ${child.allergy}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.warn)),
-                  if ((child.careNotes ?? '').trim().isNotEmpty)
-                    Text('Lưu ý: ${child.careNotes!.trim()}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkSoft)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                        color: subtitleColor,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            StatusBadge(child.status),
+            const SizedBox(width: 12),
+            StatusBadge(child.status, labelOverride: statusLabel),
           ],
         ),
       ),
@@ -620,10 +553,17 @@ class _ChildRow extends StatelessWidget {
 }
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key, required this.onOpenReport, required this.children, this.repository});
+  const HistoryScreen({
+    super.key,
+    required this.onOpenReport,
+    required this.children,
+    this.repository,
+    this.referenceDate,
+  });
   final void Function(Child child, DailyReport? report) onOpenReport;
   final List<Child> children;
   final HttpDashboardRepository? repository;
+  final DateTime? referenceDate;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -632,17 +572,24 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   String query = '';
   String filter = 'Tất cả';
-  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
+  late final HttpDashboardRepository repository =
+      widget.repository ?? HttpDashboardRepository();
   late Future<List<_HistoryRow>> future;
   @override
-  void initState() { super.initState(); future = _load(); }
+  void initState() {
+    super.initState();
+    future = _load();
+  }
+
   // Loads the latest report history for each roster child.
   Future<List<_HistoryRow>> _load() async {
-    final validChildren = widget.children.where((c) => c.id.isNotEmpty).toList();
+    final validChildren =
+        widget.children.where((c) => c.id.isNotEmpty).toList();
     final childLists = await Future.wait(
       validChildren.map((child) async {
         try {
-          final reports = await repository.getRecentReports(child.id, includeDraft: true);
+          final reports = await repository.getRecentReports(child.id,
+              includeDraft: true);
           return reports.map((report) => _HistoryRow(child, report)).toList();
         } catch (e) {
           debugPrint('Error loading reports for child ${child.id}: $e');
@@ -657,123 +604,349 @@ class _HistoryScreenState extends State<HistoryScreen> {
     rows.sort((a, b) => b.report.reportDate.compareTo(a.report.reportDate));
     return rows;
   }
+
+  ReportStatus _rowStatus(_HistoryRow row) {
+    final healthText = (row.report.health ?? '').toLowerCase();
+    final hasSeverity =
+        severityFromDescription(row.report.health) != Severity.none ||
+            healthText.contains('mild') ||
+            healthText.contains('moderate') ||
+            healthText.contains('cần chú ý') ||
+            row.report.activities.any(
+              (a) =>
+                  severityFromDescription(a['description']?.toString()) !=
+                  Severity.none,
+            ) ||
+            row.child.severity != Severity.none;
+    return uiReportStatusFromDomain(
+      row.report.status,
+      hasSeverity: hasSeverity,
+    );
+  }
+
+  String _rowTimeLabel(_HistoryRow row) {
+    final published = row.report.publishedAt;
+    if (published != null) {
+      return '${published.hour.toString().padLeft(2, '0')}:${published.minute.toString().padLeft(2, '0')}';
+    }
+    final d = row.report.reportDate;
+    if (d.hour != 0 || d.minute != 0) {
+      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    }
+    if (row.child.time.trim().isNotEmpty) {
+      return row.child.time.trim();
+    }
+    return '08:00';
+  }
+
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<_HistoryRow>>(future: future, builder: (context, snapshot) {
-    if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-    if (snapshot.hasError) return Center(child: TextButton(onPressed: () => setState(() => future = _load()), child: const Text('Không tải được lịch sử · Thử lại')));
-    final historyRows = snapshot.data ?? const <_HistoryRow>[];
-    final groupsMap = <String, List<_HistoryRow>>{};
-    for (final row in historyRows) { groupsMap.putIfAbsent(_shortDate(row.report.reportDate), () => []).add(row); }
-    bool allowed(ReportStatus status) => switch (filter) {
-          'Bản nháp' => status == ReportStatus.draft,
-          'Đã gửi' => status == ReportStatus.submitted || status == ReportStatus.attention,
-          'Đã đọc' => status == ReportStatus.read,
-          _ => true,
-        };
-    final groups = groupsMap.entries.map((entry) => MapEntry(entry.key, entry.value.where((row) => row.child.name.toLowerCase().contains(query.toLowerCase()) && allowed(uiReportStatusFromBackend(row.report.status.name))).toList())).where((entry) => entry.value.isNotEmpty).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+  Widget build(BuildContext context) {
+    final content = FutureBuilder<List<_HistoryRow>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: TextButton(
+              onPressed: () => setState(() => future = _load()),
+              child: const Text('Không tải được lịch sử · Thử lại'),
+            ),
+          );
+        }
+        final k = context.k;
+        final now = widget.referenceDate ?? DateTime.now();
+        final historyRows = snapshot.data ?? const <_HistoryRow>[];
+        final groupsMap = <String, List<_HistoryRow>>{};
+        for (final row in historyRows) {
+          groupsMap
+              .putIfAbsent(
+                  _historyGroupLabel(row.report.reportDate, now), () => [])
+              .add(row);
+        }
+        bool allowed(ReportStatus status) => switch (filter) {
+              'Bản nháp' => status == ReportStatus.draft ||
+                  status == ReportStatus.attention,
+              'Đã gửi' => status == ReportStatus.submitted ||
+                  status == ReportStatus.attention,
+              'Đã đọc' => status == ReportStatus.read,
+              _ => true,
+            };
+        final groups = groupsMap.entries
+            .map((entry) => MapEntry(
+                entry.key,
+                entry.value
+                    .where((row) =>
+                        row.child.name
+                            .toLowerCase()
+                            .contains(query.toLowerCase()) &&
+                        allowed(_rowStatus(row)))
+                    .toList()))
+            .where((entry) => entry.value.isNotEmpty)
+            .toList();
+        return ColoredBox(
+          color: k.canvas,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Lịch sử báo cáo', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 14),
-              SearchField(hint: 'Tìm theo tên bé…', onChanged: (value) => setState(() => query = value)),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: ['Tất cả', 'Bản nháp', 'Đã gửi', 'Đã đọc']
-                      .map((value) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChipButton(label: value, selected: filter == value, onTap: () => setState(() => filter = value)),
-                          ))
-                      .toList(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Báo cáo',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                        color: k.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SearchField(
+                      hint: 'Tìm theo tên bé…',
+                      onChanged: (value) => setState(() => query = value),
+                    ),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: ['Tất cả', 'Bản nháp', 'Đã gửi', 'Đã đọc']
+                            .map(
+                              (value) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: FilterChipButton(
+                                  label: value,
+                                  selected: filter == value,
+                                  onTap: () => setState(() => filter = value),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    final r = await _load();
+                    if (mounted) setState(() => future = Future.value(r));
+                  },
+                  child: groups.isEmpty
+                      ? LayoutBuilder(
+                          builder: (context, constraints) =>
+                              SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight),
+                              child: Center(
+                                child: Text(
+                                  'Không có báo cáo nào khớp với bộ lọc này.',
+                                  style: TextStyle(color: k.inkFaint),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          children: [
+                            for (var groupIndex = 0;
+                                groupIndex < groups.length;
+                                groupIndex++) ...[
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  top: groupIndex == 0 ? 0 : 12,
+                                  bottom: 12,
+                                ),
+                                child: Text(
+                                  groups[groupIndex].key,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.28,
+                                    color: k.ink,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: k.surface,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: k.lineStrong),
+                                ),
+                                child: Column(
+                                  children: [
+                                    for (var index = 0;
+                                        index < groups[groupIndex].value.length;
+                                        index++) ...[
+                                      InkWell(
+                                        onTap: () => widget.onOpenReport(
+                                          groups[groupIndex].value[index].child,
+                                          groups[groupIndex]
+                                              .value[index]
+                                              .report,
+                                        ),
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                              minHeight: 66),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 10),
+                                            child: Row(
+                                              children: [
+                                                Avatar(
+                                                  name: groups[groupIndex]
+                                                      .value[index]
+                                                      .child
+                                                      .name,
+                                                  size: 40,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Text(
+                                                        groups[groupIndex]
+                                                            .value[index]
+                                                            .child
+                                                            .name,
+                                                        style: TextStyle(
+                                                          fontSize: 14.5,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          height: 1.28,
+                                                          color: k.ink,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        'Báo cáo ngày · ${_rowTimeLabel(groups[groupIndex].value[index])}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w400,
+                                                          height: 1.28,
+                                                          color: k.inkSoft,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                _HistoryStatusPill(
+                                                  status: _rowStatus(
+                                                    groups[groupIndex]
+                                                        .value[index],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (index <
+                                          groups[groupIndex].value.length - 1)
+                                        Divider(
+                                          height: 0.6,
+                                          thickness: 0.6,
+                                          color: k.line,
+                                        ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                 ),
               ),
             ],
           ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              final r = await _load();
-              if (mounted) setState(() => future = Future.value(r));
-            },
-            child: groups.isEmpty
-                ? LayoutBuilder(
-                    builder: (context, constraints) => SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Center(
-                          child: Text('Không có báo cáo nào khớp với bộ lọc này.', style: TextStyle(color: context.k.inkFaint)),
-                        ),
-                      ),
-                    ),
-                  )
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                    children: [
-                      for (final group in groups) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-                          child: Text(group.key, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.inkFaint, letterSpacing: .4)),
-                        ),
-                        KCard(
-                          child: Column(
-                            children: [
-                              for (var index = 0; index < group.value.length; index++) ...[
-                                InkWell(
-                                  onTap: () => widget.onOpenReport(group.value[index].child, group.value[index].report),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      children: [
-                                        Avatar(name: group.value[index].child.name),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(group.value[index].child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                        ),
-                                        StatusBadge(uiReportStatusFromBackend(group.value[index].report.status.name)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (index < group.value.length - 1) const Divider(),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-          ),
-        ),
-      ],
+        );
+      },
     );
-  });
+    return context.k.isGardenVoice
+        ? content
+        : GardenVoiceScope(child: content);
+  }
 }
 
-class _HistoryRow { const _HistoryRow(this.child, this.report); final Child child; final DailyReport report; }
+class _HistoryStatusPill extends StatelessWidget {
+  const _HistoryStatusPill({required this.status});
+
+  final ReportStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final (bg, fg, label) = switch (status) {
+      ReportStatus.submitted => (
+          k.activityRowTint,
+          k.activityRowText,
+          'Đã gửi'
+        ),
+      ReportStatus.read => (k.okTint, k.ok, 'Đã đọc'),
+      ReportStatus.attention => (k.accentTint, k.warn, 'Cần chú ý'),
+      ReportStatus.draft ||
+      ReportStatus.processing ||
+      ReportStatus.none =>
+        (k.surfaceSunken, k.inkSoft, 'Bản nháp'),
+    };
+    return Container(
+      constraints: const BoxConstraints(minHeight: 26),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          height: 1.28,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryRow {
+  const _HistoryRow(this.child, this.report);
+  final Child child;
+  final DailyReport report;
+}
 
 typedef AccountScreen = TeacherAccountScreen;
 
-// Formats today's date for the Vietnamese dashboard.
-// Parses "HH:MM" into minutes since midnight (null when invalid).
-int? _timeToMinutes(String value) {
-  if (value.trim().isEmpty) return null;
-  final parts = value.split(':');
-  if (parts.length < 2) return null;
-  final hours = int.tryParse(parts[0]);
-  final minutes = int.tryParse(parts[1]);
-  if (hours == null || minutes == null) return null;
-  return hours * 60 + minutes;
-}
-
-String _longDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+String _longDate(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 String _shortDate(DateTime d) => _longDate(d);
+
+String _historyGroupLabel(DateTime d, DateTime now) {
+  final day = DateTime(d.year, d.month, d.day);
+  final today = DateTime(now.year, now.month, now.day);
+  final diff = today.difference(day).inDays;
+  if (diff == 0) return 'Hôm nay';
+  if (diff == 1) return 'Hôm qua';
+  return _shortDate(d);
+}

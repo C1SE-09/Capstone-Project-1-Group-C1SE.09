@@ -14,6 +14,7 @@ class MedicationDose extends Equatable {
       required this.dosage,
       required this.status,
       this.batchId,
+      this.childName,
       this.name,
       this.category,
       this.notes,
@@ -33,7 +34,7 @@ class MedicationDose extends Equatable {
       this.givenByName});
 
   final String id, childId, classId, dosage, status;
-  final String? batchId, name, category, notes, timeSlot, imageUrl;
+  final String? batchId, childName, name, category, notes, timeSlot, imageUrl;
   final String? creatorUserId, creatorRole, creatorName, givenById, givenByName;
   final DateTime? requestDate,
       startDate,
@@ -74,6 +75,7 @@ class MedicationDose extends Equatable {
         dosage: requiredText('dosage'),
         status: requiredText('status'),
         batchId: text('batch_id'),
+        childName: text('child_name'),
         name: text('medicine_name'),
         category: text('medicine_category'),
         notes: text('notes'),
@@ -104,6 +106,7 @@ class MedicationDose extends Equatable {
         dosage,
         status,
         batchId,
+        childName,
         name,
         category,
         notes,

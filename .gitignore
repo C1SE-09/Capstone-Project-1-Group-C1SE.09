@@ -43,8 +43,11 @@ kinderlog_firebase_service.json
 GEMINI.md
 .agents/
 
-# Docs & Design references
-docs/
+# Chỉ version tài liệu thiết kế Markdown; dataset/binary trong docs vẫn bị bỏ qua.
+/docs/*
+!/docs/design/
+/docs/design/*
+!/docs/design/*.md
 .vercel
 .env*
 node_modules/

@@ -1,5 +1,10 @@
 # KinderLog — Figma Make Sync Backlog
 
+> **Phạm vi lịch sử:** lượt sync dưới đây là Make ngày 08/10/2026, không phải
+> xác nhận Figma Design live hay Flutter đã khớp vào 05/11/2026. Task UI mới đọc
+> [FIGMA-MAP.md](FIGMA-MAP.md) và §0 [MASTER.md](MASTER.md), không dùng dấu ✅
+> trong backlog này làm bằng chứng nghiệm thu hiện tại.
+
 **Purpose:** tracks UI that exists in the Flutter app but not (yet) in the Figma Make prototype. Make is the team's visual blueprint — drift erodes its reliability, so gaps are recorded here instead of rotting in chat.
 
 **Status:** ✅ pass completed 2026-10-08 (Make verified against Flutter source). Items 1–5 added to Make; item 6 requires no Make change.

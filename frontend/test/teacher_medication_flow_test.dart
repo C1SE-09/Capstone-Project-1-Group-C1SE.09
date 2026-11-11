@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'parent_medication_repository_test.dart' show medicationRepository;
+import 'parent_medication_test.dart' show tapVisible;
 import 'parent_request_repository_test.dart' show RequestTransport, jsonBody;
 import 'parent_requests_test.dart' show app;
 
@@ -101,7 +104,113 @@ void main() {
     expect(find.textContaining('Chưa có thời điểm xác nhận'), findsOneWidget);
     expect(find.textContaining('vừa xong'), findsNothing);
     expect(find.textContaining('Tôi đã'), findsNothing);
-    expect(find.text('Đã cho uống thuốc'), findsNothing);
+    expect(find.text('Xác nhận đã khóa để tránh trùng liều'), findsOneWidget);
+    expect(find.text('Đã cho uống thuốc'), findsOneWidget);
+  });
+
+  testWidgets('teacher medication screen uses the Garden Voice page header',
+      (tester) async {
+    final transport = RequestTransport((_) => jsonBody(todayJson()));
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: TeacherMedicationScreen(
+        repository: medicationRepository(transport),
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 74);
+    expect(find.text('Thứ 7, 05/01/2030 · Lớp Mầm 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('teacher medication screen includes Garden Voice navigation',
+      (tester) async {
+    final transport = RequestTransport((_) => jsonBody(todayJson()));
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: TeacherMedicationScreen(
+        repository: medicationRepository(transport),
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('garden-voice-teacher-navigation')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('teacher medication navigation delegates to its shell',
+      (tester) async {
+    GardenVoiceTeacherDestination? selected;
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: TeacherMedicationScreen(
+        repository: medicationRepository(
+            RequestTransport((_) => jsonBody(todayJson()))),
+        onNavigationSelected: (destination) => selected = destination,
+      ),
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Tài khoản'));
+
+    expect(selected, GardenVoiceTeacherDestination.account);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('successful confirmation shows M7 only after canonical reload',
+      (tester) async {
+    var given = false;
+    final transport = RequestTransport((request) {
+      if (request.method == 'PUT') {
+        given = true;
+        return jsonBody({});
+      }
+      return jsonBody(todayJson(given: given));
+    });
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: TeacherMedicationScreen(
+        repository: medicationRepository(transport),
+        initialDate: '2030-01-05',
+      ),
+    )));
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Đã cho uống thuốc'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Xác nhận đã khóa để tránh trùng liều'), findsOneWidget);
+    expect(find.text('Quay lại danh sách thuốc'), findsOneWidget);
+    expect(find.textContaining('Cô Mai'), findsOneWidget);
+    expect(transport.requests.where((request) => request.method == 'PUT'),
+        hasLength(1));
+    expect(transport.requests.where((request) => request.method == 'GET'),
+        hasLength(2));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M7 header back returns to M6 instead of leaving the route',
+      (tester) async {
+    var given = false;
+    final transport = RequestTransport((request) {
+      if (request.method == 'PUT') {
+        given = true;
+        return jsonBody({});
+      }
+      return jsonBody(todayJson(given: given));
+    });
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: TeacherMedicationScreen(
+        repository: medicationRepository(transport),
+        initialDate: '2030-01-05',
+      ),
+    )));
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Đã cho uống thuốc'));
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byTooltip('Quay lại'));
+
+    expect(find.text('Uống thuốc hôm nay'), findsOneWidget);
+    expect(find.text('Quay lại danh sách thuốc'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('409 reload shows actual winner time in Vietnam and one mutation',

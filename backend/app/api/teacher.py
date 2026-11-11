@@ -1349,6 +1349,7 @@ def publish_report(
 def delete_draft_report(
     report_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("teacher")),
 ):
     """Xóa 1 bản nháp DailyReport (chỉ xóa khi status == DRAFT)."""
     report = (
@@ -1356,6 +1357,8 @@ def delete_draft_report(
     )
     if not report:
         return {"status": "ok", "deleted": False, "message": "Report not found"}
+    if report.teacher_id != _authenticated_teacher_id(current_user):
+        raise HTTPException(status_code=403, detail="Không có quyền xóa báo cáo này")
     if report.status != DailyReportStatus.DRAFT:
         raise HTTPException(
             status_code=400,
@@ -1375,6 +1378,7 @@ def delete_draft_report(
 def delete_draft_reports_batch(
     payload: DeleteDraftsRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("teacher")),
 ):
     """Xóa danh sách bản nháp DailyReport theo danh sách report_ids."""
     if not payload.report_ids:
@@ -1384,12 +1388,15 @@ def delete_draft_reports_batch(
         db.query(DailyReport)
         .filter(
             DailyReport.daily_report_id.in_(payload.report_ids),
-            DailyReport.status == DailyReportStatus.DRAFT,
         )
         .all()
     )
-    deleted_count = len(reports)
-    for r in reports:
+    teacher_id = _authenticated_teacher_id(current_user)
+    if any(report.teacher_id != teacher_id for report in reports):
+        raise HTTPException(status_code=403, detail="Danh sách có báo cáo không thuộc giáo viên")
+    drafts = [report for report in reports if report.status == DailyReportStatus.DRAFT]
+    deleted_count = len(drafts)
+    for r in drafts:
         db.delete(r)
     db.commit()
     logger.info("[DeleteDraftsBatch] Deleted %d draft reports", deleted_count)
@@ -1402,6 +1409,27 @@ def delete_draft_reports_batch(
 # Thay thế flow cũ (createManualReport + publishReport loop).
 # Mục tiêu: mỗi lần user bấm "Duyệt" 1 item → tạo draft NGAY (per-item).
 # Sau khi user bấm "Xác nhận gửi" → gửi tất cả drafts 1 lần (batch).
+
+
+def _authenticated_teacher_id(user: User) -> uuid.UUID:
+    if user.teacher_id is None:
+        raise HTTPException(status_code=403, detail="Tài khoản chưa liên kết giáo viên")
+    return user.teacher_id
+
+
+def _assert_teacher_id(user: User, requested_id: uuid.UUID) -> uuid.UUID:
+    teacher_id = _authenticated_teacher_id(user)
+    if requested_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Không có quyền thao tác báo cáo này")
+    return teacher_id
+
+
+def _assert_teacher_owns_class(
+    db: Session, teacher_id: uuid.UUID, class_id: uuid.UUID
+) -> None:
+    teacher = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
+    if teacher is None or teacher.class_id != class_id:
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập lớp này")
 
 
 @router.post(
@@ -1421,6 +1449,7 @@ def delete_draft_reports_batch(
 def approve_item(
     payload: ApproveItemRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("teacher")),
 ) -> ApproveItemResponse:
     """
     Auto-detect flow: Approve 1 item → tạo draft NGAY.
@@ -1433,6 +1462,17 @@ def approve_item(
         class_id: UUID của lớp (khi kind='classwide' hoặc 'unmatched')
         extraction: (Optional) Override content
     """
+    teacher_id = _assert_teacher_id(current_user, payload.teacher_id)
+    if payload.class_id:
+        _assert_teacher_owns_class(db, teacher_id, payload.class_id)
+    if payload.child_id:
+        child = db.query(Child).filter(Child.child_id == payload.child_id).first()
+        if child is None:
+            raise HTTPException(status_code=404, detail="Không tìm thấy hồ sơ bé")
+        if child.class_id is None:
+            raise HTTPException(status_code=403, detail="Bé chưa được phân lớp của giáo viên")
+        _assert_teacher_owns_class(db, teacher_id, child.class_id)
+
     voice_record = (
         db.query(VoiceRecord)
         .filter(VoiceRecord.voice_record_id == payload.voice_record_id)
@@ -1442,7 +1482,7 @@ def approve_item(
         # Tự động tạo VoiceRecord hoàn tất nếu chưa có trong DB (được tạo trực tiếp từ app)
         voice_record = VoiceRecord(
             voice_record_id=payload.voice_record_id,
-            teacher_id=payload.teacher_id,
+            teacher_id=teacher_id,
             class_id=payload.class_id,
             scope=VoiceRecordScope.WHOLE_CLASS if payload.kind == "classwide" else VoiceRecordScope.SINGLE_CHILD,
             status=VoiceRecordStatus.COMPLETED,
@@ -1454,6 +1494,8 @@ def approve_item(
         db.add(voice_record)
         db.commit()
         db.refresh(voice_record)
+    elif voice_record.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Không có quyền duyệt bản ghi này")
 
     # Extract class_wide_extraction + child_extractions từ extraction_result
     extraction_result = voice_record.extraction_result or {}
@@ -1477,7 +1519,7 @@ def approve_item(
                 db=db,
                 class_id=payload.class_id,
                 voice_record_id=payload.voice_record_id,
-                teacher_id=payload.teacher_id,
+                teacher_id=teacher_id,
                 class_wide_extraction=final_class_wide,
                 child_overrides=child_extractions,
             )
@@ -1504,7 +1546,7 @@ def approve_item(
                 db=db,
                 child_id=payload.child_id,
                 voice_record_id=payload.voice_record_id,
-                teacher_id=payload.teacher_id,
+                teacher_id=teacher_id,
                 class_wide_extraction=class_wide_extraction,
                 child_override=child_override,
             )
@@ -1525,7 +1567,7 @@ def approve_item(
                 db=db,
                 class_id=payload.class_id,
                 voice_record_id=payload.voice_record_id,
-                teacher_id=payload.teacher_id,
+                teacher_id=teacher_id,
                 class_wide_extraction=class_wide_extraction,
             )
             return ApproveItemResponse(
@@ -1568,13 +1610,25 @@ def approve_item(
 def send_batch_reports(
     payload: SendBatchRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("teacher")),
 ) -> SendBatchResponse:
     """
     Gửi batch các drafts. Tương tự send-all nhưng nhận explicit report_ids.
     """
+    teacher_id = _authenticated_teacher_id(current_user)
+    if payload.teacher_id and payload.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Không có quyền gửi báo cáo này")
+
     # Xác định target report_ids
     if payload.report_ids:
         target_ids = list(dict.fromkeys(payload.report_ids))  # dedupe, giữ thứ tự
+        reports = (
+            db.query(DailyReport)
+            .filter(DailyReport.daily_report_id.in_(target_ids))
+            .all()
+        )
+        if any(report.teacher_id != teacher_id for report in reports):
+            raise HTTPException(status_code=403, detail="Danh sách có báo cáo không thuộc giáo viên")
     else:
         # Filter theo class_id + date
         if not payload.class_id or not payload.report_date:
@@ -1582,17 +1636,17 @@ def send_batch_reports(
                 status_code=400,
                 detail="report_ids HOẶC (class_id + report_date) là bắt buộc",
             )
+        _assert_teacher_owns_class(db, teacher_id, payload.class_id)
         query = db.query(DailyReport).filter(
             DailyReport.status == DailyReportStatus.DRAFT,
             DailyReport.report_date == payload.report_date,
+            DailyReport.teacher_id == teacher_id,
         )
         if payload.class_id:
             # Join với child để filter theo class
             query = query.join(Child, DailyReport.child_id == Child.child_id).filter(
                 Child.class_id == payload.class_id
             )
-        if payload.teacher_id:
-            query = query.filter(DailyReport.teacher_id == payload.teacher_id)
         target_ids = [row.daily_report_id for row in query.all()]
 
     if not target_ids:
@@ -1604,7 +1658,7 @@ def send_batch_reports(
     for report_id in target_ids:
         try:
             # Tái sử dụng _send_one_report (đã có sẵn logic notification + error handling)
-            _send_one_report(report_id, payload.teacher_id, db, allow_resend=True)
+            _send_one_report(report_id, teacher_id, db, allow_resend=True)
             sent += 1
             results.append(
                 SendBatchItemResult(daily_report_id=report_id, result="sent")

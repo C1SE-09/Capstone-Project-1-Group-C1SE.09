@@ -495,6 +495,30 @@ def test_review_locks_only_request_and_refuses_a_second_transition(env, action):
     assert locks and all("FOR UPDATE OF leave_request" in text for text in locks)
 
 
+@pytest.mark.parametrize("action", ["approve", "reject"])
+def test_review_queues_parent_notification_after_persisting_decision(env, action, monkeypatch):
+    from types import SimpleNamespace
+    from app.api.endpoints import leave_request as routes
+
+    req = seed_request(env)
+    env.actor = env.teacher
+    queued = []
+    monkeypatch.setattr(
+        routes,
+        "send_leave_request_notifications",
+        SimpleNamespace(delay=lambda request_id: queued.append(request_id)),
+        raising=False,
+    )
+    kwargs = {"json": {"reject_reason": "Không phù hợp"}} if action == "reject" else {}
+
+    response = env.client.post(
+        f"/api/leave-requests/{req.request_id}/{action}", **kwargs
+    )
+
+    assert response.status_code == 200, response.text
+    assert queued == [str(req.request_id)]
+
+
 def test_review_refreshes_cached_pending_state_before_transition(env):
     req = seed_request(env)
     with env.factory() as other_session:

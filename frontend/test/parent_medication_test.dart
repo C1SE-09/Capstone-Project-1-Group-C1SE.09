@@ -7,6 +7,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_he
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_form_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_detail_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -412,6 +413,97 @@ void main() {
         child: child, className: 'Mầm 1', repository: repo)));
     await tester.pumpAndSettle();
     expect(tester.getSize(find.byType(Scaffold)).width, lessThanOrEqualTo(480));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('parent medication list uses the Garden Voice page header',
+      (tester) async {
+    final repo = medicationRepository(RequestTransport((_) => jsonBody([])));
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: ParentMedicationScreen(
+        child: child,
+        className: 'Mầm 1',
+        repository: repo,
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 74);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('parent medication form pins its primary action below scrolling',
+      (tester) async {
+    final repo = medicationRepository(
+        RequestTransport((_) => throw StateError('No request expected')));
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: ParentMedicationFormScreen(
+        child: child,
+        className: 'Mầm 1',
+        repository: repo,
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 74);
+    expect(scaffold.bottomNavigationBar, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pinned medication action stays above the keyboard at 320dp',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+    addTearDown(tester.view.reset);
+    final repo = medicationRepository(
+        RequestTransport((_) => throw StateError('No request expected')));
+    await tester.pumpWidget(app(
+      GardenVoiceScope(
+        child: ParentMedicationFormScreen(
+          child: child,
+          className: 'Mầm 1',
+          repository: repo,
+        ),
+      ),
+      textScale: 2,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getBottomRight(find.text('Gửi đơn dặn thuốc')).dy,
+      lessThanOrEqualTo(440),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('medication detail and create routes retain Garden Voice scope',
+      (tester) async {
+    final transport = RequestTransport((_) => jsonBody([
+          {...medicationJson(), 'prescription_image_url': null},
+        ]));
+    await tester.pumpWidget(app(GardenVoiceScope(
+      child: ParentMedicationScreen(
+        child: child,
+        className: 'Mầm 1',
+        repository: medicationRepository(transport),
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.text('+ Tạo đơn dặn thuốc mới'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 74);
+    expect(
+        tester.widget<Scaffold>(find.byType(Scaffold).last).bottomNavigationBar,
+        isNotNull);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.text('Xem chi tiết đợt'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 74);
     expect(tester.takeException(), isNull);
   });
 }

@@ -76,7 +76,7 @@ class _ParentMedicationDetailScreenState
             backgroundColor: context.k.surface,
             insetPadding: const EdgeInsets.symmetric(horizontal: 20),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -109,9 +109,12 @@ class _ParentMedicationDetailScreenState
                                         horizontal: 16, vertical: 11),
                                     side: BorderSide(
                                         color: context.k.line, width: 1.5),
+                                    minimumSize: const Size(0, 44),
                                     shape: const StadiumBorder(),
-                                    textStyle: const TextStyle(
-                                        fontFamily: 'BeVietnamPro',
+                                    textStyle: TextStyle(
+                                        fontFamily: context.k.isGardenVoice
+                                            ? 'Nunito'
+                                            : 'BeVietnamPro',
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700)),
                                 child: const Text('Giữ lại'))),
@@ -125,9 +128,12 @@ class _ParentMedicationDetailScreenState
                                         Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 11),
+                                    minimumSize: const Size(0, 44),
                                     shape: const StadiumBorder(),
-                                    textStyle: const TextStyle(
-                                        fontFamily: 'BeVietnamPro',
+                                    textStyle: TextStyle(
+                                        fontFamily: context.k.isGardenVoice
+                                            ? 'Nunito'
+                                            : 'BeVietnamPro',
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700)),
                                 child: const Text('Hủy cữ'))),
@@ -161,6 +167,7 @@ class _ParentMedicationDetailScreenState
   @override
   Widget build(BuildContext context) => ParentRequestLayout(
       title: 'Chi tiết đợt thuốc',
+      gardenVoice: true,
       child: FutureBuilder<List<MedicationDose>>(
           future: _rows,
           builder: (context, snapshot) {
@@ -198,18 +205,21 @@ class _ParentMedicationDetailScreenState
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           MedicationCard(
+                              color: context.k.reviewSurface,
+                              borderColor: context.k.lineStrong,
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                MedicationBatchHeading(batch, showRange: false),
-                                const SizedBox(height: 9),
-                                Text(
-                                    '${batchRange(batch)} · '
-                                    '${batchCreator(batch)}',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: context.k.inkSoft)),
-                              ])),
+                                    MedicationBatchHeading(batch,
+                                        showRange: false),
+                                    const SizedBox(height: 9),
+                                    Text(
+                                        '${batchRange(batch)} · '
+                                        '${batchCreator(batch)}',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: context.k.inkSoft)),
+                                  ])),
                           const SizedBox(height: 13),
                           if (_error != null) ...[
                             Semantics(
@@ -225,64 +235,66 @@ class _ParentMedicationDetailScreenState
                           ],
                           for (final dose in batch.doses) ...[
                             MedicationCard(
+                                radius: 24,
                                 child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                  Row(children: [
-                                    Expanded(
-                                        child: Text(doseTitle(dose),
-                                            style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w700))),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                        child: MedicationBadge(
+                                      Row(children: [
+                                        Expanded(
+                                            child: Text(doseTitle(dose),
+                                                style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.w700))),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                            child: MedicationBadge(
+                                                dose.isGiven
+                                                    ? '✓ ${doseStatus(dose.status)}'
+                                                    : doseStatus(dose.status),
+                                                status: dose.status))
+                                      ]),
+                                      if (dose.isGiven) ...[
+                                        const SizedBox(height: 9),
+                                        Text(
+                                            '${dose.givenByName ?? 'Chưa rõ người xác nhận'} đã cho uống'
+                                            '${dose.givenAt == null ? ' — chưa có thời điểm trong hồ sơ' : ' lúc ${medicationClock(dose.givenAt!)}'}',
+                                            style: TextStyle(
+                                                fontSize: 11.5,
+                                                color: context.k.inkSoft)),
+                                      ],
+                                      if (dose.isLegacy) ...[
+                                        const SizedBox(height: 9),
+                                        Text(
+                                            'Buổi: ${dose.sessions.join(', ')}. Lịch cũ không ghi giờ cụ thể; liên hệ giáo viên khi cần thay đổi.',
+                                            style: TextStyle(
+                                                fontSize: 11.5,
+                                                color: context.k.inkSoft)),
+                                      ],
+                                      if (!dose.isLegacy) ...[
+                                        const SizedBox(height: 9),
+                                        MedicationAction(
+                                            label: 'Hủy cữ này',
+                                            danger: true,
+                                            busy: _busy && dose.canCancel,
+                                            onPressed: !_busy && dose.canCancel
+                                                ? () => _cancel(dose)
+                                                : null),
+                                        const SizedBox(height: 9),
+                                        Text(
                                             dose.isGiven
-                                                ? '✓ ${doseStatus(dose.status)}'
-                                                : doseStatus(dose.status),
-                                            status: dose.status))
-                                  ]),
-                                  if (dose.isGiven) ...[
-                                    const SizedBox(height: 9),
-                                    Text(
-                                        '${dose.givenByName ?? 'Chưa rõ người xác nhận'} đã cho uống'
-                                        '${dose.givenAt == null ? ' — chưa có thời điểm trong hồ sơ' : ' lúc ${medicationClock(dose.givenAt!)}'}',
-                                        style: TextStyle(
-                                            fontSize: 11.5,
-                                            color: context.k.inkSoft)),
-                                  ],
-                                  if (dose.isLegacy) ...[
-                                    const SizedBox(height: 9),
-                                    Text(
-                                        'Buổi: ${dose.sessions.join(', ')}. Lịch cũ không ghi giờ cụ thể; liên hệ giáo viên khi cần thay đổi.',
-                                        style: TextStyle(
-                                            fontSize: 11.5,
-                                            color: context.k.inkSoft)),
-                                  ],
-                                  if (!dose.isLegacy) ...[
-                                    const SizedBox(height: 9),
-                                    MedicationAction(
-                                        label: 'Hủy cữ này',
-                                        danger: true,
-                                        busy: _busy && dose.canCancel,
-                                        onPressed: !_busy && dose.canCancel
-                                            ? () => _cancel(dose)
-                                            : null),
-                                    const SizedBox(height: 9),
-                                    Text(
-                                        dose.isGiven
-                                            ? '🔒 Đã cho uống rồi — nút Hủy bị khóa (backend cũng từ chối hủy).'
-                                            : dose.status == 'cancelled'
-                                                ? 'Cữ đã được hủy.'
-                                                : 'Hủy được khi cữ đang chờ / cô chưa xác nhận. Cữ bị hủy sẽ biến mất khỏi danh sách chờ uống của cô.',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: dose.isGiven
-                                                ? context.k.bad
-                                                : context.k.inkSoft))
-                                  ],
-                                ])),
+                                                ? 'Đã cho uống rồi — nút Hủy bị khóa (backend cũng từ chối hủy).'
+                                                : dose.status == 'cancelled'
+                                                    ? 'Cữ đã được hủy.'
+                                                    : 'Hủy được khi cữ đang chờ / cô chưa xác nhận. Cữ bị hủy sẽ biến mất khỏi danh sách chờ uống của cô.',
+                                            style: TextStyle(
+                                                fontSize: 11,
+                                                color: dose.isGiven
+                                                    ? context.k.bad
+                                                    : context.k.inkSoft))
+                                      ],
+                                    ])),
                             const SizedBox(height: 13),
                           ],
                         ])));

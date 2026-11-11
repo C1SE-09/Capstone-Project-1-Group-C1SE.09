@@ -232,7 +232,8 @@ class _ParentMedicationFormScreenState
       if (!mounted || _stale) return;
       _dirty = false;
       await Navigator.of(context).push<void>(MaterialPageRoute(
-          builder: (_) => ParentMedicationSubmittedScreen(result: result)));
+          builder: (_) => GardenVoiceScope(
+              child: ParentMedicationSubmittedScreen(result: result))));
       if (mounted) Navigator.pop(context);
     } catch (error) {
       if (mounted) setState(() => _error = medicationError(error));
@@ -244,7 +245,11 @@ class _ParentMedicationFormScreenState
   Widget _label(String label) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(label,
-          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)));
+          style: TextStyle(
+              fontSize: context.k.isGardenVoice ? 14 : 12.5,
+              fontWeight: context.k.isGardenVoice
+                  ? FontWeight.w700
+                  : FontWeight.w600)));
   Widget _field(String label, TextEditingController controller, int limit,
           {bool required = false, int lines = 1}) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -288,7 +293,7 @@ class _ParentMedicationFormScreenState
           labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           padding: EdgeInsets.zero,
           labelStyle: TextStyle(
-              fontSize: 11,
+              fontSize: context.k.isGardenVoice ? 12 : 11,
               fontWeight: FontWeight.w600,
               color: selected
                   ? Theme.of(context).colorScheme.onPrimary
@@ -305,8 +310,8 @@ class _ParentMedicationFormScreenState
           side: BorderSide(color: context.k.line),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(
-              fontFamily: 'BeVietnamPro',
+          textStyle: TextStyle(
+              fontFamily: context.k.isGardenVoice ? 'Nunito' : 'BeVietnamPro',
               fontSize: 13,
               fontWeight: FontWeight.w400)),
       child: Tooltip(
@@ -323,8 +328,24 @@ class _ParentMedicationFormScreenState
         },
         child: ParentRequestLayout(
             title: 'Tạo đơn dặn thuốc',
+            gardenVoice: true,
+            bottomNavigationBar: Padding(
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.viewInsetsOf(context).bottom),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: MedicationAction(
+                    label: 'Gửi đơn dặn thuốc',
+                    busy: _busy,
+                    onPressed: _picking || _stale ? null : _submit,
+                  ),
+                ),
+              ),
+            ),
             child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 child: Form(
                     key: _key,
                     child: Column(
@@ -435,10 +456,6 @@ class _ParentMedicationFormScreenState
                                     style: TextStyle(color: context.k.bad))),
                             const SizedBox(height: 13)
                           ],
-                          MedicationAction(
-                              label: 'Gửi đơn dặn thuốc',
-                              busy: _busy,
-                              onPressed: _picking || _stale ? null : _submit),
                         ])))));
   }
 }

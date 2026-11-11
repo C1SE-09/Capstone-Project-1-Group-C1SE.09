@@ -12,12 +12,14 @@ class AttendanceChildRecord {
   const AttendanceChildRecord({
     required this.childId,
     required this.status,
+    this.childName,
     this.expectedArrivalTime,
     this.checkInTime,
     this.note,
   });
 
   final String childId;
+  final String? childName;
   final AttendanceStatus status;
   final String? expectedArrivalTime;
   final String? checkInTime;
@@ -33,7 +35,10 @@ class HttpAttendanceRepository {
                 connectTimeout: const Duration(seconds: 30),
                 receiveTimeout: const Duration(seconds: 30),
                 headers: AuthRepository.currentUser?.token != null
-                    ? {'Authorization': 'Bearer ${AuthRepository.currentUser!.token}'}
+                    ? {
+                        'Authorization':
+                            'Bearer ${AuthRepository.currentUser!.token}'
+                      }
                     : null,
               ),
             ) {
@@ -115,6 +120,7 @@ class HttpAttendanceRepository {
             final cid = item['child_id'].toString();
             map[cid] = AttendanceChildRecord(
               childId: cid,
+              childName: item['full_name']?.toString(),
               status: _parseStatus(item['status']?.toString()),
               expectedArrivalTime: item['expected_arrival_time']?.toString(),
               checkInTime: item['check_in_time']?.toString(),

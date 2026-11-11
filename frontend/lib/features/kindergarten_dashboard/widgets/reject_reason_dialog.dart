@@ -57,21 +57,45 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       MedicationCard(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(widget.childName,
-                                style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700)),
-                            if (widget.request != null) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                  '${requestTypeLabel(widget.request!.requestType)} · ${requestRange(widget.request!)}',
-                                  style: TextStyle(
-                                      fontSize: 11, color: context.k.inkSoft))
-                            ],
-                          ])),
+                          child: Row(children: [
+                        CircleAvatar(
+                            radius: 20,
+                            backgroundColor: context.k.brandTint,
+                            child: Text(
+                                widget.childName
+                                    .trim()
+                                    .split(RegExp(r'\s+'))
+                                    .where((word) => word.isNotEmpty)
+                                    .toList()
+                                    .reversed
+                                    .take(2)
+                                    .toList()
+                                    .reversed
+                                    .map((word) => word.characters.first)
+                                    .join()
+                                    .toUpperCase(),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: context.k.brand))),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(widget.childName,
+                                  style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700)),
+                              if (widget.request != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                    '${requestTypeLabel(widget.request!.requestType)} · ${requestRange(widget.request!)}',
+                                    style: TextStyle(
+                                        fontSize: 11, color: context.k.inkSoft))
+                              ],
+                            ])),
+                      ])),
                       const SizedBox(height: 14),
                       const Text('Lý do từ chối *',
                           style: TextStyle(
@@ -93,8 +117,11 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                                   borderSide: BorderSide(color: context.k.bad)),
                               focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  borderSide:
-                                      BorderSide(color: context.k.bad)))),
+                                  borderSide: BorderSide(color: context.k.bad)),
+                              enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(
+                                      color: context.k.bad, width: 1.5)))),
                       const SizedBox(height: 6),
                       Text('$count/500',
                           textAlign: TextAlign.end,
@@ -106,27 +133,26 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                           style: TextStyle(
                               fontSize: 11.5, color: context.k.warnDeep)),
                       const SizedBox(height: 14),
-                      Wrap(
-                          alignment: WrapAlignment.spaceBetween,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            OutlinedButton(
+                      Row(children: [
+                        Expanded(
+                            child: OutlinedButton(
                                 onPressed: () => _close(null),
                                 style: OutlinedButton.styleFrom(
                                     shape: const StadiumBorder(),
-                                    minimumSize: const Size(140, 48)),
-                                child: const Text('Quay lại')),
-                            FilledButton(
+                                    minimumSize: const Size(0, 48)),
+                                child: const Text('Quay lại'))),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: FilledButton(
                                 onPressed: count < 2 || count > 500 || _closed
                                     ? null
                                     : () => _close(_reason.text.trim()),
                                 style: FilledButton.styleFrom(
                                     backgroundColor: context.k.bad,
                                     shape: const StadiumBorder(),
-                                    minimumSize: const Size(140, 48)),
-                                child: const Text('Gửi từ chối')),
-                          ]),
+                                    minimumSize: const Size(0, 48)),
+                                child: const Text('Gửi từ chối'))),
+                      ]),
                     ]))));
   }
 }

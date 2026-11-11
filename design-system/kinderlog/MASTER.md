@@ -1,9 +1,53 @@
 # KinderLog — Design System (MASTER)
 
-**Status:** Living document · Baseline v1.1 · 2026-10-07
-**Source of truth:** the current KinderLog Figma reconstruction, mirrored by `frontend/lib/features/kindergarten_dashboard/` (Flutter).
+**Status:** Living document · Baseline v1.3 · 2026-11-05 (clarify implementation baseline and live Figma drift; no runtime token changes)
+**Source of truth:** tài liệu này mô tả baseline Flutter trong `frontend/lib/features/kindergarten_dashboard/`. Nguồn thiết kế cho task UI là node Figma cụ thể được giao; xem §0 và [FIGMA-MAP.md](FIGMA-MAP.md). Không khẳng định Flutter hiện đã đồng bộ Figma.
 **Documentation method:** values captured from the existing implementation and palette definitions (`theme.dart`, `widgets.dart`, `screens/*`). UI/UX Pro Max Quick Reference used for structure, UX-state coverage, accessibility rules, and anti-patterns. Its generative `--design-system` recommendations were intentionally **not** adopted — this document records the current design, it does not propose a new one.
-**Change policy:** This baseline is descriptive. No color, type, spacing, component, or layout value changes without an explicit, recorded decision. New work must reuse these tokens; deviations are recorded in §15.
+**Change policy:** Baseline mô tả code hiện có. Dùng lại token/component khi thể hiện đúng node được giao; nếu cần thay đổi để khớp thiết kế, ghi node, giá trị và phạm vi tác động trong task rồi cập nhật tài liệu liên quan. Không tự redesign ngoài yêu cầu hoặc coi baseline cũ là lý do ghi đè Figma live.
+
+---
+
+## 0. Nguồn thiết kế và chênh lệch — kiểm kê 05/11/2026
+
+[FIGMA-MAP.md](FIGMA-MAP.md) chứa file key, node màn hình, đường dẫn code và test.
+[COMPONENT-MAP.md](COMPONENT-MAP.md) ghi component/variant/asset hiện có;
+[VISUAL-QA.md](VISUAL-QA.md) quy định cách chụp và đối chiếu ảnh.
+
+Figma Design `9RurF0HiJlYLVDV7ljp2bH` đã được đọc qua connector. Metadata của
+trang Design System `142:2` hiện ghi **Warm Sage · Be Vietnam Pro + Quicksand**.
+Variables/context/screenshot của [KButton `142:42`](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/KinderLog?node-id=142-42)
+xác nhận các giá trị sau. Đây là mẫu đã kiểm chứng, không phải audit toàn bộ file.
+
+| Thuộc tính | Figma live — KButton | Flutter baseline |
+|---|---|---|
+| Brand primary | `#176B60` | `KColors.brand` = `#3A6BC9` |
+| Brand strong / tint | `#14594F` / `#E6F2ED` | `#33539F` / `#EDF2FC` |
+| Border default | `#E8E7E2` | `KColors.line` = `#E4E7EC` |
+| Radius control | 20 | `KRadii.control` = 8 |
+| Button height | 48 | `KButton` minimum 44 |
+| Button label | Be Vietnam Pro, 14, 600 | Family chung BeVietnamPro; label kế thừa theme |
+| Loading | Spinner 12 + “Đang xử lý…” | `KButton` chưa có tham số loading |
+| Font bổ sung | Header DS nhắc Quicksand; chưa xác minh mọi role | `pubspec.yaml` chỉ bundle BeVietnamPro |
+
+Metadata màn Đăng nhập/Tổng quan giáo viên còn có layer illustration; các mục
+“no imagery” bên dưới là mô tả baseline cũ, không phải lệnh bỏ ảnh khỏi Figma.
+Dark mode trong code chưa có lượt đối chiếu với một node dark được chỉ định.
+
+Khi implement một node được giao, lấy context/variables/screenshot mới của node
+đó làm mục tiêu và ghi quyết định ở task. Dùng lại component khi thể hiện được
+thiết kế; ghi rõ nếu cần mở rộng API hoặc token. Thay đổi shared theme phải kiểm
+tra các màn liên quan. Không tự migrate cả palette/font toàn app trong task sửa
+tài liệu này. Prompt Make cũ không có quyền ghi đè node được giao.
+
+**Garden Voice đang port dần:** node `452:556` là visual target hiện tại cho
+Flutter Giáo viên/Phụ huynh. `GardenVoiceScope` dùng Nunito và `KPalette.gardenVoice`
+chỉ bao quanh màn đã port; `kinderTheme()` cùng baseline A2 vẫn giữ nguyên cho
+màn chưa chuyển. Đây là quyết định giảm regression trong lúc refactor, không phải
+xác nhận hai visual system đã hợp nhất.
+
+**Lịch sử:** v1.2 (01/11) ghi palette A2 của Flutter; v1.3 (05/11) bổ sung mapping,
+phân biệt baseline/live Figma và sửa mô tả lỗi thời. Những quyết định palette A2
+bên dưới được giữ để hiểu code hiện tại, không phải giá trị Figma live mặc định.
 
 ---
 
@@ -11,10 +55,10 @@
 
 | Aspect | Current definition |
 |---|---|
-| Character | Calm, warm, service-oriented. Soft cream canvas, deep teal brand, low-contrast borders, generous whitespace. |
+| Character | Calm, clean, service-oriented. Pure white canvas, soft azure brand with a single amber accent, low-contrast borders, generous whitespace. |
 | Depth model | Flat. Surfaces are separated by **1px borders**, not shadows. Shadows appear only on the raised center mic button and the login logo mark. |
-| Shape language | Rounded rectangles. Cards 12, controls 9, chips/full pills. |
-| Color strategy | One brand hue (teal) + three semantic hue families (ok/warn/bad) + one info hue. All status color pairs are tint + ink (soft background + strong foreground). |
+| Shape language | Rounded rectangles. Cards 12, controls 8 (`KRadii.control` hiện tại), chips/full pills. |
+| Color strategy | One brand hue (azure) + one accent hue (amber, decorative/emphasis only) + three semantic hue families (ok/warn/bad) + one info hue. All status color pairs are tint + ink (soft background + strong foreground). |
 | Imagery | None. No photography, no illustration. Identity carried by the logo mark, palette, and typography. |
 | Gradients | Exactly one: the 56px login logo mark (brand → brand @ 80%). Nothing else. |
 | Platform | Mobile only, portrait. Material 3. |
@@ -29,42 +73,48 @@ Both themes ship as first-class. Widgets resolve colors through a semantic palet
 
 | Token | Hex | Role |
 |---|---|---|
-| canvas | `#F6F4EF` | App background, app-bar background (96% alpha) |
+| canvas | `#FFFFFF` | App background, app-bar background (96% alpha) |
 | surface | `#FFFFFF` | Cards, sheets, nav bar, inputs |
-| surfaceSunken | `#EFECE5` | Inset fields on login, badges "none", step circles idle |
-| ink | `#2A2926` | Primary text, snackbar background |
-| inkSoft | `#605D57` | Secondary text, inactive nav labels |
-| inkFaint | `#757169` | Tertiary/meta text (darkened to meet WCAG AA on canvas) |
-| line | `#E7E3DA` | Dividers, card borders, input borders |
-| lineStrong | `#D9D4C9` | Input border emphasis, sheet drag handle |
-| brand | `#16665A` | Primary actions, active states, selection |
-| brandStrong | `#114F46` | Reserved darker brand |
-| brandTint | `#E6EFEC` | Tinted surfaces: class chip, icon squares, banners |
+| surfaceSunken | `#F2F4F7` | Inset fields on login, badges "none", step circles idle, subtle fills |
+| ink | `#182230` | Primary text, snackbar background |
+| inkSoft | `#526070` | Secondary text, inactive nav labels |
+| inkFaint | `#667085` | Tertiary/meta text (darkened to meet WCAG AA on canvas; the Figma muted `#98A2B3` is decoration/icon only) |
+| line | `#E4E7EC` | Dividers, card borders, input borders |
+| lineStrong | `#98A2B3` | Input border emphasis, sheet drag handle |
+| brand | `#3A6BC9` | Primary actions, active states, selection |
+| brandStrong | `#33539F` | Reserved darker brand; hero/dashboard surfaces |
+| brandTint | `#EDF2FC` | Tinted surfaces: class chip, icon squares, banners |
+| accent | `#F2A93B` | Single amber accent: progress fills, highlights, sun/emphasis marks (never body text on white) |
+| accentDeep | `#8A5A00` | Accent text on accentTint |
+| accentTint | `#FFF6E0` | Accent soft background |
 | ok | `#3F8B5C` | Success text/dot; `read` badge surface |
-| okTint | `#E7F1EA` | Success soft background |
+| okTint | `#E7F6EE` | Success soft background |
 | warn | `#B0791B` | Warning text/dot, health filters |
 | warnDeep | `#8A5E12` | Warning on tinted background |
 | warnTint | `#F6EED9` | Warning soft background |
 | bad | `#BB4A34` | Error text/dot, attention badge |
-| badTint | `#F6E6E1` | Error soft background |
+| badTint | `#FDECE8` | Error soft background |
 | info | `#4B6F8C` | Informational text/dot (draft state) |
 | infoTint | `#E7EEF3` | Informational soft background |
+
+> **Decision 2026-10-31 (Ted), lịch sử baseline Flutter:** palette A2 · Azure mềm replaces the former teal/cream baseline. Ở thời điểm đó nguồn ghi nhận là Figma variables `KL Primitives` + `KL Color` (Light). Giá trị Figma live đã khác (§0); không hiểu câu “retired” là cấm dùng màu từ node hiện tại. Dark values ở §2.2 là đề xuất A2 trong code, chưa được xác nhận khớp một node dark mục tiêu.
 
 ### 2.2 Dark
 
 | Token | Hex | Notes |
 |---|---|---|
-| canvas | `#1C1B1A` | |
-| surface | `#252422` | Cards/sheets/nav |
-| surfaceSunken | `#2D2C29` | |
-| ink | `#E8E6E1` | |
-| inkSoft | `#C4C2BC` | |
-| inkFaint | `#9A9891` | |
-| line | `#3E3D3A` | |
-| lineStrong | `#4E4D49` | |
-| brand | `#52BBA8` | Lightened for dark-surface contrast |
-| brandStrong | `#6DD4C0` | |
-| brandTint | `#1E3833` | |
+| canvas | `#16191D` | proposed |
+| surface | `#212429` | Cards/sheets/nav · proposed |
+| surfaceSunken | `#2A2E35` | proposed |
+| ink | `#E8EAED` | proposed |
+| inkSoft | `#C2C7CF` | proposed |
+| inkFaint | `#9AA1AB` | proposed |
+| line | `#33373F` | proposed |
+| lineStrong | `#474C55` | proposed |
+| brand | `#7AA5E8` | Lightened azure for dark-surface contrast · proposed |
+| accent | `#F2B950` · accentDeep `#F5C878` · accentTint `#3A2F1A` | proposed |
+| brandStrong | `#9DB9EC` | proposed |
+| brandTint | `#1E2A44` | proposed |
 | ok | `#6FCF8E` · okTint `#1E3328` | |
 | warn | `#E5B05C` · warnDeep `#F5C878` · warnTint `#3A2F1A` | |
 | bad | `#E87B63` · badTint `#3A2621` | |
@@ -96,7 +146,11 @@ Both themes ship as first-class. Widgets resolve colors through a semantic palet
 | bodySmall | 400 | 1.45 | inkFaint | Meta, hints, counts |
 | labelLarge | 600 | — | inherited | Button labels |
 
-**Base sizes in use (reference, not fixed tokens):** 28 / 22 / 18 / 16 / 15 / 14 / 13 / 12 / 11. Theme roles intentionally carry **no fixed `fontSize`** so system text scaling applies.
+**Base sizes in use (reference, not fixed tokens):** 28 / 22 / 18 / 16 / 15 / 14 / 13 / 12 / 11. `TextTheme` hiện không khai báo `fontSize` cơ sở và kế thừa size Material. Điều này không đảm bảo size khớp Figma. Khi chuẩn hóa typography, lấy family/size/weight/line height/letter spacing từ role/node đã xác minh; không suy ra size toàn app từ một label.
+
+Khai báo `fontSize` cơ sở **không tắt text scaling**: Flutter vẫn dùng hệ số của
+hệ thống khi render `Text`. Chỉ việc khóa/override scaler mới thay đổi cơ chế đó.
+Giữ hỗ trợ chữ lớn và kiểm tra wrap/overflow riêng. Xem [Flutter TextStyle.fontSize](https://api.flutter.dev/flutter/painting/TextStyle/fontSize.html).
 
 ### 3.2 Hierarchy rules
 
@@ -128,13 +182,13 @@ Rhythm rule: related items 4–8, groups 12–16, sections 20–24, screen block
 | Token | Value | Applied to |
 |---|---|---|
 | card | 12 | Cards, class-select icon squares, tooltip/notice surfaces |
-| control | 9 | Buttons, inputs (theme-level) |
+| control | 8 | Buttons, inputs (theme-level; đọc từ `KRadii.control`) |
 | (login fields/button) | 10 | Login screen inputs and submit button |
 | sheet | 20 (top only) | Bottom sheets |
 | chip | stadium (99) | Filter chips, badges, class-select chip |
 | circle | 50% | Avatars, icon circles, mic button, step dots |
 
-Radius discipline: 9 for standard controls, 10 only within the login card, 12 for containers, pill only for chips/badges/small controls.
+Radius baseline: 8 for standard controls, 10 within the login card, 12 for containers, pill for chips/badges/small controls. Figma live có giá trị khác (§0); không áp baseline vào node mới một cách máy móc.
 
 ---
 
@@ -165,9 +219,9 @@ The system is border-first; elevation is the exception.
 | Outlined (`secondary`) | transparent | brand | Secondary/cancel |
 | Text (`ghost`) | transparent | brand | Tertiary/inline |
 
-- Shape: radius 9, full available width by default, **minimum height 44**.
+- Shape: radius 8 (`KRadii.control`), full available width by default, **minimum height 44**.
 - Optional 18px leading icon with 8px gap.
-- States: enabled / disabled (`onPressed: null`, reduced emphasis, no action) / loading (label replaced by 22×22 white spinner, non-interactive).
+- States hiện có của `KButton`: enabled / disabled (`onPressed: null`). Class chưa có API loading; màn gọi đang tự quản lý trạng thái gửi. Loading trong Figma live là spinner 12 + label (§0), cần implement rõ khi task yêu cầu; không coi mô tả spinner 22 của baseline cũ là tính năng đã có.
 - Local override: login submit is 48 high, radius 10, all-caps label.
 - Pill buttons appear only as inline affordances ("Đổi lớp": outlined, radius 20, 12.5/600, padding 10×6).
 
@@ -181,7 +235,7 @@ The system is border-first; elevation is the exception.
 
 ### 7.3 Forms & Inputs
 
-- Filled fields on `surface` (theme) or `surfaceSunken` (login), `isDense`, padding 14×12 (14×14 on login), radius 9 (10 on login).
+- Filled fields on `surface` (theme) or `surfaceSunken` (login), `isDense`, padding 14×12 (14×14 on login), radius 8 (10 on login).
 - Borders: `line`/`lineStrong` at rest, **`brand` at 1.5px on focus**.
 - Hint style: `inkFaint`; labels for login fields sit above as 13/600 text.
 - Search field: leading 20px search icon (`inkFaint`), hint "Tìm…".
@@ -296,7 +350,7 @@ Mobile-only surface: hover states are not part of the system. All interactive el
 | State | Current pattern |
 |---|---|
 | Screen loading | Centered `CircularProgressIndicator` (brand), full-screen or content-area |
-| Button loading | Label replaced by 22×22 white spinner; button disabled |
+| Button loading | Màn gọi tự quản lý; `KButton` chưa có API loading. Figma live có spinner + label (§0) |
 | Step progress | `StepIndicator` with animated indeterminate bar under the active step |
 | Error | Centered text "Không tải được {X} · Thử lại" as a `TextButton` that refetches |
 | Inline error | Login error banner (tinted, error icon, message); report editor inline `bad` text |
@@ -311,7 +365,7 @@ All messages are Vietnamese, sentence case, user-facing (no codes).
 
 - **Target: phone portrait only.** No tablet, foldable, or landscape-specific layouts exist; no breakpoints are defined.
 - `SafeArea` wraps headers, lists, and bottom bars (top in content areas, bottom on nav/bottom bars).
-- The only width constraint is the login card (`maxWidth: 420`, centered).
+- Login card có `maxWidth: 420`; luồng phụ huynh có giới hạn chiều rộng 480dp trên web. Đọc constraints của màn đang sửa; không áp giới hạn của một flow cho mọi màn.
 - Keyboard: `adjustResize` (AndroidManifest) + scroll views; sheets add bottom view-inset padding.
 - Content is full-width with 20px gutters; long text wraps to available width.
 
@@ -322,7 +376,7 @@ All messages are Vietnamese, sentence case, user-facing (no codes).
 **Implemented in the current build:**
 
 - Icon-only controls carry accessible names: back ("Quay lại"), password visibility toggle, notifications, logout, sheet close, mic ("Ghi nhận hoạt động").
-- Text scales with the system size for theme-level type roles (no fixed sizes in the type scale).
+- Text scales with the system size, kể cả khi khai báo `fontSize` cơ sở; không khóa scaler để ép khớp ảnh.
 - Status is never color-only: dot + text label pairs everywhere.
 - `inkFaint` was set to meet WCAG AA (4.5:1) on canvas in light mode.
 - Dark theme is a designed scheme (not an inversion) with lightened brand/status hues.
@@ -374,7 +428,7 @@ All messages are Vietnamese, sentence case, user-facing (no codes).
 | # | Deviation | Where |
 |---|---|---|
 | D1 | Emoji used as section markers in report field labels (🍽️ 😴 🎨 🎭 🏥 📝, 💬) | Report editor, review cards |
-| D2 | Explicit `fontSize` overrides bypass system text scaling across many widgets | Throughout screens (10.5–17 range) |
+| D2 | Size chữ rải rác làm khó giữ một type scale nhất quán; khai báo `fontSize` tự nó không bỏ qua system scaling | Throughout screens (10.5–17 range) |
 | D3 | Hard-coded `Colors.red.shade*` in the login and forgot-password error banners instead of `bad`/`badTint` | `auth_screens.dart`, `forgot_password_screen.dart` |
 | D4 | `Colors.white` literals for on-brand text instead of an on-brand token | Buttons, chips, nav mic |
 | D5 | Button minimum height 44 (< Android 48dp) | `KButton` |
@@ -394,7 +448,7 @@ D1–D4, D6–D8 are candidates for a future, explicitly-scoped cleanup task. Th
   - `KColors` — raw palette constants (light + dark).
   - `KPalette` — `ThemeExtension` with both instances; register on each `ThemeData`.
   - `context.k` — the only sanctioned way for widgets to read palette colors.
-  - `KSpace` (4–32) and `KRadii` (card 12, control 9).
+  - `KSpace` (4–32) and `KRadii` (card 12, control 8).
 - `kinderTheme()` / `kinderThemeDark()` build both themes; `ThemeController` (`theme_controller.dart`, persisted via `shared_preferences`) supplies `themeMode` (Sáng / Tối / Theo máy, system by default) to `MaterialApp.router`.
 - Global component defaults (card, divider, input, snackbar) are defined once in `_buildTheme`.
 - Shared widgets live in `widgets.dart`: `KCard`, `KButton`, `KAppBar`, `Avatar`, `StatusBadge`, `SeverityChip`, `SearchField`, `FilterChipButton`, `ProgressRing`, `StatCard`, `StepIndicator`, `BottomActionBar`, `showKSheet`.
@@ -407,10 +461,10 @@ D1–D4, D6–D8 are candidates for a future, explicitly-scoped cleanup task. Th
 1. `fl_chart` is a dependency but no chart is rendered; ProgressRing is the only visualization.
 2. Dark theme is complete in code but has no captured verification pass on device.
 3. History/roster use `ListView` with prebuilt children in places; large rosters may warrant `ListView.builder` later.
-4. Timetable (Thời khóa biểu) is specified and prototyped in Figma Make; not yet implemented in Flutter — its component extensions are registered in §7.10.
+4. Timetable đã có trong Flutter (`screens/timetable_screens.dart`, `test/timetable_test.dart`); mức khớp Figma cần kiểm tra theo node `8:150` / `9:18`, không còn là tính năng chưa implement.
 5. `forgot_password_screen.dart` and `change_password_screen.dart` repeat the login input styling; the forgot-password error banner carries the same hard-coded red debt as D3.
 6. Empty/error copy is consistent by convention, not enforced by a shared widget.
 
 ---
 
-*End of baseline v1.1 — any revision must be recorded as a new version with a decision note.*
+*End of baseline v1.3 — any revision must be recorded as a new version with a decision note.*

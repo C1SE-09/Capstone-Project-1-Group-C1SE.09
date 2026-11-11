@@ -59,27 +59,30 @@ class _ParentMedicationScreenState extends State<ParentMedicationScreen> {
 
   Future<void> _create() async {
     await Navigator.of(context).push<void>(MaterialPageRoute(
-        builder: (_) => ParentMedicationFormScreen(
-            child: widget.child,
-            className: widget.className,
-            repository: _repository,
-            imagePicker: widget.imagePicker)));
+        builder: (_) => GardenVoiceScope(
+            child: ParentMedicationFormScreen(
+                child: widget.child,
+                className: widget.className,
+                repository: _repository,
+                imagePicker: widget.imagePicker))));
     if (mounted) await _reload();
   }
 
   Future<void> _detail(MedicationBatch batch) async {
     await Navigator.of(context).push<void>(MaterialPageRoute(
-        builder: (_) => ParentMedicationDetailScreen(
-            child: widget.child,
-            className: widget.className,
-            batchId: batch.id,
-            repository: _repository)));
+        builder: (_) => GardenVoiceScope(
+            child: ParentMedicationDetailScreen(
+                child: widget.child,
+                className: widget.className,
+                batchId: batch.id,
+                repository: _repository))));
     if (mounted) await _reload();
   }
 
   @override
   Widget build(BuildContext context) => ParentRequestLayout(
       title: 'Dặn dò uống thuốc',
+      gardenVoice: true,
       child: FutureBuilder<List<MedicationDose>>(
           future: _rows,
           builder: (context, snapshot) {

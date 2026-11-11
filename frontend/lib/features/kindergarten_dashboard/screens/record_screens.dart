@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
@@ -14,10 +15,10 @@ import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_ad
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/services.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/core/utils/error_helper.dart';
@@ -26,17 +27,22 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/audio_player_card.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/analyzed_text_card.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/edit_observation_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/edit_observation_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/review_common_widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/done_screen_view.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/audio_player_card.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/analyzed_text_card.dart';
-export 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/edit_observation_sheet.dart';
+export 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/edit_observation_screen.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/review_common_widgets.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/done_screen_view.dart';
 
 enum RecordMode { classroom, child }
+
+String _recordAllergy(String value) => value
+    .replaceFirst(RegExp(r'^Dị ứng\s*:?\s*', caseSensitive: false), '')
+    .trim();
 
 class RecordHubScreen extends StatefulWidget {
   const RecordHubScreen(
@@ -99,159 +105,258 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<_RecordHubData>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
-        }
-        if (snapshot.hasError || snapshot.data == null) {
-          return Scaffold(
-              body: Center(
-                  child: TextButton(
-                      onPressed: () => setState(() => future = _load()),
-                      child: const Text('Không tải được lớp · Thử lại'))));
-        }
-        final data = snapshot.data;
-        if (data == null) {
-          return const Scaffold(
-              body: Center(child: Text('Không có dữ liệu lớp.')));
-        }
-        final list = data.children
-            .where((child) =>
-                child.name.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-        return Scaffold(
-          appBar: KAppBar(
-              title: 'Ghi nhận hoạt động',
-              subtitle: 'Chọn trẻ để bắt đầu ghi nhận',
-              onBack: () => Navigator.pop(context)),
-          body: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
-              children: [
-                KCard(
-                  color: context.k.brandTint,
-                  onTap: widget.onClass,
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                            color: context.k.brand,
-                            borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.groups_outlined,
-                            color: Colors.white),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Cả ${data.className}',
-                                style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w600)),
-                            Text('Ghi một lần, tạo báo cáo cho tất cả trẻ.',
-                                style: TextStyle(
-                                    fontSize: 12, color: context.k.inkSoft)),
-                          ],
+  Widget build(BuildContext context) => GardenVoiceScope(
+        child: FutureBuilder<_RecordHubData>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()));
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return Scaffold(
+                  body: Center(
+                      child: TextButton(
+                          onPressed: () => setState(() => future = _load()),
+                          child: const Text('Không tải được lớp · Thử lại'))));
+            }
+            final data = snapshot.data!;
+            final list = data.children
+                .where((child) =>
+                    child.name.toLowerCase().contains(query.toLowerCase()))
+                .toList();
+            final k = context.k;
+            return Scaffold(
+              body: SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  children: [
+                    _GardenVoiceRecordHeader(
+                      title: 'Ghi nhận hoạt động',
+                      subtitle: 'Chọn trẻ để bắt đầu ghi nhận',
+                      onBack: () => Navigator.pop(context),
+                      backAsset: 'assets/garden_voice/hub_back.svg',
+                    ),
+                    const SizedBox(height: 14),
+                    Material(
+                      color: k.brandTint,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        onTap: widget.onClass,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 82),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: k.lineStrong),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              SvgPicture.asset(
+                                  'assets/garden_voice/class_group.svg'),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                        'Cả Lớp ${data.className.replaceFirst(RegExp(r'^Lớp\s+'), '')}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          height: 1.4,
+                                          fontWeight: FontWeight.w700,
+                                          color: k.ink,
+                                        )),
+                                    Text(
+                                        'Ghi một lần, tạo báo cáo cho tất cả trẻ.',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          height: 1.4,
+                                          fontWeight: FontWeight.w500,
+                                          color: k.inkSoft,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SvgPicture.asset(
+                                  'assets/garden_voice/caret_filled.svg'),
+                            ],
+                          ),
                         ),
                       ),
-                      Icon(Icons.chevron_right, color: context.k.brand),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('hoặc chọn từng trẻ',
-                              style: TextStyle(
-                                  fontSize: 12, color: context.k.inkFaint))),
-                      const Expanded(child: Divider()),
-                    ],
-                  ),
-                ),
-                SearchField(
-                    hint: 'Tìm trẻ…',
-                    onChanged: (value) => setState(() => query = value)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Text(
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(child: Divider(color: k.line)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('hoặc chọn từng trẻ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w500,
+                                  color: k.inkFaint,
+                                )),
+                          ),
+                          Expanded(child: Divider(color: k.line)),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 48,
+                      child: TextField(
+                        onChanged: (value) => setState(() => query = value),
+                        style: TextStyle(fontSize: 14, color: k.ink),
+                        decoration: InputDecoration(
+                          hintText: 'Tìm trẻ…',
+                          hintStyle: TextStyle(color: k.inkSoft),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.all(11),
+                            child: SvgPicture.asset(
+                                'assets/garden_voice/record_search.svg'),
+                          ),
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 14),
+                          filled: true,
+                          fillColor: const Color(0xFFEDF4F7),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: Color(0xFF9FC3CF)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: k.brand, width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
                               '${data.className} · ${data.totalChildren} trẻ',
                               style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: context.k.inkSoft))),
-                      Text('${data.pendingCount} chưa xong',
-                          style: TextStyle(
-                              fontSize: 12, color: context.k.inkFaint)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: KCard(
-                    child: ListView.separated(
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final child = list[index];
-                        return InkWell(
-                          onTap: () => widget.onChild(child),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                Avatar(name: child.name),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(child.name,
-                                          style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500)),
-                                      if (child.allergy != null)
-                                        Text('Dị ứng: ${child.allergy}',
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                color: context.k.warn)),
-                                      if ((child.careNotes ?? '')
-                                          .trim()
-                                          .isNotEmpty)
-                                        Text(
-                                            'Lưu ý: ${child.careNotes!.trim()}',
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                color: context.k.inkSoft)),
-                                    ],
-                                  ),
-                                ),
-                                StatusBadge(child.status),
-                              ],
+                                fontSize: 14,
+                                height: 1.4,
+                                color: k.inkSoft,
+                              ),
                             ),
                           ),
-                        );
-                      },
+                          Text('${data.pendingCount} chưa xong',
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500,
+                                color: k.inkFaint,
+                              )),
+                        ],
+                      ),
                     ),
-                  ),
+                    SizedBox(
+                      height: 257,
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FCFB),
+                          border: Border.all(color: k.lineStrong),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF212E2B)
+                                  .withValues(alpha: .05),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: list.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Không tìm thấy trẻ phù hợp.',
+                                  style: TextStyle(color: k.inkSoft),
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 6),
+                                itemCount: list.length,
+                                separatorBuilder: (_, __) =>
+                                    Divider(height: 1, color: k.line),
+                                itemBuilder: (context, index) {
+                                  final child = list[index];
+                                  final allergy = child.allergy == null
+                                      ? null
+                                      : _recordAllergy(child.allergy!);
+                                  return InkWell(
+                                    onTap: () => widget.onChild(child),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      child: Row(
+                                        children: [
+                                          Avatar(name: child.name),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(child.name,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      height: 1.4,
+                                                      color: k.ink,
+                                                    )),
+                                                if (allergy != null &&
+                                                    allergy.isNotEmpty)
+                                                  Text('Dị ứng: $allergy',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        height: 1.4,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: k.warn,
+                                                      )),
+                                                if ((child.careNotes ?? '')
+                                                    .trim()
+                                                    .isNotEmpty)
+                                                  Text(
+                                                      'Lưu ý: ${child.careNotes!.trim()}',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        height: 1.4,
+                                                        color: k.inkSoft,
+                                                      )),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          _GardenVoiceRecordStatus(
+                                              status: child.status),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );
-      });
+              ),
+            );
+          },
+        ),
+      );
 }
 
 class _RecordHubData {
@@ -261,6 +366,147 @@ class _RecordHubData {
   final String className;
   final int totalChildren;
   final int pendingCount;
+}
+
+class _GardenVoiceRecordHeader extends StatelessWidget {
+  const _GardenVoiceRecordHeader({
+    required this.title,
+    required this.subtitle,
+    required this.onBack,
+    this.backAsset = 'assets/garden_voice/record_back.svg',
+    this.showProgress = false,
+    this.progressStep = 0,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onBack;
+  final String backAsset;
+  final bool showProgress;
+  final int progressStep;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              onPressed: onBack,
+              tooltip: 'Quay lại',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              icon: SvgPicture.asset(backAsset),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        height: 1.4,
+                        fontWeight: FontWeight.w700,
+                        color: k.ink,
+                      )),
+                  Text(subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
+                        color: k.inkSoft,
+                      )),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (showProgress) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: List.generate(
+              3,
+              (index) => Expanded(
+                child: Container(
+                  height: 4,
+                  margin: EdgeInsets.only(right: index == 2 ? 0 : 6),
+                  decoration: BoxDecoration(
+                    color: index <= progressStep ? k.brand : k.brandTint,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+              'Bước ${progressStep + 1}/3 · ${const [
+                'Ghi âm',
+                'Phân tích',
+                'Xem lại'
+              ][progressStep]}',
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+                color: k.inkSoft,
+              )),
+        ],
+      ],
+    );
+  }
+}
+
+class _GardenVoiceRecordStatus extends StatelessWidget {
+  const _GardenVoiceRecordStatus({required this.status});
+
+  final ReportStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final (label, background, foreground) = switch (status) {
+      ReportStatus.none => ('Chưa ghi', k.surfaceSunken, k.inkSoft),
+      ReportStatus.draft || ReportStatus.processing => (
+          'Đang xử lý',
+          k.infoTint,
+          k.info
+        ),
+      ReportStatus.submitted || ReportStatus.read => ('Đã ghi', k.okTint, k.ok),
+      ReportStatus.attention => ('Cần xử lý', k.badTint, k.bad),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: foreground, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(label,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+                color: foreground,
+              )),
+        ],
+      ),
+    );
+  }
 }
 
 class RecordFlowScreen extends StatefulWidget {
@@ -300,57 +546,62 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return switch (step) {
-      'processing' => ProcessingScreen(
-          mode: widget.mode,
-          file: uploadedFile,
-          classId: widget.classId,
-          child: widget.child,
-          teacherRepository: teacherRepository,
-          onBack: () => setState(() => step = 'record'),
-          onDone: (record, extraction) {
-            voiceRecord = record;
-            extractionData = extraction;
-            transcript = record?.effectiveTranscript ?? extraction?.transcript;
-            setState(() => step = 'review');
-          },
-        ),
-      'review' || 'segment' => ReviewScreen(
-          mode: widget.mode,
-          classId: widget.classId,
-          child: widget.child,
-          className: widget.className,
-          extraction: extractionData,
-          transcript: transcript,
-          voiceRecord: voiceRecord,
-          recordedBytes: uploadedFile?.bytes,
-          repository: widget.repository,
-          teacherRepository: teacherRepository,
-          onBack: () => setState(() => step = 'record'),
-          onCompleted: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Đã tạo và gửi báo cáo thành công!'),
-                backgroundColor: context.k.brand,
-              ),
-            );
-          },
-        ),
-      _ => RecordingScreen(
-          mode: widget.mode,
-          child: widget.child,
-          className: widget.className,
-          audioRecorder: widget.audioRecorder,
-          pathProvider: widget.pathProvider,
-          onSubmit: (file) {
-            setState(() {
-              uploadedFile = file;
-              step = 'processing';
-            });
-          },
-        ),
-    };
+    return GardenVoiceScope(
+      child: Builder(
+        builder: (context) => switch (step) {
+          'processing' => ProcessingScreen(
+              mode: widget.mode,
+              file: uploadedFile,
+              classId: widget.classId,
+              child: widget.child,
+              teacherRepository: teacherRepository,
+              onBack: () => setState(() => step = 'record'),
+              onDone: (record, extraction) {
+                voiceRecord = record;
+                extractionData = extraction;
+                transcript =
+                    record?.effectiveTranscript ?? extraction?.transcript;
+                setState(() => step = 'review');
+              },
+            ),
+          'review' || 'segment' => ReviewScreen(
+              mode: widget.mode,
+              classId: widget.classId,
+              child: widget.child,
+              className: widget.className,
+              extraction: extractionData,
+              transcript: transcript,
+              voiceRecord: voiceRecord,
+              recordedBytes: uploadedFile?.bytes,
+              repository: widget.repository,
+              teacherRepository: teacherRepository,
+              onBack: () => setState(() => step = 'record'),
+              onCompleted: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Đã tạo và gửi báo cáo thành công!'),
+                    backgroundColor: context.k.brand,
+                  ),
+                );
+              },
+            ),
+          _ => RecordingScreen(
+              mode: widget.mode,
+              child: widget.child,
+              className: widget.className,
+              audioRecorder: widget.audioRecorder,
+              pathProvider: widget.pathProvider,
+              onSubmit: (file) {
+                setState(() {
+                  uploadedFile = file;
+                  step = 'processing';
+                });
+              },
+            ),
+        },
+      ),
+    );
   }
 }
 
@@ -467,11 +718,14 @@ class _RecordingScreenState extends State<RecordingScreen>
       if (!hasPermission) {
         if (mounted) {
           setState(() => isBusy = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Vui lòng cấp quyền truy cập micro để ghi âm.'),
-              backgroundColor: context.k.warn,
-            ),
+          await _showRecordingRecoveryDialog(
+            iconAsset: 'assets/garden_voice/record_permission.svg',
+            title: 'Chưa có quyền micro',
+            message:
+                'Vui lòng cấp quyền truy cập micro để ghi âm. Thầy cô có thể mở Cài đặt của thiết bị, chọn Quyền riêng tư → Micro và bật cho KinderLog.',
+            primaryLabel: 'Mở cài đặt',
+            secondaryLabel: 'Để sau',
+            onPrimary: _openMicrophoneSettings,
           );
         }
         return;
@@ -558,14 +812,110 @@ class _RecordingScreenState extends State<RecordingScreen>
       debugPrint('Error starting recording: $e');
       if (mounted) {
         setState(() => isBusy = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé.'),
-            backgroundColor: context.k.bad,
-          ),
+        await _showRecordingRecoveryDialog(
+          iconAsset: 'assets/garden_voice/record_error.svg',
+          title: 'Chưa thể ghi âm',
+          message:
+              'Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé.',
+          primaryLabel: 'Thử lại',
+          secondaryLabel: 'Đóng',
+          onPrimary: () => _startRecording(),
         );
       }
     }
+  }
+
+  Future<void> _openMicrophoneSettings() async {
+    try {
+      final opened = await launchUrl(
+        Uri.parse('app-settings:'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mở Cài đặt để cấp quyền micro.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mở Cài đặt để cấp quyền micro.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showRecordingRecoveryDialog({
+    required String iconAsset,
+    required String title,
+    required String message,
+    required String primaryLabel,
+    required String secondaryLabel,
+    required VoidCallback onPrimary,
+  }) {
+    if (!mounted) return Future<void>.value();
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => GardenVoiceScope(
+        child: Builder(
+          builder: (context) {
+            final k = context.k;
+            return Dialog(
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 35, vertical: 24),
+              backgroundColor: k.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(iconAsset, width: 56, height: 56),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: k.ink,
+                        fontSize: 16,
+                        height: 1.4,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: k.inkSoft,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    KButton(
+                      label: primaryLabel,
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        onPrimary();
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    KButton(
+                      label: secondaryLabel,
+                      ghost: true,
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _stopRecording() async {
@@ -644,349 +994,436 @@ class _RecordingScreenState extends State<RecordingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final classroom = widget.mode == RecordMode.classroom;
     final recording = phase == 'recording';
     final hasFile = phase == 'file_selected' && selectedFile != null;
+    final child = widget.child;
+    final allergy =
+        child?.allergy == null ? null : _recordAllergy(child!.allergy!);
+    final classLabel = widget.className.startsWith('Lớp ')
+        ? widget.className
+        : 'Lớp ${widget.className}';
+    final title = child?.name ?? 'Cả lớp';
+    final subtitle = child == null ? classLabel : '$title · $classLabel';
+    final canSubmit = !isBusy && (hasFile || phase == 'done');
 
-    return Scaffold(
-      appBar: KAppBar(
-          title: classroom ? 'Ghi âm cả lớp' : 'Ghi âm',
-          onBack: () => Navigator.pop(context)),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          children: [
-            KCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
+    return GardenVoiceScope(
+      child: Builder(
+        builder: (context) {
+          final k = context.k;
+          return Scaffold(
+            body: SafeArea(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                 children: [
-                  classroom
-                      ? Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                              color: context.k.brandTint,
-                              shape: BoxShape.circle),
-                          child: Icon(Icons.groups_outlined,
-                              color: context.k.brand))
-                      : Avatar(name: widget.child?.name ?? 'Trẻ', size: 44),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  _GardenVoiceRecordHeader(
+                    title: 'Ghi âm',
+                    subtitle: subtitle,
+                    onBack: () => Navigator.pop(context),
+                    showProgress: true,
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    constraints: const BoxConstraints(minHeight: 86),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FCFB),
+                      border: Border.all(color: k.line),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF212E2B).withValues(alpha: .05),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                            classroom
-                                ? 'Cả ${widget.className}'
-                                : (widget.child?.name ?? 'Trẻ'),
-                            style: Theme.of(context).textTheme.titleMedium),
-                        Text(
-                            classroom
-                                ? 'Cả lớp'
-                                : '${widget.className}${widget.child?.nickname == null ? '' : ' · ${widget.child!.nickname}'}',
-                            style: Theme.of(context).textTheme.bodySmall),
-                        if (!classroom && widget.child?.allergy != null)
-                          Text('Dị ứng: ${widget.child?.allergy}',
-                              style: TextStyle(
-                                  fontSize: 11, color: context.k.warn)),
+                        if (child != null)
+                          Avatar(name: child.name)
+                        else
+                          SvgPicture.asset(
+                              'assets/garden_voice/class_group.svg'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                child == null
+                                    ? 'Cả lớp $classLabel'
+                                    : child.name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w700,
+                                  color: k.ink,
+                                ),
+                              ),
+                              Text(
+                                child == null
+                                    ? 'Ghi một lần, tạo báo cáo cho tất cả trẻ.'
+                                    : '$classLabel${child.nickname == null ? '' : ' · ${child.nickname}'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w500,
+                                  color: k.inkSoft,
+                                ),
+                              ),
+                              if (allergy != null && allergy.isNotEmpty)
+                                Text('Dị ứng: $allergy',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w500,
+                                      color: k.warn,
+                                    )),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-
-                ],
-              ),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (hasFile) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 26),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: context.k.surface,
-                        borderRadius: BorderRadius.circular(KRadii.card),
-                        border: Border.all(
-                            color: context.k.brand.withValues(alpha: .35),
-                            width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.k.brand.withValues(alpha: .08),
-                            blurRadius: 18,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 72,
-                            height: 72,
-                            decoration: BoxDecoration(
-                              color: context.k.brandTint,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Icon(Icons.audio_file_rounded,
-                                size: 40, color: context.k.brand),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            selectedFile!.name,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: context.k.ink),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Kích thước: ${_formatBytes(selectedFile!.size)}',
-                            style: TextStyle(
-                                fontSize: 13, color: context.k.inkSoft),
-                          ),
-                          const SizedBox(height: 14),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: context.k.okTint,
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.check_circle_rounded,
-                                    size: 15, color: context.k.ok),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Đã sẵn sàng tạo báo cáo',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: context.k.ok),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    AnimatedBuilder(
-                      animation: Listenable.merge([wave, wave2]),
-                      builder: (_, __) => SizedBox(
-                        height: 56,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            28,
-                            (index) {
-                              // Each bar uses two overlapping sine waves with independent phase offsets
-                              // to create an organic, speech-like ripple effect.
-                              final double phaseOffset = index * 0.42;
-                              final double amp1 = (math.sin(phaseOffset +
-                                          wave.value * math.pi * 2) +
-                                      1) /
-                                  2;
-                              final double amp2 = (math.sin(phaseOffset * 1.3 +
-                                          wave2.value * math.pi * 2 +
-                                          1.1) +
-                                      1) /
-                                  2;
-                              final double combined = (amp1 * 0.6 + amp2 * 0.4);
-                              final double barH =
-                                  recording ? 5 + 38 * combined : 4;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 80),
-                                width: 3,
-                                height: barH,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 2),
-                                decoration: BoxDecoration(
-                                  color: recording
-                                      ? context.k.brand.withValues(
-                                          alpha: 0.5 + 0.5 * combined)
-                                      : context.k.brand.withValues(alpha: .28),
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-                    SizedBox.square(
-                      dimension: 132,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          if (phase != 'ready')
-                            SizedBox.square(
-                              dimension: 132,
-                              child: CircularProgressIndicator(
-                                value: seconds / 180,
-                                strokeWidth: 4,
-                                strokeCap: StrokeCap.round,
-                                backgroundColor: context.k.surfaceSunken,
-                                color: seconds >= 150
-                                    ? context.k.warn
-                                    : context.k.brand,
-                              ),
-                            ),
-                          Material(
-                            color: recording ? context.k.bad : context.k.brand,
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap:
-                                  (phase == 'done' || isBusy) ? null : toggle,
-                              child: SizedBox.square(
-                                dimension: 96,
-                                child: isBusy
-                                    ? const Center(
-                                        child: SizedBox(
-                                          width: 32,
-                                          height: 32,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 3,
-                                          ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        recording
-                                            ? Icons.stop_rounded
-                                            : Icons.mic_none_rounded,
-                                        size: 36,
-                                        color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Text(time,
-                        style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w600,
-                            color: seconds >= 150
-                                ? context.k.warn
-                                : context.k.ink)),
-                    Text(
-                      phase == 'ready'
+                  const SizedBox(height: 12),
+                  if (hasFile)
+                    _SelectedAudioFileCard(
+                      file: selectedFile!,
+                      formatBytes: _formatBytes,
+                    )
+                  else
+                    _GardenVoiceRecorderPanel(
+                      recording: recording,
+                      isBusy: isBusy,
+                      seconds: seconds,
+                      time: time,
+                      message: phase == 'ready'
                           ? 'Nhấn để bắt đầu ghi âm'
                           : recording
                               ? 'Đang ghi âm · Nói tự nhiên'
-                              : (selectedFile != null
-                                  ? 'Đã ghi âm $time · ${_formatBytes(selectedFile!.size)}'
-                                  : 'Đã ghi âm $time'),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                              : 'Đã ghi âm $time · ${_formatBytes(selectedFile?.size ?? 0)}',
+                      wave: wave,
+                      wave2: wave2,
+                      onToggle: toggle,
                     ),
-                    if (phase == 'ready') ...[
-                      const SizedBox(height: 18),
-                      OutlinedButton.icon(
-                        onPressed: _pickFile,
-                        icon: Icon(Icons.upload_file_rounded,
-                            size: 20, color: context.k.brand),
-                        label: Text(
-                          'Tải lên file ghi âm',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: context.k.brand),
-                        ),
+                  const SizedBox(height: 14),
+                  if (!hasFile)
+                    Center(
+                      child: OutlinedButton(
+                        onPressed: recording || isBusy ? null : _pickFile,
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: context.k.brand, width: 1.4),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 22, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(KRadii.control)),
-                          backgroundColor:
-                              context.k.brandTint.withValues(alpha: .35),
+                          foregroundColor: k.brand,
+                          minimumSize: const Size(230, 48),
+                          side: BorderSide(color: k.line),
+                          shape: const StadiumBorder(),
+                          backgroundColor: k.surface,
+                        ),
+                        child: const Text('Tải lên file ghi âm'),
+                      ),
+                    ),
+                  if (hasFile)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: _pickFile,
+                          child: const Text('Chọn file khác'),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            selectedFile = null;
+                            phase = 'ready';
+                          }),
+                          child: const Text('Hủy chọn'),
+                        ),
+                      ],
+                    ),
+                  if (phase == 'done')
+                    Center(
+                      child: TextButton(
+                        onPressed: () => setState(() {
+                          seconds = 0;
+                          phase = 'ready';
+                          selectedFile = null;
+                        }),
+                        child: const Text('Ghi âm lại'),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F5F9),
+                      border: Border.all(color: k.lineStrong),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Gợi ý: kể lại hoạt động của bé',
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.4,
+                              fontWeight: FontWeight.w700,
+                              color: k.ink,
+                            )),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Kể lần lượt: ăn uống, giấc ngủ, hoạt động, sức khỏe và tâm trạng của bé.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            fontWeight: FontWeight.w500,
+                            color: k.inkSoft,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 104,
+                        height: 48,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            foregroundColor: k.brand,
+                            shape: const StadiumBorder(),
+                          ),
+                          child: const Text('Hủy'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: FilledButton(
+                            onPressed: canSubmit
+                                ? () => widget.onSubmit(selectedFile)
+                                : null,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: k.brand,
+                              foregroundColor: k.surface,
+                              disabledBackgroundColor:
+                                  k.brand.withValues(alpha: .35),
+                              shape: const StadiumBorder(),
+                              textStyle: const TextStyle(
+                                fontFamily: 'Nunito',
+                                fontSize: 14,
+                                height: 1.4,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            child: const Text('Gửi xử lý'),
+                          ),
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ],
               ),
             ),
-            if (hasFile) ...[
-              KButton(
-                label: 'Gửi xử lý',
-                icon: Icons.auto_awesome,
-                large: true,
-                onPressed: () => widget.onSubmit(selectedFile),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: KButton(
-                      label: 'Chọn file khác',
-                      icon: Icons.folder_open_rounded,
-                      secondary: true,
-                      onPressed: _pickFile,
-                    ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GardenVoiceRecorderPanel extends StatelessWidget {
+  const _GardenVoiceRecorderPanel({
+    required this.recording,
+    required this.isBusy,
+    required this.seconds,
+    required this.time,
+    required this.message,
+    required this.wave,
+    required this.wave2,
+    required this.onToggle,
+  });
+
+  final bool recording;
+  final bool isBusy;
+  final int seconds;
+  final String time;
+  final String message;
+  final AnimationController wave;
+  final AnimationController wave2;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Column(
+          children: [
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (recording) ...[
+                  SvgPicture.asset('assets/garden_voice/record_status_dot.svg'),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  recording ? 'Đang ghi âm · Nói tự nhiên' : message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: recording ? 14 : 13,
+                    height: 1.4,
+                    fontWeight: recording ? FontWeight.w700 : FontWeight.w500,
+                    color: recording ? k.bad : k.inkSoft,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: KButton(
-                      label: 'Hủy chọn',
-                      ghost: true,
-                      onPressed: () => setState(() {
-                        selectedFile = null;
-                        phase = 'ready';
-                      }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(time,
+                style: TextStyle(
+                  fontSize: 28,
+                  height: 1.4,
+                  fontWeight: FontWeight.w800,
+                  color: seconds >= 150 ? k.warn : k.ink,
+                )),
+            const SizedBox(height: 12),
+            AnimatedBuilder(
+              animation: Listenable.merge([wave, wave2]),
+              builder: (_, __) => SizedBox(
+                width: 165,
+                height: 56,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(28, (index) {
+                    final phaseOffset = index * .42;
+                    final amp1 =
+                        (math.sin(phaseOffset + wave.value * math.pi * 2) + 1) /
+                            2;
+                    final amp2 = (math.sin(phaseOffset * 1.3 +
+                                wave2.value * math.pi * 2 +
+                                1.1) +
+                            1) /
+                        2;
+                    final combined = amp1 * .6 + amp2 * .4;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 80),
+                      width: 3,
+                      height: recording ? 5 + 38 * combined : 4,
+                      decoration: BoxDecoration(
+                        color: recording
+                            ? k.brand.withValues(alpha: .5 + .5 * combined)
+                            : k.brand.withValues(alpha: .28),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox.square(
+              dimension: 132,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                      'assets/garden_voice/record_progress_outer.svg'),
+                  if (recording)
+                    SizedBox.square(
+                      dimension: 132,
+                      child: CircularProgressIndicator(
+                        value: seconds / 180,
+                        strokeWidth: 4,
+                        strokeCap: StrokeCap.round,
+                        backgroundColor: Colors.transparent,
+                        color: seconds >= 150 ? k.warn : k.brand,
+                      ),
+                    ),
+                  Material(
+                    color: recording ? k.bad : k.brand,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: isBusy ? null : onToggle,
+                      child: SizedBox.square(
+                        dimension: 96,
+                        child: isBusy
+                            ? const Center(
+                                child: SizedBox.square(
+                                  dimension: 32,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                              )
+                            : Tooltip(
+                                message: recording
+                                    ? 'Dừng ghi âm'
+                                    : 'Bắt đầu ghi âm',
+                                child: Icon(
+                                  recording
+                                      ? Icons.pause_rounded
+                                      : Icons.mic_none_rounded,
+                                  size: 36,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ] else if (phase == 'done') ...[
-              KButton(
-                  label: 'Gửi xử lý',
-                  icon: Icons.send_outlined,
-                  large: true,
-                  onPressed: () => widget.onSubmit(selectedFile)),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                      child: KButton(
-                          label: 'Ghi âm lại',
-                          icon: Icons.refresh,
-                          secondary: true,
-                          onPressed: () => setState(() {
-                                seconds = 0;
-                                phase = 'ready';
-                                selectedFile = null;
-                              }))),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: KButton(
-                          label: 'Hủy',
-                          ghost: true,
-                          onPressed: () => Navigator.pop(context))),
-                ],
-              ),
-            ] else
-              Text(
-                classroom
-                    ? 'Kể lần lượt về các bé trong lớp. Nhắc tên bé trước khi nói — hệ thống sẽ tách phần của từng bé.'
-                    : 'Kể lại hoạt động của bé trong ngày. Hệ thống sẽ tự sắp xếp thành báo cáo.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SelectedAudioFileCard extends StatelessWidget {
+  const _SelectedAudioFileCard({required this.file, required this.formatBytes});
+
+  final PlatformFile file;
+  final String Function(int bytes) formatBytes;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 289),
+      decoration: BoxDecoration(
+        color: k.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: k.lineStrong),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.audio_file_rounded, size: 48, color: k.brand),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(file.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w700, color: k.ink)),
+          ),
+          const SizedBox(height: 6),
+          Text('Kích thước: ${formatBytes(file.size)}',
+              style: TextStyle(color: k.inkSoft)),
+          const SizedBox(height: 14),
+          Text('Đã sẵn sàng tạo báo cáo',
+              style: TextStyle(fontSize: 12, color: k.ok)),
+        ],
       ),
     );
   }
@@ -1019,14 +1456,13 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   int active = 0;
   String? errorMessage;
   bool isProcessing = false;
-  Timer? fallbackTimer;
+  VoiceRecord? uploadedRecord;
+  String? completedTranscript;
   late final TeacherRepository repository =
       widget.teacherRepository ?? TeacherRepository();
 
   List<String> get steps => [
-        widget.file != null
-            ? 'Đã tải lên: ${widget.file!.name}'
-            : 'Đã nhận bản ghi âm',
+        'Đã nhận bản ghi âm',
         'Đang chuyển giọng nói thành văn bản',
         'Đang phân tích & tổng hợp nội dung',
         widget.mode == RecordMode.classroom
@@ -1101,7 +1537,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
   @override
   void dispose() {
-    fallbackTimer?.cancel();
     super.dispose();
   }
 
@@ -1110,12 +1545,20 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
     setState(() {
       isProcessing = true;
       errorMessage = null;
-      active = 0;
+      active = completedTranscript != null
+          ? 2
+          : uploadedRecord != null
+              ? 1
+              : 0;
     });
 
     final file = widget.file;
     if (file == null) {
-      _runSimulated();
+      setState(() {
+        isProcessing = false;
+        errorMessage =
+            'Không tìm thấy bản ghi âm. Vui lòng quay lại và ghi âm lại.';
+      });
       return;
     }
 
@@ -1124,80 +1567,85 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           'bbbbbbbb-0000-0000-0000-000000000001';
       final childId = widget.mode == RecordMode.child ? widget.child?.id : null;
 
-      // 1. Upload audio file to backend / MinIO
-      setState(() => active = 0);
+      VoiceRecord? currentRecord = uploadedRecord;
+      String? transcript = completedTranscript;
+      if (currentRecord == null) {
+        // 1. Upload audio file to backend / MinIO
+        setState(() => active = 0);
 
-      String safeFilePath = '';
-      if (!kIsWeb) {
-        try {
-          safeFilePath = file.path ?? '';
-        } catch (_) {
-          safeFilePath = '';
-        }
-      }
-
-      Uint8List? fileBytes;
-      try {
-        fileBytes = file.bytes;
-      } catch (_) {}
-
-      if (fileBytes == null && file.readStream != null) {
-        try {
-          final chunks = <int>[];
-          await for (final chunk in file.readStream!) {
-            chunks.addAll(chunk);
+        String safeFilePath = '';
+        if (!kIsWeb) {
+          try {
+            safeFilePath = file.path ?? '';
+          } catch (_) {
+            safeFilePath = '';
           }
-          fileBytes = Uint8List.fromList(chunks);
-        } catch (_) {}
-      }
+        }
 
-      final voiceRecord = await repository.uploadAudio(
-        filePath: safeFilePath,
-        fileBytes: fileBytes,
-        fileName: file.name,
-        classId: widget.classId,
-        teacherId: teacherId,
-        childId: childId,
-      );
+        Uint8List? fileBytes;
+        try {
+          fileBytes = file.bytes;
+        } catch (_) {}
+
+        if (fileBytes == null && file.readStream != null) {
+          try {
+            final chunks = <int>[];
+            await for (final chunk in file.readStream!) {
+              chunks.addAll(chunk);
+            }
+            fileBytes = Uint8List.fromList(chunks);
+          } catch (_) {}
+        }
+
+        currentRecord = await repository.uploadAudio(
+          filePath: safeFilePath,
+          fileBytes: fileBytes,
+          fileName: file.name,
+          classId: widget.classId,
+          teacherId: teacherId,
+          childId: childId,
+        );
+        uploadedRecord = currentRecord;
+      }
 
       if (!mounted) return;
+      final voiceRecord = currentRecord;
 
-      // 2. Poll for PhoWhisper speech-to-text
-      setState(() => active = 1);
-      VoiceRecord? currentRecord = voiceRecord;
-      String? transcript;
+      // 2. Poll for PhoWhisper speech-to-text unless a prior attempt finished it.
+      if (transcript == null) {
+        setState(() => active = 1);
+        for (var attempt = 0; attempt < 60; attempt++) {
+          await Future.delayed(const Duration(seconds: 2));
+          if (!mounted) return;
 
-      for (var attempt = 0; attempt < 60; attempt++) {
-        await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) return;
+          try {
+            currentRecord = await repository.getVoiceRecord(
+              voiceId: voiceRecord.id,
+              teacherId: teacherId,
+            );
+            uploadedRecord = currentRecord;
+          } catch (e) {
+            if (attempt >= 58) rethrow;
+            continue;
+          }
 
-        try {
-          currentRecord = await repository.getVoiceRecord(
-            voiceId: voiceRecord.id,
-            teacherId: teacherId,
+          if (currentRecord.status == 'completed') {
+            transcript = currentRecord.effectiveTranscript;
+            break;
+          } else if (currentRecord.status == 'failed') {
+            uploadedRecord = null;
+            final errMsg = currentRecord.errorMessage?.trim();
+            throw Exception((errMsg != null && errMsg.isNotEmpty)
+                ? errMsg
+                : 'Quá trình nhận dạng giọng nói thất bại.');
+          }
+        }
+
+        if (transcript == null && currentRecord?.status != 'completed') {
+          throw Exception(
+            'Quá trình xử lý âm thanh quá thời gian chờ (hơn 2 phút). Vui lòng thử lại hoặc chọn file âm thanh ngắn hơn.',
           );
-        } catch (e) {
-          if (attempt >= 58) rethrow;
-          continue;
         }
-
-        if (currentRecord.status == 'completed') {
-          transcript = currentRecord.effectiveTranscript;
-          break;
-        } else if (currentRecord.status == 'failed') {
-          final errMsg = currentRecord.errorMessage?.trim();
-          throw Exception((errMsg != null && errMsg.isNotEmpty)
-              ? errMsg
-              : 'Quá trình nhận dạng giọng nói thất bại.');
-        }
-      }
-
-      if (transcript == null &&
-          currentRecord != null &&
-          currentRecord.status != 'completed') {
-        throw Exception(
-          'Quá trình xử lý âm thanh quá thời gian chờ (hơn 2 phút). Vui lòng thử lại hoặc chọn file âm thanh ngắn hơn.',
-        );
       }
 
       final effectiveTranscript = transcript?.trim() ?? '';
@@ -1208,10 +1656,11 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       }
 
       if (!mounted) return;
+      completedTranscript = effectiveTranscript;
 
       // 3. Run NLP model extraction
       setState(() => active = 2);
-      ExtractionData? extraction;
+      late final ExtractionData extraction;
       try {
         extraction = await repository.analyzeTranscript(
           voiceId: voiceRecord.id,
@@ -1263,15 +1712,9 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           );
           return; // dừng – onBack() đã xử lý navigation
         }
-        // ─── Lỗi khác (network, server 5xx…) → dừng, không fallback ───
-        extraction = ExtractionData(
-          transcript: effectiveTranscript,
-        );
+        rethrow;
       } catch (_) {
-        // ─── Exception không phải TeacherRepositoryException → dừng ───
-        extraction = ExtractionData(
-          transcript: effectiveTranscript,
-        );
+        rethrow;
       }
 
       if (!mounted) return;
@@ -1332,155 +1775,341 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         isProcessing = false;
         errorMessage = friendlyMsg;
       });
-      await _showAudioErrorDialog(friendlyMsg);
     }
-  }
-
-  Future<void> _showAudioErrorDialog(String message) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.error_outline_rounded,
-                color: context.k.bad, size: 26),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Không thể xử lý file âm thanh',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(fontSize: 14, height: 1.55),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              widget.onBack();
-            },
-            child: const Text('Quay lại'),
-          ),
-          FilledButton.icon(
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Thử lại'),
-            style: FilledButton.styleFrom(
-              backgroundColor: context.k.brand,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              _start();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  String _generateUuid() {
-    final rnd = math.Random();
-    String hex(int len) =>
-        List.generate(len, (_) => rnd.nextInt(16).toRadixString(16)).join();
-    return '${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}';
-  }
-
-  void _runSimulated() {
-    fallbackTimer = Timer.periodic(const Duration(milliseconds: 900), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
-      }
-      if (active >= steps.length - 1) {
-        t.cancel();
-        Future<void>.delayed(const Duration(milliseconds: 500), () {
-          if (!mounted) return;
-          final synthId = _generateUuid();
-          final synthTranscript = '';
-          final synthRecord = VoiceRecord(
-            id: synthId,
-            status: 'completed',
-            transcription: synthTranscript,
-          );
-          final synthExtraction = ExtractionData(
-            transcript: synthTranscript,
-            classWideExtraction: widget.mode == RecordMode.classroom
-                ? {
-                    'meals': '',
-                    'sleeping': '',
-                    'health': '',
-                    'activities': '',
-                    'mood': '',
-                  }
-                : null,
-          );
-          widget.onDone(synthRecord, synthExtraction);
-        });
-      } else {
-        setState(() => active++);
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: KAppBar(
-        title: errorMessage != null ? 'Thông báo sự cố' : 'Đang xử lý',
-        onBack: widget.onBack,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(steps[active],
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontSize: 20, fontWeight: FontWeight.w700)),
-            Text('Hệ thống đang xử lý file ghi âm của bạn.',
-                style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 24),
-            StepIndicator(steps: steps, active: active),
-            const Spacer(),
-            KCard(
-              color: context.k.infoTint,
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final progressStep = active == 0
+        ? 0
+        : active < 3
+            ? 1
+            : 2;
+    return GardenVoiceScope(
+      child: Builder(
+        builder: (context) {
+          final k = context.k;
+          if (errorMessage != null) {
+            return Scaffold(
+              backgroundColor: k.canvas,
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: _GardenVoiceRecordHeader(
+                        title: 'Thông báo sự cố',
+                        subtitle: 'Phân tích bản ghi âm',
+                        onBack: widget.onBack,
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+                        children: [
+                          Center(
+                            child: SvgPicture.asset(
+                              'assets/garden_voice/process_error.svg',
+                              width: 76,
+                              height: 76,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text('Chưa xử lý được bản ghi âm',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: k.ink)),
+                          const SizedBox(height: 12),
+                          Text(errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 14, height: 1.4, color: k.inkSoft)),
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FCFB),
+                              border: Border.all(color: k.lineStrong),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Thầy cô có thể',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: k.ink)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Thử lại sau ít phút, hoặc quay lại để chọn bản ghi khác.',
+                                  style:
+                                      TextStyle(fontSize: 12, color: k.inkSoft),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                        child: widget.file == null
+                            ? SizedBox(
+                                width: double.infinity,
+                                child: FilledButton(
+                                  onPressed: widget.onBack,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: k.brand,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(0, 48),
+                                    shape: const StadiumBorder(),
+                                  ),
+                                  child: const Text('Chọn bản ghi'),
+                                ),
+                              )
+                            : Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: widget.onBack,
+                                      style: OutlinedButton.styleFrom(
+                                        minimumSize: const Size(0, 48),
+                                        shape: const StadiumBorder(),
+                                      ),
+                                      child: const Text('Quay lại'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: FilledButton(
+                                      onPressed: _start,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: k.brand,
+                                        foregroundColor: Colors.white,
+                                        minimumSize: const Size(0, 48),
+                                        shape: const StadiumBorder(),
+                                      ),
+                                      child: const Text('Thử lại'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final statusText = switch (active) {
+            0 => 'Đang tải bản ghi âm lên',
+            1 => 'Đang chuyển giọng nói thành văn bản',
+            2 => 'Đang phân tích nội dung',
+            _ => 'Đang hoàn tất báo cáo',
+          };
+          return Scaffold(
+            backgroundColor: k.canvas,
+            body: SafeArea(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: context.k.info,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: _GardenVoiceRecordHeader(
+                      title: 'Đang xử lý',
+                      subtitle: 'Phân tích bản ghi âm',
+                      onBack: widget.onBack,
+                      showProgress: true,
+                      progressStep: progressStep,
+                    ),
                   ),
-                  const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      widget.file != null
-                          ? 'Đang xử lý file "${widget.file!.name}". Vui lòng giữ màn hình này cho đến khi hoàn tất.'
-                          : 'Vui lòng giữ màn hình này cho đến khi hoàn tất.',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                      children: [
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                color: k.brand,
+                                backgroundColor: k.brandTint,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(statusText,
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: k.ink)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                      'Hệ thống đang xử lý file ghi âm của bạn.',
+                                      style: TextStyle(
+                                          fontSize: 14, color: k.inkSoft)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FCFB),
+                            border: Border.all(color: k.lineStrong),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: const [
+                              BoxShadow(
+                                  color: Color(0x0E212E2B),
+                                  blurRadius: 16,
+                                  offset: Offset(0, 4)),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              for (var index = 0;
+                                  index < steps.length;
+                                  index++) ...[
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 22,
+                                      height: 22,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: index < active
+                                            ? k.ok
+                                            : index == active
+                                                ? k.brandTint
+                                                : k.surfaceSunken,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: index < active
+                                          ? const Icon(Icons.check,
+                                              size: 14, color: Colors.white)
+                                          : index == active
+                                              ? Container(
+                                                  width: 8,
+                                                  height: 8,
+                                                  decoration: BoxDecoration(
+                                                      color: k.brand,
+                                                      shape: BoxShape.circle),
+                                                )
+                                              : null,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        steps[index],
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: index == active
+                                              ? FontWeight.w700
+                                              : FontWeight.w400,
+                                          color: index <= active
+                                              ? k.ink
+                                              : k.inkSoft,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (index < steps.length - 1)
+                                  const SizedBox(height: 14),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: k.brandTint,
+                            border: Border.all(color: k.lineStrong),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: k.brand, size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  widget.file == null
+                                      ? 'Vui lòng giữ màn hình này cho đến khi hoàn tất.'
+                                      : 'Đang xử lý file "${widget.file!.name}". Vui lòng giữ màn hình này cho đến khi hoàn tất.',
+                                  style: TextStyle(
+                                      fontSize: 14, height: 1.4, color: k.ink),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 13,
+                            child: OutlinedButton(
+                              onPressed: () =>
+                                  showBugReportBottomSheet(context),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: k.brand,
+                                side: BorderSide(color: k.line),
+                                minimumSize: const Size(0, 48),
+                                shape: const StadiumBorder(),
+                              ),
+                              child: const Text('Sự cố'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 21,
+                            child: FilledButton(
+                              onPressed: widget.onBack,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: k.brand,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 48),
+                                shape: const StadiumBorder(),
+                              ),
+                              child: const Text('Xem lại'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
-
 
 enum ObservationKind { normal, unmatched, classwide }
 
@@ -1526,7 +2155,7 @@ class ObservationItem {
       childId: child.id,
       nickname: child.nickname,
       matched: true,
-      decision: ObservationDecision.approved,
+      decision: ObservationDecision.pending,
       kind: ObservationKind.normal,
       eating: eating,
       sleep: sleep,
@@ -1555,6 +2184,7 @@ class ReviewScreen extends StatefulWidget {
     this.transcript,
     this.voiceRecord,
     this.recordedBytes,
+    this.audioPlayerFactory,
   });
 
   final VoidCallback onBack;
@@ -1571,6 +2201,7 @@ class ReviewScreen extends StatefulWidget {
 
   /// Bytes của file ghi âm gốc, dùng để phát lại ở màn hình done.
   final Uint8List? recordedBytes;
+  final AudioPlayerFactory? audioPlayerFactory;
 
   @override
   State<ReviewScreen> createState() => _ReviewScreenState();
@@ -1592,6 +2223,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   /// Map từ item.id → list draft_report_id đã được tạo (sau khi gọi approve-item).
   /// Dùng để gom lại và gửi 1 lần qua send-batch.
   final Map<String, List<String>> approvedDraftIds = {};
+  final Set<String> sentDraftIds = {};
 
   /// Set các item.id đang trong quá trình approve (disable button tránh double-click).
   final Set<String> approvingIds = <String>{};
@@ -1617,8 +2249,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
     super.initState();
     currentExtraction = widget.extraction;
     childrenFuture = _loadChildren().then((children) {
-      roster = children;
-      items = _buildObservations(children);
+      if (mounted) {
+        setState(() {
+          roster = children;
+          items = _buildObservations(children);
+        });
+      }
       return children;
     }).catchError((Object e, StackTrace st) {
       debugPrint('ReviewScreen childrenFuture error: $e\n$st');
@@ -1791,7 +2427,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
             result.add(_unmatchedItem(
               'unmatched_$i',
               text,
-              seg is Map && seg['extraction'] is Map ? (seg['extraction'] as Map<dynamic, dynamic>) : null,
+              seg is Map && seg['extraction'] is Map
+                  ? (seg['extraction'] as Map<dynamic, dynamic>)
+                  : null,
             ));
           }
         }
@@ -1811,7 +2449,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 result.add(_unmatchedItem(
                   'unmatched_${uIdx++}',
                   text,
-                  seg['extraction'] is Map ? (seg['extraction'] as Map<dynamic, dynamic>) : null,
+                  seg['extraction'] is Map
+                      ? (seg['extraction'] as Map<dynamic, dynamic>)
+                      : null,
                 ));
               }
             }
@@ -2161,6 +2801,32 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  void _discardItem(ObservationItem item) {
+    final draftIds = List<String>.from(
+      approvedDraftIds[item.id] ?? <String>[],
+    );
+    if (draftIds.any(sentDraftIds.contains)) {
+      _showError('Báo cáo đã gửi một phần nên không thể loại bỏ mục này.');
+      return;
+    }
+    setState(() {
+      item.decision = ObservationDecision.discarded;
+      approvedDraftIds.remove(item.id);
+    });
+    if (draftIds.isNotEmpty) teacherRepository.deleteDraftReports(draftIds);
+  }
+
+  void _restoreItem(ObservationItem item) {
+    final draftIds = List<String>.from(
+      approvedDraftIds[item.id] ?? <String>[],
+    );
+    setState(() {
+      item.decision = ObservationDecision.pending;
+      approvedDraftIds.remove(item.id);
+    });
+    if (draftIds.isNotEmpty) teacherRepository.deleteDraftReports(draftIds);
+  }
+
   /// Duyệt tất cả các mục chưa được duyệt.
   Future<void> _approveAll() async {
     for (final item in items) {
@@ -2177,6 +2843,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (approvingIds.contains(item.id)) return;
     final draftIdsToDelete =
         List<String>.from(approvedDraftIds[item.id] ?? <String>[]);
+    if (draftIdsToDelete.any(sentDraftIds.contains)) {
+      _showError('Báo cáo đã gửi một phần nên không thể bỏ duyệt mục này.');
+      return;
+    }
     setState(() {
       item.decision = ObservationDecision.pending;
       approvedDraftIds.remove(item.id);
@@ -2205,8 +2875,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
           teacherId =
               AuthRepository.currentUser?.teacherId ?? repository.teacherId;
         }
-        final voiceRecordId = widget.voiceRecord?.id ??
-            '00000000-0000-0000-0000-000000000000';
+        final voiceRecordId =
+            widget.voiceRecord?.id ?? '00000000-0000-0000-0000-000000000000';
         await teacherRepository.approveItem(
           voiceRecordId: voiceRecordId,
           teacherId: teacherId,
@@ -2219,7 +2889,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
             if (classwideItem.activities.isNotEmpty)
               'activities': classwideItem.activities,
             if (classwideItem.mood.isNotEmpty) 'mood': classwideItem.mood,
-            if (classwideItem.note.isNotEmpty) 'teacher_note': classwideItem.note,
+            if (classwideItem.note.isNotEmpty)
+              'teacher_note': classwideItem.note,
           },
         );
       } catch (e) {
@@ -2259,6 +2930,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   /// Bỏ duyệt tất cả các mục đã duyệt. Xóa tất cả draft reports khỏi backend DB.
   Future<void> _unapproveAll() async {
+    if (approvedDraftIds.values
+        .expand((ids) => ids)
+        .any(sentDraftIds.contains)) {
+      _showError('Đã có báo cáo được gửi nên không thể bỏ duyệt tất cả.');
+      return;
+    }
     final allDraftIdsToDelete = <String>[];
     for (final ids in approvedDraftIds.values) {
       allDraftIdsToDelete.addAll(ids);
@@ -2289,77 +2966,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
-  /// Hiển thị hộp thoại xem đầy đủ nội dung văn bản đã phân tích.
-  void _showTranscriptDialog(BuildContext context, String text) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.description_outlined, color: context.k.brand, size: 22),
-            const SizedBox(width: 8),
-            const Text('Text đã phân tích',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Toàn bộ nội dung giọng nói từ file ghi âm đã được AI chuyển thành văn bản và phân tích:',
-                style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: context.k.surfaceSunken,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: context.k.line),
-                ),
-                child: SelectableText(
-                  text,
-                  style: TextStyle(
-                      fontSize: 13, height: 1.6, color: context.k.ink),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: text));
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                    content: Text('Đã sao chép!'),
-                    duration: Duration(seconds: 1)),
-              );
-            },
-            icon: const Icon(Icons.copy_rounded, size: 16),
-            label: const Text('Sao chép'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _editAndReanalyzeTranscript();
-            },
-            icon: const Icon(Icons.edit_note_rounded, size: 16),
-            label: const Text('Sửa & Phân tích lại'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Đóng'),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Gửi batch tất cả draft đã thu được từ các mục ĐÃ ĐƯỢC DUYỆT.
   /// Gọi POST /api/teacher/reports/send-batch với list tất cả draft_report_ids.
   Future<void> _sendBatch() async {
@@ -2374,17 +2980,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
       }
     }
     // dedupe (giữ thứ tự)
-    final uniqueDraftIds = <String>[];
+    final allUniqueDraftIds = <String>[];
     final seen = <String>{};
     for (final id in allDraftIds) {
-      if (seen.add(id)) uniqueDraftIds.add(id);
-    }
-
-    // Tuyệt đối không tự ý duyệt ngầm - chỉ mục nào được duyệt mới gửi
-    if (uniqueDraftIds.isEmpty) {
-      _showError(
-          'Chưa có mục nào được duyệt. Hãy bấm "Duyệt" ít nhất 1 mục để gửi.');
-      return;
+      if (seen.add(id)) allUniqueDraftIds.add(id);
     }
 
     final pendingCount = items
@@ -2395,6 +2994,21 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (pendingCount > 0) {
       _showError(
           'Còn $pendingCount mục chưa duyệt hoặc loại bỏ. Vui lòng xử lý tất cả các mục trước khi gửi.');
+      return;
+    }
+
+    // Tuyệt đối không tự ý duyệt ngầm - chỉ mục nào được duyệt mới gửi.
+    final uniqueDraftIds = allUniqueDraftIds
+        .where((id) => !sentDraftIds.contains(id))
+        .toList();
+    if (uniqueDraftIds.isEmpty) {
+      if (allUniqueDraftIds.isNotEmpty &&
+          allUniqueDraftIds.every(sentDraftIds.contains)) {
+        _finishBatchSend();
+      } else {
+        _showError(
+            'Chưa có mục nào được duyệt. Hãy bấm "Duyệt" ít nhất 1 mục để gửi.');
+      }
       return;
     }
 
@@ -2422,59 +3036,67 @@ class _ReviewScreenState extends State<ReviewScreen> {
           (res['skipped'] is num) ? (res['skipped'] as num).toInt() : 0;
       final failed =
           (res['failed'] is num) ? (res['failed'] as num).toInt() : 0;
+      final results = res['results'];
+      final failedIds = <String>{};
+      if (results is List) {
+        for (final result in results) {
+          if (result is! Map) continue;
+          final id = result['daily_report_id']?.toString();
+          if (id == null || !uniqueDraftIds.contains(id)) continue;
+          if (result['result'] == 'sent' || result['result'] == 'skipped') {
+            sentDraftIds.add(id);
+          } else if (result['result'] == 'failed') {
+            failedIds.add(id);
+          }
+        }
+      }
+      if (failed == 0 && sent + skipped == uniqueDraftIds.length) {
+        sentDraftIds.addAll(uniqueDraftIds);
+      }
 
       if (failed > 0 && sent == 0) {
         debugPrint(
             'sendBatch returned failed=$failed (${res['results']}), publishing individually...');
-        for (final repId in uniqueDraftIds) {
+        final fallbackIds = failedIds.isEmpty
+            ? uniqueDraftIds.where((id) => !sentDraftIds.contains(id))
+            : failedIds;
+        for (final repId in fallbackIds) {
           try {
             await teacherRepository.publishReport(
                 reportId: repId, teacherId: teacherId);
+            sentDraftIds.add(repId);
           } catch (e) {
             debugPrint('Individual publish error for $repId: $e');
           }
         }
       }
 
-      // Tính số phiếu liên lạc + sức khỏe từ các item đã approve
-      final pCount = uniqueDraftIds.length;
-      final hCount = items
-          .where((i) =>
-              i.decision == ObservationDecision.approved &&
-              approvedDraftIds.containsKey(i.id) &&
-              i.health.isNotEmpty)
-          .length;
-
-      if (!mounted) return;
-      setState(() {
-        savedReportsCount = pCount;
-        savedHealthCount = hCount;
-        isDone = true;
-      });
-
-      if (failed > 0) {
-        debugPrint('send-batch: sent=$sent skipped=$skipped failed=$failed');
+      final remaining =
+          allUniqueDraftIds.where((id) => !sentDraftIds.contains(id)).length;
+      if (remaining > 0) {
+        _showError(
+            'Đã gửi ${sentDraftIds.length} báo cáo; còn $remaining báo cáo chưa gửi. Vui lòng thử lại.');
+        return;
       }
+      _finishBatchSend();
     } catch (e) {
+      // ponytail: timeout có thể che lần commit; cần idempotency/status lookup trước khi retry tự động.
       debugPrint('send-batch error: $e, trying publishReport fallback...');
-      bool fallbackOk = false;
-      for (final repId in uniqueDraftIds) {
+      for (final repId in uniqueDraftIds.where((id) => !sentDraftIds.contains(id))) {
         try {
           await teacherRepository.publishReport(
               reportId: repId, teacherId: teacherId);
-          fallbackOk = true;
+          sentDraftIds.add(repId);
         } catch (_) {}
       }
-      if (fallbackOk) {
-        if (!mounted) return;
-        setState(() {
-          savedReportsCount = uniqueDraftIds.length;
-          savedHealthCount = 0;
-          isDone = true;
-        });
+      final remaining =
+          allUniqueDraftIds.where((id) => !sentDraftIds.contains(id)).length;
+      if (remaining == 0 && allUniqueDraftIds.isNotEmpty) {
+        _finishBatchSend();
         return;
       }
-      if (mounted) _showError('Không thể gửi báo cáo. Vui lòng thử lại.');
+      _showError(
+          'Đã gửi ${sentDraftIds.length} báo cáo; còn $remaining báo cáo chưa gửi. Vui lòng thử lại.');
     } finally {
       if (mounted) {
         setState(() {
@@ -2485,21 +3107,37 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  void _finishBatchSend() {
+    if (!mounted) return;
+    final healthCount = items
+        .where((item) =>
+            item.health.isNotEmpty &&
+            (approvedDraftIds[item.id] ?? const <String>[])
+                .any(sentDraftIds.contains))
+        .length;
+    setState(() {
+      savedReportsCount = sentDraftIds.length;
+      savedHealthCount = healthCount;
+      isDone = true;
+    });
+  }
+
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  void _assignChild(ObservationItem item) {
-    showModalBottomSheet<Child>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      backgroundColor: context.k.canvas,
-      constraints: const BoxConstraints(maxWidth: 480),
-      builder: (_) => _AssignSheet(card: item, roster: roster),
-    ).then((selected) {
+  void _assignChild(ObservationItem item,
+      {required VoidCallback onAssignClass}) {
+    Navigator.of(context)
+        .push<Child>(MaterialPageRoute(
+            builder: (_) => _AssignScreen(
+                  card: item,
+                  roster: roster,
+                  className: widget.className,
+                  onAssignClass: onAssignClass,
+                )))
+        .then((selected) {
       if (selected != null && mounted) {
         setState(() {
           final idx = items.indexWhere((i) => i.id == item.id);
@@ -2518,7 +3156,24 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final classLabel = widget.className.startsWith('Lớp ')
+        ? widget.className
+        : 'Lớp ${widget.className}';
     if (isDone) {
+      final classwideItems =
+          items.where((item) => item.kind == ObservationKind.classwide).toList();
+      final classwideDraftIds = classwideItems.length == 1
+          ? approvedDraftIds[classwideItems.single.id] ?? const <String>[]
+          : const <String>[];
+      if (classwideItems.length == 1 &&
+          classwideItems.single.decision == ObservationDecision.approved &&
+          classwideDraftIds.isNotEmpty &&
+          classwideDraftIds.every(sentDraftIds.contains)) {
+        return _ClasswideDoneScreen(
+          classLabel: classLabel,
+          onBack: widget.onCompleted,
+        );
+      }
       return _DoneScreenView(
         parentReportsCount: savedReportsCount,
         healthRecordsCount: savedHealthCount,
@@ -2542,9 +3197,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
         .length;
     final discardedCount =
         items.where((i) => i.decision == ObservationDecision.discarded).length;
-    final healthCount = approvedDraftIds.entries
-        .where((e) => items.any((i) => i.id == e.key && i.health.isNotEmpty))
-        .length;
 
     // Unmatched còn lại (chưa được gán/lọc) - phải = 0 mới cho confirm
     final unmatchedActiveCount = items
@@ -2552,332 +3204,568 @@ class _ReviewScreenState extends State<ReviewScreen> {
             i.kind == ObservationKind.unmatched &&
             i.decision != ObservationDecision.discarded)
         .length;
-
-    final subtitle = widget.mode == RecordMode.classroom
-        ? 'Ghi âm cả lớp · ${widget.className}'
-        : 'Ghi âm cho bé ${widget.child?.name ?? ''} · ${widget.className}';
+    final hasUnmatchedActive = unmatchedActiveCount > 0;
+    final classwideItems = items
+        .where((item) => item.kind == ObservationKind.classwide)
+        .toList();
+    final classwideChildItems = items
+        .where((item) =>
+            item.kind != ObservationKind.classwide &&
+            item.kind != ObservationKind.unmatched)
+        .toList();
+    final isClasswideReview = classwideItems.length == 1 &&
+        classwideChildItems.length == 1 &&
+        items.length == 2 &&
+        !hasUnmatchedActive &&
+        discardedCount == 0 &&
+        items.every(
+          (item) => item.decision == ObservationDecision.approved,
+        );
+    final skippedItems = items
+        .where((item) =>
+            item.kind == ObservationKind.unmatched &&
+            item.decision == ObservationDecision.discarded)
+        .toList();
+    final isSkippedReview = skippedItems.isNotEmpty &&
+        !hasUnmatchedActive &&
+        skippedItems.length == 1 &&
+        items.length == 2 &&
+        !items.any((item) => item.kind == ObservationKind.classwide) &&
+        classwideChildItems.length == 1;
 
     return Scaffold(
-      appBar: KAppBar(
-        title: 'Xem lại & tách theo bé',
-        subtitle: subtitle,
-        onBack: widget.onBack,
-        trailing: effectiveTranscript.isNotEmpty
-            ? IconButton(
-                icon: Icon(Icons.description_outlined, color: context.k.brand),
-                tooltip: 'Xem text đã phân tích',
-                onPressed: () =>
-                    _showTranscriptDialog(context, effectiveTranscript),
-              )
-            : null,
-      ),
-      body: FutureBuilder<List<Child>>(
-        future: childrenFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: TextButton(
-                onPressed: () => setState(() {
-                  childrenFuture = _loadChildren().then((children) {
-                    roster = children;
-                    items = _buildObservations(children);
-                    return children;
-                  });
-                }),
-                child: const Text('Không tải được danh sách trẻ · Thử lại'),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Quay lại',
+                    onPressed: widget.onBack,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints.tightFor(width: 44, height: 44),
+                    icon: SvgPicture.asset('assets/garden_voice/edit_back.svg'),
+                  ),
+                  const SizedBox(width: 0),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isClasswideReview
+                              ? 'Duyệt báo cáo cả lớp'
+                              : isSkippedReview
+                                  ? 'Duyệt báo cáo'
+                                  : hasUnmatchedActive
+                                      ? 'Xem lại bản ghi'
+                                      : 'Xem lại báo cáo',
+                          style: TextStyle(
+                              fontSize: 16,
+                              height: 1.4,
+                              fontWeight: FontWeight.w700,
+                              color: context.k.ink),
+                        ),
+                        if (!isClasswideReview && !isSkippedReview)
+                          Text(
+                            hasUnmatchedActive
+                                ? '$classLabel · $unmatchedActiveCount đoạn cần cô xác nhận'
+                                : 'Đã tách thông tin theo từng bé',
+                            style: TextStyle(
+                                fontSize: 12,
+                                height: 1.4,
+                                color: context.k.inkSoft),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header: counter X/Y
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Từ 1 lần nói · ${items.length} ghi nhận',
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            height: 1.25,
-                            color: context.k.ink),
-                      ),
-                    ),
-                    if (pendingCount > 0) ...[
-                      TextButton.icon(
-                        onPressed: _approveAll,
-                        icon: Icon(Icons.done_all_rounded,
-                            size: 14, color: context.k.brand),
-                        label: Text(
-                          'Duyệt tất cả',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: context.k.brand,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    if (approvedCount > 0) ...[
-                      TextButton.icon(
-                        onPressed: _unapproveAll,
-                        icon: Icon(Icons.undo_rounded,
-                            size: 14, color: context.k.warn),
-                        label: Text(
-                          'Bỏ duyệt tất cả',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: context.k.warn,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    _CounterPill(
-                      approved: approvedCount,
-                      total: totalCount - discardedCount,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Đọc lại theo đúng thứ tự cô đã kể.',
-                  style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-                ),
-                const SizedBox(height: 16),
-                if (widget.recordedBytes != null &&
-                    widget.recordedBytes!.isNotEmpty)
-                  _AudioPlayerCard(
-                    recordedBytes: widget.recordedBytes!,
-                  ),
-                if (effectiveTranscript.isNotEmpty)
-                  _AnalyzedTextCard(
-                    text: effectiveTranscript,
-                    onEdit: _editAndReanalyzeTranscript,
-                  ),
-                for (var i = 0; i < items.length; i++)
-                  _AnimatedObservationWrapper(
-                    key: ValueKey(items[i].id),
-                    decision: items[i].decision,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _ObservationTile(
-                        card: items[i],
-                        index: i,
-                        isApproving: approvingIds.contains(items[i].id),
-                        onToggleApprove: () {
-                          if (items[i].decision ==
-                              ObservationDecision.approved) {
-                            _unapproveItem(items[i]);
-                          } else {
-                            _approveItem(items[i]);
-                          }
-                        },
-                        onUnapprove: () => _unapproveItem(items[i]),
-                        onDiscard: () {
-                          final draftIds = List<String>.from(
-                              approvedDraftIds[items[i].id] ?? <String>[]);
-                          setState(() {
-                            items[i].decision = ObservationDecision.discarded;
-                            approvedDraftIds.remove(items[i].id);
-                          });
-                          if (draftIds.isNotEmpty) {
-                            teacherRepository.deleteDraftReports(draftIds);
-                          }
-                        },
-                        onRestore: () {
-                          final draftIds = List<String>.from(
-                              approvedDraftIds[items[i].id] ?? <String>[]);
-                          setState(() {
-                            items[i].decision = ObservationDecision.pending;
-                            approvedDraftIds.remove(items[i].id);
-                          });
-                          if (draftIds.isNotEmpty) {
-                            teacherRepository.deleteDraftReports(draftIds);
-                          }
-                        },
-                        onAssign: () => _assignChild(items[i]),
-                        onAssignClass: () {
-                          final draftIds = List<String>.from(
-                              approvedDraftIds[items[i].id] ?? <String>[]);
-                          setState(() {
-                            items[i].kind = ObservationKind.classwide;
-                            items[i].name = 'Chung cả lớp';
-                            items[i].matched = true;
-                            items[i].decision = ObservationDecision.pending;
-                            approvedDraftIds.remove(items[i].id);
-                          });
-                          if (draftIds.isNotEmpty) {
-                            teacherRepository.deleteDraftReports(draftIds);
-                          }
-                        },
-                        onEdit: () => _editObservation(items[i]),
-                      ),
-                    ),
-                  ),
-              ],
             ),
-          );
-        },
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          decoration: BoxDecoration(
-            color: context.k.surface,
-            border: Border(top: BorderSide(color: context.k.line)),
-            boxShadow: const [
-              BoxShadow(
-                  color: Color(0x102a2926),
-                  blurRadius: 20,
-                  offset: Offset(0, -8)),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Sẽ gửi từ 1 lần nói này:',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: context.k.inkSoft),
-              ),
-              const SizedBox(height: 7),
-              _SummaryRow(Icons.description_outlined, approvedCount, 'phiếu liên lạc cho phụ huynh'),
-              if (healthCount > 0)
-                _SummaryRow(Icons.health_and_safety_outlined, healthCount, 'ghi nhận vào sổ sức khỏe'),
-              if (discardedCount > 0)
-                _SummaryRow(Icons.delete_outline, discardedCount, 'đã được loại bỏ'),
-              if (unmatchedActiveCount > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _SurfaceBox(
-                    padding: const EdgeInsets.all(8),
-                    color: context.k.warnTint,
-                    borderColor: context.k.warnTint,
-                    child: Text(
-                      'Còn $unmatchedActiveCount đoạn chưa xử lý. Gán cho một bé, cả lớp hoặc bỏ qua để xác nhận.',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: context.k.warn),
-                    ),
-                  ),
-                ),
-              if (pendingCount > 0 && unmatchedActiveCount == 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _SurfaceBox(
-                    padding: const EdgeInsets.all(8),
-                    color: approvedCount == 0
-                        ? context.k.brandTint
-                        : context.k.warnTint.withValues(alpha: 0.45),
-                    borderColor: approvedCount == 0
-                        ? context.k.brandTint
-                        : context.k.warn,
-                    child: Text(
-                      approvedCount == 0
-                          ? 'Chưa có mục nào được duyệt. Bấm "Duyệt" hoặc "Loại bỏ" từng mục để tiếp tục.'
-                          : 'Còn $pendingCount mục chưa xử lý. Vui lòng duyệt hoặc loại bỏ tất cả các mục để có thể gửi.',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: approvedCount == 0
-                              ? context.k.brand
-                              : context.k.warn),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 10),
-              FilledButton(
-                onPressed: !isSubmitting &&
+            Expanded(
+              child: FutureBuilder<List<Child>>(
+                future: childrenFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: TextButton(
+                        onPressed: () => setState(() {
+                          childrenFuture = _loadChildren().then((children) {
+                            roster = children;
+                            items = _buildObservations(children);
+                            return children;
+                          });
+                        }),
+                        child: const Text(
+                            'Không tải được danh sách trẻ · Thử lại'),
+                      ),
+                    );
+                  }
+
+                  Widget reviewTile(
+                    ObservationItem item, {
+                    bool summaryStyle = false,
+                    bool showApproveAction = false,
+                    String? summaryLabel,
+                  }) =>
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _ObservationTile(
+                          card: item,
+                          className: widget.className,
+                          showSegmentPreview: false,
+                          summaryStyle: summaryStyle,
+                          showApproveAction: showApproveAction,
+                          summaryLabel: summaryLabel,
+                          isApproving: approvingIds.contains(item.id),
+                          onToggleApprove: () {
+                            if (item.decision == ObservationDecision.approved) {
+                              _unapproveItem(item);
+                            } else {
+                              _approveItem(item);
+                            }
+                          },
+                          onUnapprove: () => _unapproveItem(item),
+                          onDiscard: () => _discardItem(item),
+                          onRestore: () => _restoreItem(item),
+                          onAssign: () => _assignChild(
+                            item,
+                            onAssignClass: () {},
+                          ),
+                          onEdit: () => _editObservation(item),
+                        ),
+                      );
+
+                  if (isClasswideReview) {
+                    final childItem = classwideChildItems.single;
+                    final classwideItem = classwideItems.single;
+                    final actionLabel = pendingCount > 0
+                        ? 'Duyệt tất cả'
+                        : approvedCount > 0
+                            ? 'Xác nhận gửi cho cả lớp'
+                            : 'Chưa duyệt mục nào để gửi';
+                    final VoidCallback? action = isSubmitting
+                        ? null
+                        : pendingCount > 0
+                            ? _approveAll
+                            : approvedCount > 0
+                                ? _sendBatch
+                                : null;
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            '$classLabel · Đã xử lý tất cả đoạn ghi',
+                            style: TextStyle(
+                              color: context.k.inkSoft,
+                              fontSize: 15,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          reviewTile(
+                            childItem,
+                            summaryStyle: true,
+                            summaryLabel: 'Riêng ${childItem.name}',
+                          ),
+                          reviewTile(
+                            classwideItem,
+                            summaryStyle: true,
+                            summaryLabel: 'Áp dụng cho cả lớp',
+                          ),
+                          SizedBox(
+                            height: 48,
+                            child: KButton(
+                              label: actionLabel,
+                              onPressed: action,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (isSkippedReview) {
+                    final skipped = skippedItems.single;
+                    final skippedDetail = skipped.snippet.trim();
+                    final skippedMessage = skippedDetail.isEmpty
+                        ? 'Đoạn chưa rõ đã được bỏ qua.'
+                        : 'Đoạn chưa rõ “$skippedDetail” đã được bỏ qua.';
+                    final activeItems = items
+                        .where((item) => item.id != skipped.id)
+                        .toList();
+                    final canSend = !isSubmitting &&
                         approvedCount > 0 &&
                         pendingCount == 0 &&
-                        unmatchedActiveCount == 0
-                    ? () async {
-                        await _sendBatch();
-                      }
-                    : null,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KRadii.control)),
-                ),
-                child: Text(
-                  isSubmitting
-                      ? 'Đang gửi báo cáo…'
-                      : approvedCount == 0
-                          ? 'Chưa duyệt mục nào để gửi'
-                          : pendingCount > 0
-                              ? 'Còn $pendingCount mục chưa duyệt hoặc loại bỏ'
-                              : 'Gửi $approvedCount báo cáo cho phụ huynh',
-                ),
+                        unmatchedActiveCount == 0;
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            skippedMessage,
+                            style: TextStyle(
+                              color: context.k.inkSoft,
+                              fontSize: 15,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          for (final item in activeItems)
+                            reviewTile(
+                              item,
+                              summaryStyle: true,
+                              showApproveAction: true,
+                              summaryLabel: item.name,
+                            ),
+                          SizedBox(
+                            height: 48,
+                            child: KButton(
+                              label: 'Gửi báo cáo cho phụ huynh',
+                              onPressed: canSend ? _sendBatch : null,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 48,
+                            child: KButton(
+                              label: 'Xử lý lại đoạn ghi',
+                              secondary: true,
+                              onPressed: () => _restoreItem(skipped),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  Widget contentWidth(Widget child) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 350),
+                          child: child,
+                        ),
+                      );
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 6, 18, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (!hasUnmatchedActive) ...[
+                          contentWidth(
+                            Row(
+                              children: List.generate(
+                                3,
+                                (index) => Expanded(
+                                  child: Container(
+                                    height: 4,
+                                    margin: EdgeInsets.only(
+                                        right: index == 2 ? 0 : 6),
+                                    decoration: BoxDecoration(
+                                      color: context.k.brand,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Bước 3/3 · Xem lại',
+                                style: TextStyle(
+                                    fontSize: 12, color: context.k.inkSoft)),
+                          ),
+                          const SizedBox(height: 0),
+                        ] else
+                          const SizedBox(height: 14),
+                        if (items.length > 1 && !hasUnmatchedActive) ...[
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                'Từ 1 lần nói · ${items.length} ghi nhận',
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.25,
+                                    color: context.k.ink),
+                              ),
+                              if (pendingCount > 0) ...[
+                                TextButton.icon(
+                                  onPressed: _approveAll,
+                                  icon: Icon(Icons.done_all_rounded,
+                                      size: 14, color: context.k.brand),
+                                  label: Text(
+                                    'Duyệt tất cả',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: context.k.brand,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              if (approvedCount > 0) ...[
+                                TextButton.icon(
+                                  onPressed: _unapproveAll,
+                                  icon: Icon(Icons.undo_rounded,
+                                      size: 14, color: context.k.warn),
+                                  label: Text(
+                                    'Bỏ duyệt tất cả',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: context.k.warn,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              _CounterPill(
+                                approved: approvedCount,
+                                total: totalCount - discardedCount,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Đọc lại theo đúng thứ tự cô đã kể.',
+                            style: TextStyle(
+                                fontSize: 12, color: context.k.inkSoft),
+                          ),
+                          const SizedBox(height: 16),
+                        ] else
+                          const SizedBox(height: 17),
+                        if (!hasUnmatchedActive) ...[
+                          if (widget.recordedBytes != null &&
+                              widget.recordedBytes!.isNotEmpty)
+                            contentWidth(
+                              _AudioPlayerCard(
+                                recordedBytes: widget.recordedBytes!,
+                                audioPlayerFactory: widget.audioPlayerFactory,
+                              ),
+                            ),
+                          if (effectiveTranscript.isNotEmpty)
+                            contentWidth(
+                              _AnalyzedTextCard(
+                                text: effectiveTranscript,
+                                matchedChildCount: items
+                                    .where((item) =>
+                                        item.childId != null &&
+                                        item.matched &&
+                                        item.kind == ObservationKind.normal)
+                                    .length,
+                                onEdit: _editAndReanalyzeTranscript,
+                              ),
+                            ),
+                        ],
+                        for (var i = 0; i < items.length; i++)
+                          _AnimatedObservationWrapper(
+                            key: ValueKey(items[i].id),
+                            decision: items[i].decision,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _ObservationTile(
+                                card: items[i],
+                                className: widget.className,
+                                showSegmentPreview: hasUnmatchedActive,
+                                isApproving: approvingIds.contains(items[i].id),
+                                onToggleApprove: () {
+                                  if (items[i].decision ==
+                                      ObservationDecision.approved) {
+                                    _unapproveItem(items[i]);
+                                  } else {
+                                    _approveItem(items[i]);
+                                  }
+                                },
+                                onUnapprove: () => _unapproveItem(items[i]),
+                                onDiscard: () => _discardItem(items[i]),
+                                onRestore: () => _restoreItem(items[i]),
+                                onAssign: () =>
+                                    _assignChild(items[i], onAssignClass: () {
+                                  final draftIds = List<String>.from(
+                                      approvedDraftIds[items[i].id] ??
+                                          <String>[]);
+                                  setState(() {
+                                    items[i].kind = ObservationKind.classwide;
+                                    items[i].name = 'Chung cả lớp';
+                                    items[i].matched = true;
+                                    items[i].decision =
+                                        ObservationDecision.pending;
+                                    approvedDraftIds.remove(items[i].id);
+                                  });
+                                  if (draftIds.isNotEmpty) {
+                                    teacherRepository
+                                        .deleteDraftReports(draftIds);
+                                  }
+                                }),
+                                onEdit: () => _editObservation(items[i]),
+                              ),
+                            ),
+                          ),
+                        if (!hasUnmatchedActive) ...[
+                          const SizedBox(height: 0),
+                          if (pendingCount > 0 || approvedCount == 0)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Text(
+                                approvedCount == 0
+                                    ? 'Chưa có mục nào được duyệt. Duyệt hoặc loại bỏ từng mục để tiếp tục.'
+                                    : 'Còn $pendingCount mục chưa xử lý. Vui lòng duyệt hoặc loại bỏ tất cả các mục để có thể gửi.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: approvedCount == 0
+                                      ? context.k.brand
+                                      : context.k.warn,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 2),
+                          contentWidth(
+                            FilledButton(
+                              onPressed: !isSubmitting &&
+                                      approvedCount > 0 &&
+                                      pendingCount == 0 &&
+                                      unmatchedActiveCount == 0
+                                  ? _sendBatch
+                                  : null,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: context.k.brand,
+                                foregroundColor: context.k.surface,
+                                disabledBackgroundColor:
+                                    context.k.surfaceSunken,
+                                disabledForegroundColor: context.k.inkSoft,
+                                minimumSize: const Size(double.infinity, 48),
+                                shape: const StadiumBorder(),
+                              ),
+                              child: Text(isSubmitting
+                                  ? 'Đang gửi báo cáo…'
+                                  : approvedCount > 0 &&
+                                          pendingCount == 0 &&
+                                          unmatchedActiveCount == 0
+                                      ? 'Hoàn thành'
+                                      : approvedCount == 0
+                                          ? 'Chưa duyệt mục nào để gửi'
+                                          : pendingCount > 0
+                                              ? 'Còn $pendingCount mục chưa duyệt hoặc loại bỏ'
+                                              : 'Hoàn thành'),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  String _sleepDurationMinutes(String value) {
+    final duration = RegExp(r'(\d+)\s*phút', caseSensitive: false)
+        .firstMatch(value)
+        ?.group(1);
+    if (duration != null) return duration;
+    final numeric = int.tryParse(value.trim());
+    if (numeric != null) return '$numeric';
+    final times = RegExp(
+      r'(\d{1,2}):(\d{2})\s*(?:đến|[-–])\s*(\d{1,2}):(\d{2})',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (times == null) return '';
+    final startHour = int.parse(times.group(1)!);
+    final startMinute = int.parse(times.group(2)!);
+    final endHour = int.parse(times.group(3)!);
+    final endMinute = int.parse(times.group(4)!);
+    if (startHour > 23 || endHour > 23 || startMinute > 59 || endMinute > 59) {
+      return '';
+    }
+    final start = startHour * 60 + startMinute;
+    final end = endHour * 60 + endMinute;
+    final minutes = (end - start + 1440) % 1440;
+    return minutes == 0 ? '' : '$minutes';
+  }
+
+  String _sleepNarrative(String value) => value
+      .replaceAll(
+          RegExp(r'\s*(?:[·,]\s*)?\d+\s*phút', caseSensitive: false), '')
+      .trim();
+
+  String _editedSleep(String narrative, String duration) {
+    final description = _sleepNarrative(narrative);
+    final minutes = duration.trim().isNotEmpty
+        ? duration.trim()
+        : _sleepDurationMinutes(narrative);
+    return [description, if (minutes.isNotEmpty) '$minutes phút']
+        .where((value) => value.isNotEmpty)
+        .join(' · ');
+  }
+
   Future<void> _editObservation(ObservationItem item) async {
+    if ((approvedDraftIds[item.id] ?? const <String>[])
+        .any(sentDraftIds.contains)) {
+      _showError('Báo cáo đã gửi một phần nên không thể sửa mục này.');
+      return;
+    }
     final eatingCtrl = TextEditingController(text: item.eating);
-    final sleepDigits = RegExp(r'\d+').firstMatch(item.sleep)?.group(0) ?? '';
-    final sleepCtrl = TextEditingController(
-      text: sleepDigits.isNotEmpty
-          ? sleepDigits
-          : (int.tryParse(item.sleep.trim()) != null ? item.sleep.trim() : ''),
-    );
+    final sleepCtrl =
+        TextEditingController(text: _sleepDurationMinutes(item.sleep));
+    final sleepDescriptionCtrl =
+        TextEditingController(text: _sleepNarrative(item.sleep));
     final activitiesCtrl = TextEditingController(text: item.activities);
     final moodCtrl = TextEditingController(text: item.mood);
     final healthCtrl = TextEditingController(text: item.health);
     final noteCtrl = TextEditingController(text: item.note);
     final snippetCtrl = TextEditingController(text: item.snippet);
 
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _EditObservationSheet(
-        title: item.name,
-        isClasswide: item.kind == ObservationKind.classwide,
-        isUnmatched: item.kind == ObservationKind.unmatched,
-        eatingCtrl: eatingCtrl,
-        sleepCtrl: sleepCtrl,
-        activitiesCtrl: activitiesCtrl,
-        moodCtrl: moodCtrl,
-        healthCtrl: healthCtrl,
-        noteCtrl: noteCtrl,
-        snippetCtrl: snippetCtrl,
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => GardenVoiceScope(
+        child: EditObservationScreen(
+          title: item.name,
+          isUnmatched: item.kind == ObservationKind.unmatched,
+          eatingCtrl: eatingCtrl,
+          sleepCtrl: sleepCtrl,
+          sleepDescriptionCtrl: sleepDescriptionCtrl,
+          activitiesCtrl: activitiesCtrl,
+          moodCtrl: moodCtrl,
+          healthCtrl: healthCtrl,
+          noteCtrl: noteCtrl,
+          snippetCtrl: snippetCtrl,
+        ),
       ),
-    );
+    ));
 
     if (saved == true && mounted) {
       setState(() {
         item.eating = eatingCtrl.text.trim();
-        final sVal = sleepCtrl.text.trim();
-        item.sleep = sVal.isNotEmpty ? '$sVal phút' : '';
+        item.sleep = _editedSleep(sleepDescriptionCtrl.text, sleepCtrl.text);
         item.activities = activitiesCtrl.text.trim();
         item.mood = moodCtrl.text.trim();
         item.health = healthCtrl.text.trim();
@@ -2902,6 +3790,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
         );
       }
     }
+    eatingCtrl.dispose();
+    sleepCtrl.dispose();
+    sleepDescriptionCtrl.dispose();
+    activitiesCtrl.dispose();
+    moodCtrl.dispose();
+    healthCtrl.dispose();
+    noteCtrl.dispose();
+    snippetCtrl.dispose();
   }
 
   Future<void> _editAndReanalyzeTranscript() async {
@@ -3062,33 +3958,147 @@ typedef _AnalyzedTextCard = AnalyzedTextCard;
 
 typedef SegmentationScreen = ReviewScreen;
 
+class _ClasswideDoneScreen extends StatelessWidget {
+  const _ClasswideDoneScreen({
+    required this.classLabel,
+    required this.onBack,
+  });
+
+  final String classLabel;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => GardenVoiceScope(
+        child: Builder(
+          builder: (context) {
+            final k = context.k;
+            final name = classLabel.startsWith('Lớp ')
+                ? classLabel.substring(4)
+                : classLabel;
+            return Scaffold(
+              backgroundColor: k.canvas,
+              appBar: KAppBar(
+                title: 'Đã gửi báo cáo',
+                onBack: onBack,
+              ),
+              body: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Báo cáo ngày đã được gửi đến phụ huynh của từng bé trong lớp $name.',
+                        style: TextStyle(
+                          color: k.inkSoft,
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      KButton(
+                        label: 'Về tổng quan lớp',
+                        onPressed: onBack,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+}
+
 class _ObservationTile extends StatelessWidget {
   const _ObservationTile({
     required this.card,
-    required this.index,
+    required this.className,
+    required this.showSegmentPreview,
     required this.onToggleApprove,
     required this.onUnapprove,
     required this.onDiscard,
     required this.onRestore,
     required this.onAssign,
-    required this.onAssignClass,
     this.onEdit,
     this.isApproving = false,
+    this.summaryStyle = false,
+    this.showApproveAction = false,
+    this.summaryLabel,
   });
 
   final ObservationItem card;
-  final int index;
+  final String className;
+  final bool showSegmentPreview;
   final VoidCallback onToggleApprove;
   final VoidCallback onUnapprove;
   final VoidCallback onDiscard;
   final VoidCallback onRestore;
   final VoidCallback onAssign;
-  final VoidCallback onAssignClass;
   final VoidCallback? onEdit;
   final bool isApproving;
+  final bool summaryStyle;
+  final bool showApproveAction;
+  final String? summaryLabel;
 
   @override
   Widget build(BuildContext context) {
+    if (summaryStyle) {
+      final k = context.k;
+      final summary = [
+        card.eating,
+        card.sleep,
+        card.activities,
+        card.mood,
+        card.health,
+        card.note,
+      ].where((value) => value.trim().isNotEmpty).join('. ');
+      return Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: k.surfaceSunken,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              summaryLabel ??
+                  (card.kind == ObservationKind.classwide
+                      ? 'Áp dụng cho cả lớp'
+                      : card.name),
+              style: TextStyle(
+                color: k.brandStrong,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              summary.isEmpty
+                  ? 'Không có thông tin chi tiết được ghi nhận'
+                  : summary,
+              style: TextStyle(
+                color: k.ink,
+                fontSize: 17,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (showApproveAction &&
+                card.decision != ObservationDecision.approved)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: isApproving ? null : onToggleApprove,
+                  child: const Text('Duyệt'),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     if (card.decision == ObservationDecision.discarded) {
       return _SurfaceBox(
         color: context.k.canvas,
@@ -3111,198 +4121,276 @@ class _ObservationTile extends StatelessWidget {
     }
 
     final isUnmatched = card.kind == ObservationKind.unmatched;
+    final isSegmentPreview = showSegmentPreview && !isUnmatched;
+    final segmentSummary = [
+      card.eating,
+      card.sleep,
+      card.activities,
+      card.mood,
+      card.health,
+      card.note,
+    ].where((value) => value.trim().isNotEmpty).join('. ');
+    final nameParts = card.name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final avatarText = nameParts.length > 1
+        ? '${nameParts[nameParts.length - 2][0]}${nameParts.last[0]}'
+        : (nameParts.firstOrNull ?? '?')[0].toUpperCase();
 
     return _SurfaceBox(
       color: isUnmatched
-          ? context.k.warnTint.withValues(alpha: 0.45)
-          : context.k.surface,
-      borderColor: isUnmatched ? context.k.warn : context.k.line,
-      padding: const EdgeInsets.all(14),
+          ? context.k.surface
+          : isSegmentPreview
+              ? context.k.surfaceSunken
+              : context.k.reviewSurface,
+      borderColor: isUnmatched
+          ? context.k.bad.withValues(alpha: .52)
+          : isSegmentPreview
+              ? Colors.transparent
+              : context.k.lineStrong,
+      padding: isUnmatched
+          ? const EdgeInsets.all(15)
+          : const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: isUnmatched ? context.k.warn : context.k.brand,
-                child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              if (card.matched)
-                Avatar(name: card.name, size: 32)
-              else
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: context.k.warnTint,
-                  child: Text(
-                    '?',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: context.k.warn,
-                        fontWeight: FontWeight.w700),
-                  ),
-                ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      card.name,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isUnmatched ? context.k.warn : context.k.ink,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      isUnmatched
-                          ? 'Đoạn này có nhắc tên nhưng chưa khớp'
-                          : 'Đoạn ${index + 1}',
-                      style: TextStyle(fontSize: 11, color: context.k.inkFaint),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (isUnmatched) ...[
-            const SizedBox(height: 10),
-            _SurfaceBox(
-              color: context.k.surface,
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Lời cô nói, chỉ cô thấy',
-                      style:
-                          TextStyle(fontSize: 10, color: context.k.inkFaint)),
-                  const SizedBox(height: 3),
-                  Text(
-                    card.snippet.isNotEmpty
-                        ? card.snippet
-                        : 'Chưa nhận diện chính xác được bé trong lớp.',
-                    style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          if (card.eating.isNotEmpty)
-            _buildReportLine(context, 'Bữa ăn', card.eating),
-          if (card.sleep.isNotEmpty)
-            _buildReportLine(context, 'Giấc ngủ', card.sleep),
-          if (card.activities.isNotEmpty)
-            _buildReportLine(context, 'Hoạt động', card.activities),
-          if (card.mood.isNotEmpty)
-            _buildReportLine(context, 'Tâm trạng', card.mood),
-          if (card.health.isNotEmpty)
-            _buildReportLine(context, 'Sức khỏe', card.health),
-          if (card.note.trim().isNotEmpty)
-            _buildReportLine(context, 'Ghi chú', card.note.trim()),
-          if (card.eating.isEmpty &&
-              card.sleep.isEmpty &&
-              card.activities.isEmpty &&
-              card.mood.isEmpty &&
-              card.health.isEmpty &&
-              card.note.trim().isEmpty &&
-              !isUnmatched)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                'Không có thông tin chi tiết được ghi nhận',
+          if (isUnmatched)
+            Text('Chưa xác định bé',
                 style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: context.k.inkFaint),
-              ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.brandStrong))
+          else if (isSegmentPreview)
+            Text('Đã nhận ra · ${card.name}',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.brandStrong))
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: context.k.accentTint,
+                  child: Text(avatarText.toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: context.k.accentDeep)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(card.name,
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: context.k.ink,
+                              fontWeight: FontWeight.w700)),
+                      Text(
+                          className.startsWith('Lớp ')
+                              ? className
+                              : 'Lớp $className',
+                          style: TextStyle(
+                              fontSize: 11, color: context.k.inkFaint)),
+                    ],
+                  ),
+                ),
+                if (card.decision == ObservationDecision.approved)
+                  Container(
+                    key: const ValueKey('review-approved-pill'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: context.k.okTint,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 6,
+                      children: [
+                        Container(
+                          key: const ValueKey('review-approved-dot'),
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: context.k.okDot,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        Text('Đã duyệt',
+                            style: TextStyle(
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500,
+                                color: context.k.ok)),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-          const Divider(height: 20),
+          if (isUnmatched) ...[
+            const SizedBox(height: 4),
+            Text(
+              '“${card.snippet.isNotEmpty ? card.snippet : 'Chưa nhận diện chính xác được bé trong lớp.'}”',
+              style: TextStyle(
+                  fontSize: 17,
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                  color: context.k.ink),
+            ),
+          ] else if (isSegmentPreview) ...[
+            const SizedBox(height: 4),
+            Text(segmentSummary,
+                style: TextStyle(
+                    fontSize: 17,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                    color: context.k.ink)),
+          ] else ...[
+            const SizedBox(height: 10),
+            if (card.eating.isNotEmpty)
+              _buildReportLine(context, 'Ăn uống', card.eating),
+            if (card.sleep.isNotEmpty)
+              _buildReportLine(context, 'Giấc ngủ', card.sleep),
+            if (card.activities.isNotEmpty)
+              _buildReportLine(context, 'Hoạt động', card.activities),
+            if (card.mood.isNotEmpty)
+              _buildReportLine(context, 'Tâm trạng', card.mood),
+            if (card.health.isNotEmpty)
+              _buildReportLine(context, 'Sức khỏe', card.health),
+            if (card.note.trim().isNotEmpty)
+              _buildReportLine(context, 'Ghi chú', card.note.trim()),
+            if (card.eating.isEmpty &&
+                card.sleep.isEmpty &&
+                card.activities.isEmpty &&
+                card.mood.isEmpty &&
+                card.health.isEmpty &&
+                card.note.trim().isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  'Không có thông tin chi tiết được ghi nhận',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: context.k.inkFaint),
+                ),
+              ),
+          ],
+          if (!isSegmentPreview &&
+              card.decision != ObservationDecision.approved)
+            isUnmatched
+                ? const SizedBox(height: 14)
+                : const Divider(height: 20),
           if (isUnmatched) ...[
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: context.k.warn,
-                  minimumSize: const Size(double.infinity, 40),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KRadii.control)),
-                ),
+              child: FilledButton(
                 onPressed: onAssign,
-                icon: const Icon(Icons.person_add_alt_rounded, size: 16),
-                label: const Text('Gán cho một bé'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: context.k.brand,
+                  foregroundColor: context.k.surface,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: const StadiumBorder(),
+                ),
+                child: const Text('Gán đoạn này'),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 40),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KRadii.control)),
-                ),
-                onPressed: onAssignClass,
-                child: const Text('Đoạn này nói về cả lớp'),
-              ),
-            ),
-            if (onEdit != null) ...[
-              const SizedBox(height: 6),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 40),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(KRadii.control)),
-                  ),
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined, size: 16),
-                  label: const Text('Chỉnh sửa nội dung đoạn này'),
-                ),
-              ),
-            ],
-            Center(
-              child: TextButton(
                 onPressed: onDiscard,
-                child: Text('Bỏ đoạn này',
-                    style: TextStyle(color: context.k.inkFaint)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.k.brand,
+                  side: BorderSide(color: context.k.line),
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: const StadiumBorder(),
+                ),
+                child: const Text('Bỏ qua đoạn này'),
               ),
             ),
-          ] else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+          ] else if (!isSegmentPreview &&
+              card.decision == ObservationDecision.approved)
+            Wrap(
+              alignment: WrapAlignment.start,
+              spacing: 22,
+              runSpacing: 0,
+              children: [
+                if (onEdit != null)
+                  TextButton(
+                    onPressed: isApproving ? null : onEdit,
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.k.brand,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Chỉnh sửa',
+                        style: TextStyle(
+                            fontSize: 14,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                TextButton(
+                  onPressed: isApproving ? null : onDiscard,
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.k.badText,
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Loại bỏ',
+                      style: TextStyle(
+                          fontSize: 14,
+                          height: 1.4,
+                          fontWeight: FontWeight.w700)),
+                ),
+                TextButton(
+                  onPressed: isApproving ? null : onUnapprove,
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.k.warn,
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Bỏ duyệt',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ],
+            )
+          else if (!isSegmentPreview)
+            Wrap(
+              alignment: WrapAlignment.start,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 0,
               children: [
                 if (onEdit != null) ...[
-                  OutlinedButton.icon(
+                  TextButton(
                     onPressed: isApproving ? null : onEdit,
-                    icon: const Icon(Icons.edit_outlined, size: 14),
-                    label: const Text('Chỉnh sửa'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(KRadii.control)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.k.brand,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      minimumSize: const Size(44, 44),
                     ),
+                    child: const Text('Chỉnh sửa'),
                   ),
-                  const SizedBox(width: 8),
                 ],
-                TextButton.icon(
+                TextButton(
                   onPressed: isApproving ? null : onDiscard,
-                  icon: const Icon(Icons.close_rounded, size: 15),
-                  label: const Text('Loại bỏ'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.k.badText,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    minimumSize: const Size(44, 44),
+                  ),
+                  child: const Text('Loại bỏ'),
                 ),
-                const SizedBox(width: 8),
                 if (isApproving)
                   // Đang approve → hiện spinner (block cả Loại bỏ để tránh race)
                   const SizedBox(
@@ -3362,10 +4450,14 @@ class _ObservationTile extends StatelessWidget {
                     ),
                   ),
                 ] else
-                  OutlinedButton.icon(
+                  TextButton(
                     onPressed: onToggleApprove,
-                    icon: const Icon(Icons.check_rounded, size: 15),
-                    label: const Text('Duyệt'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.k.brand,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      minimumSize: const Size(44, 44),
+                    ),
+                    child: const Text('Duyệt'),
                   ),
               ],
             ),
@@ -3376,21 +4468,76 @@ class _ObservationTile extends StatelessWidget {
 
   Widget _buildReportLine(BuildContext context, String label, String text) {
     if (text.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: Text.rich(
-        TextSpan(
+    final (background, foreground, asset) = switch (label) {
+      'Ăn uống' => (
+          context.k.foodRowTint,
+          context.k.foodRowText,
+          'food',
+        ),
+      'Giấc ngủ' => (
+          context.k.sleepRowTint,
+          context.k.sleepRowText,
+          'sleep',
+        ),
+      'Hoạt động' => (
+          context.k.activityRowTint,
+          context.k.activityRowText,
+          'activity',
+        ),
+      _ => (context.k.brandTint, context.k.brand, ''),
+    };
+    final icon = switch (asset) {
+      'food' => Stack(
           children: [
-            TextSpan(
-              text: '$label: ',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: context.k.inkSoft),
+            Positioned(
+              left: 15,
+              top: 4,
+              child: SvgPicture.asset('assets/garden_voice/review_spoon.svg'),
             ),
-            TextSpan(
-              text: text,
-              style: TextStyle(fontSize: 13, color: context.k.ink),
+            Positioned(
+              left: 4,
+              top: 12,
+              child: SvgPicture.asset('assets/garden_voice/review_bowl.svg'),
+            ),
+          ],
+        ),
+      'sleep' => Padding(
+          padding: const EdgeInsets.all(4),
+          child: SvgPicture.asset('assets/garden_voice/review_moon.svg'),
+        ),
+      'activity' => Padding(
+          padding: const EdgeInsets.all(4),
+          child:
+              SvgPicture.asset('assets/garden_voice/review_artist_palette.svg'),
+        ),
+      _ => Icon(Icons.favorite_outline, size: 18, color: foreground),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(
+          children: [
+            SizedBox(width: 26, height: 26, child: icon),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 65,
+              child: Text(label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: foreground)),
+            ),
+            Expanded(
+              child: Text(text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: context.k.ink)),
             ),
           ],
         ),
@@ -3400,19 +4547,25 @@ class _ObservationTile extends StatelessWidget {
 }
 
 typedef _SurfaceBox = SurfaceBox;
-typedef _SummaryRow = SummaryRow;
 
-class _AssignSheet extends StatefulWidget {
-  const _AssignSheet({required this.card, required this.roster});
+class _AssignScreen extends StatefulWidget {
+  const _AssignScreen({
+    required this.card,
+    required this.roster,
+    required this.className,
+    required this.onAssignClass,
+  });
 
   final ObservationItem card;
   final List<Child> roster;
+  final String className;
+  final VoidCallback onAssignClass;
 
   @override
-  State<_AssignSheet> createState() => _AssignSheetState();
+  State<_AssignScreen> createState() => _AssignScreenState();
 }
 
-class _AssignSheetState extends State<_AssignSheet> {
+class _AssignScreenState extends State<_AssignScreen> {
   String query = '';
 
   @override
@@ -3425,57 +4578,87 @@ class _AssignSheetState extends State<_AssignSheet> {
                 .contains(query.toLowerCase()))
         .toList();
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          16, 0, 16, 20 + MediaQuery.viewInsetsOf(context).bottom),
-      child: SizedBox(
-        height: 440,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Gán cho một bé',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: context.k.ink)),
-            const SizedBox(height: 2),
-            Text(
-              widget.card.snippet.isNotEmpty
-                  ? 'Đoạn nói: "${widget.card.snippet}". Chọn bé tương ứng.'
-                  : 'Chọn bé tương ứng với đoạn ghi âm này.',
-              style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              onChanged: (value) => setState(() => query = value),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search_rounded),
-                hintText: 'Tìm tên bé hoặc biệt danh',
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Quay lại',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints.tightFor(width: 44, height: 44),
+                    icon: SvgPicture.asset('assets/notifications/back_44.svg'),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('Gán đoạn ghi',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF24313D))),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
             Expanded(
-              child: ListView.separated(
-                itemCount: list.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (_, i) => ListTile(
-                  leading: Avatar(name: list[i].name, size: 34),
-                  title: Text(list[i].name,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: list[i].nickname != null &&
-                          list[i].nickname!.isNotEmpty
-                      ? Text('Tên gọi ở lớp: ${list[i].nickname}',
-                          style: TextStyle(
-                              fontSize: 11, color: context.k.inkSoft))
-                      : null,
-                  trailing: const Icon(Icons.chevron_right_rounded, size: 18),
-                  onTap: () => Navigator.pop(context, list[i]),
-                ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                children: [
+                  Text(
+                    '“${widget.card.snippet}”',
+                    style: const TextStyle(
+                        fontSize: 14, height: 1.4, color: Color(0xFF65727D)),
+                  ),
+                  if (widget.roster.length > 4) ...[
+                    const SizedBox(height: 14),
+                    TextField(
+                      onChanged: (value) => setState(() => query = value),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        hintText: 'Tìm tên bé hoặc biệt danh',
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  for (final child in list) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(context, child),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF087F70),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: const StadiumBorder(),
+                        ),
+                        child: Text(child.name),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  OutlinedButton(
+                    onPressed: () {
+                      widget.onAssignClass();
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF087F70),
+                      side: const BorderSide(color: Color(0xFFE5E8EB)),
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: Text(
+                        'Cả lớp ${widget.className.replaceFirst(RegExp(r'^Lớp\s+'), '')}'),
+                  ),
+                ],
               ),
             ),
           ],
@@ -3493,4 +4676,3 @@ typedef _DoneScreenView = DoneScreenView;
 
 typedef _CounterPill = CounterPill;
 typedef _AnimatedObservationWrapper = AnimatedObservationWrapper;
-typedef _EditObservationSheet = EditObservationSheet;

@@ -7,12 +7,17 @@
 // - Design System: KColors, KSpace, KRadii
 
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
+import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/widgets/leave_request_card.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_approval_result_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/reject_reason_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LeaveRequestReviewScreen extends StatefulWidget {
   const LeaveRequestReviewScreen({
@@ -20,11 +25,23 @@ class LeaveRequestReviewScreen extends StatefulWidget {
     required this.classId,
     this.className,
     this.repository,
+    this.initialRequest,
+    this.onNavigationSelected,
+    this.onOpenAttendance,
+    this.onOpenAttendanceForDate,
+    this.onOpenTimetable,
+    this.onOpenClassList,
   });
 
   final String classId;
   final String? className;
   final HttpLeaveRequestRepository? repository;
+  final LeaveRequestEntity? initialRequest;
+  final ValueChanged<GardenVoiceTeacherDestination>? onNavigationSelected;
+  final VoidCallback? onOpenAttendance;
+  final ValueChanged<DateTime>? onOpenAttendanceForDate;
+  final VoidCallback? onOpenTimetable;
+  final VoidCallback? onOpenClassList;
 
   @override
   State<LeaveRequestReviewScreen> createState() =>
@@ -41,6 +58,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   int _pendingCount = 0;
   int _reviewedCount = 0;
   List<LeaveRequestEntity> _items = [];
+  List<LeaveRequestEntity> _recentReviewed = [];
   final Set<String> _processing = {};
   final Map<String, String> _rejectionDrafts = {};
   bool _loadingMore = false;
@@ -49,14 +67,21 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   int _nextOffset = 0;
   int _loadVersion = 0;
   int _scopeVersion = 0;
+  bool _focusResolved = false;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? HttpLeaveRequestRepository();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+        length: 2,
+        vsync: this,
+        initialIndex: widget.initialRequest != null &&
+                widget.initialRequest!.status != LeaveStatus.pending
+            ? 1
+            : 0);
     _tabController.addListener(_handleTabChange);
-    _loadRequests(tab: 'pending');
+    _loadRequests(tab: _tabController.index == 0 ? 'pending' : 'reviewed');
   }
 
   @override
@@ -77,6 +102,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       _repository = widget.repository ?? HttpLeaveRequestRepository();
       _processing.clear();
       _rejectionDrafts.clear();
+      _focusResolved = false;
       _loadRequests(tab: _tabController.index == 0 ? 'pending' : 'reviewed');
     }
   }
@@ -103,22 +129,61 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     });
 
     try {
+      final Future<LeaveRequestBatchResult?>? recentFuture =
+          !more && tab == 'pending'
+              ? _repository
+                  .getLeaveRequests(
+                      classId: widget.classId, tab: 'reviewed', limit: 1)
+                  .then<LeaveRequestBatchResult?>((result) => result,
+                      onError: (Object _) => null)
+              : null;
       final result = await _repository.getLeaveRequests(
         classId: widget.classId,
         tab: tab,
         offset: _nextOffset,
       );
+      final recent = await recentFuture;
       if (!mounted || version != _loadVersion) return;
+      final focused = widget.initialRequest;
+      LeaveRequestEntity? extra;
+      if (!more &&
+          !_focusResolved &&
+          focused != null &&
+          focused.classId == widget.classId &&
+          !result.items.any((item) => item.requestId == focused.requestId)) {
+        extra = await _repository.getRequest(focused.requestId);
+        if (!mounted || version != _loadVersion) return;
+        if (extra.classId != widget.classId ||
+            extra.requestId != focused.requestId) {
+          throw const LeaveRequestException('Không thể xác minh đơn của lớp.');
+        }
+        if ((extra.status == LeaveStatus.pending) != (tab == 'pending')) {
+          _tabController.index = extra.status == LeaveStatus.pending ? 0 : 1;
+          return;
+        }
+      }
+      if (!more) _focusResolved = true;
       setState(() {
         _pendingCount = result.pendingCount;
         _reviewedCount = result.reviewedCount;
+        if (recent != null) _recentReviewed = recent.items;
         _nextOffset += result.items.length;
-        _hasMore = result.items.isNotEmpty &&
-            _nextOffset < (tab == 'pending' ? _pendingCount : _reviewedCount);
         final unique = {
-          for (final item in [..._items, ...result.items]) item.requestId: item
+          for (final item in [
+            ..._items,
+            ...result.items,
+            if (extra != null &&
+                (extra.status == LeaveStatus.pending) == (tab == 'pending'))
+              extra
+          ])
+            item.requestId: item
         };
         _items = unique.values.toList();
+        _hasMore = result.items.isNotEmpty &&
+            _items.length < (tab == 'pending' ? _pendingCount : _reviewedCount);
+        final focusIndex =
+            _items.indexWhere((item) => item.requestId == focused?.requestId);
+        if (focusIndex > 0) _items.insert(0, _items.removeAt(focusIndex));
         _isLoading = false;
         _loadingMore = false;
       });
@@ -142,19 +207,33 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     setState(() => _processing.add(item.requestId));
     final scope = _scopeVersion;
     try {
-      await _repository.approveLeaveRequest(item.requestId);
+      final reviewed = await _repository.approveLeaveRequest(item.requestId);
       if (!mounted || scope != _scopeVersion) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(item.requestType == LeaveRequestType.lateArrival
-              ? 'Đã duyệt báo đi trễ của ${item.childName ?? "bé"}. Giờ đến thực tế do giáo viên xác nhận.'
-              : 'Đã duyệt đơn xin nghỉ của ${item.childName ?? "bé"}.'),
-          backgroundColor: KColors.ok,
-          behavior: SnackBarBehavior.floating,
+      if (widget.initialRequest != null) {
+        setState(() {
+          _items = [reviewed];
+          if (_pendingCount > 0) _pendingCount--;
+          _reviewedCount++;
+        });
+      } else {
+        await _loadRequests(
+            tab: _tabController.index == 0 ? 'pending' : 'reviewed');
+      }
+      if (!mounted || scope != _scopeVersion) return;
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => AttendanceApprovalResultScreen(
+            request: reviewed,
+            onReturnToAttendance: (date) {
+              if (widget.onOpenAttendanceForDate != null) {
+                widget.onOpenAttendanceForDate!(date);
+              } else {
+                widget.onOpenAttendance?.call();
+              }
+            },
+          ),
         ),
       );
-      await _loadRequests(
-          tab: _tabController.index == 0 ? 'pending' : 'reviewed');
     } catch (e) {
       if (!mounted || scope != _scopeVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -173,8 +252,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
 
   Future<void> _handleReject(LeaveRequestEntity item) async {
     if (_processing.contains(item.requestId)) return;
-    setState(() => _processing.add(item.requestId));
     final scope = _scopeVersion;
+    var processing = false;
     try {
       final confirmedReason = await RejectReasonDialog.show(
         context,
@@ -188,8 +267,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
           confirmedReason.isEmpty) {
         return;
       }
+      setState(() => _processing.add(item.requestId));
+      processing = true;
       _rejectionDrafts[item.requestId] = confirmedReason;
-      await _repository.rejectLeaveRequest(
+      final reviewed = await _repository.rejectLeaveRequest(
         requestId: item.requestId,
         rejectReason: confirmedReason,
       );
@@ -203,8 +284,16 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
           behavior: SnackBarBehavior.floating,
         ),
       );
-      await _loadRequests(
-          tab: _tabController.index == 0 ? 'pending' : 'reviewed');
+      if (widget.initialRequest != null) {
+        setState(() {
+          _items = [reviewed];
+          if (_pendingCount > 0) _pendingCount--;
+          _reviewedCount++;
+        });
+      } else {
+        await _loadRequests(
+            tab: _tabController.index == 0 ? 'pending' : 'reviewed');
+      }
     } catch (e) {
       if (!mounted || scope != _scopeVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -215,7 +304,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         ),
       );
     } finally {
-      if (mounted && scope == _scopeVersion) {
+      if (processing && mounted && scope == _scopeVersion) {
         setState(() => _processing.remove(item.requestId));
       }
     }
@@ -264,34 +353,422 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+  Widget build(BuildContext context) => GardenVoiceScope(
+        child: Builder(builder: _buildScreen),
+      );
 
-    return ParentRequestLayout(
-      title: 'Duyệt đơn xin nghỉ',
-      child: Column(children: [
-        Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(children: [
-              Expanded(
-                  child: Text(widget.className ?? 'Lớp phụ trách',
-                      style: TextStyle(fontSize: 11, color: k.inkSoft))),
-              Flexible(
-                  child: Text(
-                      '$_pendingCount chờ duyệt · $_reviewedCount đã xử lý',
-                      style: TextStyle(fontSize: 11, color: k.warnDeep))),
-            ])),
-        TabBar(
-            controller: _tabController,
-            isScrollable: largeText,
-            tabAlignment: largeText ? TabAlignment.start : TabAlignment.fill,
-            labelColor: k.brand,
-            unselectedLabelColor: k.inkSoft,
-            tabs: const [Tab(text: 'Chờ duyệt'), Tab(text: 'Đã xử lý')]),
-        Expanded(child: _buildBody(k)),
-      ]),
+  Widget _buildScreen(BuildContext context) {
+    final k = context.k;
+    if (widget.initialRequest != null && _focusResolved) {
+      for (final item in _items) {
+        if (item.requestId == widget.initialRequest!.requestId) {
+          return _buildFocusedDetail(item);
+        }
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: k.canvas,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.className ?? 'Lớp học',
+                        style: TextStyle(
+                            fontSize: 24,
+                            height: 1.35,
+                            fontWeight: FontWeight.w700,
+                            color: k.ink)),
+                    Text('Đơn xin nghỉ và báo đi trễ',
+                        style: TextStyle(fontSize: 13, color: k.inkSoft)),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              child: _buildClassTabs(k),
+            ),
+            Expanded(child: _buildBody(k)),
+          ],
+        ),
+      ),
+      bottomNavigationBar: GardenVoiceTeacherNavigation(
+        selected: GardenVoiceTeacherDestination.classList,
+        onSelected: (destination) {
+          if (widget.onNavigationSelected != null) {
+            Navigator.of(context).maybePop();
+            widget.onNavigationSelected!(destination);
+          }
+        },
+      ),
     );
+  }
+
+  Widget _buildClassTabs(KPalette k) {
+    final largeText = MediaQuery.textScalerOf(context).scale(12) > 16;
+    return Container(
+      height: largeText ? 58 : 42,
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        color: k.surface,
+        border: Border.all(color: k.lineStrong),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (label, callback, selected) in [
+              ('Danh sách', widget.onOpenClassList, false),
+              ('Điểm danh', widget.onOpenAttendance ?? () {}, false),
+              ('Đơn nghỉ', null, true),
+              ('Lịch học', widget.onOpenTimetable, false),
+            ])
+              SizedBox(
+                width: largeText ? 116 : 84.5,
+                child: Semantics(
+                  button: callback != null,
+                  selected: selected,
+                  child: Material(
+                    color: selected ? k.brandTint : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                    child: InkWell(
+                      onTap: callback == null
+                          ? null
+                          : () {
+                              Navigator.of(context).maybePop();
+                              callback();
+                            },
+                      borderRadius: BorderRadius.circular(16),
+                      child: SizedBox(
+                        height: largeText ? 56 : 40,
+                        child: Center(
+                          child: Text(label,
+                              softWrap: false,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w400,
+                                  color: selected ? k.brand : k.inkSoft)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFocusedDetail(LeaveRequestEntity item) {
+    final pending = item.status == LeaveStatus.pending;
+    final late = item.requestType == LeaveRequestType.lateArrival;
+    final name = item.childName ?? 'Học sinh';
+    final words = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    final initials = words.reversed
+        .take(2)
+        .toList()
+        .reversed
+        .map((word) => String.fromCharCode(word.runes.first))
+        .join()
+        .toUpperCase();
+    final k = context.k;
+    final (statusBackground, statusColor) = switch (item.status) {
+      LeaveStatus.pending => (k.warnTint, k.warnDeep),
+      LeaveStatus.approved => (k.okTint, k.ok),
+      LeaveStatus.rejected => (k.badTint, k.badText),
+      LeaveStatus.cancelled => (k.surfaceSunken, k.inkSoft),
+    };
+    final dateText = item.totalDays == 1
+        ? requestDayLabel(item.fromDate)
+        : '${requestDayLabel(item.fromDate)} – ${requestDayLabel(item.toDate)}';
+    final avatar = CircleAvatar(
+      radius: 20,
+      backgroundColor: k.brand,
+      child: Text(initials,
+          style: TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w700, color: k.surface)),
+    );
+    final identity = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name,
+            style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w600, color: k.ink)),
+        Text('Lớp ${widget.className ?? 'học sinh'}',
+            style: TextStyle(fontSize: 12, color: k.inkSoft)),
+      ],
+    );
+    final statusBadge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+          color: statusBackground, borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (pending) ...[
+            SvgPicture.asset('assets/notifications/pending_dot.svg'),
+            const SizedBox(width: 6),
+          ],
+          Text(requestStatusLabel(item.status),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: statusColor)),
+        ],
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: k.canvas,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Quay lại',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints.tightFor(width: 44, height: 44),
+                    icon: SvgPicture.asset('assets/notifications/back_44.svg'),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Duyệt đơn xin nghỉ',
+                            style: TextStyle(
+                                fontSize: 17,
+                                height: 1.4,
+                                fontWeight: FontWeight.w600,
+                                color: k.ink)),
+                        Text('Chi tiết đơn · ${widget.className ?? 'Lớp học'}',
+                            style: TextStyle(
+                                fontSize: 12, height: 1.4, color: k.inkSoft)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                children: [
+                  _detailSurface(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 300 ||
+                            MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                        if (compact) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(children: [
+                                avatar,
+                                const SizedBox(width: 12),
+                                Expanded(child: identity),
+                              ]),
+                              const SizedBox(height: 8),
+                              Align(
+                                  alignment: Alignment.centerRight,
+                                  child: statusBadge),
+                            ],
+                          );
+                        }
+                        return Row(children: [
+                          avatar,
+                          const SizedBox(width: 12),
+                          Expanded(child: identity),
+                          statusBadge,
+                        ]);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _detailSurface(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    child: Column(
+                      children: [
+                        _detailRow(
+                            'Ngày nghỉ',
+                            late
+                                ? '${requestDayLabel(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'chưa cập nhật'}'
+                                : dateText),
+                        Divider(height: 1, color: k.line),
+                        _detailRow('Số ngày', '${item.totalDays} ngày'),
+                        Divider(height: 1, color: k.line),
+                        _detailRow('Lý do', item.reason),
+                        Divider(height: 1, color: k.line),
+                        _detailRow('Người gửi', item.parentName ?? 'Phụ huynh'),
+                        Divider(height: 1, color: k.line),
+                        _detailRow('Gửi lúc', requestTimestamp(item.createdAt)),
+                        if (item.attachmentUrl != null) ...[
+                          Divider(height: 1, color: k.line),
+                          _detailRow(
+                              'Đính kèm',
+                              TextButton(
+                                  onPressed: () => _openAttachment(item),
+                                  child: const Text('Xem ảnh đính kèm'))),
+                        ],
+                        if (item.contactPhone.isNotEmpty) ...[
+                          Divider(height: 1, color: k.line),
+                          _detailRow(
+                              'SĐT liên hệ',
+                              TextButton(
+                                  onPressed: () => _callParent(item),
+                                  child: Text(maskedPhone(item.contactPhone)))),
+                        ],
+                        if (item.rejectReason?.isNotEmpty == true) ...[
+                          Divider(height: 1, color: k.line),
+                          _detailRow('Lý do từ chối', item.rejectReason!),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _detailSurface(
+                    color: k.brandTint,
+                    border: false,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    child: Text(
+                      late
+                          ? 'Giờ đến dự kiến không phải giờ check-in thực tế.'
+                          : 'Khi duyệt, điểm danh sẽ được đồng bộ sang “Vắng có phép”; giờ check-in thực tế được giữ nguyên.',
+                      style: TextStyle(fontSize: 12, height: 1.4, color: k.ink),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (pending)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _processing.contains(item.requestId)
+                              ? null
+                              : () => _handleReject(item),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: k.brand,
+                            side: BorderSide(color: k.line),
+                            minimumSize: const Size(0, 48),
+                            shape: const StadiumBorder(),
+                          ),
+                          child: const Text('Từ chối'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _processing.contains(item.requestId)
+                              ? null
+                              : () => _handleApprove(item),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: k.brand,
+                            foregroundColor: k.surface,
+                            minimumSize: const Size(0, 48),
+                            shape: const StadiumBorder(),
+                          ),
+                          child: _processing.contains(item.requestId)
+                              ? SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: k.surface),
+                                )
+                              : const Text('Duyệt đơn'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailSurface({
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(16),
+    Color? color,
+    bool border = true,
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: padding,
+        decoration: BoxDecoration(
+          color: color ?? context.k.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: border ? Border.all(color: context.k.line) : null,
+        ),
+        child: child,
+      );
+
+  Widget _detailRow(String label, Object value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 84,
+              child: Text(label,
+                  style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: value is Widget
+                  ? DefaultTextStyle.merge(
+                      style: TextStyle(fontSize: 13, color: context.k.ink),
+                      child: value)
+                  : Text(value.toString(),
+                      style: TextStyle(
+                          fontSize: 13, height: 1.4, color: context.k.ink)),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _callParent(LeaveRequestEntity item) async {
+    final uri = phoneCallUri(item.contactPhone);
+    if (uri == null) return;
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không mở được ứng dụng gọi điện.')));
+    }
   }
 
   Widget _buildBody(KPalette k) {
@@ -322,7 +799,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                 label: const Text('Thử lại'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: k.brand,
-                  foregroundColor: Colors.white,
+                  foregroundColor: k.surface,
                 ),
               ),
             ],
@@ -331,68 +808,259 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       );
     }
 
-    if (_items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _tabController.index == 0 ? Icons.task_alt : Icons.history,
-              size: 56,
-              color: k.inkFaint,
-            ),
-            const SizedBox(height: KSpace.x3),
-            Text(
-              _tabController.index == 0
-                  ? 'Không có đơn nào đang chờ duyệt'
-                  : 'Chưa có lịch sử đơn đã xử lý',
-              style: TextStyle(fontSize: 15, color: k.inkSoft),
-            ),
-          ],
-        ),
-      );
-    }
-
+    final pending = _tabController.index == 0;
     return RefreshIndicator(
       color: k.brand,
       onRefresh: () => _loadRequests(
-        tab: _tabController.index == 0 ? 'pending' : 'reviewed',
+        tab: pending ? 'pending' : 'reviewed',
       ),
-      child: ListView.separated(
-        padding: const EdgeInsets.all(KSpace.x4),
-        itemCount: _items.length +
-            (_hasMore || _loadingMore || _moreError != null ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: KSpace.x3),
-        itemBuilder: (context, index) {
-          if (index == _items.length) {
-            if (_loadingMore) {
-              return const Center(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _statusFilter(k, 'Chờ duyệt ($_pendingCount)', pending, 0),
+                const SizedBox(width: 8),
+                _statusFilter(k, 'Đã xử lý', !pending, 1),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  pending
+                      ? 'Không có đơn nào đang chờ duyệt'
+                      : 'Chưa có lịch sử đơn đã xử lý',
+                  style: TextStyle(fontSize: 14, color: k.inkSoft),
+                ),
+              ),
+            )
+          else
+            ..._items.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _requestPreview(k, item),
+                )),
+          if (pending && _recentReviewed.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('Đã xử lý gần đây',
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700, color: k.ink)),
+            const SizedBox(height: 12),
+            _recentRequest(k, _recentReviewed.first),
+          ],
+          if (_hasMore || _loadingMore || _moreError != null) ...[
+            if (_loadingMore)
+              const Center(
                   child: Padding(
                       padding: EdgeInsets.all(KSpace.x4),
-                      child: CircularProgressIndicator()));
-            }
-            return Column(children: [
+                      child: CircularProgressIndicator()))
+            else ...[
               if (_moreError != null)
                 Text(_moreError!, style: TextStyle(color: k.bad)),
               TextButton(
                   onPressed: () => _loadRequests(
-                      tab: _tabController.index == 0 ? 'pending' : 'reviewed',
-                      more: true),
+                      tab: pending ? 'pending' : 'reviewed', more: true),
                   child: Text(
                       _moreError == null ? 'Tải thêm' : 'Thử lại tải thêm')),
-            ]);
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _statusFilter(KPalette k, String label, bool selected, int index) =>
+      Material(
+        color: selected ? k.warnTint : k.okTint,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _tabController.index = index,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: selected ? k.warnDeep : k.ok,
+                    fontWeight: FontWeight.w500)),
+          ),
+        ),
+      );
+
+  Widget _requestPreview(KPalette k, LeaveRequestEntity item) {
+    final childName = item.childName ?? 'Học sinh';
+    final initials = childName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList()
+        .reversed
+        .take(2)
+        .toList()
+        .reversed
+        .map((part) => String.fromCharCode(part.runes.first))
+        .join()
+        .toUpperCase();
+    final date = item.totalDays == 1
+        ? DateFormat('dd/MM').format(item.fromDate)
+        : '${DateFormat('dd/MM').format(item.fromDate)} – ${DateFormat('dd/MM').format(item.toDate)}';
+    return Material(
+      color: k.brandTint,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        key: ValueKey('leave-request-preview-${item.requestId}'),
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => LeaveRequestReviewScreen(
+                  classId: widget.classId,
+                  className: widget.className,
+                  repository: _repository,
+                  initialRequest: item,
+                  onNavigationSelected: widget.onNavigationSelected,
+                  onOpenAttendance: widget.onOpenAttendance,
+                  onOpenTimetable: widget.onOpenTimetable,
+                  onOpenClassList: widget.onOpenClassList,
+                ))),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                CircleAvatar(
+                  radius: 21,
+                  backgroundColor: k.accentTint,
+                  child: Text(initials,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: k.accentDeep)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(childName,
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: k.ink)),
+                    Text('Nghỉ $date · ${item.parentName ?? 'Phụ huynh'}',
+                        style: TextStyle(fontSize: 12, color: k.inkSoft)),
+                  ],
+                )),
+              ]),
+              const SizedBox(height: 10),
+              Text(item.reason,
+                  style: TextStyle(fontSize: 14, color: k.inkSoft)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Flexible(
+                  child: Text('Xem chi tiết đơn',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: k.brand)),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, size: 20, color: k.brand),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _recentRequest(KPalette k, LeaveRequestEntity item) {
+    final name = item.childName ?? 'Học sinh';
+    final initials = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList()
+        .reversed
+        .take(2)
+        .toList()
+        .reversed
+        .map((part) => String.fromCharCode(part.runes.first))
+        .join()
+        .toUpperCase();
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: switch (item.status) {
+          LeaveStatus.pending => k.warnTint,
+          LeaveStatus.approved => k.okTint,
+          LeaveStatus.rejected => k.badTint,
+          LeaveStatus.cancelled => k.surfaceSunken,
+        },
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(requestStatusLabel(item.status),
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: switch (item.status) {
+                LeaveStatus.pending => k.warnDeep,
+                LeaveStatus.approved => k.ok,
+                LeaveStatus.rejected => k.bad,
+                LeaveStatus.cancelled => k.inkSoft,
+              })),
+    );
+    final identity = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name,
+            style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w700, color: k.ink)),
+        Text('Nghỉ ${DateFormat('dd/MM').format(item.fromDate)}',
+            style: TextStyle(fontSize: 12, color: k.inkSoft)),
+      ],
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: k.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(1) > 1.3;
+          final avatar = CircleAvatar(
+              radius: 21,
+              backgroundColor: k.infoTint,
+              child: Text(initials,
+                  style:
+                      TextStyle(fontWeight: FontWeight.w700, color: k.info)));
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  avatar,
+                  const SizedBox(width: 12),
+                  Expanded(child: identity),
+                ]),
+                const SizedBox(height: 8),
+                Align(alignment: Alignment.centerRight, child: badge),
+              ],
+            );
           }
-          final item = _items[index];
-          return LeaveRequestCard(
-            key: ValueKey(item.requestId),
-            item: item,
-            initiallyExpanded: index == 0,
-            className: widget.className,
-            onApprove: () => _handleApprove(item),
-            onReject: () => _handleReject(item),
-            onAttachment: () => _openAttachment(item),
-            processing: _processing.contains(item.requestId),
-          );
+          return Row(children: [
+            avatar,
+            const SizedBox(width: 12),
+            Expanded(child: identity),
+            badge,
+          ]);
         },
       ),
     );

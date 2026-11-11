@@ -13,8 +13,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from sqlalchemy import desc, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
@@ -26,6 +26,7 @@ from app.schemas.health_incident_schema import (
     ChildEmergencyContactsResponse,
     EmergencyContactInfo,
     HealthIncidentCreate,
+    HealthIncidentListItem,
     HealthIncidentResponse,
     HealthIncidentUpdate,
 )
@@ -64,6 +65,53 @@ def verify_child_access(child: Child, current_user: User, db: Session) -> None:
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Chức năng này chỉ dành cho Giáo viên phụ trách lớp và Quản trị viên",
     )
+
+
+def verify_class_access(class_id: uuid.UUID, current_user: User, db: Session) -> None:
+    role_val = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_val == UserRole.ADMIN.value:
+        return
+    if role_val != UserRole.TEACHER.value or not current_user.teacher_id:
+        raise HTTPException(status_code=403, detail="Chức năng này chỉ dành cho Giáo viên phụ trách lớp")
+    teacher = db.scalar(select(Teacher).where(Teacher.teacher_id == current_user.teacher_id))
+    if not teacher or teacher.class_id != class_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xem sự cố của lớp này")
+
+
+@router.get("", response_model=list[HealthIncidentListItem])
+def list_health_incidents(
+    class_id: uuid.UUID = Query(...),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Lịch sử sự cố có phân trang, giới hạn theo lớp giáo viên phụ trách."""
+    verify_class_access(class_id, current_user, db)
+    incidents = db.scalars(
+        select(HealthIncident)
+        .options(joinedload(HealthIncident.child), joinedload(HealthIncident.reported_by))
+        .where(HealthIncident.class_id == class_id)
+        .order_by(desc(HealthIncident.reported_at), desc(HealthIncident.incident_id))
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return [
+        HealthIncidentListItem(
+            incident_id=incident.incident_id,
+            child_id=incident.child_id,
+            child_name=incident.child.full_name,
+            class_id=incident.class_id,
+            incident_type=incident.incident_type,
+            incident_type_label=INCIDENT_LABELS.get(incident.incident_type, "Sự cố sức khỏe"),
+            description=incident.description,
+            temperature=incident.temperature,
+            action_taken=incident.action_taken,
+            reported_at=incident.reported_at,
+            reported_by_name=incident.reported_by.full_name if incident.reported_by else None,
+        )
+        for incident in incidents
+    ]
 
 
 def extract_emergency_contacts(child: Child, db: Session) -> list[EmergencyContactInfo]:

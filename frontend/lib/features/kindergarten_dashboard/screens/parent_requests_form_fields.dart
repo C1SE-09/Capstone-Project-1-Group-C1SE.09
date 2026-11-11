@@ -11,7 +11,7 @@ class _ParentRequestFormFields extends StatelessWidget {
     return Form(
         key: form._formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -41,14 +41,17 @@ class _ParentRequestFormFields extends StatelessWidget {
               ],
             ]),
             const SizedBox(height: 12),
-            ParentRequestChild(
-                child: form.widget.child,
-                className: form.widget.className,
-                teacherName: form.widget.teacherName),
-            const SizedBox(height: 12),
+            if (!form._late) ...[
+              ParentRequestChild(
+                  child: form.widget.child,
+                  className: form.widget.className,
+                  teacherName: form.widget.teacherName),
+              const SizedBox(height: 12),
+            ],
             _label(context, form._late ? 'Ngày đi trễ' : 'Từ ngày'),
             _date(context, requestDayLabel(form._from),
-                disabled ? null : () => form._pickDate()),
+                disabled ? null : () => form._pickDate(),
+                emphasized: !form._late),
             if (!form._late) ...[
               const SizedBox(height: 12),
               _label(context, 'Đến ngày'),
@@ -99,70 +102,91 @@ class _ParentRequestFormFields extends StatelessWidget {
             ],
             const SizedBox(height: 12),
             _label(context, form._late ? 'Lý do đi trễ' : 'Lý do xin nghỉ'),
-            TextFormField(
-                controller: form._reason,
-                enabled: !disabled,
-                minLines: 2,
-                maxLines: 5,
-                maxLength: 1000,
-                maxLengthEnforcement: MaxLengthEnforcement.none,
-                style: TextStyle(fontSize: 13, color: k.ink),
-                decoration: InputDecoration(
-                    hintText: form._late
-                        ? 'Nhập lý do bé đến lớp muộn'
-                        : 'Nhập lý do xin nghỉ của bé',
-                    fillColor: _inputColor(context),
-                    border: _border(context),
-                    enabledBorder: _border(context),
-                    focusedBorder: _border(context, focused: true)),
-                buildCounter: (context,
-                        {required currentLength,
-                        required isFocused,
-                        maxLength}) =>
-                    Text('${form._reason.text.trim().characters.length}/1000',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: form._reason.text.trim().characters.length >
-                                    1000
-                                ? k.bad
-                                : k.inkSoft)),
-                validator: (value) {
-                  final length = (value ?? '').trim().characters.length;
-                  if (length < 3) {
-                    return 'Lý do cần ít nhất 3 ký tự sau khi bỏ khoảng trắng.';
-                  }
-                  if (length > 1000) return 'Lý do tối đa 1000 ký tự.';
-                  return null;
-                }),
-            const SizedBox(height: 4),
-            Text('Lý do tối thiểu 3 ký tự – hệ thống kiểm tra khi gửi.',
-                style: TextStyle(color: k.inkSoft, fontSize: 11)),
-            const SizedBox(height: 12),
-            OutlinedButton(
-                onPressed: disabled ? null : form._pickImage,
-                style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    backgroundColor: k.surface,
-                    foregroundColor: k.ink,
-                    side: BorderSide(color: k.lineStrong),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10))),
-                child: Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    spacing: 12,
-                    runSpacing: 4,
+            Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                    color: _inputColor(context),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: k.line)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                          form._pickingImage
-                              ? 'Đang mở ảnh…'
-                              : '+ Thêm ảnh giấy khám / đơn thuốc',
-                          style: const TextStyle(
-                              fontSize: 12.5, fontWeight: FontWeight.w600)),
-                      Text('Không bắt buộc',
-                          style: TextStyle(fontSize: 11, color: k.inkSoft)),
+                      TextFormField(
+                          controller: form._reason,
+                          enabled: !disabled,
+                          minLines: 2,
+                          maxLines: 5,
+                          maxLength: 1000,
+                          maxLengthEnforcement: MaxLengthEnforcement.none,
+                          style: TextStyle(fontSize: 14, color: k.ink),
+                          decoration: InputDecoration(
+                              isDense: true,
+                              filled: false,
+                              contentPadding: EdgeInsets.zero,
+                              counterText: '',
+                              hintText: form._late
+                                  ? 'Nhập lý do bé đến lớp muộn'
+                                  : 'Nhập lý do xin nghỉ của bé',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none),
+                          validator: (value) {
+                            final length =
+                                (value ?? '').trim().characters.length;
+                            if (length < 3) {
+                              return 'Lý do cần ít nhất 3 ký tự sau khi bỏ khoảng trắng.';
+                            }
+                            if (length > 1000) {
+                              return 'Lý do tối đa 1000 ký tự.';
+                            }
+                            return null;
+                          }),
+                      if (!form._late)
+                        Text(
+                            '${form._reason.text.trim().characters.length}/1000',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                                fontSize: 10.5,
+                                color:
+                                    form._reason.text.trim().characters.length >
+                                            1000
+                                        ? k.bad
+                                        : k.inkSoft)),
                     ])),
+            if (!form._late) ...[
+              const SizedBox(height: 12),
+              Text('Lý do tối thiểu 3 ký tự – hệ thống kiểm tra khi gửi.',
+                  style: TextStyle(color: k.inkSoft, fontSize: 11)),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                  onPressed: disabled ? null : form._pickImage,
+                  style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      backgroundColor: k.surface,
+                      foregroundColor: k.brand,
+                      side: BorderSide(color: k.line),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10))),
+                  child: Row(children: [
+                    Expanded(
+                        flex: 5,
+                        child: Text(
+                            form._pickingImage
+                                ? 'Đang mở ảnh…'
+                                : '+ Thêm ảnh giấy khám / đơn thuốc',
+                            style: const TextStyle(
+                                fontSize: 12.5, fontWeight: FontWeight.w600))),
+                    const SizedBox(width: 8),
+                    Flexible(
+                        flex: 2,
+                        child: Text('Không bắt buộc',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(fontSize: 11, color: k.inkSoft))),
+                  ])),
+            ],
             if (form._imageBytes != null) ...[
               const SizedBox(height: 8),
               ClipRRect(
@@ -183,8 +207,9 @@ class _ParentRequestFormFields extends StatelessWidget {
                     icon: const Icon(Icons.close, size: 20))
               ]),
             ],
-            Text('Ảnh y tế riêng tư · JPEG, PNG, WebP · Tối đa 5 MiB',
-                style: TextStyle(fontSize: 11, color: k.inkSoft)),
+            if (form._imageBytes != null)
+              Text('Ảnh y tế riêng tư · JPEG, PNG, WebP · Tối đa 5 MiB',
+                  style: TextStyle(fontSize: 11, color: k.inkSoft)),
             if (form._error != null) ...[
               const SizedBox(height: 12),
               Container(
@@ -248,10 +273,11 @@ class _ParentRequestFormFields extends StatelessWidget {
                 backgroundColor:
                     selected ? context.k.brandTint : context.k.surface,
                 foregroundColor: selected ? context.k.brand : context.k.ink,
-                minimumSize: const Size(0, 56),
+                alignment: Alignment.centerLeft,
+                minimumSize: const Size(0, 62),
                 padding: const EdgeInsets.all(12),
                 side: BorderSide(
-                    color: selected ? context.k.brand : context.k.lineStrong,
+                    color: selected ? context.k.brand : context.k.line,
                     width: selected ? 1.5 : 1),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12))),
@@ -268,22 +294,15 @@ class _ParentRequestFormFields extends StatelessWidget {
             ])));
   }
 
-  Color _inputColor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.light
-          ? const Color(0xFFFAF9F6)
-          : context.k.surface;
+  Color _inputColor(BuildContext context) => context.k.surface;
 
-  OutlineInputBorder _border(BuildContext context, {bool focused = false}) =>
-      OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-              color: focused ? context.k.brand : context.k.lineStrong));
-
-  Widget _date(BuildContext context, String value, VoidCallback? onTap) =>
-      _control(context, value, 'Chọn ngày', onTap);
+  Widget _date(BuildContext context, String value, VoidCallback? onTap,
+          {bool emphasized = false}) =>
+      _control(context, value, 'Chọn ngày', onTap,
+          borderColor: emphasized ? context.k.brand : context.k.line);
 
   Widget _control(BuildContext context, String value, String action,
-          VoidCallback? onTap, {bool strong = false}) =>
+          VoidCallback? onTap, {bool strong = false, Color? borderColor}) =>
       OutlinedButton(
           onPressed: onTap,
           style: OutlinedButton.styleFrom(
@@ -291,15 +310,15 @@ class _ParentRequestFormFields extends StatelessWidget {
               foregroundColor: context.k.ink,
               minimumSize: const Size(0, 48),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              side: BorderSide(color: context.k.lineStrong),
+              side: BorderSide(color: borderColor ?? context.k.line),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10))),
           child: Row(children: [
             Expanded(
-                flex: 3,
+                flex: 4,
                 child: Text(value,
                     style: TextStyle(
-                        fontSize: strong ? 18 : 13.5,
+                        fontSize: strong ? 20 : 14,
                         fontWeight:
                             strong ? FontWeight.w700 : FontWeight.w400))),
             const SizedBox(width: 8),

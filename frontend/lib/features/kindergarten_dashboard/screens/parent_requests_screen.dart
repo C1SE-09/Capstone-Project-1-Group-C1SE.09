@@ -116,26 +116,27 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
 
   @override
   Widget build(BuildContext context) => ParentRequestLayout(
+        gardenVoice: true,
         title: 'Xin phép nghỉ / báo trễ',
         actions: [
           IconButton(
               tooltip: 'Tạo đơn mới',
               onPressed: _create,
               icon: Container(
-                  width: 30,
-                  height: 30,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                       color: context.k.brand,
                       borderRadius: BorderRadius.circular(15)),
                   child: Icon(Icons.add,
-                      size: 16,
+                      size: 20,
                       color: Theme.of(context).colorScheme.onPrimary)))
         ],
         child: RefreshIndicator(
             onRefresh: _load,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
               children: [
                 Align(
                     alignment: Alignment.centerLeft,
@@ -148,8 +149,8 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
                         child: Text(
                             'Bé ${widget.child.fullName}${widget.className.isEmpty ? '' : ' · ${widget.className}'}',
                             style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 color: context.k.brand)))),
                 const SizedBox(height: 12),
                 SingleChildScrollView(
@@ -211,14 +212,15 @@ class _HistoryCard extends StatelessWidget {
             color: context.k.surface,
             borderRadius: BorderRadius.circular(14),
             textStyle: TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 13,
-                height: 1.3,
+                fontFamily: 'Nunito',
+                fontSize: 14,
+                height: 1.4,
                 color: context.k.ink),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
               child: ParentRequestCard(
+                  color: const Color(0xFFDDEEEA),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -232,11 +234,12 @@ class _HistoryCard extends StatelessWidget {
                               Text(requestTypeLabel(item.requestType),
                                   style: TextStyle(
                                       color: context.k.brand,
-                                      fontWeight: FontWeight.w600)),
-                              ParentRequestStatus(item.status),
+                                      fontWeight: FontWeight.w700)),
+                              ParentRequestStatus(item.status,
+                                  gardenVoice: true),
                             ])),
                     const SizedBox(height: 6),
-                    Text(requestRange(item),
+                    Text(requestListRange(item),
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                     if (item.expectedArrivalTime != null)
                       Text(
@@ -267,7 +270,7 @@ class _HistoryCard extends StatelessWidget {
                             ? 'Gửi ${requestTimestamp(item.createdAt)}${item.attachmentUrl == null ? '' : ' · Có đính kèm giấy khám'}'
                             : '${item.status == LeaveStatus.cancelled ? 'Phụ huynh đã hủy đơn' : '${item.reviewerName ?? 'Giáo viên'} ${item.status == LeaveStatus.approved ? 'đã duyệt' : 'đã từ chối'}'}${item.reviewedAt == null ? '' : ' · ${requestTimestamp(item.reviewedAt!)}'}',
                         style:
-                            TextStyle(fontSize: 11, color: context.k.inkSoft)),
+                            TextStyle(fontSize: 12, color: context.k.inkSoft)),
                   ])),
             )),
       );

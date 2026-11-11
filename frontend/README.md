@@ -1,19 +1,57 @@
-# adark_frontend
+# KinderLog — Flutter
 
-A new Flutter project.
+Ứng dụng Android cho giáo viên/phụ huynh. Package Dart vẫn là `adark_frontend`;
+không đổi import/package chỉ để đổi tên sản phẩm hiển thị.
 
-## Getting Started
+## Bắt đầu một task UI
 
-This project is a starting point for a Flutter application.
+Đọc [AGENTS.md](AGENTS.md), [Figma → Flutter](../design-system/kinderlog/FIGMA-MAP.md),
+[component/asset](../design-system/kinderlog/COMPONENT-MAP.md) và
+[visual QA](../design-system/kinderlog/VISUAL-QA.md). [MASTER](../design-system/kinderlog/MASTER.md)
+mô tả baseline code và chênh lệch với Figma live, không phải cam kết app đã đồng bộ.
 
-A few resources to get you started if this is your first Flutter project:
+CI dùng Flutter **3.47.5 stable**. Chạy các lệnh sau từ `frontend/`:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```powershell
+flutter --version
+flutter pub get
+flutter analyze
+flutter test --no-pub test/figma_request_layout_test.dart
+flutter test --no-pub --dart-define=UI_CAPTURE_DIR=build/ui-captures test/figma_request_layout_test.dart
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Lệnh cuối xuất PNG vào `build/ui-captures/`; chi tiết node/state và giới hạn của
+capture nằm trong visual QA. Test này dùng dữ liệu giả, không cần backend. Khi
+đổi behavior, chạy thêm test màn tương ứng và `flutter test --no-pub`; không coi
+layout test này là full suite hoặc bằng chứng đã khớp Figma.
+
+## Chạy app để review
+
+```powershell
+# Android emulator dùng backend trên máy host.
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+# Web demo: mở localhost:8080 trong cùng trình duyệt/profile.
+flutter run -d web-server --web-hostname=localhost --web-port=8080 --dart-define=API_BASE_URL=http://localhost:8000
+```
+
+Backend local cần được chạy từ repo root theo AGENTS.md. Nếu không truyền
+`API_BASE_URL`, app dùng VPS cấu hình trong `lib/core/utils/api_config.dart`;
+chọn endpoint có chủ đích trước khi dùng luồng ghi dữ liệu. Không lưu tài khoản
+hoặc token thật trong tài liệu/fixture. Không có tài khoản demo mặc định được
+ghi ở đây; lấy tài khoản test do nhóm cấp cho môi trường tương ứng.
+
+Đăng nhập teacher → chọn lớp → `/teacher`; parent → `/parent`. Màn đơn, thuốc,
+thông báo và sheet mở từ shell tương ứng, không phải frame nào cũng có URL route.
+Xem cột Entry trong FIGMA-MAP để vào đúng màn. Với UI chưa cần API, ưu tiên pump
+widget bằng repository giả trong test thay vì thêm nút bỏ qua đăng nhập production.
+
+Ảnh review chuẩn dùng viewport theo frame (hiện 390×844), DPR 1, light, locale vi,
+text scale 1; ghi rõ system insets. Kiểm tra riêng màn hẹp/chữ lớn/bàn phím.
+Sửa Flutter: bấm ▶; thêm font/asset có thể cần dừng rồi chạy lại app. Chỉ sửa
+Flutter/tài liệu không cần restart hoặc rebuild Docker.
+
+Các mục kiểm tra có ngày bên dưới là lịch sử của task cũ, không phải kết quả
+kiểm tra hiện tại của toàn repo.
 
 ## Nhớ tài khoản và phiên 1 giờ
 

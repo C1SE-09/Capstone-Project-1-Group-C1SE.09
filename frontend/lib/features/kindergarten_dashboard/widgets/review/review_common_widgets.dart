@@ -22,9 +22,15 @@ class SurfaceBox extends StatelessWidget {
     return Container(
       padding: padding ?? const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color ?? context.k.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor ?? context.k.line),
+        color: color ?? context.k.reviewSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor ?? context.k.lineStrong),
+        boxShadow: [
+          BoxShadow(
+              color: context.k.ink.withValues(alpha: .055),
+              blurRadius: 16,
+              offset: const Offset(0, 4)),
+        ],
       ),
       child: child,
     );
@@ -45,8 +51,7 @@ class SummaryRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-              width: 24,
-              child: Icon(icon, size: 16, color: context.k.brand)),
+              width: 24, child: Icon(icon, size: 16, color: context.k.brand)),
           SizedBox(
             width: 24,
             child: Text(

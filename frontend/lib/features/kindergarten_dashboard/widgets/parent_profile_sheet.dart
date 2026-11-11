@@ -11,7 +11,8 @@ import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 const kRelationshipOptions = ['Bố', 'Mẹ', 'Ông', 'Bà', 'Người giám hộ'];
 
-bool isValidParentPhone(String value) => RegExp(r'^0\d{9}$').hasMatch(value.trim());
+bool isValidParentPhone(String value) =>
+    RegExp(r'^0\d{9}$').hasMatch(value.trim());
 
 bool isValidParentEmail(String value) {
   final v = value.trim();
@@ -22,7 +23,8 @@ bool isValidParentEmail(String value) {
 Future<void> showParentProfileSheet(
   BuildContext context, {
   required Parent parent,
-  required void Function(String phone, String? email, String? relationship) onSaved,
+  required void Function(String phone, String? email, String? relationship)
+      onSaved,
   HttpDashboardRepository? repository,
 }) {
   return showKSheet(
@@ -31,12 +33,43 @@ Future<void> showParentProfileSheet(
   );
 }
 
+Future<void> showParentProfileEditScreen(
+  BuildContext context, {
+  required Parent parent,
+  required String childName,
+  required void Function(String phone, String? email, String? relationship)
+      onSaved,
+  HttpDashboardRepository? repository,
+}) {
+  return Navigator.of(context).push<void>(MaterialPageRoute(
+    builder: (_) => GardenVoiceScope(
+      child: ParentProfileForm(
+        parent: parent,
+        childName: childName,
+        fullScreen: true,
+        repository: repository,
+        onSaved: onSaved,
+      ),
+    ),
+  ));
+}
+
 class ParentProfileForm extends StatefulWidget {
-  const ParentProfileForm({super.key, required this.parent, required this.onSaved, this.repository});
+  const ParentProfileForm({
+    super.key,
+    required this.parent,
+    required this.onSaved,
+    this.repository,
+    this.childName = '',
+    this.fullScreen = false,
+  });
 
   final Parent parent;
-  final void Function(String phone, String? email, String? relationship) onSaved;
+  final void Function(String phone, String? email, String? relationship)
+      onSaved;
   final HttpDashboardRepository? repository;
+  final String childName;
+  final bool fullScreen;
 
   @override
   State<ParentProfileForm> createState() => _ParentProfileFormState();
@@ -54,7 +87,8 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
   @override
   void initState() {
     super.initState();
-    if (_relationship != null && !kRelationshipOptions.contains(_relationship)) {
+    if (_relationship != null &&
+        !kRelationshipOptions.contains(_relationship)) {
       _relationship = null;
     }
   }
@@ -105,22 +139,41 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
     }
   }
 
+  Future<void> _selectRelationship() async {
+    final relationship =
+        await Navigator.of(context).push<String>(MaterialPageRoute(
+      builder: (_) => GardenVoiceScope(
+        child: _ParentRelationshipScreen(
+          childName: widget.childName,
+          selected: _relationship,
+        ),
+      ),
+    ));
+    if (relationship != null && mounted) {
+      setState(() => _relationship = relationship);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final validPhone = isValidParentPhone(_phoneController.text);
     final validEmail = isValidParentEmail(_emailController.text);
     final canSave = validPhone && validEmail && !_saving;
 
-    return Column(
+    final form = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Chỉnh sửa thông tin', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 16),
+        if (!widget.fullScreen) ...[
+          Text('Chỉnh sửa thông tin',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 16),
+        ],
         TextField(
           controller: _phoneController,
+          key: const ValueKey('parent-profile-phone'),
           keyboardType: TextInputType.phone,
-          autofocus: true,
+          autofocus: !widget.fullScreen,
           onChanged: (_) => setState(() => _error = null),
           decoration: const InputDecoration(
             labelText: 'Số điện thoại *',
@@ -130,6 +183,7 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
         const SizedBox(height: 12),
         TextField(
           controller: _emailController,
+          key: const ValueKey('parent-profile-email'),
           keyboardType: TextInputType.emailAddress,
           onChanged: (_) => setState(() => _error = null),
           decoration: const InputDecoration(
@@ -138,26 +192,130 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
           ),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _relationship,
-          decoration: const InputDecoration(
-            labelText: 'Quan hệ với bé',
+        if (widget.fullScreen)
+          Semantics(
+            button: true,
+            child: InkWell(
+              key: const ValueKey('parent-profile-relationship'),
+              onTap: _selectRelationship,
+              borderRadius: BorderRadius.circular(14),
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Quan hệ với bé'),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(_relationship ?? 'Chọn quan hệ')),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          DropdownButtonFormField<String>(
+            initialValue: _relationship,
+            decoration: const InputDecoration(labelText: 'Quan hệ với bé'),
+            items: kRelationshipOptions
+                .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                .toList(),
+            onChanged: (val) => setState(() => _relationship = val),
           ),
-          items: kRelationshipOptions
-              .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-              .toList(),
-          onChanged: (val) => setState(() => _relationship = val),
-        ),
         if (_error != null) ...[
           const SizedBox(height: 8),
           Text(_error!, style: TextStyle(fontSize: 13, color: context.k.bad)),
         ],
-        const SizedBox(height: 20),
-        KButton(
-          label: _saving ? 'Đang lưu…' : 'Lưu thay đổi',
-          onPressed: canSave ? _save : null,
-        ),
       ],
     );
+
+    if (!widget.fullScreen) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          form,
+          const SizedBox(height: 20),
+          KButton(
+              label: _saving ? 'Đang lưu…' : 'Lưu thay đổi',
+              onPressed: canSave ? _save : null),
+        ],
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: context.k.canvas,
+      appBar: KAppBar(
+        title: 'Sửa thông tin liên hệ',
+        onBack: () => Navigator.maybePop(context),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          children: [
+            Text('Cập nhật thông tin để nhà trường liên lạc khi cần.',
+                style: TextStyle(
+                    fontSize: 14, height: 1.4, color: context.k.inkSoft)),
+            const SizedBox(height: 18),
+            form,
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              KButton(
+                  label: _saving ? 'Đang lưu…' : 'Lưu thay đổi',
+                  onPressed: canSave ? _save : null),
+              const SizedBox(height: 12),
+              KButton(
+                  label: 'Hủy',
+                  secondary: true,
+                  onPressed: () => Navigator.maybePop(context)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+}
+
+class _ParentRelationshipScreen extends StatelessWidget {
+  const _ParentRelationshipScreen({required this.childName, this.selected});
+
+  final String childName;
+  final String? selected;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: context.k.canvas,
+        appBar: KAppBar(
+            title: 'Quan hệ với bé', onBack: () => Navigator.maybePop(context)),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          children: [
+            Text('Chọn mối quan hệ của bạn với $childName.',
+                style: TextStyle(
+                    fontSize: 14, height: 1.4, color: context.k.inkSoft)),
+            const SizedBox(height: 14),
+            for (final relationship in kRelationshipOptions) ...[
+              KCard(
+                onTap: () => Navigator.pop(context, relationship),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(relationship)),
+                    if (relationship == selected)
+                      Icon(Icons.check_circle, color: context.k.brand)
+                    else
+                      Icon(Icons.circle_outlined, color: context.k.lineStrong),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ],
+        ),
+      );
 }

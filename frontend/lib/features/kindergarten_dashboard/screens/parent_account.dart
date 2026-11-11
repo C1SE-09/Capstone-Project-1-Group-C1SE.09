@@ -6,11 +6,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
+import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/core/utils/error_helper.dart';
+import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
@@ -21,12 +24,15 @@ import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_health_profile_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_child_edit_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/parent_profile_sheet.dart';
-export '../widgets/parent_profile_sheet.dart' show
-    kRelationshipOptions,
-    isValidParentPhone,
-    isValidParentEmail,
-    showParentProfileSheet;
+export '../widgets/parent_profile_sheet.dart'
+    show
+        kRelationshipOptions,
+        isValidParentPhone,
+        isValidParentEmail,
+        showParentProfileSheet;
 
 /// Khoá lưu lựa chọn nhận thông báo đẩy trên máy.
 const kParentPushPrefsKey = 'kinderlog-parent-push';
@@ -80,8 +86,10 @@ class ParentAccount extends StatefulWidget {
     this.onParentUpdated,
     this.onChildUpdated,
     this.repository,
+    this.medicationRepository,
     this.onLogout,
     this.onHealthUpdated,
+    this.onOpenNotifications,
   });
 
   final Parent parent;
@@ -89,11 +97,14 @@ class ParentAccount extends StatefulWidget {
   final List<DailyReport> reports;
   final ValueChanged<DailyReport> onOpenReport;
   final ValueChanged<String> onPhoneUpdated;
-  final void Function(String phone, String? email, String? relationship)? onParentUpdated;
+  final void Function(String phone, String? email, String? relationship)?
+      onParentUpdated;
   final ValueChanged<Child>? onChildUpdated;
   final HttpDashboardRepository? repository;
+  final HttpMedicationRepository? medicationRepository;
   final VoidCallback? onLogout;
   final ValueChanged<Child>? onHealthUpdated;
+  final VoidCallback? onOpenNotifications;
 
   @override
   State<ParentAccount> createState() => _ParentAccountState();
@@ -130,21 +141,66 @@ class _ParentAccountState extends State<ParentAccount> {
     // Firebase có thể chưa cấu hình (dev) — đăng ký/xoá token là fail-soft.
     try {
       final service = PushNotificationService.instance;
-      await (enabled ? service.registerCurrentDevice() : service.deleteCurrentDevice());
+      await (enabled
+          ? service.registerCurrentDevice()
+          : service.deleteCurrentDevice());
     } catch (_) {
       // Thiếu cấu hình Firebase thì bỏ qua, app vẫn chạy bình thường.
     }
   }
 
-  void _openProfileSheet() {
-    showParentProfileSheet(
+  void _openProfileSheet({
+    void Function(String phone, String? email, String? relationship)? onSaved,
+  }) {
+    showParentProfileEditScreen(
       context,
       parent: widget.parent,
+      childName: widget.overview.child.fullName,
       repository: widget.repository,
       onSaved: (phone, email, relationship) {
-        widget.onPhoneUpdated(phone);
-        widget.onParentUpdated?.call(phone, email, relationship);
+        if (widget.onParentUpdated != null) {
+          widget.onParentUpdated!(phone, email, relationship);
+        } else {
+          widget.onPhoneUpdated(phone);
+        }
+        onSaved?.call(phone, email, relationship);
       },
+    );
+  }
+
+  void _openContactScreen() {
+    Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => GardenVoiceScope(
+        child: ParentContactScreen(
+          parent: widget.parent,
+          childName: widget.overview.child.fullName,
+          onEdit: (onSaved) => _openProfileSheet(onSaved: onSaved),
+        ),
+      ),
+    ));
+  }
+
+  void _openThemeSelector() {
+    Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => const GardenVoiceScope(
+        child: Scaffold(body: ThemeSelector()),
+      ),
+    ));
+  }
+
+  void _openChildInfo() {
+    showKSheet<void>(
+      context,
+      GardenVoiceScope(
+        child: _ParentChildInfoSheet(
+          overview: widget.overview,
+          parentId: widget.parent.parentId,
+          repository: widget.repository,
+          medicationRepository: widget.medicationRepository,
+          onChildUpdated: widget.onChildUpdated,
+          onHealthUpdated: widget.onHealthUpdated,
+        ),
+      ),
     );
   }
 
@@ -164,12 +220,15 @@ class _ParentAccountState extends State<ParentAccount> {
       child: widget.overview.child,
       className: widget.overview.className,
       repository: widget.repository ?? HttpDashboardRepository(),
+      medicationRepository: widget.medicationRepository,
       onSaved: widget.onHealthUpdated,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (context.k.isGardenVoice) return _buildGardenVoiceAccount(context);
+
     final child = widget.overview.child;
     final parent = widget.parent;
     final relationship = parent.relationship?.trim();
@@ -213,15 +272,17 @@ class _ParentAccountState extends State<ParentAccount> {
                             padding: const EdgeInsets.only(top: 4),
                             child: Container(
                               key: const ValueKey('parent-relation-chip'),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 3),
                               decoration: BoxDecoration(
-                                // 14% trắng trên nền brand đậm: chữ trắng đạt ~5:1
-                                color: Colors.white.withValues(alpha: .14),
+                                // Làm nền tối hơn để chữ trắng luôn đạt tương phản AA.
+                                color: Colors.black.withValues(alpha: .14),
                                 borderRadius: BorderRadius.circular(99),
                               ),
                               child: Text(
                                 '$relationship của ${child.displayName}',
-                                style: const TextStyle(fontSize: 12, color: Colors.white),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.white),
                               ),
                             ),
                           ),
@@ -245,12 +306,14 @@ class _ParentAccountState extends State<ParentAccount> {
         ),
 
         // ── Nhận xét mới nhất của cô ───────────────────────────
-        if (latestReport != null && (latestReport.summaryText?.trim().isNotEmpty ?? false)) ...[
+        if (latestReport != null &&
+            (latestReport.summaryText?.trim().isNotEmpty ?? false)) ...[
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.only(left: 14),
             decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: context.k.brand, width: 3)),
+              border:
+                  Border(left: BorderSide(color: context.k.brand, width: 3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,7 +333,8 @@ class _ParentAccountState extends State<ParentAccount> {
                     Expanded(
                       child: Text(
                         '${widget.overview.teacherName} · ${kDateLabel(latestReport.reportDate)}',
-                        style: TextStyle(fontSize: 12, color: context.k.inkFaint),
+                        style:
+                            TextStyle(fontSize: 12, color: context.k.inkFaint),
                       ),
                     ),
                     TextButton(
@@ -299,7 +363,8 @@ class _ParentAccountState extends State<ParentAccount> {
                   value: parent.phone!.trim(),
                   showEditIcon: false,
                   onTap: () {
-                    Clipboard.setData(ClipboardData(text: parent.phone!.trim()));
+                    Clipboard.setData(
+                        ClipboardData(text: parent.phone!.trim()));
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Đã sao chép số điện thoại'),
@@ -318,7 +383,8 @@ class _ParentAccountState extends State<ParentAccount> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(
                   children: [
                     Avatar(name: child.fullName, size: 48),
@@ -329,14 +395,16 @@ class _ParentAccountState extends State<ParentAccount> {
                         children: [
                           Text(
                             child.fullName,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                           if ((child.nickname ?? '').trim().isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
                               child: Text(
                                 'Biệt danh: ${child.nickname!.trim()}',
-                                style: TextStyle(fontSize: 13, color: context.k.inkSoft),
+                                style: TextStyle(
+                                    fontSize: 13, color: context.k.inkSoft),
                               ),
                             ),
                         ],
@@ -374,7 +442,9 @@ class _ParentAccountState extends State<ParentAccount> {
                   value: formatGender(child.gender),
                 ),
               KInfoRow(label: 'Lớp', value: widget.overview.className),
-              KInfoRow(label: 'Giáo viên chủ nhiệm', value: widget.overview.teacherName),
+              KInfoRow(
+                  label: 'Giáo viên chủ nhiệm',
+                  value: widget.overview.teacherName),
               if (child.allergy != null)
                 KInfoRow(
                   label: 'Dị ứng',
@@ -405,7 +475,8 @@ class _ParentAccountState extends State<ParentAccount> {
                 context,
                 icon: Icons.lock_outline_rounded,
                 label: 'Đổi mật khẩu',
-                trailing: Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+                trailing: Icon(Icons.chevron_right,
+                    size: 18, color: context.k.inkFaint),
                 onTap: () => showChangePasswordBottomSheet(context),
               ),
               const Divider(height: 1),
@@ -413,7 +484,8 @@ class _ParentAccountState extends State<ParentAccount> {
                 context,
                 icon: Icons.rate_review_outlined,
                 label: 'Góp ý & Cải thiện ứng dụng',
-                trailing: Icon(Icons.chevron_right, size: 18, color: context.k.inkFaint),
+                trailing: Icon(Icons.chevron_right,
+                    size: 18, color: context.k.inkFaint),
                 onTap: () => showBugReportBottomSheet(context),
               ),
               const Divider(height: 1),
@@ -431,7 +503,8 @@ class _ParentAccountState extends State<ParentAccount> {
                 context,
                 icon: Icons.info_outline,
                 label: 'Về KinderLog',
-                trailing: Text('v1.0.0', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                trailing: Text('v1.0.0',
+                    style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
               ),
             ],
           ),
@@ -444,19 +517,329 @@ class _ParentAccountState extends State<ParentAccount> {
           secondary: true,
           onPressed: widget.onLogout == null
               ? null
-              : () => showParentLogoutSheet(context, onLogout: widget.onLogout!),
+              : () =>
+                  showParentLogoutSheet(context, onLogout: widget.onLogout!),
         ),
       ],
     );
   }
 
+  Widget _buildGardenVoiceAccount(BuildContext context) {
+    final k = context.k;
+    final parent = widget.parent;
+    final child = widget.overview.child;
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 16;
+
+    return ColoredBox(
+      color: k.canvas,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Tài khoản',
+                  style: TextStyle(
+                    fontSize: 24,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: k.ink,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Thông báo',
+                onPressed: widget.onOpenNotifications,
+                icon: Container(
+                  width: 46,
+                  height: 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: k.brandTint,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/garden_voice/account_bell.svg',
+                    width: 24,
+                    height: 24,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(
+            height: largeText ? 160 : 126,
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -16,
+                  bottom: 0,
+                  width: 190,
+                  height: 92,
+                  child: IgnorePointer(
+                    child: Image.asset(
+                      'assets/garden_voice/books_v2.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  top: 4,
+                  bottom: 22,
+                  right: 60,
+                  child: Row(
+                    children: [
+                      Avatar(name: parent.fullName, size: 68),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              parent.fullName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 18,
+                                height: 1.3,
+                                fontWeight: FontWeight.w700,
+                                color: k.ink,
+                              ),
+                            ),
+                            Text(
+                              'Phụ huynh bé ${child.displayName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: k.inkSoft,
+                              ),
+                            ),
+                            if (parent.createdAt != null)
+                              Text(
+                                '${parentJourneyDays(parent.createdAt)} ngày đồng hành cùng KinderLog',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w500,
+                                  color: k.brand,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _accountSectionTitle(context, 'Gia đình'),
+          Column(
+            children: [
+              _accountMenuRow(
+                key: const ValueKey('parent-contact-menu'),
+                icon: 'assets/garden_voice/account_phone.svg',
+                label: 'Thông tin liên hệ',
+                onTap: _openContactScreen,
+              ),
+              _accountMenuRow(
+                key: const ValueKey('parent-child-menu'),
+                icon: 'assets/garden_voice/account_heart.svg',
+                label: 'Thông tin bé · Hồ sơ sức khỏe',
+                subtitle: 'Dị ứng và lưu ý chăm sóc',
+                onTap: _openChildInfo,
+              ),
+            ],
+          ),
+          _accountSectionTitle(context, 'Tùy chọn'),
+          Column(
+            children: [
+              _accountMenuRow(
+                icon: 'assets/garden_voice/account_bell.svg',
+                label: 'Thông báo đẩy',
+                subtitle: _pushEnabled
+                    ? 'Đã bật trên thiết bị'
+                    : 'Đã tắt trên thiết bị',
+                trailing: Switch(value: _pushEnabled, onChanged: _setPush),
+              ),
+              ValueListenableBuilder<ThemeMode>(
+                valueListenable: ThemeController.instance,
+                builder: (context, mode, _) => _accountMenuRow(
+                  icon: 'assets/garden_voice/account_moon.svg',
+                  label: 'Giao diện',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: k.okTint,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          switch (mode) {
+                            ThemeMode.light => 'Sáng',
+                            ThemeMode.dark => 'Tối',
+                            ThemeMode.system => 'Theo máy',
+                          },
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: k.ok,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SvgPicture.asset(
+                        'assets/garden_voice/account_chevron_right.svg',
+                        width: 18,
+                        height: 18,
+                      ),
+                    ],
+                  ),
+                  onTap: _openThemeSelector,
+                ),
+              ),
+            ],
+          ),
+          _accountSectionTitle(context, 'Cài đặt & hỗ trợ'),
+          Column(
+            children: [
+              _accountMenuRow(
+                icon: 'assets/garden_voice/account_lock.svg',
+                label: 'Đổi mật khẩu',
+                onTap: () => showChangePasswordBottomSheet(context),
+              ),
+              _accountMenuRow(
+                icon: 'assets/garden_voice/account_bug.svg',
+                label: 'Báo lỗi & góp ý',
+                onTap: () => showBugReportBottomSheet(context),
+              ),
+              _accountMenuRow(
+                icon: 'assets/garden_voice/account_info.svg',
+                label: 'Về KinderLog',
+                subtitle: 'Phiên bản 1.0.0',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: widget.onLogout == null
+                ? null
+                : () =>
+                    showParentLogoutSheet(context, onLogout: widget.onLogout!),
+            style: TextButton.styleFrom(
+              alignment: Alignment.centerLeft,
+              foregroundColor: k.badText,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            ),
+            icon: SvgPicture.asset('assets/garden_voice/account_logout.svg'),
+            label: const Text('Đăng xuất'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _accountSectionTitle(BuildContext context, String title) => Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 4),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            height: 1.4,
+            fontWeight: FontWeight.w700,
+            color: context.k.ink,
+          ),
+        ),
+      );
+
+  Widget _accountMenuRow({
+    Key? key,
+    required String icon,
+    required String label,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    final k = context.k;
+    final iconTint = switch (icon) {
+      'assets/garden_voice/account_heart.svg' => k.badTint,
+      'assets/garden_voice/account_moon.svg' => k.sleepRowTint,
+      'assets/garden_voice/account_lock.svg' => k.accentTint,
+      'assets/garden_voice/account_bug.svg' => k.badTint,
+      _ => k.brandTint,
+    };
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: iconTint,
+              shape: BoxShape.circle,
+            ),
+            child: SvgPicture.asset(icon, width: 20, height: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 16,
+                        height: 1.4,
+                        fontWeight: FontWeight.w700,
+                        color: k.ink)),
+                if (subtitle != null)
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12, height: 1.4, color: k.inkSoft)),
+              ],
+            ),
+          ),
+          trailing ??
+              SvgPicture.asset(
+                'assets/garden_voice/account_chevron_right.svg',
+                width: 18,
+                height: 18,
+              ),
+        ],
+      ),
+    );
+    return Column(
+      key: key,
+      children: [
+        if (onTap == null)
+          content
+        else
+          Semantics(button: true, child: InkWell(onTap: onTap, child: content)),
+        Divider(height: 1, color: k.line),
+      ],
+    );
+  }
+
   Widget _sectionTitle(BuildContext context, String title) => Padding(
-    padding: const EdgeInsets.only(top: 24, bottom: 10),
-    child: Text(
-      title,
-      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink),
-    ),
-  );
+        padding: const EdgeInsets.only(top: 24, bottom: 10),
+        child: Text(
+          title,
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink),
+        ),
+      );
 
   Widget _settingsRow(
     BuildContext context, {
@@ -478,7 +861,9 @@ class _ParentAccountState extends State<ParentAccount> {
               children: [
                 Text(label, style: const TextStyle(fontSize: 14)),
                 if (subtitle != null)
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                  Text(subtitle,
+                      style:
+                          TextStyle(fontSize: 12, color: context.k.inkFaint)),
               ],
             ),
           ),
@@ -488,6 +873,379 @@ class _ParentAccountState extends State<ParentAccount> {
     );
     if (onTap == null) return row;
     return InkWell(onTap: onTap, child: row);
+  }
+}
+
+class ParentContactScreen extends StatefulWidget {
+  const ParentContactScreen({
+    super.key,
+    required this.parent,
+    required this.childName,
+    required this.onEdit,
+  });
+
+  final Parent parent;
+  final String childName;
+  final void Function(
+    void Function(String phone, String? email, String? relationship) onSaved,
+  ) onEdit;
+
+  @override
+  State<ParentContactScreen> createState() => _ParentContactScreenState();
+}
+
+class _ParentContactScreenState extends State<ParentContactScreen> {
+  late String? _phone = widget.parent.phone;
+  late String? _email = widget.parent.email;
+  late String? _relationship = widget.parent.relationship;
+
+  void _edit() => widget.onEdit((phone, email, relationship) {
+        setState(() {
+          _phone = phone;
+          _email = email;
+          _relationship = relationship;
+        });
+      });
+
+  String _maskedEmail(String? value) {
+    final email = value?.trim() ?? '';
+    final at = email.indexOf('@');
+    return at < 0
+        ? (email.isEmpty ? 'Chưa cập nhật' : email)
+        : '${email.substring(0, at)}@…';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final phone = _phone?.trim() ?? '';
+    return Scaffold(
+      backgroundColor: context.k.canvas,
+      appBar: KAppBar(
+          title: 'Thông tin liên hệ',
+          onBack: () => Navigator.maybePop(context)),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          children: [
+            Text(
+              'Tài khoản phụ huynh của bé ${widget.childName}',
+              style: TextStyle(
+                  fontSize: 14, height: 1.4, color: context.k.inkSoft),
+            ),
+            const SizedBox(height: 14),
+            _contactCard(context, 'Họ và tên', widget.parent.fullName),
+            const SizedBox(height: 14),
+            Semantics(
+              button: phoneCallUri(phone) != null,
+              label: 'Sao chép số điện thoại',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: phoneCallUri(phone) == null
+                    ? null
+                    : () {
+                        Clipboard.setData(ClipboardData(text: phone));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Đã sao chép số điện thoại')),
+                        );
+                      },
+                child: _contactCard(
+                  context,
+                  'Số điện thoại',
+                  phone.isEmpty ? 'Chưa cập nhật' : maskedPhone(phone),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _contactCard(context, 'Email', _maskedEmail(_email)),
+            const SizedBox(height: 14),
+            _contactCard(
+              context,
+              'Quan hệ với bé',
+              _relationship?.trim().isNotEmpty == true
+                  ? _relationship!.trim()
+                  : 'Chưa cập nhật',
+            ),
+            const SizedBox(height: 14),
+            KButton(label: 'Chỉnh sửa thông tin', onPressed: _edit),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _contactCard(BuildContext context, String label, String value) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        decoration: BoxDecoration(
+          color: context.k.surfaceSunken,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.brand)),
+            const SizedBox(height: 2),
+            Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    TextStyle(fontSize: 16, height: 1.4, color: context.k.ink)),
+          ],
+        ),
+      );
+}
+
+class _ParentChildInfoSheet extends StatefulWidget {
+  const _ParentChildInfoSheet({
+    required this.overview,
+    required this.parentId,
+    required this.repository,
+    required this.medicationRepository,
+    required this.onChildUpdated,
+    required this.onHealthUpdated,
+  });
+
+  final ChildOverview overview;
+  final String parentId;
+  final HttpDashboardRepository? repository;
+  final HttpMedicationRepository? medicationRepository;
+  final ValueChanged<Child>? onChildUpdated;
+  final ValueChanged<Child>? onHealthUpdated;
+
+  @override
+  State<_ParentChildInfoSheet> createState() => _ParentChildInfoSheetState();
+}
+
+class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
+  late Child _child = widget.overview.child;
+
+  void _editChild() {
+    showParentChildEditScreen(
+      context,
+      child: _child,
+      parentId: widget.parentId,
+      repository: widget.repository,
+      onSaved: (updated) {
+        if (!mounted) return;
+        setState(() => _child = updated);
+        widget.onChildUpdated?.call(updated);
+      },
+    );
+  }
+
+  String _initials(String name) {
+    final words =
+        name.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+    return words
+        .toList()
+        .reversed
+        .take(2)
+        .toList()
+        .reversed
+        .map((word) => String.fromCharCode(word.runes.first))
+        .join()
+        .toUpperCase();
+  }
+
+  String _healthSummary(Child child) => switch (child.allergyStatus) {
+        'present' => (child.medicalAllergies ?? '').trim().isNotEmpty
+            ? 'Dị ứng · ${(child.medicalAllergies ?? '').trim()}'
+            : 'Có dị ứng',
+        'none' => 'Không ghi nhận dị ứng',
+        _ => 'Chưa khai báo dị ứng',
+      };
+
+  Future<void> _callTeacher(BuildContext context) async {
+    final phone = phoneCallUri(widget.overview.teacherPhone ?? '');
+    if (phone == null) return;
+    try {
+      if (await launchUrl(phone, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      // Giữ số liên hệ trong hồ sơ nếu thiết bị không mở được ứng dụng gọi.
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không mở được ứng dụng gọi điện.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = _child;
+    final overview = widget.overview;
+    final phoneAvailable = phoneCallUri(overview.teacherPhone ?? '') != null;
+    final dateOfBirth = child.dateOfBirth;
+    return ConstrainedBox(
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .85),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Thông tin bé',
+                    style: TextStyle(
+                        fontSize: 16,
+                        height: 1.4,
+                        fontWeight: FontWeight.w700,
+                        color: context.k.ink)),
+              ),
+              IconButton(
+                tooltip: 'Chỉnh sửa thông tin bé',
+                onPressed: _editChild,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+              IconButton(
+                tooltip: 'Đóng',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: context.k.brandTint,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: context.k.brand,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Text(
+                            _initials(child.fullName),
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: context.k.surface),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(child.fullName,
+                            style: TextStyle(
+                                fontSize: 16,
+                                height: 1.4,
+                                fontWeight: FontWeight.w700,
+                                color: context.k.ink)),
+                        Text(
+                          [
+                            if ((child.nickname ?? '').trim().isNotEmpty)
+                              'Biệt danh: ${child.nickname!.trim()}',
+                            if (overview.className.trim().isNotEmpty)
+                              'Lớp ${overview.className.trim()}',
+                          ].join(' · '),
+                          style: TextStyle(
+                              fontSize: 12,
+                              height: 1.4,
+                              color: context.k.inkSoft),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.k.reviewSurface,
+                      border: Border.all(color: context.k.lineStrong),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        if (dateOfBirth != null)
+                          KInfoRow(
+                            label: 'Ngày sinh',
+                            value:
+                                '${kDateLabel(dateOfBirth)}${formatChildAge(dateOfBirth).isEmpty ? '' : ' · ${formatChildAge(dateOfBirth)}'}',
+                          ),
+                        if (overview.teacherName.trim().isNotEmpty)
+                          KInfoRow(
+                              label: 'Giáo viên chủ nhiệm',
+                              value: overview.teacherName),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  KCard(
+                    color: context.k.accentTint,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    onTap: () => showParentHealthProfile(
+                      context,
+                      child: child,
+                      className: overview.className,
+                      repository:
+                          widget.repository ?? HttpDashboardRepository(),
+                      medicationRepository: widget.medicationRepository,
+                      onSaved: (updated) {
+                        if (!mounted) return;
+                        setState(() => _child = updated);
+                        widget.onHealthUpdated?.call(updated);
+                      },
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Hồ sơ sức khỏe',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w700,
+                                      color: context.k.ink)),
+                              Text(_healthSummary(child),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 12, color: context.k.inkSoft)),
+                            ],
+                          ),
+                        ),
+                        Text('Xem ›',
+                            style: TextStyle(
+                                fontSize: 12, color: context.k.accentDeep)),
+                      ],
+                    ),
+                  ),
+                  if (phoneAvailable) ...[
+                    const SizedBox(height: 12),
+                    KButton(
+                      label: 'Gọi giáo viên chủ nhiệm',
+                      onPressed: () => _callTeacher(context),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -506,321 +1264,21 @@ Future<void> showParentPhoneSheet(
   );
 }
 
-/// Sheet chỉnh sửa thông tin của bé (họ tên, biệt danh, ngày sinh, giới tính, dị ứng).
+/// Giữ tương thích tên gọi cũ; trình sửa bé hiện mở thành trang riêng.
 Future<void> showParentChildEditSheet(
   BuildContext context, {
   required Child child,
   required String parentId,
   required HttpDashboardRepository? repository,
   required ValueChanged<Child> onSaved,
-}) {
-  return showKSheet(
-    context,
-    _ParentChildEditSheetBody(
+}) =>
+    showParentChildEditScreen(
+      context,
       child: child,
       parentId: parentId,
       repository: repository,
       onSaved: onSaved,
-    ),
-  );
-}
-
-class _ParentChildEditSheetBody extends StatefulWidget {
-  const _ParentChildEditSheetBody({
-    required this.child,
-    required this.parentId,
-    required this.repository,
-    required this.onSaved,
-  });
-
-  final Child child;
-  final String parentId;
-  final HttpDashboardRepository? repository;
-  final ValueChanged<Child> onSaved;
-
-  @override
-  State<_ParentChildEditSheetBody> createState() => _ParentChildEditSheetBodyState();
-}
-
-class _ParentChildEditSheetBodyState extends State<_ParentChildEditSheetBody> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _nicknameController;
-  late final TextEditingController _allergyController;
-  DateTime? _selectedDob;
-  String _selectedGender = 'male';
-  bool _saving = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.child.fullName);
-    _nicknameController = TextEditingController(text: widget.child.nickname ?? '');
-    _allergyController = TextEditingController(text: widget.child.medicalAllergies ?? '');
-    _selectedDob = widget.child.dateOfBirth;
-    final g = (widget.child.gender ?? '').trim().toLowerCase();
-    _selectedGender = (g == 'female' || g == 'nữ' || g == 'nu') ? 'female' : 'male';
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _nicknameController.dispose();
-    _allergyController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDob ?? DateTime(now.year - 3, now.month, now.day),
-      firstDate: DateTime(2015),
-      lastDate: now,
-      helpText: 'Chọn ngày sinh của bé',
-      cancelText: 'Hủy',
-      confirmText: 'Chọn',
     );
-    if (picked != null) {
-      setState(() => _selectedDob = picked);
-    }
-  }
-
-  Future<void> _save() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      setState(() => _error = 'Họ và tên của bé không được để trống.');
-      return;
-    }
-
-    if (_selectedDob != null && _selectedDob!.isAfter(DateTime.now())) {
-      setState(() => _error = 'Ngày sinh của bé không thể là ngày trong tương lai.');
-      return;
-    }
-
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-
-    try {
-      final updated = await widget.repository?.updateChildInfo(
-        parentId: widget.parentId,
-        childId: widget.child.childId,
-        fullName: name,
-        nickname: _nicknameController.text.trim().isEmpty ? null : _nicknameController.text.trim(),
-        dateOfBirth: _selectedDob,
-        gender: _selectedGender,
-        medicalAllergies: _allergyController.text.trim().isEmpty ? null : _allergyController.text.trim(),
-      );
-
-      if (!mounted) return;
-      if (updated != null) {
-        widget.onSaved(updated);
-      }
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật thông tin của bé thành công')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = getFriendlyErrorMessage(
-          e,
-          fallback: 'Không thể lưu thông tin của bé. Vui lòng thử lại sau.',
-        );
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Chỉnh sửa thông tin bé',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Họ và tên
-            TextField(
-              controller: _nameController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Họ và tên của bé *',
-                hintText: 'Ví dụ: Nguyễn Minh An',
-                prefixIcon: Icon(Icons.person_outline),
-              ),
-              onChanged: (_) => setState(() => _error = null),
-            ),
-            const SizedBox(height: 14),
-
-            // Biệt danh
-            TextField(
-              controller: _nicknameController,
-              decoration: const InputDecoration(
-                labelText: 'Tên gọi ở nhà (Biệt danh)',
-                hintText: 'Ví dụ: Bơ, Sóc, Bon...',
-                prefixIcon: Icon(Icons.favorite_outline),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Ngày sinh
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(KRadii.control),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Ngày sinh của bé',
-                  prefixIcon: Icon(Icons.cake_outlined),
-                  suffixIcon: Icon(Icons.calendar_today_outlined, size: 20),
-                ),
-                child: Text(
-                  _selectedDob != null
-                      ? '${kDateLabel(_selectedDob!)} (${formatChildAge(_selectedDob!)})'
-                      : 'Chọn ngày sinh',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _selectedDob != null ? context.k.ink : context.k.inkFaint,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Giới tính
-            Text(
-              'Giới tính',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _GenderOption(
-                    label: 'Bé trai (Nam)',
-                    icon: Icons.male_rounded,
-                    isSelected: _selectedGender == 'male',
-                    onTap: () => setState(() => _selectedGender = 'male'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _GenderOption(
-                    label: 'Bé gái (Nữ)',
-                    icon: Icons.female_rounded,
-                    isSelected: _selectedGender == 'female',
-                    onTap: () => setState(() => _selectedGender = 'female'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // Dị ứng & Lưu ý sức khỏe
-            TextField(
-              controller: _allergyController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Dị ứng & Lưu ý sức khỏe',
-                hintText: 'Ghi chú các dị ứng đồ ăn, phấn hoa, thuốc hoặc dặn dò cho cô...',
-                alignLabelWithHint: true,
-                prefixIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 40),
-                  child: Icon(Icons.healing_outlined),
-                ),
-              ),
-            ),
-
-            if (_error != null) ...[
-              const SizedBox(height: 10),
-              Text(_error!, style: TextStyle(fontSize: 13, color: context.k.bad)),
-            ],
-
-            const SizedBox(height: 24),
-            KButton(
-              label: _saving ? 'Đang lưu thông tin…' : 'Lưu thay đổi',
-              icon: Icons.save_outlined,
-              onPressed: _saving ? null : _save,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GenderOption extends StatelessWidget {
-  const _GenderOption({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(KRadii.control),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? context.k.brand.withValues(alpha: .08) : context.k.surface,
-          borderRadius: BorderRadius.circular(KRadii.control),
-          border: Border.all(
-            color: isSelected ? context.k.brand : context.k.line,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? context.k.brand : context.k.inkSoft,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? context.k.brand : context.k.ink,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// Sheet xác nhận đăng xuất ("Ở lại" / "Đăng xuất").
 Future<void> showParentLogoutSheet(
@@ -833,7 +1291,8 @@ Future<void> showParentLogoutSheet(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Bạn có muốn đăng xuất không ?', style: Theme.of(context).textTheme.titleMedium),
+        Text('Bạn có muốn đăng xuất không ?',
+            style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 20),
         Row(
           children: [

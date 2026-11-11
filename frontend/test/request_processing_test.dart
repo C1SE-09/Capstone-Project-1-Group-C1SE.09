@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
+import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_detail_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
 import 'package:flutter/material.dart';
@@ -38,29 +39,31 @@ void main() {
     final transport = RequestTransport((_) => jsonBody({
           'pending_count': 1,
           'reviewed_count': 0,
-          'items': [
-            {
-              ...requestJson(),
-              'reason':
-                  List.filled(25, 'Gia đình xin phép cho bé nghỉ.').join(' ')
-            }
-          ]
-        }));
+        'items': [
+          {
+            ...requestJson(),
+            'reason': List.filled(25, 'Gia đình xin phép cho bé nghỉ.').join(' ')
+          }
+        ]
+      }));
     await tester.pumpWidget(app(
         LeaveRequestReviewScreen(
             classId: 'class-1',
             className: 'Lớp minh họa dài',
-            repository: repo(transport)),
+            repository: repo(transport),
+            initialRequest: LeaveRequestEntity.fromJson({
+              ...requestJson(),
+              'reason':
+                  List.filled(25, 'Gia đình xin phép cho bé nghỉ.').join(' ')
+            })),
         dark: true,
         textScale: 2));
     await tester.pumpAndSettle();
-    final tabLabel = find.text('Chờ duyệt');
+    final tabLabel = find.textContaining('Chờ duyệt');
     final paragraph = tester.renderObject<RenderParagraph>(tabLabel);
     expect(tester.getSize(tabLabel).width,
         greaterThanOrEqualTo(paragraph.getMaxIntrinsicWidth(double.infinity)));
-    await tester.scrollUntilVisible(find.text('Từ chối'), 200,
-        scrollable: find.byType(Scrollable).last);
-    await tapVisible(tester, find.text('Từ chối'));
+    await tapVisible(tester, find.widgetWithText(OutlinedButton, 'Từ chối'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Bổ sung thông tin');
     await tester.ensureVisible(find.text('Gửi từ chối'));
@@ -126,6 +129,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Đã hủy đơn'), findsNothing);
     expect(find.textContaining('hãy tải lại'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Hủy đơn này'), 200,
+        scrollable: find.byType(Scrollable).last);
+    expect(find.text('Hủy đơn này'), findsOneWidget);
+    expect(
+        tester
+            .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Hủy đơn này'))
+            .onPressed,
+        isNull);
     expect(transport.requests.where((r) => r.method == 'POST'), hasLength(1));
   });
   test(
@@ -206,6 +218,9 @@ void main() {
     await tapVisible(tester, find.text('Hủy đơn'));
     await tester.pumpAndSettle();
     expect(find.text('Đã hủy đơn'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Hủy đơn này'), 200,
+        scrollable: find.byType(Scrollable).last);
+    expect(find.text('Hủy đơn này'), findsOneWidget);
     expect(
         tester
             .widget<FilledButton>(
@@ -230,9 +245,12 @@ void main() {
       });
     });
     await tester.pumpWidget(app(LeaveRequestReviewScreen(
-        classId: 'class-1', className: 'Mầm 1', repository: repo(transport))));
+        classId: 'class-1',
+        className: 'Mầm 1',
+        repository: repo(transport),
+        initialRequest: LeaveRequestEntity.fromJson(requestJson()))));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Từ chối'));
+    await tapVisible(tester, find.widgetWithText(OutlinedButton, 'Từ chối'));
     await tester.enterText(find.byType(TextField), 'x');
     await tester.pump();
     expect(
@@ -245,7 +263,8 @@ void main() {
         find.byType(TextField), 'Vui lòng bổ sung thông tin');
     await tapVisible(tester, find.text('Gửi từ chối'));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Từ chối'));
+    await tester.pump(const Duration(seconds: 5));
+    await tapVisible(tester, find.widgetWithText(OutlinedButton, 'Từ chối'));
     expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
         'Vui lòng bổ sung thông tin');
     expect(transport.requests.where((r) => r.method == 'POST'), hasLength(1));

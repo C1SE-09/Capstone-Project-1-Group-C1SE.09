@@ -21,6 +21,7 @@ from app.services.attendance_sync_service import cancel_leave_request as cancel_
 from app.services.attendance_sync_service import cancellation_metadata
 from app.services.leave_request_attachments import MAX_IMAGE_BYTES, read_attachment, save_attachment
 from app.services.leave_request_service import create_request, create_requests, require_parent, review_request, verify_class_access
+from app.tasks.notifications import send_leave_request_notifications
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/leave-requests", tags=["leave-requests"])
@@ -162,6 +163,7 @@ def approve_leave_request(
 ):
     req, synced = review_request(db, request_id, current_user, LeaveRequestStatus.APPROVED)
     logger.info("Duyệt đơn: id=%s", req.leave_id)
+    _queue_review_notification(req)
     return LeaveRequestReviewResponse(**_to_response_dto(req, current_user).model_dump(), success=True,
         message="Đã duyệt đơn xin phép", synced_attendance_count=synced)
 
@@ -173,8 +175,16 @@ def reject_leave_request(
 ):
     req, _ = review_request(db, request_id, current_user, LeaveRequestStatus.REJECTED, reject_reason=payload.reason)
     logger.info("Từ chối đơn: id=%s", req.leave_id)
+    _queue_review_notification(req)
     return LeaveRequestReviewResponse(**_to_response_dto(req, current_user).model_dump(), success=True,
         message="Đã từ chối đơn", synced_attendance_count=0)
+
+
+def _queue_review_notification(req: LeaveRequest) -> None:
+    try:
+        send_leave_request_notifications.delay(str(req.leave_id))
+    except Exception:
+        logger.exception("Không thể xếp hàng thông báo đơn: id=%s", req.leave_id)
 
 
 @router.post("/{request_id}/cancel", response_model=LeaveRequestCancelResponse)

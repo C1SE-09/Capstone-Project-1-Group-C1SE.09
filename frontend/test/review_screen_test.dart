@@ -4,10 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/domain/entities/child/child.dart' as domain_child;
+import 'package:adark_frontend/domain/entities/child/child.dart'
+    as domain_child;
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
-import 'package:adark_frontend/domain/entities/auth/teacher.dart' as domain_teacher;
+import 'package:adark_frontend/domain/entities/auth/teacher.dart'
+    as domain_teacher;
 
 class MockDashboardRepository extends HttpDashboardRepository {
   @override
@@ -33,7 +35,8 @@ class MockDashboardRepository extends HttpDashboardRepository {
   }
 
   @override
-  Future<ClassDashboardSummary> getClassDashboard(String classId, DateTime date) async {
+  Future<ClassDashboardSummary> getClassDashboard(
+      String classId, DateTime date) async {
     return const ClassDashboardSummary(
       classInfo: ClassInfo(
         classId: 'class-1',
@@ -61,13 +64,15 @@ class MockDashboardRepository extends HttpDashboardRepository {
 }
 
 void main() {
-  testWidgets('ReviewScreen handles integer unmatched_segments from backend without crashing',
+  testWidgets(
+      'ReviewScreen handles integer unmatched_segments from backend without crashing',
       (WidgetTester tester) async {
     // Backend returns integer count for unmatched_segments, e.g. "unmatched_segments": 0
     final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.',
       rawJson: {
-        'unmatched_segments': 0, // Integer from backend that previously caused type cast error
+        'unmatched_segments':
+            0, // Integer from backend that previously caused type cast error
         'child_extractions': {
           'child-1': {
             'meals': 'Ăn hết 2 bát cơm',
@@ -114,16 +119,20 @@ void main() {
     expect(find.text('Không tải được danh sách trẻ · Thử lại'), findsNothing);
 
     // Verify header and child observation items are rendered
-    expect(find.text('Xem lại & tách theo bé'), findsOneWidget);
+    expect(find.text('Xem lại báo cáo'), findsOneWidget);
+    expect(find.text('Bước 3/3 · Xem lại'), findsOneWidget);
     expect(find.text('Bé Nguyễn Văn A'), findsOneWidget);
     expect(find.text('Bé Trần Thị B'), findsOneWidget);
     expect(find.textContaining('Ăn hết 2 bát cơm'), findsOneWidget);
+    expect(tester.widget<CounterPill>(find.byType(CounterPill)).total, 2);
 
     // Verify Analyzed Text card is rendered
-    expect(find.text('Xem lại text đã phân tích'), findsOneWidget);
+    expect(find.text('Văn bản đã phân tích'), findsOneWidget);
+    expect(find.text('Đã tách 2 bé'), findsOneWidget);
   });
 
-  testWidgets('ReviewScreen expands analyzed text and shows unapprove button after approve',
+  testWidgets(
+      'ReviewScreen expands analyzed text and shows unapprove button after approve',
       (WidgetTester tester) async {
     final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.',
@@ -163,15 +172,23 @@ void main() {
     await tester.pumpAndSettle();
 
     // 1. Check Analyzed Text Card
-    expect(find.text('Xem lại text đã phân tích'), findsOneWidget);
-    await tester.tap(find.text('Xem lại text đã phân tích'));
+    expect(find.text('Văn bản đã phân tích'), findsOneWidget);
+    expect(find.text('Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.'),
+        findsOneWidget);
+    await tester.tap(find.text('Văn bản đã phân tích'));
     await tester.pumpAndSettle();
-    expect(find.text('Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.'), findsOneWidget);
+    expect(find.text('Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.'),
+        findsNothing);
+    await tester.tap(find.text('Văn bản đã phân tích'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hôm nay các bé ăn cơm ngoan, ngủ trưa đúng giờ.'),
+        findsOneWidget);
 
     // 2. Check initial Duyệt button and Send button disabled
     expect(find.text('Duyệt'), findsOneWidget);
     expect(find.text('Chưa duyệt mục nào để gửi'), findsOneWidget);
-    final initialButton = tester.widget<FilledButton>(find.byType(FilledButton).last);
+    final initialButton =
+        tester.widget<FilledButton>(find.byType(FilledButton).last);
     expect(initialButton.onPressed, isNull);
 
     // Tap Duyệt
@@ -182,9 +199,10 @@ void main() {
     // 3. Now it should show both "Đã duyệt" and "Bỏ duyệt", send button enabled
     expect(find.text('Đã duyệt'), findsWidgets);
     expect(find.text('Bỏ duyệt'), findsOneWidget);
-    expect(find.text('Bỏ duyệt tất cả'), findsOneWidget);
-    expect(find.text('Gửi 1 báo cáo cho phụ huynh'), findsOneWidget);
-    final approvedButton = tester.widget<FilledButton>(find.byType(FilledButton).last);
+    expect(find.text('Bỏ duyệt tất cả'), findsNothing);
+    expect(find.text('Hoàn thành'), findsOneWidget);
+    final approvedButton =
+        tester.widget<FilledButton>(find.byType(FilledButton).last);
     expect(approvedButton.onPressed, isNotNull);
 
     // Tap Bỏ duyệt
@@ -196,18 +214,20 @@ void main() {
     expect(find.text('Duyệt'), findsOneWidget);
     expect(find.text('Bỏ duyệt'), findsNothing);
     expect(find.text('Chưa duyệt mục nào để gửi'), findsOneWidget);
-    final unapprovedButton = tester.widget<FilledButton>(find.byType(FilledButton).last);
+    final unapprovedButton =
+        tester.widget<FilledButton>(find.byType(FilledButton).last);
     expect(unapprovedButton.onPressed, isNull);
     expect(mockTeacher.deletedReportIds, contains('draft-123'));
   });
 
-  testWidgets('ReviewScreen allows editing observation content via edit sheet',
+  testWidgets('ReviewScreen opens full-screen edit form and saves content',
       (WidgetTester tester) async {
     final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan.',
       childExtractions: {
         'child-1': {
           'meals': 'Ăn hết 2 bát cơm',
+          'sleeping': 'Ngủ từ 12:00 đến 13:45, ngủ ngon, không quấy khóc.',
         },
       },
     );
@@ -242,7 +262,25 @@ void main() {
     await tester.tap(find.text('Chỉnh sửa'));
     await tester.pumpAndSettle();
 
-    // Verify modal bottom sheet is open
+    expect(find.text('Chỉnh sửa báo cáo'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('Thời lượng (phút)'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(
+              find.byKey(const ValueKey('sleep-duration-minutes')))
+          .controller
+          ?.text,
+      '105',
+    );
+    expect(
+      tester
+          .widget<TextField>(
+              find.byKey(const ValueKey('sleep-duration-minutes')))
+          .controller
+          ?.text,
+      '105',
+    );
     expect(find.text('Lưu thay đổi'), findsOneWidget);
     expect(find.textContaining('/500 ký tự'), findsOneWidget);
 
@@ -252,9 +290,94 @@ void main() {
 
     // Verify modal is closed
     expect(find.text('Lưu thay đổi'), findsNothing);
+    expect(find.textContaining('105 phút'), findsOneWidget);
   });
 
-  testWidgets('ReviewScreen does not display missing fields and leaves note empty',
+  testWidgets('assigning an unmatched segment leaves it pending for review',
+      (tester) async {
+    final extraction = const ExtractionData(
+      transcript: 'Hôm nay Minh An ăn cơm. Chiều bé vẽ tranh mùa thu.',
+      childExtractions: {
+        'child-1': {'meals': 'Ăn cơm ngoan'},
+      },
+      rawJson: {
+        'unmatched_segments': [
+          {
+            'text': 'Chiều bé vẽ tranh mùa thu.',
+            'extraction': {'activities': 'Vẽ tranh mùa thu'},
+          },
+        ],
+      },
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: ReviewScreen(
+        classId: 'class-1',
+        className: 'Lớp Mầm A',
+        extraction: extraction,
+        repository: MockDashboardRepository(),
+        teacherRepository: MockTeacherRepo(),
+        onBack: () {},
+        onCompleted: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Chưa xác định bé'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Gán đoạn này'));
+    await tester.tap(find.text('Gán đoạn này'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gán đoạn ghi'), findsOneWidget);
+    expect(find.text('Cả lớp Mầm A'), findsOneWidget);
+    await tester.tap(find.text('Bé Nguyễn Văn A').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Đã duyệt'), findsNothing);
+    expect(find.text('Duyệt'), findsNWidgets(2));
+    expect(find.text('Chưa duyệt mục nào để gửi'), findsOneWidget);
+  });
+
+  testWidgets('review remains scrollable at 320dp and 200% text scale',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MediaQuery(
+      data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+      child: MaterialApp(
+        home: ReviewScreen(
+          classId: 'class-1',
+          className: 'Lớp Mầm A',
+          extraction: const ExtractionData(
+            transcript: 'Hôm nay Minh An ăn hết suất cơm và ngủ trưa ngon.',
+            childExtractions: {
+              'child-1': {
+                'meals': 'Ăn hết suất cơm với thịt kho và canh bí.',
+                'sleeping': 'Ngủ từ 12:00 đến 13:45, ngủ ngon.',
+                'activities': 'Vẽ tranh mùa thu và vui chơi với các bạn.',
+              },
+            },
+          ),
+          repository: MockDashboardRepository(),
+          teacherRepository: MockTeacherRepo(),
+          onBack: () {},
+          onCompleted: () {},
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Xem lại báo cáo'), findsOneWidget);
+    expect(find.text('Duyệt'), findsOneWidget);
+    expect(
+        MediaQuery.textScalerOf(
+                tester.element(find.text('Văn bản đã phân tích')))
+            .scale(1),
+        2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'ReviewScreen does not display missing fields and leaves note empty',
       (WidgetTester tester) async {
     final extraction = const ExtractionData(
       transcript: 'Hôm nay bé ăn rất ngoan hết suất.',
@@ -295,7 +418,8 @@ void main() {
     expect(find.textContaining('Ghi chú:'), findsNothing);
   });
 
-  testWidgets('ReviewScreen displays audio player card above analyzed text card when recordedBytes is provided',
+  testWidgets(
+      'ReviewScreen displays audio player card above analyzed text card when recordedBytes is provided',
       (WidgetTester tester) async {
     final extraction = const ExtractionData(
       transcript: 'Hôm nay các bé ăn cơm ngoan.',
@@ -333,11 +457,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     // Verify audio player card is rendered
-    expect(find.text('Nghe lại bản ghi âm'), findsOneWidget);
-    expect(find.text('Chạm để nghe lại giọng nói cô vừa ghi âm'), findsOneWidget);
+    expect(find.text('Bản ghi gốc'), findsOneWidget);
 
     // Verify Analyzed Text card is also rendered below it
-    expect(find.text('Xem lại text đã phân tích'), findsOneWidget);
+    expect(find.text('Văn bản đã phân tích'), findsOneWidget);
   });
 
   testWidgets(
@@ -384,7 +507,8 @@ void main() {
 
     // 1. Initial state: 2 items, none approved -> Send button disabled
     expect(find.text('Chưa duyệt mục nào để gửi'), findsOneWidget);
-    var sendButton = tester.widget<FilledButton>(find.byType(FilledButton).last);
+    var sendButton =
+        tester.widget<FilledButton>(find.byType(FilledButton).last);
     expect(sendButton.onPressed, isNull);
 
     // 2. Approve ONLY the first item ("Chung cả lớp")
@@ -412,7 +536,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Now all items are processed (1 approved, 1 discarded) -> Send button MUST be enabled!
-    expect(find.text('Gửi 1 báo cáo cho phụ huynh'), findsOneWidget);
+    expect(find.text('Hoàn thành'), findsOneWidget);
     sendButton = tester.widget<FilledButton>(find.byType(FilledButton).last);
     expect(sendButton.onPressed, isNotNull);
 
@@ -433,7 +557,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Both items are approved -> Send button enabled with 2 reports
-    expect(find.text('Gửi 2 báo cáo cho phụ huynh'), findsOneWidget);
+    expect(find.text('Xác nhận gửi cho cả lớp'), findsOneWidget);
     sendButton = tester.widget<FilledButton>(find.byType(FilledButton).last);
     expect(sendButton.onPressed, isNotNull);
   });

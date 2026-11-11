@@ -3,10 +3,13 @@ import 'dart:convert';
 
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
+import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_form_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_detail_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart'
+    show gardenVoiceRequestRange, requestListRange, requestRange;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -42,6 +45,7 @@ HttpLeaveRequestRepository repository(RequestTransport transport) =>
 
 Widget app(Widget screen, {double textScale = 1, bool dark = false}) =>
     MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: dark ? kinderThemeDark() : kinderTheme(),
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       supportedLocales: const [Locale('vi'), Locale('en')],
@@ -62,6 +66,85 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  test('khoảng ngày hiển thị thứ như Garden Voice', () {
+    final request = LeaveRequestEntity.fromJson(requestJson());
+    expect(requestRange(request), '29/10/2026 · 1 ngày');
+    expect(gardenVoiceRequestRange(request), 'Thứ 5, 29/10/2026 · 1 ngày');
+    expect(requestListRange(request), 'Thứ 5, 29/10 · 1 ngày');
+  });
+
+  testWidgets('kết quả đã duyệt không tự khẳng định điểm danh đã đồng bộ',
+      (tester) async {
+    final transport = RequestTransport((_) => jsonBody({
+          ...requestJson(status: 'approved'),
+          'reviewer_name': 'Cô Mai',
+          'reviewed_at': '2026-10-29T08:02:00+07:00',
+        }));
+    await tester.pumpWidget(app(ParentRequestDetailScreen(
+      requestId: 'request-1',
+      child: child,
+      className: 'Mầm 1',
+      repository: repository(transport),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('✓ ĐƠN ĐÃ ĐƯỢC DUYỆT'), findsOneWidget);
+    expect(find.text('Hủy đơn này'), findsNothing);
+    await tester.scrollUntilVisible(
+        find.text('Chưa có xác nhận đồng bộ điểm danh từ hệ thống.'), 250);
+    expect(find.text('Điểm danh đã đồng bộ tự động'), findsNothing);
+  });
+
+  testWidgets('lý do chặn hủy lấy từ API và nút hủy bị khóa', (tester) async {
+    final transport = RequestTransport((_) => jsonBody({
+          ...requestJson(),
+          'can_cancel': false,
+          'cancel_block_reason': 'Bé đã được điểm danh, không thể hủy đơn.'
+        }));
+    await tester.pumpWidget(app(ParentRequestDetailScreen(
+      requestId: 'request-1',
+      child: child,
+      className: 'Mầm 1',
+      repository: repository(transport),
+    )));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.text('Bé đã được điểm danh, không thể hủy đơn.'), 250);
+    expect(
+        find.text('Bé đã được điểm danh, không thể hủy đơn.'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Hủy đơn này'), 150);
+    expect(
+        tester
+            .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Hủy đơn này'))
+            .onPressed,
+        isNull);
+  });
+
+  testWidgets('form báo trễ theo frame 10 không chèn hồ sơ bé và ô đính kèm',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app(const ParentRequestFormScreen(
+      child: child,
+      className: 'Lớp Mầm 1',
+      teacherName: 'Cô Mai',
+    )));
+    expect(find.text('An'), findsOneWidget);
+    await tester.tap(find.text('Báo đi trễ'));
+    await tester.pumpAndSettle();
+    expect(find.text(child.fullName), findsNothing);
+    expect(find.text('+ Thêm ảnh giấy khám / đơn thuốc'), findsNothing);
+    expect(find.text('Từ ngày'), findsNothing);
+    expect(find.text('Ngày đi trễ'), findsOneWidget);
+    expect(find.text('Giờ đến dự kiến'), findsOneWidget);
+    expect(tester.getRect(find.text('GỬI THÔNG BÁO')).bottom, lessThan(650));
+    await tester.tap(find.text('Nghỉ học'));
+    await tester.pumpAndSettle();
+    expect(find.text(child.fullName), findsOneWidget);
+    expect(find.text('+ Thêm ảnh giấy khám / đơn thuốc'), findsOneWidget);
+  });
+
   testWidgets(
       'đơn đã hủy không bị hiển thị thành chờ duyệt hoặc giáo viên từ chối',
       (tester) async {

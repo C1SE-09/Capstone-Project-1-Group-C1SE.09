@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:adark_frontend/core/utils/device_info_helper.dart';
@@ -164,87 +167,70 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final k = context.k;
     final viewInsets = MediaQuery.viewInsetsOf(context);
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+    final size = MediaQuery.sizeOf(context);
+    final sheetHeight = math.max(
+      0.0,
+      math.min(size.height * 0.56, size.height - viewInsets.bottom),
+    );
 
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      decoration: BoxDecoration(
-        color: k.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            // Handle bar
-            Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: k.lineStrong,
-                borderRadius: BorderRadius.circular(99),
-              ),
+    return GardenVoiceScope(
+      child: Builder(
+        builder: (context) {
+          final k = context.k;
+          return Container(
+            height: sheetHeight,
+            decoration: BoxDecoration(
+              color: k.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            const SizedBox(height: 14),
-
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+            padding: EdgeInsets.only(bottom: viewInsets.bottom),
+            child: SafeArea(
+              top: false,
+              child: Column(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: k.brandTint,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.rate_review_outlined, color: k.brand, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Góp ý & Cải thiện ứng dụng',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: k.ink,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                    child: SizedBox(
+                      height: 44,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Báo lỗi & góp ý',
+                              style: TextStyle(
+                                color: k.ink,
+                                fontSize: 16,
+                                height: 1.4,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Chia sẻ ý kiến đóng góp hoặc sự cố để KinderLog ngày càng tốt hơn',
-                          style: TextStyle(fontSize: 12, color: k.inkSoft),
-                        ),
-                      ],
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            tooltip: 'Đóng',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 44,
+                              height: 44,
+                            ),
+                            icon: SvgPicture.asset(
+                              'assets/garden_voice/parent_report_close.svg',
+                              width: 44,
+                              height: 44,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close_rounded, color: k.inkSoft),
-                    tooltip: 'Đóng',
-                  ),
+                  Expanded(child: _buildFormTab(context)),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-
-            const SizedBox(height: 12),
-            Divider(height: 1, color: k.line),
-
-            // Body
-            Expanded(
-              child: _buildFormTab(),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -253,11 +239,11 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
   // TAB 1: FORM GỬI BÁO CÁO LỖI
   // ═══════════════════════════════════════════════════════════════════════
 
-  Widget _buildFormTab() {
+  Widget _buildFormTab(BuildContext context) {
     final k = context.k;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       physics: const BouncingScrollPhysics(),
       child: Form(
         key: _formKey,
@@ -290,25 +276,26 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
             ],
 
             // Tiêu đề góp ý
-            _buildFieldLabel('Tiêu đề góp ý / vấn đề *'),
+            _buildFieldLabel('Tiêu đề', context),
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
-                hintText: 'Tóm tắt ngắn gọn góp ý hoặc vấn đề (ví dụ: Gợi ý thêm tính năng lưu ảnh...)',
-                hintStyle: TextStyle(color: k.inkFaint, fontSize: 13),
+                hintText: 'Tóm tắt ngắn gọn góp ý hoặc vấn đề…',
+                hintStyle: TextStyle(color: k.inkSoft, fontSize: 14),
                 filled: true,
-                fillColor: k.surfaceSunken,
+                fillColor: k.surface,
+                isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(color: k.line),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(color: k.line),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(color: k.brand, width: 1.5),
                 ),
               ),
@@ -327,26 +314,27 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
 
             // Mô tả chi tiết
-            _buildFieldLabel('Mô tả chi tiết *'),
+            _buildFieldLabel('Mô tả chi tiết', context),
             TextFormField(
               controller: _descriptionController,
+              minLines: 4,
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: 'Mô tả chi tiết ý kiến cải thiện hoặc sự cố gặp phải để đội ngũ hỗ trợ tốt nhất...',
-                hintStyle: TextStyle(color: k.inkFaint, fontSize: 13),
+                hintStyle: TextStyle(color: k.inkSoft, fontSize: 14),
                 filled: true,
-                fillColor: k.surfaceSunken,
-                contentPadding: const EdgeInsets.all(14),
+                fillColor: k.surface,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: k.line),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: k.line),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: k.brand, width: 1.5),
                 ),
               ),
@@ -361,17 +349,14 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Ảnh đính kèm
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildFieldLabel('Ảnh minh họa (tối đa 5 ảnh)'),
-                Text('${_attachments.length}/5', style: TextStyle(fontSize: 12, color: k.inkSoft)),
-              ],
+            _buildFieldLabel(
+              'Ảnh đính kèm · tối đa 5 ảnh, mỗi ảnh ≤ 5MB',
+              context,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -380,11 +365,11 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                     final idx = entry.key;
                     final att = entry.value;
                     return Container(
-                      width: 80,
-                      height: 80,
+                      width: 64,
+                      height: 64,
                       margin: const EdgeInsets.only(right: 10),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: k.line),
                         image: DecorationImage(
                           image: MemoryImage(att.bytes),
@@ -411,23 +396,12 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                   if (_attachments.length < 5)
                     InkWell(
                       onTap: _pickImages,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: k.surfaceSunken,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: k.line, style: BorderStyle.solid),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate_outlined, color: k.inkSoft, size: 24),
-                            const SizedBox(height: 4),
-                            Text('Thêm ảnh', style: TextStyle(fontSize: 11, color: k.inkSoft)),
-                          ],
-                        ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: SvgPicture.asset(
+                        'assets/garden_voice/bug_report_add.svg',
+                        width: 64,
+                        height: 64,
+                        semanticsLabel: 'Thêm ảnh',
                       ),
                     ),
                 ],
@@ -435,34 +409,13 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
             ),
             const SizedBox(height: 18),
 
-            // Thông tin thiết bị tự động đính kèm
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: k.surfaceSunken,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, size: 18, color: k.inkSoft),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Hệ thống sẽ tự động đính kèm thông tin thiết bị và phiên bản ứng dụng để hỗ trợ cải thiện trải nghiệm tốt hơn.',
-                      style: TextStyle(fontSize: 11, color: k.inkSoft),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
             // Submit Button
-            KButton(
-              label: _isSubmitting ? 'Đang gửi...' : 'Gửi góp ý cải thiện',
-              icon: _isSubmitting ? null : Icons.send_rounded,
-              large: true,
-              onPressed: _isSubmitting ? null : _submitReport,
+            SizedBox(
+              height: 48,
+              child: KButton(
+                label: _isSubmitting ? 'Đang gửi...' : 'Gửi góp ý',
+                onPressed: _isSubmitting ? null : _submitReport,
+              ),
             ),
           ],
         ),
@@ -470,14 +423,15 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
     );
   }
 
-  Widget _buildFieldLabel(String text) {
+  Widget _buildFieldLabel(String text, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          height: 1.4,
+          fontWeight: FontWeight.w700,
           color: context.k.ink,
         ),
       ),

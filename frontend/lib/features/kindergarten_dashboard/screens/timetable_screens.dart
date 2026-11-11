@@ -15,9 +15,12 @@ import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_class_header.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/schedule_editor_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/timetable_models_and_helpers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/schedule_editor_sheet.dart' show ScheduleEditorSheet;
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/timetable_models_and_helpers.dart' show TimetableData;
 
@@ -90,8 +93,16 @@ class TimetableScreen extends StatefulWidget {
     this.repository,
     this.isReadOnly = false,
     this.embedded = false,
+    this.teacherName,
+    this.notificationCount,
+    this.pendingLeaveCount,
     this.classList,
     this.onClassChanged,
+    this.onNavigationSelected,
+    this.onOpenClassList,
+    this.onOpenAttendance,
+    this.onOpenLeaveRequests,
+    this.onOpenNotifications,
     this.searchQuery,
   });
 
@@ -100,8 +111,16 @@ class TimetableScreen extends StatefulWidget {
   final ScheduleRepository? repository;
   final bool isReadOnly;
   final bool embedded;
+  final String? teacherName;
+  final int? notificationCount;
+  final int? pendingLeaveCount;
   final List<TimetableClassItem>? classList;
   final ValueChanged<String>? onClassChanged;
+  final ValueChanged<GardenVoiceTeacherDestination>? onNavigationSelected;
+  final VoidCallback? onOpenClassList;
+  final VoidCallback? onOpenAttendance;
+  final VoidCallback? onOpenLeaveRequests;
+  final VoidCallback? onOpenNotifications;
   final String? searchQuery;
 
   @override
@@ -195,19 +214,114 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
 
     if (widget.embedded) {
-      return content;
+      return Material(
+        color: context.k.canvas,
+        child: Column(
+          children: [
+            _buildParentSheetHeader(context),
+            Expanded(child: content),
+          ],
+        ),
+      );
+    }
+
+    if (!context.k.isGardenVoice) {
+      return Scaffold(
+        backgroundColor: context.k.canvas,
+        appBar: KAppBar(
+          title: 'Thời khóa biểu',
+          subtitle: _currentClassName,
+          onBack: () => Navigator.pop(context),
+        ),
+        body: content,
+      );
     }
 
     return Scaffold(
       backgroundColor: context.k.canvas,
-      appBar: KAppBar(
-        title: 'Thời khóa biểu',
-        subtitle: _currentClassName,
-        onBack: () => Navigator.pop(context),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            GardenVoiceClassHeader(
+              className: _currentClassName,
+              subtitle: widget.teacherName ?? '',
+              selectedTab: GardenVoiceClassTab.timetable,
+              notificationCount: widget.notificationCount,
+              pendingLeaveCount: widget.pendingLeaveCount,
+              onOpenNotifications: widget.onOpenNotifications,
+              onTabSelected: _selectClassTab,
+            ),
+            Expanded(child: content),
+          ],
+        ),
       ),
-      body: content,
+      bottomNavigationBar: GardenVoiceTeacherNavigation(
+        selected: GardenVoiceTeacherDestination.classList,
+        onSelected: widget.onNavigationSelected ?? (_) {},
+      ),
     );
   }
+
+  void _selectClassTab(GardenVoiceClassTab tab) {
+    switch (tab) {
+      case GardenVoiceClassTab.roster:
+        widget.onOpenClassList?.call();
+      case GardenVoiceClassTab.attendance:
+        widget.onOpenAttendance?.call();
+      case GardenVoiceClassTab.leaveRequests:
+        widget.onOpenLeaveRequests?.call();
+      case GardenVoiceClassTab.timetable:
+        break;
+    }
+  }
+
+  Widget _buildParentSheetHeader(BuildContext context) => Column(
+        children: [
+          const SizedBox(height: 18),
+          Container(
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(
+              color: context.k.line,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Thời khóa biểu của lớp',
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: context.k.ink,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Đóng',
+                  onPressed: () => Navigator.maybePop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
+                  ),
+                  icon: SvgPicture.asset(
+                    'assets/garden_voice/parent_child_close.svg',
+                    width: 44,
+                    height: 44,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
 
   Widget _buildClassSelectorBar(BuildContext context) {
     final classes = widget.classList!;
@@ -297,6 +411,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   Widget _buildLoaded(BuildContext context, _TimetableData data) {
+    if (widget.embedded) return _buildParentSheetSchedule(context, data);
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 900;
@@ -313,7 +428,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
         Widget mainContent;
         if (allItems.isEmpty) {
-          mainContent = _emptyState(context, data);
+          mainContent = context.k.isGardenVoice
+              ? _buildPhone(
+                  context, data, items, conflicts, days, selected, todayIndex)
+              : _emptyState(context, data);
         } else if (items.isEmpty) {
           mainContent = Padding(
             padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
@@ -348,34 +466,130 @@ class _TimetableScreenState extends State<TimetableScreen> {
           children: [
             if (widget.embedded && widget.classList != null && widget.classList!.isNotEmpty)
               _buildClassSelectorBar(context),
-            if (widget.searchQuery == null)
+            if (widget.searchQuery == null && !context.k.isGardenVoice)
               _buildSearchBar(context),
-            if (widget.embedded)
-              mainContent
-            else
-              Expanded(child: mainContent),
+            Expanded(child: mainContent),
             if (!widget.isReadOnly && !wide)
-              widget.embedded
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      child: KButton(
-                        label: 'Thêm hoạt động',
-                        icon: Icons.add,
-                        large: true,
-                        onPressed: () => _openEditor(data),
-                      ),
-                    )
-                  : BottomActionBar(
-                      child: KButton(
-                        label: 'Thêm hoạt động',
-                        icon: Icons.add,
-                        large: true,
-                        onPressed: () => _openEditor(data),
-                      ),
-                    ),
+              BottomActionBar(
+                child: KButton(
+                  label: 'Thêm hoạt động',
+                  icon: Icons.add,
+                  large: true,
+                  onPressed: () => _openEditor(data),
+                ),
+              ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildParentSheetSchedule(
+    BuildContext context,
+    _TimetableData data,
+  ) {
+    final items = data.items.where((item) => item.isActive).toList();
+    final conflicts = _conflictMap(items);
+    final days = _activeDays(items);
+    final todayIndex = DateTime.now().weekday - 1;
+    final selected = (_selectedDay != null && days.contains(_selectedDay))
+        ? _selectedDay!
+        : (days.contains(todayIndex) ? todayIndex : (days.isNotEmpty ? days.first : 0));
+    final dayItems = _itemsForDay(items, selected);
+    final status = _statusesFor(dayItems, selected == todayIndex);
+    final visible = _conflictsOnly
+        ? dayItems.where((item) => conflicts.containsKey(item.scheduleId)).toList()
+        : dayItems;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Row(
+            spacing: 6,
+            children: [
+              for (final day in days)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: day == selected,
+                    label: _dayLong[day],
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedDay = day),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 36),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: day == selected ? context.k.brand : context.k.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: day == selected
+                                ? context.k.brand
+                                : context.k.line,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _dayShort[day],
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            fontWeight: FontWeight.w500,
+                            color: day == selected
+                                ? context.k.surface
+                                : context.k.inkSoft,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (conflicts.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FilterChipButton(
+                label: '${conflicts.length} xung đột',
+                warn: true,
+                selected: _conflictsOnly,
+                onTap: () => setState(() => _conflictsOnly = !_conflictsOnly),
+              ),
+            ),
+          ),
+        Expanded(
+          child: visible.isEmpty
+              ? Center(
+                  child: Text(
+                    _conflictsOnly
+                        ? 'Không có xung đột'
+                        : 'Chưa có hoạt động',
+                    style: TextStyle(color: context.k.inkSoft),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 9, 20, 16),
+                  itemCount: visible.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final item = visible[index];
+                    return _ParentScheduleCard(
+                      item: item,
+                      status: status[item.scheduleId],
+                      conflict: conflicts.containsKey(item.scheduleId),
+                      onTap: () => _openActions(data, item),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -390,6 +604,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
     int selected,
     int todayIndex,
   ) {
+    final gardenVoice = context.k.isGardenVoice;
     final dayItems = _itemsForDay(items, selected);
     final visible = _conflictsOnly ? dayItems.where((i) => conflicts.containsKey(i.scheduleId)).toList() : dayItems;
     final statuses = _statusesFor(dayItems, selected == todayIndex);
@@ -402,16 +617,25 @@ class _TimetableScreenState extends State<TimetableScreen> {
       physics: widget.embedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          padding: EdgeInsets.fromLTRB(20, gardenVoice ? 0 : 16, 20, 0),
           child: Row(
             children: [
               Expanded(
-                child: Text('Tuần này · ${_weekLabel(days)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
+                child: Text(
+                  'Tuần này · ${gardenVoice ? _gardenVoiceWeekLabel(days) : _weekLabel(days)}',
+                  style: TextStyle(
+                    fontSize: gardenVoice ? 16 : 13,
+                    height: gardenVoice ? 1.35 : null,
+                    fontWeight: gardenVoice ? FontWeight.w700 : FontWeight.w600,
+                    color: gardenVoice ? context.k.ink : context.k.inkSoft,
+                  ),
+                ),
               ),
-              _ViewToggle(
-                weekMode: _weekMode,
-                onChanged: (value) => setState(() => _weekMode = value),
-              ),
+              if (!gardenVoice)
+                _ViewToggle(
+                  weekMode: _weekMode,
+                  onChanged: (value) => setState(() => _weekMode = value),
+                ),
             ],
           ),
         ),
@@ -430,7 +654,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
           ),
         if (!_weekMode) ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            padding: EdgeInsets.fromLTRB(20, gardenVoice ? 12 : 14, 20, 0),
             child: _DayStrip(
               days: days,
               selected: selected,
@@ -443,8 +667,16 @@ class _TimetableScreenState extends State<TimetableScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
             child: Text(
-              '${_dayLong[selected].toUpperCase()}, ${date.day}/${date.month}${isToday ? ' · HÔM NAY' : ''}',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: context.k.inkFaint),
+              gardenVoice
+                  ? '${_dayLong[selected]}, ngày ${date.day.toString().padLeft(2, '0')} tháng ${date.month.toString().padLeft(2, '0')}'
+                  : '${_dayLong[selected].toUpperCase()}, ${date.day}/${date.month}${isToday ? ' · HÔM NAY' : ''}',
+              style: TextStyle(
+                fontSize: gardenVoice ? 14 : 11,
+                height: gardenVoice ? 1.35 : null,
+                fontWeight: gardenVoice ? FontWeight.w400 : FontWeight.w600,
+                letterSpacing: gardenVoice ? 0 : 0.4,
+                color: context.k.inkSoft,
+              ),
             ),
           ),
           Padding(
@@ -482,7 +714,13 @@ class _TimetableScreenState extends State<TimetableScreen> {
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
               child: Text(
                 '${_dayLong[d].toUpperCase()}, ${_dateOfDay(d).day}/${_dateOfDay(d).month}${d == todayIndex ? ' · HÔM NAY' : ''}',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: context.k.inkFaint),
+              style: TextStyle(
+                fontSize: gardenVoice ? 14 : 11,
+                height: gardenVoice ? 1.35 : null,
+                fontWeight: gardenVoice ? FontWeight.w400 : FontWeight.w600,
+                letterSpacing: gardenVoice ? 0 : 0.4,
+                color: context.k.inkSoft,
+              ),
               ),
             ),
             Padding(
@@ -853,6 +1091,14 @@ class _TimetableScreenState extends State<TimetableScreen> {
         ? '${monday.day}–${last.day}/${last.month}/${last.year}'
         : '${monday.day}/${monday.month}–${last.day}/${last.month}/${last.year}';
   }
+
+  String _gardenVoiceWeekLabel(List<int> days) {
+    final first = _dateOfDay(days.first);
+    final last = _dateOfDay(days.last);
+    String label(DateTime date) =>
+        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+    return '${label(first)}–${label(last)}';
+  }
 }
 
 /* ======================= Widgets ======================= */
@@ -921,20 +1167,27 @@ class _DayStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gardenVoice = context.k.isGardenVoice;
+    final largeText = MediaQuery.textScalerOf(context).scale(14) >= 24;
     return Row(
       children: [
         for (final d in days)
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
+              padding: EdgeInsets.symmetric(horizontal: gardenVoice ? 2 : 3),
               child: InkWell(
                 onTap: () => onPick(d),
-                borderRadius: BorderRadius.circular(KRadii.control),
+                borderRadius: BorderRadius.circular(gardenVoice ? 18 : KRadii.control),
                 child: Container(
-                  height: 64,
+                  constraints: BoxConstraints(
+                    minHeight: gardenVoice
+                        ? (largeText ? 76 : 60)
+                        : 64,
+                  ),
                   decoration: BoxDecoration(
                     color: d == selected ? context.k.brand : context.k.surface,
-                    borderRadius: BorderRadius.circular(KRadii.control),
+                    borderRadius:
+                        BorderRadius.circular(gardenVoice ? 18 : KRadii.control),
                     border: Border.all(color: d == selected ? context.k.brand : (d == todayIndex ? context.k.brand : context.k.line)),
                   ),
                   child: Column(
@@ -942,21 +1195,39 @@ class _DayStrip extends StatelessWidget {
                     children: [
                       Text(
                         _dayShort[d],
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: d == selected ? Colors.white : context.k.inkFaint),
+                        style: TextStyle(
+                          fontSize: gardenVoice ? 12 : 11,
+                          fontWeight: gardenVoice ? FontWeight.w500 : FontWeight.w600,
+                          color: d == selected
+                              ? context.k.surface
+                              : context.k.inkSoft,
+                        ),
                       ),
                       Text(
                         '${dateOfDay(d).day}',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: d == selected ? Colors.white : context.k.ink),
-                      ),
-                      const SizedBox(height: 2),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: hasItems(d) ? (d == selected ? Colors.white : context.k.brand) : Colors.transparent,
+                        style: TextStyle(
+                          fontSize: gardenVoice ? 18 : 16,
+                          fontWeight: FontWeight.w700,
+                          color: d == selected
+                              ? context.k.surface
+                              : context.k.ink,
                         ),
                       ),
+                      if (!gardenVoice) ...[
+                        const SizedBox(height: 2),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: hasItems(d)
+                                ? (d == selected
+                                    ? context.k.surface
+                                    : context.k.brand)
+                                : Colors.transparent,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1046,6 +1317,8 @@ class _ScheduleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (context.k.isGardenVoice) return _buildGardenVoice(context);
+
     final Color color = _hexColor(item.subject?.colorCode) ?? context.k.brand;
     final name = item.displayName;
     final teacher = item.teacherLabel;
@@ -1149,6 +1422,392 @@ class _ScheduleRow extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildGardenVoice(BuildContext context) {
+    final name = item.displayName;
+    final teacher = item.teacherLabel;
+    final room = item.roomLabel;
+    final kind = _scheduleKind(item);
+    final detail = (item.content?.trim().isNotEmpty ?? false)
+        ? item.content!.trim()
+        : [teacher, room].where((part) => part.isNotEmpty).join(' · ');
+    final visual = _scheduleVisual(context, kind);
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                  color: context.k.ink,
+                ),
+              ),
+            ),
+            if (conflict) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.warning_amber_rounded,
+                  size: 14, color: context.k.warn),
+            ],
+          ],
+        ),
+        if (detail.isNotEmpty)
+          Text(
+            detail,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.35,
+              fontWeight: FontWeight.w500,
+              color: context.k.inkSoft,
+            ),
+          ),
+        if (status == 'Đang diễn ra') ...[
+          const SizedBox(height: 3),
+          _ScheduleStatusPill(status: status!),
+        ],
+      ],
+    );
+    final icon = Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: visual.background,
+        borderRadius: BorderRadius.circular(17),
+      ),
+      alignment: Alignment.center,
+      child: Semantics(
+        key: ValueKey('timetable-icon-${item.scheduleId}'),
+        image: true,
+        label: _scheduleKindLabel(kind),
+        child: SvgPicture.asset(
+          _teacherScheduleIcon(kind),
+          width: 19,
+          height: 19,
+        ),
+      ),
+    );
+    final row = compact
+        ? Row(
+            children: [
+              icon,
+              const SizedBox(width: 10),
+              Expanded(child: body),
+              const SizedBox(width: 8),
+              Text(
+                item.startTime,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: context.k.inkSoft,
+                ),
+              ),
+            ],
+          )
+        : Row(
+            children: [
+              SizedBox(
+                width: 44,
+                child: Text(
+                  item.startTime,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.inkSoft,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              icon,
+              const SizedBox(width: 10),
+              Expanded(child: body),
+            ],
+          );
+
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: compact ? 64 : 70),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: row,
+        ),
+      ),
+    );
+  }
+}
+
+class _ParentScheduleCard extends StatelessWidget {
+  const _ParentScheduleCard({
+    required this.item,
+    required this.conflict,
+    required this.onTap,
+    this.status,
+  });
+
+  final ClassSchedule item;
+  final bool conflict;
+  final VoidCallback onTap;
+  final String? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final kind = _scheduleKind(item);
+    final detail = (item.content?.trim().isNotEmpty ?? false)
+        ? item.content!.trim()
+        : [item.teacherLabel, item.roomLabel]
+            .where((part) => part.isNotEmpty)
+            .join(' · ');
+    final current = status == 'Đang diễn ra';
+
+    return Semantics(
+      button: true,
+      label: '${item.displayName}, ${item.startTime}',
+      child: Material(
+        color: current ? context.k.brandTint : context.k.reviewSurface,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            constraints: BoxConstraints(minHeight: current ? 102 : 80),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.k.lineStrong),
+              boxShadow: [
+                BoxShadow(
+                  color: context.k.ink.withValues(alpha: .05),
+                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 40,
+                  child: Semantics(
+                    image: true,
+                    label: _scheduleKindLabel(kind),
+                    child: _ParentScheduleIcon(kind: kind),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.4,
+                                fontWeight: FontWeight.w700,
+                                color: context.k.ink,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            item.startTime,
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                              color: context.k.inkSoft,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (detail.isNotEmpty)
+                        Text(
+                          detail,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            fontWeight: FontWeight.w500,
+                            color: context.k.inkSoft,
+                          ),
+                        ),
+                      if (conflict)
+                        Text(
+                          'Xung đột khung giờ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1.4,
+                            fontWeight: FontWeight.w600,
+                            color: context.k.warnDeep,
+                          ),
+                        ),
+                      if (status == 'Đang diễn ra') ...[
+                        const SizedBox(height: 3),
+                        _ScheduleStatusPill(status: status!),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _ScheduleKind { attendance, food, activity, outdoor, sleep, health }
+
+String _scheduleKindLabel(_ScheduleKind kind) => switch (kind) {
+      _ScheduleKind.attendance => 'Điểm danh',
+      _ScheduleKind.food => 'Bữa ăn',
+      _ScheduleKind.activity => 'Hoạt động sáng tạo',
+      _ScheduleKind.outdoor => 'Hoạt động ngoài trời',
+      _ScheduleKind.sleep => 'Giấc ngủ',
+      _ScheduleKind.health => 'Sức khỏe',
+    };
+
+_ScheduleKind _scheduleKind(ClassSchedule item) {
+  final text =
+      '${item.displayName} ${item.subject?.name ?? ''} ${item.content ?? ''}'
+          .toLowerCase();
+  if ((text.contains('điểm danh') || text.contains('đón trẻ')) &&
+      !text.contains('ăn')) {
+    return _ScheduleKind.attendance;
+  }
+  if (text.contains('ngủ') || text.contains('nghỉ trưa')) {
+    return _ScheduleKind.sleep;
+  }
+  if (text.contains('ngoài trời') || text.contains('vận động')) {
+    return _ScheduleKind.outdoor;
+  }
+  if (text.contains('sức khỏe') || text.contains('y tế')) {
+    return _ScheduleKind.health;
+  }
+  if (text.contains('ăn') || text.contains('bữa')) return _ScheduleKind.food;
+  return _ScheduleKind.activity;
+}
+
+({Color background, Color foreground}) _scheduleVisual(
+  BuildContext context,
+  _ScheduleKind kind,
+) =>
+    switch (kind) {
+      _ScheduleKind.attendance =>
+        (
+          background: context.k.activityRowTint,
+          foreground: context.k.activityRowText
+        ),
+      _ScheduleKind.food => (
+          background: context.k.foodRowTint,
+          foreground: context.k.foodRowText
+        ),
+      _ScheduleKind.activity || _ScheduleKind.outdoor =>
+        (
+          background: context.k.activityRowTint,
+          foreground: context.k.activityRowText
+        ),
+      _ScheduleKind.sleep => (
+          background: context.k.sleepRowTint,
+          foreground: context.k.sleepRowText
+        ),
+      _ScheduleKind.health => (
+          background: context.k.badTint,
+          foreground: context.k.badText
+        ),
+    };
+
+String _teacherScheduleIcon(_ScheduleKind kind) => switch (kind) {
+      _ScheduleKind.attendance => 'assets/garden_voice/timetable_users.svg',
+      _ScheduleKind.food => 'assets/garden_voice/timetable_utensils.svg',
+      _ScheduleKind.activity => 'assets/garden_voice/timetable_sparkles.svg',
+      _ScheduleKind.outdoor => 'assets/garden_voice/timetable_leaf.svg',
+      _ScheduleKind.sleep => 'assets/garden_voice/timetable_moon.svg',
+      _ScheduleKind.health => 'assets/garden_voice/timetable_heart.svg',
+    };
+
+class _ParentScheduleIcon extends StatelessWidget {
+  const _ParentScheduleIcon({required this.kind});
+  final _ScheduleKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    if (kind == _ScheduleKind.food) {
+      return SizedBox(
+        width: 40,
+        height: 40,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 23,
+              top: 6,
+              child: SvgPicture.asset(
+                'assets/garden_voice/parent_spoon.svg',
+                width: 10.0513,
+                height: 16.3106,
+              ),
+            ),
+            Positioned(
+              left: 6,
+              top: 19,
+              child: SvgPicture.asset(
+                'assets/garden_voice/parent_bowl.svg',
+                width: 27.824,
+                height: 13,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final asset = kind == _ScheduleKind.sleep
+        ? 'assets/garden_voice/parent_crescent_moon.svg'
+        : 'assets/garden_voice/parent_artist_palette.svg';
+    return Center(
+      child: SvgPicture.asset(asset, width: 28, height: 28),
+    );
+  }
+}
+
+class _ScheduleStatusPill extends StatelessWidget {
+  const _ScheduleStatusPill({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: context.k.accent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          status,
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.4,
+            fontWeight: FontWeight.w500,
+            color: context.k.ink,
+          ),
+        ),
+      );
 }
 
 

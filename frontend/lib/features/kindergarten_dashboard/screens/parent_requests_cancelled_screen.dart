@@ -24,6 +24,7 @@ class ParentRequestsCancelledScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = context.k;
     return ParentRequestLayout(
+        gardenVoice: true,
         child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -73,13 +74,15 @@ class ParentRequestsCancelledScreen extends StatelessWidget {
                                 '${requestTypeLabel(request.requestType)} · ${request.totalDays == 1 ? '1 ngày' : '${request.totalDays} ngày'}',
                                 textAlign: TextAlign.end,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600))),
+                                    fontWeight: FontWeight.w600)),
+                            gardenVoice: true),
                         ParentRequestInfo(
                             'Ngày nghỉ',
-                            Text(requestRange(request),
+                            Text(gardenVoiceRequestRange(request),
                                 textAlign: TextAlign.end,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600))),
+                                    fontWeight: FontWeight.w600)),
+                            gardenVoice: true),
                       ])),
                   const SizedBox(height: 14),
                   ParentRequestCard(

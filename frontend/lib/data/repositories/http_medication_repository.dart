@@ -156,6 +156,51 @@ class HttpMedicationRepository {
     }
   }
 
+  Future<List<MedicationDose>> getClassMedicationRequests(
+      {required String classId, int limit = 100}) async {
+    final response = await _request('GET', '/api/medication-requests', query: {
+      'class_id': classId,
+      'offset': 0,
+      'limit': limit,
+    });
+    if (response.data is! List) {
+      throw const MedicationRequestException(
+          'Máy chủ chưa trả đúng danh sách thuốc.');
+    }
+    final items = (response.data as List).map((item) => _dose(item)).toList();
+    if (items.any((item) => item.classId != classId)) {
+      throw const MedicationRequestException(
+          'Không thể xác minh danh sách thuốc của lớp.',
+          code: 'invalid_response');
+    }
+    return items;
+  }
+
+  Future<List<Map<String, dynamic>>> getHealthIncidents(
+      {required String classId}) async {
+    final response = await _request('GET', '/api/teacher/health-incidents',
+        query: {'class_id': classId, 'offset': 0, 'limit': 50});
+    if (response.data is! List) {
+      throw const MedicationRequestException(
+          'Máy chủ chưa trả đúng danh sách sự cố.');
+    }
+    final items = (response.data as List).map((raw) {
+      if (raw is! Map<String, dynamic> ||
+          raw['incident_id'] is! String ||
+          raw['class_id'] != classId ||
+          raw['child_name'] is! String ||
+          raw['incident_type_label'] is! String ||
+          raw['description'] is! String ||
+          DateTime.tryParse(raw['reported_at']?.toString() ?? '') == null) {
+        throw const MedicationRequestException(
+            'Dữ liệu sự cố không hợp lệ. Vui lòng tải lại.',
+            code: 'invalid_response');
+      }
+      return raw;
+    }).toList();
+    return items;
+  }
+
   Future<MedicationBatchCreateResult> createMedicationRequests(
       {required String childId,
       String? expectedClassId,

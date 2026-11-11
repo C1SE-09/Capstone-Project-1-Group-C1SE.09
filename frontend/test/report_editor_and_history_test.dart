@@ -7,6 +7,7 @@ import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' as ui;
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/report_editor.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,6 +90,39 @@ class MockClassDataRepository extends HttpClassDataRepository {
 }
 
 void main() {
+  testWidgets('ReportEditorScreen matches the GV draft frame and keeps both actions',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: kinderTheme(),
+      home: ReportEditorScreen(
+        child: const ui.Child(
+          id: '',
+          name: 'Trần Bảo Ngọc',
+          status: ui.ReportStatus.draft,
+          severity: ui.Severity.none,
+          present: true,
+          time: '08:00',
+        ),
+        repository: MockDashboardRepository(),
+        classRepository: MockClassDataRepository(),
+        onSent: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GardenVoiceScope), findsOneWidget);
+    expect(find.text('Chỉnh sửa báo cáo'), findsOneWidget);
+    expect(find.text('Trần Bảo Ngọc · Hôm nay'), findsOneWidget);
+    expect(find.text('Chưa có ghi nhận'), findsNWidgets(6));
+    expect(find.text('Lưu nháp'), findsOneWidget);
+    expect(find.text('Gửi báo cáo'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('ReportEditorScreen displays health field and populates from todayReport',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
@@ -185,7 +219,7 @@ void main() {
     expect(find.text('Sức khỏe'), findsOneWidget);
     expect(find.text('Đã hết sốt, da dẻ hồng hào'), findsOneWidget);
     expect(find.text('Cháo gà hạt sen'), findsOneWidget);
-    expect(find.text('28/09/2026'), findsOneWidget);
+    expect(find.text('Trần Thị Bích · 28/09/2026'), findsOneWidget);
     expect(find.text('Lưu nháp'), findsOneWidget);
   });
 

@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 from app.models.device_token import DeviceToken
 from app.models.report import DailyReport
+from app.models.leave_request import LeaveRequest, LeaveRequestStatus
 from app.models.user import Teacher
 from app.tasks import notifications as notifications_task
 
@@ -265,3 +266,58 @@ def test_updated_report_notification_content(monkeypatch):
     assert calls[0]["title"] == "KinderLog"
     assert "Báo cáo ngày 08/10 của Lê Ngọc Ánh đã được cập nhật" in calls[0]["body"]
     assert calls[0]["data"]["type"] == "report_updated"
+
+
+def test_leave_review_notification_uses_real_decision_and_child_parents(monkeypatch):
+    request_id = uuid.UUID("44444444-0000-0000-0000-000000000002")
+    request = MagicMock()
+    request.leave_id = request_id
+    request.child_id = uuid.uuid4()
+    request.status = LeaveRequestStatus.APPROVED
+    request.child.full_name = "Lê Ngọc Ánh"
+    tokens = [_make_token("parent-device")]
+    db = _make_db()
+    db.query.side_effect = lambda model: (
+        MagicMock(filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=request))))
+        if model is LeaveRequest
+        else MagicMock()
+    )
+    calls = []
+    monkeypatch.setattr(
+        notifications_task, "child_parents_device_tokens", lambda db, child_id: tokens
+    )
+    monkeypatch.setattr(
+        notifications_task,
+        "send_push_notification",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    result = notifications_task._deliver_leave_request_notification(db, str(request_id))
+
+    assert result == {"sent": 1, "removed": 0}
+    assert calls[0]["data"] == {
+        "type": "leave_request_reviewed",
+        "request_id": str(request_id),
+        "child_id": str(request.child_id),
+        "status": "approved",
+    }
+    assert "Lê Ngọc Ánh" in calls[0]["body"]
+
+
+def test_leave_review_queues_notification_after_database_review(monkeypatch):
+    from types import SimpleNamespace
+    from app.api.endpoints import leave_request as leave_request_api
+
+    request_id = uuid.UUID("44444444-0000-0000-0000-000000000003")
+    queued = []
+    monkeypatch.setattr(
+        leave_request_api,
+        "send_leave_request_notifications",
+        SimpleNamespace(delay=lambda value: queued.append(value)),
+    )
+
+    leave_request_api._queue_review_notification(
+        MagicMock(leave_id=request_id)
+    )
+
+    assert queued == [str(request_id)]

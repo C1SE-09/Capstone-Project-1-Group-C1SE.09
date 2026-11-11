@@ -75,7 +75,8 @@ class PushNotificationService {
     _pendingLocation = null;
     if (Firebase.apps.isEmpty) return;
     try {
-      final token = _currentToken ?? await FirebaseMessaging.instance.getToken();
+      final token =
+          _currentToken ?? await FirebaseMessaging.instance.getToken();
       if (token == null || token.isEmpty) return;
       _currentToken = null;
       await repository.deleteDeviceToken(token);
@@ -117,7 +118,9 @@ class PushNotificationService {
     scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
         backgroundColor: isEmergency ? const Color(0xFFD32F2F) : null,
-        duration: isEmergency ? const Duration(seconds: 30) : const Duration(seconds: 4),
+        duration: isEmergency
+            ? const Duration(seconds: 30)
+            : const Duration(seconds: 4),
         content: Text(
           title,
           style: TextStyle(
@@ -202,7 +205,23 @@ class PushNotificationService {
       });
     }
 
-    if (type != 'attendance_absent' && type != 'attendance_reminder') return null;
+    if (type == 'leave_request_reviewed') {
+      final requestId = text('request_id');
+      final status = text('status');
+      if (requestId == null ||
+          childId == null ||
+          (status != 'approved' && status != 'rejected')) {
+        return null;
+      }
+      return Uri(path: '/parent', queryParameters: {
+        'childId': childId,
+        'requests': 'true',
+      });
+    }
+
+    if (type != 'attendance_absent' && type != 'attendance_reminder') {
+      return null;
+    }
     final date = text('date');
     if (date == null ||
         !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date) ||
