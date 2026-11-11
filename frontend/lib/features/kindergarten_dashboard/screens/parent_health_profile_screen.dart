@@ -24,14 +24,18 @@ Future<void> showParentHealthProfile(
   required String className,
   required HttpDashboardRepository repository,
   ValueChanged<Child>? onSaved,
+  HttpMedicationRepository? medicationRepository,
 }) {
   return Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => ParentHealthProfileScreen(
-        child: child,
-        className: className,
-        repository: repository,
-        onSaved: onSaved,
+      builder: (_) => GardenVoiceScope(
+        child: ParentHealthProfileScreen(
+          child: child,
+          className: className,
+          repository: repository,
+          medicationRepository: medicationRepository,
+          onSaved: onSaved,
+        ),
       ),
     ),
   );
@@ -299,17 +303,29 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
           title: 'Thông tin sức khỏe',
           onBack: () => Navigator.maybePop(context),
           trailing: IconButton(
-              tooltip: 'Dặn dò uống thuốc',
-              icon: const Icon(Icons.medication_outlined),
-              onPressed: _dirty || _saving
-                  ? null
-                  : () => Navigator.of(context).push<void>(MaterialPageRoute(
-                      builder: (_) => ParentMedicationScreen(
-                          child: _child,
-                          className: widget.className,
-                          repository: widget.medicationRepository)))),
+            tooltip: 'Dặn dò uống thuốc',
+            icon: const Icon(Icons.medication_outlined),
+            onPressed: _dirty || _saving
+                ? null
+                : () => Navigator.of(context).push<void>(MaterialPageRoute(
+                    builder: (_) => GardenVoiceScope(
+                          child: ParentMedicationScreen(
+                            child: _child,
+                            className: widget.className,
+                            repository: widget.medicationRepository,
+                          ),
+                        ))),
+          ),
         ),
         body: SafeArea(child: _buildBody(context)),
+        bottomNavigationBar: _loading || _loadError
+            ? null
+            : BottomActionBar(
+                child: KButton(
+                  label: _saving ? 'Đang lưu...' : 'Lưu thay đổi',
+                  onPressed: _dirty && !_saving && !_conflict ? _save : null,
+                ),
+              ),
       ),
     );
   }
@@ -344,42 +360,67 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
-        KCard(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color:
+                _status == 'present' ? context.k.accentTint : context.k.okTint,
+            border: Border.all(color: context.k.lineStrong),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Avatar(name: _child.fullName, size: 44),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _child.fullName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+              Row(
+                children: [
+                  Icon(
+                    _status == 'present'
+                        ? Icons.warning_amber_rounded
+                        : Icons.health_and_safety_outlined,
+                    size: 18,
+                    color: _status == 'present'
+                        ? context.k.accentDeep
+                        : context.k.brand,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _status == 'present'
+                        ? 'Dị ứng'
+                        : _status == 'none'
+                            ? 'Không ghi nhận dị ứng'
+                            : 'Chưa khai báo dị ứng',
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: _status == 'present'
+                          ? context.k.accentDeep
+                          : context.k.brand,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Lớp ${widget.className}',
-                      style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+              if (_status == 'present' && _allergyValue.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _allergyValue,
+                  style: TextStyle(
+                      fontSize: 12, height: 1.4, color: context.k.ink),
+                ),
+              ],
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          'Cập nhật thông tin lâu dài để giáo viên lưu ý khi chăm sóc bé.',
-          style: TextStyle(fontSize: 13, color: context.k.inkSoft),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
+        Text('Trạng thái dị ứng',
+            style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+                color: context.k.ink)),
+        const SizedBox(height: 8),
         _HealthOption(
           title: 'Chưa khai báo',
           subtitle: 'Gia đình chưa cung cấp thông tin dị ứng.',
@@ -399,7 +440,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
           onTap: () => _selectStatus('present'),
         ),
         if (_status == 'present') ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           TextField(
             controller: _allergyController,
             focusNode: _allergyFocus,
@@ -417,15 +458,35 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
           ),
         ],
         const SizedBox(height: 12),
+        Text('Lưu ý chăm sóc',
+            style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+                color: context.k.brand)),
+        const SizedBox(height: 8),
         TextField(
           controller: _notesController,
           maxLines: 4,
           onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(
-            labelText: 'Lưu ý chăm sóc',
+          decoration: InputDecoration(
             helperText:
                 'Không dùng để gửi lời dặn trong ngày hoặc yêu cầu dùng thuốc.',
             helperMaxLines: 2,
+            filled: true,
+            fillColor: context.k.okTint,
+            border: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: context.k.brand, width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         ),
         _CharCounter(
@@ -445,12 +506,6 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
             onReload: _conflict ? _load : null,
           ),
         ],
-        const SizedBox(height: 24),
-        KButton(
-          label: _saving ? 'Đang lưu...' : 'Lưu thay đổi',
-          large: true,
-          onPressed: _dirty && !_saving && !_conflict ? _save : null,
-        ),
       ],
     );
   }
@@ -480,12 +535,12 @@ class _HealthOption extends StatelessWidget {
         button: true,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(KRadii.control),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: selected ? context.k.brandTint : context.k.surface,
-              borderRadius: BorderRadius.circular(KRadii.control),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: color, width: selected ? 1.5 : 1),
             ),
             child: Row(

@@ -460,23 +460,24 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
         child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.ink)),
       );
 
-  InputDecoration _inputDecoration(BuildContext context, {required String hint}) => InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: context.k.surface,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KRadii.control),
-          borderSide: BorderSide(color: context.k.lineStrong),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KRadii.control),
-          borderSide: BorderSide(color: context.k.lineStrong),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KRadii.control),
-          borderSide: BorderSide(color: context.k.brand, width: 1.5),
-        ),
-      );
+  InputDecoration _inputDecoration(BuildContext context, {required String hint}) {
+    final radius =
+        context.k.isGardenVoice ? 14.0 : KRadii.control;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(radius),
+      borderSide: BorderSide(color: context.k.lineStrong),
+    );
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: context.k.surface,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: BorderSide(color: context.k.brand, width: 1.5),
+      ),
+    );
+  }
 }

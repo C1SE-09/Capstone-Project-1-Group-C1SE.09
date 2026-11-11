@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
@@ -55,6 +56,14 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
   String get todayLong => widget.initialReport != null
       ? _todayLong(widget.initialReport!.reportDate)
       : _todayLong(DateTime.now());
+
+  String get _headerDate {
+    final date = widget.initialReport?.reportDate ?? DateTime.now();
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month && date.day == now.day
+        ? 'Hôm nay'
+        : _todayLong(date);
+  }
 
   @override
   void initState() {
@@ -168,138 +177,242 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_ReportMeta>(
-      future: metaFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        if (snapshot.hasError || snapshot.data == null) {
-          return Scaffold(
-            body: Center(
-              child: TextButton(
-                onPressed: () => setState(() => metaFuture = _loadMeta()),
-                child: const Text('Không tải được thông tin báo cáo · Thử lại'),
-              ),
-            ),
-          );
-        }
-        final meta = snapshot.data;
-        if (meta == null) return const Scaffold(body: Center(child: Text('Không có thông tin báo cáo.')));
-
-        return Scaffold(
-          appBar: KAppBar(
-            title: widget.child.name,
-            subtitle: todayLong,
-            onBack: () => Navigator.pop(context),
-          ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            children: [
-              if (widget.readOnly)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: context.k.surfaceSunken, borderRadius: BorderRadius.circular(KRadii.control)),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle_outline, size: 18, color: context.k.ok),
-                      const SizedBox(width: 10),
-                      Text('Báo cáo đã gửi, không thể sửa.', style: TextStyle(fontSize: 13, color: context.k.inkSoft)),
-                    ],
+    return GardenVoiceScope(
+      child: Builder(
+        builder: (context) => FutureBuilder<_ReportMeta>(
+          future: metaFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => setState(() => metaFuture = _loadMeta()),
+                    child: const Text(
+                        'Không tải được thông tin báo cáo · Thử lại'),
                   ),
                 ),
-              _FieldBlock(
-                icon: Icons.restaurant_outlined,
-                label: 'Ăn uống',
-                child: _TextArea(controller: eating, readOnly: widget.readOnly),
-              ),
-              _FieldBlock(
-                icon: Icons.bedtime_outlined,
-                label: 'Giấc ngủ',
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: sleepDuration,
-                      readOnly: widget.readOnly,
-                      textAlignVertical: TextAlignVertical.center,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      style: const TextStyle(fontSize: 14, height: 1.2),
-                      decoration: const InputDecoration(
-                        hintText: 'Thời lượng (phút)',
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              );
+            }
+            final k = context.k;
+            final compact = MediaQuery.sizeOf(context).width < 360 ||
+                MediaQuery.textScalerOf(context).scale(1) > 1.2;
+            Widget durationField() => SizedBox(
+                  width: 96,
+                  height: 40,
+                  child: TextField(
+                    controller: sleepDuration,
+                    readOnly: widget.readOnly,
+                    textAlignVertical: TextAlignVertical.center,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    style: TextStyle(color: k.ink, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: '—',
+                      filled: true,
+                      fillColor: k.surface,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: k.lineStrong),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: k.lineStrong),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _TextArea(controller: sleep, readOnly: widget.readOnly),
-                  ],
-                ),
+                  ),
+                );
+            return Scaffold(
+              backgroundColor: k.canvas,
+              appBar: KAppBar(
+                title: 'Chỉnh sửa báo cáo',
+                subtitle: '${widget.child.name} · $_headerDate',
+                onBack: () => Navigator.pop(context),
               ),
-              _FieldBlock(
-                icon: Icons.health_and_safety_outlined,
-                label: 'Sức khỏe',
-                child: _TextArea(controller: health, readOnly: widget.readOnly),
-              ),
-              _FieldBlock(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', child: _TextArea(controller: mood, readOnly: widget.readOnly)),
-              _FieldBlock(icon: Icons.palette_outlined, label: 'Hoạt động', child: _TextArea(controller: activity, readOnly: widget.readOnly)),
-              _FieldBlock(
-                icon: Icons.edit_note,
-                label: 'Ghi chú của cô',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _TextArea(controller: note, readOnly: widget.readOnly, maxLines: 3, maxLength: 500),
-                    const SizedBox(height: 4),
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: note,
-                      builder: (context, value, _) => Text(
-                        '${value.text.characters.length}/500',
-                        style: Theme.of(context).textTheme.bodySmall,
+              body: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+                children: [
+                  if (widget.readOnly)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: k.surfaceSunken,
+                        borderRadius: BorderRadius.circular(KRadii.control),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_outline,
+                              size: 18, color: k.ok),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Báo cáo đã gửi, không thể sửa.',
+                            style: TextStyle(fontSize: 13, color: k.inkSoft),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          bottomNavigationBar: widget.readOnly
-              ? null
-              : BottomActionBar(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (submitError != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(submitError!, style: TextStyle(color: context.k.bad)),
+                  _FieldBlock(
+                    icon: const _MealFieldIcon(),
+                    label: 'Ăn uống',
+                    child: _TextArea(
+                        controller: eating, readOnly: widget.readOnly),
+                  ),
+                  const SizedBox(height: KSpace.x8 + KSpace.x1),
+                  _FieldBlock(
+                    icon: SvgPicture.asset(
+                      'assets/garden_voice/review_moon.svg',
+                      width: 22,
+                      height: 22,
+                    ),
+                    label: 'Giấc ngủ',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _TextArea(controller: sleep, readOnly: widget.readOnly),
+                        const SizedBox(height: 8),
+                        if (compact)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Thời lượng (phút)',
+                                style: TextStyle(
+                                  color: k.inkSoft,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              durationField(),
+                            ],
+                          )
+                        else
+                          Row(
+                            children: [
+                            Text(
+                              'Thời lượng (phút)',
+                              style: TextStyle(
+                                color: k.inkSoft,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            durationField(),
+                          ],
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: KSpace.x8),
+                  _FieldBlock(
+                    icon: SvgPicture.asset(
+                      'assets/garden_voice/parent_notification_health.svg',
+                      width: 22,
+                      height: 22,
+                    ),
+                    label: 'Sức khỏe',
+                    child: _TextArea(
+                        controller: health, readOnly: widget.readOnly),
+                  ),
+                  const SizedBox(height: KSpace.x4),
+                  _FieldBlock(
+                    label: 'Tâm trạng',
+                    child: _TextArea(
+                        controller: mood, readOnly: widget.readOnly),
+                  ),
+                  const SizedBox(height: KSpace.x5),
+                  _FieldBlock(
+                    icon: SvgPicture.asset(
+                      'assets/garden_voice/review_artist_palette.svg',
+                      width: 22,
+                      height: 22,
+                    ),
+                    label: 'Hoạt động',
+                    child: _TextArea(
+                        controller: activity, readOnly: widget.readOnly),
+                  ),
+                  const SizedBox(height: 12),
+                  _FieldBlock(
+                    label: 'Ghi chú của cô',
+                    child: _TextArea(
+                      controller: note,
+                      readOnly: widget.readOnly,
+                      maxLines: 3,
+                      maxLength: 500,
+                    ),
+                  ),
+                  const SizedBox(height: KSpace.x6),
+                  if (!widget.readOnly) ...[
+                    if (submitError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: KSpace.x2),
+                        child: Text(
+                          submitError!,
+                          style: TextStyle(color: k.bad),
+                        ),
+                      ),
+                    if (compact) ...[
+                      SizedBox(
+                        height: 48,
+                        width: double.infinity,
+                        child: KButton(
+                          label: 'Lưu nháp',
+                          secondary: true,
+                          onPressed: submitting ? null : _saveDraft,
+                        ),
+                      ),
+                      const SizedBox(height: KSpace.x2),
+                      SizedBox(
+                        height: 48,
+                        width: double.infinity,
+                        child: KButton(
+                          label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                          onPressed: submitting ? null : _confirmSend,
+                        ),
+                      ),
+                    ] else
                       Row(
                         children: [
                           Expanded(
-                            child: KButton(
-                              label: 'Lưu nháp',
-                              secondary: true,
-                              onPressed: submitting ? null : _saveDraft,
+                            child: SizedBox(
+                              height: 48,
+                              child: KButton(
+                                label: 'Lưu nháp',
+                                secondary: true,
+                                onPressed: submitting ? null : _saveDraft,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: KSpace.x2),
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: KButton(
+                                label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                                onPressed: submitting ? null : _confirmSend,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      KButton(
-                        label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
-                        icon: Icons.send_outlined,
-                        large: true,
-                        onPressed: submitting ? null : _confirmSend,
-                      ),
-                    ],
-                  ),
-                ),
-        );
-      },
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -450,36 +563,76 @@ class _ReportMeta {
 String _todayLong(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
 class _FieldBlock extends StatelessWidget {
-  const _FieldBlock({required this.icon, required this.label, required this.child});
-  final IconData icon;
+  const _FieldBlock({this.icon, required this.label, required this.child});
+  final Widget? icon;
   final String label;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.k.surface,
-        border: Border.all(color: context.k.line),
-        borderRadius: BorderRadius.circular(KRadii.card),
-      ),
-      child: Column(
-        children: [
-          Row(
+    final k = context.k;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 24),
+          child: Row(
             children: [
-              Icon(icon, size: 16, color: context.k.brand),
-              const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              if (icon != null) ...[
+                icon!,
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: k.ink,
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
     );
   }
+}
+
+class _MealFieldIcon extends StatelessWidget {
+  const _MealFieldIcon();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 22,
+        height: 22,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 3,
+              top: 1,
+              child: SvgPicture.asset(
+                'assets/garden_voice/review_spoon.svg',
+                width: 7,
+                height: 11,
+              ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 3,
+              child: SvgPicture.asset(
+                'assets/garden_voice/review_bowl.svg',
+                width: 18,
+                height: 9,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 
@@ -497,19 +650,38 @@ class _TextArea extends StatelessWidget {
   final int? maxLength;
 
   @override
-  Widget build(BuildContext context) => TextField(
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return TextField(
         controller: controller,
         readOnly: readOnly,
         minLines: 1,
         maxLines: maxLines,
         maxLength: maxLength,
         textAlignVertical: TextAlignVertical.center,
-        style: const TextStyle(fontSize: 14, height: 1.4),
-        decoration: const InputDecoration(
+        style: TextStyle(color: k.ink, fontSize: 14, height: 1.4),
+        decoration: InputDecoration(
+          hintText: 'Chưa có ghi nhận',
+          hintStyle: TextStyle(color: k.inkSoft, fontSize: 14, height: 1.4),
+          filled: true,
+          fillColor: k.surface,
           isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: k.lineStrong),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: k.lineStrong),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: k.brand),
+          ),
         ),
         buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
       );
+  }
 }
 

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
+    show Avatar;
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_class_header.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({
@@ -10,9 +14,17 @@ class AttendanceScreen extends StatefulWidget {
     required this.className,
     required this.date,
     required this.roster,
+    this.teacherName,
+    this.notificationCount,
+    this.pendingLeaveCount,
     this.repository,
     this.initialRecords,
     this.initialDetails,
+    this.onNavigationSelected,
+    this.onOpenClassList,
+    this.onOpenLeaveRequests,
+    this.onOpenNotifications,
+    this.onOpenTimetable,
     super.key,
   });
 
@@ -20,9 +32,17 @@ class AttendanceScreen extends StatefulWidget {
   final String className;
   final String date;
   final List<Child> roster;
+  final String? teacherName;
+  final int? notificationCount;
+  final int? pendingLeaveCount;
   final HttpAttendanceRepository? repository;
   final Map<String, AttendanceStatus>? initialRecords;
   final Map<String, AttendanceChildRecord>? initialDetails;
+  final ValueChanged<GardenVoiceTeacherDestination>? onNavigationSelected;
+  final VoidCallback? onOpenClassList;
+  final VoidCallback? onOpenLeaveRequests;
+  final VoidCallback? onOpenNotifications;
+  final VoidCallback? onOpenTimetable;
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -39,6 +59,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _allowPop = false;
   bool _loading = false;
   String _query = '';
+  late DateTime _selectedDate;
 
   List<Child> get _filteredRoster {
     if (_query.trim().isEmpty) return widget.roster;
@@ -52,6 +73,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedDate = DateTime.tryParse(widget.date) ?? DateTime.now();
     if (widget.initialDetails != null && widget.initialDetails!.isNotEmpty) {
       _details = Map.of(widget.initialDetails!);
     }
@@ -62,7 +84,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       _saved = {
         for (final child in widget.roster)
           child.id: _details[child.id]?.status ??
-              (child.present ? AttendanceStatus.arrived : AttendanceStatus.absent),
+              (child.present
+                  ? AttendanceStatus.arrived
+                  : AttendanceStatus.absent),
       };
       _draft = Map.of(_saved);
       _fetchLatest();
@@ -74,7 +98,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     try {
       final details = await _repository.getClassAttendanceDetails(
         widget.classId,
-        DateTime.tryParse(widget.date) ?? DateTime.now(),
+        _selectedDate,
       );
       if (details.isNotEmpty && mounted) {
         setState(() {
@@ -82,7 +106,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           _saved = {
             for (final child in widget.roster)
               child.id: details[child.id]?.status ??
-                  (child.present ? AttendanceStatus.arrived : AttendanceStatus.absent),
+                  (child.present
+                      ? AttendanceStatus.arrived
+                      : AttendanceStatus.absent),
           };
           _draft = Map.of(_saved);
         });
@@ -129,7 +155,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     try {
       await _repository.saveBatchAttendance(
         classId: widget.classId,
-        date: DateTime.tryParse(widget.date) ?? DateTime.now(),
+        date: _selectedDate,
         record: _draft,
         expectedArrivalTimes: {
           for (final e in _details.entries)
@@ -148,7 +174,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       });
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('Đã lưu điểm danh thành công')));
+        ..showSnackBar(
+            const SnackBar(content: Text('Đã lưu điểm danh thành công')));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -209,6 +236,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       builder: (sheetContext) => _AbsentNotificationSheet(
         students: _absentStudents,
         unsaved: _dirty,
+        date: _selectedDate,
       ),
     );
     if (shouldSend != true || !mounted) return;
@@ -216,7 +244,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     try {
       final sentCount = await _repository.notifyAbsentParents(
         classId: widget.classId,
-        date: DateTime.tryParse(widget.date) ?? DateTime.now(),
+        date: _selectedDate,
         childIds: _absentStudents.map((s) => s.id).toList(),
       );
       if (!mounted) return;
@@ -243,255 +271,264 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
+  Future<void> _changeDate(int days) async {
+    if (_saving || _loading) return;
+    if (_dirty) {
+      if (!await _confirmDiscard() || !mounted) return;
+      setState(() => _draft = Map.of(_saved));
+    }
+
+    final target = _selectedDate.add(Duration(days: days));
+    setState(() => _loading = true);
+    try {
+      final details = await _repository.getClassAttendanceDetails(
+        widget.classId,
+        target,
+      );
+      if (!mounted) return;
+      if (details.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Không có dữ liệu điểm danh cho ngày này.')),
+        );
+        return;
+      }
+      setState(() {
+        _selectedDate = target;
+        _details = details;
+        _saved = {
+          for (final child in widget.roster)
+            child.id: details[child.id]?.status ??
+                (child.present
+                    ? AttendanceStatus.arrived
+                    : AttendanceStatus.absent),
+        };
+        _draft = Map.of(_saved);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không thể tải điểm danh cho ngày đã chọn.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final media = MediaQuery.of(context);
-    final largeText = media.textScaler.scale(14) >= 24;
-    final summaryHeight = largeText ? 144.0 : 88.0;
-
     return PopScope(
       canPop: _allowPop || (!_dirty && !_saving),
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) _back();
       },
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: _saving ? null : _back,
-            tooltip: 'Quay lại',
-            icon: const Icon(Icons.arrow_back),
-          ),
-          titleSpacing: 0,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: context.k.canvas,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
             children: [
-              const Text(
-                'Điểm danh',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              GardenVoiceClassHeader(
+                className: widget.className,
+                subtitle: widget.teacherName ?? '',
+                selectedTab: GardenVoiceClassTab.attendance,
+                notificationCount: widget.notificationCount,
+                pendingLeaveCount: widget.pendingLeaveCount,
+                onOpenNotifications: widget.onOpenNotifications,
+                onTabSelected: (tab) {
+                  switch (tab) {
+                    case GardenVoiceClassTab.roster:
+                      widget.onOpenClassList?.call();
+                    case GardenVoiceClassTab.attendance:
+                      break;
+                    case GardenVoiceClassTab.leaveRequests:
+                      widget.onOpenLeaveRequests?.call();
+                    case GardenVoiceClassTab.timetable:
+                      widget.onOpenTimetable?.call();
+                  }
+                },
               ),
-              Text(
-                '${widget.className} · ${widget.date}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              tooltip: 'Duyệt đơn xin nghỉ',
-              icon: const Icon(Icons.assignment_turned_in_outlined),
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => LeaveRequestReviewScreen(
-                      classId: widget.classId,
-                      className: widget.className,
-                    ),
-                  ),
-                );
-                // Sau khi quay lại, tự động refresh bảng điểm danh
-                _fetchLatest();
-              },
-            ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(summaryHeight),
-            child: _AttendanceSummary(
-              height: summaryHeight,
-              total: widget.roster.length,
-              arrived: _arrivedCount,
-              absent: _absentCount,
-              excusedAbsent: _excusedAbsentCount,
-              late: _lateCount,
-            ),
-          ),
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _fetchLatest,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                  child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Chọn trạng thái từ dropdown để cập nhật',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _SavedIndicator(dirty: _dirty),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Tìm theo tên bé…',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _query.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () => setState(() => _query = ''),
-                              )
-                            : null,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: theme.dividerColor),
-                        ),
-                      ),
-                      onChanged: (val) => setState(() => _query = val),
-                    ),
-                    const SizedBox(height: 14),
-                    if (_filteredRoster.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Không tìm thấy học sinh phù hợp.',
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+              Expanded(
+                child: _loading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: context.k.brand,
                         ),
                       )
-                    else
-                      Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.dividerColor.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
+                    : RefreshIndicator(
+                        onRefresh: _fetchLatest,
+                        color: context.k.brand,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(14, 2, 14, 16),
                           children: [
-                            for (int i = 0; i < _filteredRoster.length; i++) ...[
-                              _AttendanceRow(
-                                student: _filteredRoster[i],
-                                status: _draft[_filteredRoster[i].id] ??
-                                    AttendanceStatus.arrived,
-                                detail: _details[_filteredRoster[i].id],
-                                enabled: !_saving,
-                                onChanged: (newStatus) =>
-                                    _setStatus(_filteredRoster[i], newStatus),
-                              ),
-                              if (i < _filteredRoster.length - 1)
-                                Divider(
-                                  height: 1,
-                                  indent: 68,
-                                  color: theme.dividerColor.withValues(alpha: 0.5),
+                            _AttendanceDateLabel(
+                              date: _selectedDate,
+                              onPrevious: () => _changeDate(-1),
+                              onNext: () => _changeDate(1),
+                            ),
+                            const SizedBox(height: 19),
+                            _AttendanceSummary(
+                              total: widget.roster.length,
+                              arrived: _arrivedCount,
+                              absent: _absentCount,
+                              excusedAbsent: _excusedAbsentCount,
+                              late: _lateCount,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildSearchField(context),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Danh sách điểm danh',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w800,
+                                      color: context.k.ink,
+                                    ),
+                                  ),
                                 ),
+                                _SavedIndicator(
+                                  dirty: _dirty,
+                                  saving: _saving,
+                                  onSave: _dirty && !_saving ? _save : null,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            _filteredRoster.isEmpty
+                                ? _emptyRoster(context)
+                                : _attendanceList(context),
+                            if (_absentCount > 0) ...[
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed:
+                                      _saving ? null : _showAbsentNotifications,
+                                  icon: const Icon(Icons.notifications_none),
+                                  label: const Text('Gửi thông báo bé vắng'),
+                                ),
+                              ),
                             ],
+                            const SizedBox(height: 13),
+                            _PendingLeaveTile(
+                              count: widget.pendingLeaveCount,
+                              onTap: widget.onOpenLeaveRequests,
+                            ),
                           ],
                         ),
                       ),
-                  ],
-                ),
               ),
-              ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border(top: BorderSide(color: theme.dividerColor)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 52),
-                      child: FilledButton.icon(
-                        onPressed: _dirty && !_saving ? _save : null,
-                        icon: _saving
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.check_circle_outline),
-                        label: Text(
-                          _saving ? 'Đang lưu...' : 'Lưu điểm danh',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 52),
-                      child: OutlinedButton.icon(
-                        onPressed: _absentCount > 0 && !_saving
-                            ? _showAbsentNotifications
-                            : null,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _attendanceWarningText(context),
-                          backgroundColor: theme.brightness == Brightness.dark
-                              ? const Color(0xFF3A2F1A)
-                              : KColors.warnTint,
-                          side: BorderSide(
-                            color: _absentCount > 0
-                                ? KColors.warn
-                                : theme.disabledColor,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        icon: const Icon(Icons.notifications_none),
-                        label: const Text('Gửi thông báo bé vắng'),
-                      ),
-                    ),
-                  ),
-                  if (_absentCount == 0) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Không có bé vắng',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            ],
           ),
+        ),
+        bottomNavigationBar: GardenVoiceTeacherNavigation(
+          selected: GardenVoiceTeacherDestination.classList,
+          onSelected: widget.onNavigationSelected ?? (_) {},
         ),
       ),
     );
   }
+
+  Widget _buildSearchField(BuildContext context) => Container(
+        constraints: const BoxConstraints(minHeight: 39),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: context.k.activityRowTint,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.k.lineStrong),
+        ),
+        child: Row(
+          children: [
+            SvgPicture.asset(
+              'assets/garden_voice/class_search.svg',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                onChanged: (value) => setState(() => _query = value),
+                style:
+                    TextStyle(fontSize: 15, height: 1.24, color: context.k.ink),
+                decoration: InputDecoration(
+                  hintText: 'Tìm tên bé…',
+                  hintStyle: TextStyle(fontSize: 15, color: context.k.inkSoft),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Xóa tìm kiếm',
+                          onPressed: () => setState(() => _query = ''),
+                          icon: const Icon(Icons.clear, size: 18),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _attendanceList(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          color: context.k.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: context.k.lineStrong),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var index = 0; index < _filteredRoster.length; index++) ...[
+              SizedBox(
+                height: 57,
+                child: _AttendanceRow(
+                  student: _filteredRoster[index],
+                  status: _draft[_filteredRoster[index].id] ??
+                      AttendanceStatus.arrived,
+                  detail: _details[_filteredRoster[index].id],
+                  enabled: !_saving,
+                  onChanged: (status) =>
+                      _setStatus(_filteredRoster[index], status),
+                ),
+              ),
+              if (index < _filteredRoster.length - 1)
+                Divider(height: 0.6, indent: 12, color: context.k.line),
+            ],
+          ],
+        ),
+      );
+
+  Widget _emptyRoster(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: context.k.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: context.k.lineStrong),
+        ),
+        child: Center(
+          child: Text(
+            'Không tìm thấy học sinh phù hợp.',
+            style: TextStyle(color: context.k.inkSoft),
+          ),
+        ),
+      );
 }
 
 class _AttendanceSummary extends StatelessWidget {
   const _AttendanceSummary({
-    required this.height,
     required this.total,
     required this.arrived,
     required this.absent,
@@ -499,7 +536,6 @@ class _AttendanceSummary extends StatelessWidget {
     required this.late,
   });
 
-  final double height;
   final int total;
   final int arrived;
   final int absent;
@@ -508,116 +544,307 @@ class _AttendanceSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final divider = Theme.of(context).dividerColor;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: divider)),
-      ),
-      child: SizedBox(
-        height: height,
-        child: Row(
-          children: [
-            Expanded(child: _Counter(value: total, label: 'Tổng')),
-            VerticalDivider(width: 1, color: divider),
-            Expanded(
-              child: _Counter(
-                value: arrived,
-                label: 'Đến',
-                helper: late > 0 ? '$late bé trễ' : null,
-              ),
+    final onTime = arrived - late;
+    return Semantics(
+      label:
+          '$arrived/$total bé đã đến lớp. $onTime đúng giờ, $late đến trễ, $absent vắng, $excusedAbsent có phép.',
+      child: ExcludeSemantics(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 67),
+          child: SizedBox(
+            width: double.infinity,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 54),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 35,
+                        child: Row(
+                          children: [
+                            SvgPicture.asset(
+                              'assets/garden_voice/attendance_users.svg',
+                              width: 32,
+                              height: 32,
+                            ),
+                            const SizedBox(width: 11),
+                            Flexible(
+                              child: Text(
+                                '$arrived/$total bé đã đến lớp',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  height: 1.24,
+                                  fontWeight: FontWeight.w800,
+                                  color: context.k.ink,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          _AttendanceCountBadge(
+                            label: '$onTime đúng giờ',
+                            color: context.k.brand,
+                            background: context.k.okTint,
+                          ),
+                          if (late > 0)
+                            _AttendanceCountBadge(
+                              label: '$late đến trễ',
+                              color: context.k.warnDeep,
+                              background: context.k.accentTint,
+                            ),
+                          _AttendanceCountBadge(
+                            label: '$absent vắng',
+                            color: absent > 0
+                                ? context.k.badText
+                                : context.k.brand,
+                            background: absent > 0
+                                ? context.k.badTint
+                                : context.k.okTint,
+                          ),
+                          if (excusedAbsent > 0)
+                            _AttendanceCountBadge(
+                              label: '$excusedAbsent có phép',
+                              color: context.k.info,
+                              background: context.k.infoTint,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  top: 1,
+                  width: 47,
+                  height: 65,
+                  child: IgnorePointer(
+                    child: ClipRect(
+                      child: Stack(
+                        clipBehavior: Clip.hardEdge,
+                        children: [
+                          Positioned(
+                            left: -268.6,
+                            top: -32.5,
+                            width: 335.7,
+                            height: 191.2,
+                            child: Image.asset(
+                              'assets/garden_voice/plant_detail.png',
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            VerticalDivider(width: 1, color: divider),
-            Expanded(child: _Counter(value: excusedAbsent, label: 'Có Phép')),
-            VerticalDivider(width: 1, color: divider),
-            Expanded(child: _Counter(value: absent, label: 'Vắng')),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _Counter extends StatelessWidget {
-  const _Counter({required this.value, required this.label, this.helper});
+class _AttendanceCountBadge extends StatelessWidget {
+  const _AttendanceCountBadge({
+    required this.label,
+    required this.color,
+    required this.background,
+  });
 
-  final int value;
   final String label;
-  final String? helper;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(minHeight: 28),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.24,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      );
+}
+
+class _AttendanceDateLabel extends StatelessWidget {
+  const _AttendanceDateLabel({
+    required this.date,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final DateTime date;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: '$label: $value${helper == null ? '' : '. $helper'}',
-      child: ExcludeSemantics(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '$value',
-              style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
+    final parsed = date;
+    final today = DateTime.now();
+    final isToday = parsed.year == today.year &&
+        parsed.month == today.month &&
+        parsed.day == today.day;
+    final weekdays = const [
+      'Thứ Hai',
+      'Thứ Ba',
+      'Thứ Tư',
+      'Thứ Năm',
+      'Thứ Sáu',
+      'Thứ Bảy',
+      'Chủ nhật',
+    ];
+    final label = isToday ? 'Hôm nay' : weekdays[parsed.weekday - 1];
+    final formatted =
+        '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}';
+
+    return Container(
+      height: 37,
+      decoration: BoxDecoration(
+        color: context.k.okTint,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Ngày trước',
+            onPressed: onPrevious,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            icon: SvgPicture.asset(
+              'assets/garden_voice/attendance_chevron_left.svg',
+              width: 23,
+              height: 23,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-            if (helper != null)
-              Text(
-                helper!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: _attendanceWarningText(context),
-                ),
+          ),
+          Expanded(
+            child: Text(
+              '$label · $formatted',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 17,
+                height: 1.24,
+                fontWeight: FontWeight.w800,
+                color: context.k.ink,
               ),
-          ],
-        ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Ngày sau',
+            onPressed: onNext,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            icon: SvgPicture.asset(
+              'assets/garden_voice/attendance_chevron_right.svg',
+              width: 23,
+              height: 23,
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _PendingLeaveTile extends StatelessWidget {
+  const _PendingLeaveTile({this.count, this.onTap});
+
+  final int? count;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: context.k.surface,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: SizedBox(
+            height: 43,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    'assets/garden_voice/attendance_calendar.svg',
+                    width: 25,
+                    height: 25,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      count == null
+                          ? 'Xem đơn nghỉ của lớp'
+                          : '$count đơn nghỉ đang chờ duyệt',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        height: 1.24,
+                        fontWeight: FontWeight.w800,
+                        color: context.k.ink,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: context.k.inkSoft),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _SavedIndicator extends StatelessWidget {
-  const _SavedIndicator({required this.dirty});
+  const _SavedIndicator({
+    required this.dirty,
+    required this.saving,
+    required this.onSave,
+  });
 
   final bool dirty;
+  final bool saving;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
-    final color = dirty
-        ? _attendanceWarningText(context)
-        : _attendanceSuccessText(context);
-    final background = dirty
-        ? (Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF3A2F1A)
-            : KColors.warnTint)
-        : (Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1E3328)
-            : KColors.okTint);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(dirty ? Icons.circle : Icons.check, size: dirty ? 7 : 15, color: color),
-            const SizedBox(width: 5),
-            Text(
-              dirty ? 'Có thay đổi chưa lưu' : 'Đã lưu',
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+    if (dirty || saving) {
+      return TextButton(
+        onPressed: onSave,
+        style: TextButton.styleFrom(
+          foregroundColor: context.k.brand,
+          minimumSize: const Size(48, 36),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
-      ),
+        child: Text(saving ? 'Đang lưu…' : 'Lưu'),
+      );
+    }
+    return Text(
+      'Đã cập nhật',
+      style: TextStyle(fontSize: 12, height: 1.4, color: context.k.inkSoft),
     );
   }
 }
@@ -637,284 +864,189 @@ class _AttendanceRow extends StatelessWidget {
   final ValueChanged<AttendanceStatus> onChanged;
   final AttendanceChildRecord? detail;
 
-  Widget? _buildBadge(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    if (status == AttendanceStatus.late) {
-      String label = 'Late';
-      if (detail?.expectedArrivalTime != null &&
-          detail!.expectedArrivalTime!.isNotEmpty) {
-        final raw = detail!.expectedArrivalTime!;
-        final parts = raw.split(':');
-        final formattedEta =
-            parts.length >= 2 ? '${parts[0]}:${parts[1]}' : raw;
-        label = 'Late (ETA: $formattedEta)';
-      }
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: dark ? const Color(0xFF3A2F1A) : KColors.warnTint,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: _attendanceWarningText(context).withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.schedule_outlined,
-              size: 11,
-              color: _attendanceWarningText(context),
-            ),
-            const SizedBox(width: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: _attendanceWarningText(context),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final visual = _statusVisual(context, status);
     final isLocked = status == AttendanceStatus.excusedAbsent;
+    final actualTime = detail?.checkInTime?.trim().isNotEmpty == true
+        ? detail!.checkInTime!.trim()
+        : student.time.trim();
+    final expectedTime = detail?.expectedArrivalTime?.trim() ?? '';
+    final subtitle = actualTime.isNotEmpty
+        ? 'Đến lúc ${_formatAttendanceTime(actualTime)}'
+        : expectedTime.isNotEmpty
+            ? 'Dự kiến đến ${_formatAttendanceTime(expectedTime)}'
+            : null;
+    final allergy = student.allergy?.trim() ?? '';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(12, 0, 32, 0),
       child: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              foregroundColor: theme.colorScheme.onPrimaryContainer,
-              child: Text(
-                _initials(student.name),
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Avatar(name: student.name, size: 40),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        student.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          height: 1.24,
+                          fontWeight: FontWeight.w800,
+                          color: context.k.ink,
+                        ),
+                      ),
+                    ),
+                    if (allergy.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: 'Lưu ý sức khỏe: $allergy',
+                        child: Icon(
+                          Icons.monitor_heart_outlined,
+                          size: 14,
+                          color: context.k.warnDeep,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.24,
+                      color: context.k.inkSoft,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            height: 28,
+            width: 90,
+            decoration: BoxDecoration(
+              color: visual.background,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color:
+                    context.k.isGardenVoice ? visual.background : visual.border,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          student.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      if (_buildBadge(context) != null) ...[
-                        const SizedBox(width: 6),
-                        _buildBadge(context)!,
-                      ],
-                    ],
-                  ),
-                  if (student.nickname != null &&
-                      student.nickname!.trim().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        'Tên gọi: ${student.nickname}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  if (student.allergy != null &&
-                      student.allergy!.trim().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.monitor_heart_outlined,
-                            size: 13,
-                            color: KColors.warn,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              'Lưu ý: ${student.allergy}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: KColors.warn,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<AttendanceStatus>(
+                value: status,
+                isDense: true,
+                isExpanded: true,
+                icon: const SizedBox.shrink(),
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                borderRadius: BorderRadius.circular(14),
+                dropdownColor: context.k.surface,
+                onChanged: (enabled && !isLocked)
+                    ? (newVal) {
+                        if (newVal != null) onChanged(newVal);
+                      }
+                    : null,
+                selectedItemBuilder: (context) => [
+                  _buildSelectedItem(context, AttendanceStatus.arrived),
+                  _buildSelectedItem(context, AttendanceStatus.absent),
+                  _buildSelectedItem(context, AttendanceStatus.excusedAbsent),
+                  _buildSelectedItem(context, AttendanceStatus.late),
+                ],
+                items: [
+                  _statusOption(context, AttendanceStatus.arrived),
+                  _statusOption(context, AttendanceStatus.absent),
+                  _statusOption(context, AttendanceStatus.excusedAbsent),
+                  _statusOption(context, AttendanceStatus.late),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: visual.background,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: visual.border),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<AttendanceStatus>(
-                  value: status,
-                  isDense: true,
-                  icon: Icon(
-                    isLocked ? Icons.lock_outline : Icons.arrow_drop_down,
-                    size: isLocked ? 16 : 20,
-                    color: visual.foreground,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  dropdownColor: theme.colorScheme.surface,
-                  onChanged: (enabled && !isLocked)
-                      ? (newVal) {
-                          if (newVal != null) {
-                            onChanged(newVal);
-                          }
-                        }
-                      : null,
-                  selectedItemBuilder: (context) => [
-                    _buildSelectedItem(context, AttendanceStatus.arrived),
-                    _buildSelectedItem(context, AttendanceStatus.absent),
-                    _buildSelectedItem(context, AttendanceStatus.excusedAbsent),
-                    _buildSelectedItem(context, AttendanceStatus.late),
-                  ],
-                  items: [
-                    DropdownMenuItem(
-                      value: AttendanceStatus.arrived,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            size: 16,
-                            color: _attendanceSuccessText(context),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Đến',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _attendanceSuccessText(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: AttendanceStatus.absent,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.event_busy_outlined,
-                            size: 16,
-                            color: _attendanceDangerText(context),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Vắng',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _attendanceDangerText(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: AttendanceStatus.excusedAbsent,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.event_available_outlined,
-                            size: 16,
-                            color: _attendanceInfoText(context),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Có Phép',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _attendanceInfoText(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: AttendanceStatus.late,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.schedule_outlined,
-                            size: 16,
-                            color: _attendanceWarningText(context),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Đến Trễ',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _attendanceWarningText(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSelectedItem(BuildContext context, AttendanceStatus itemStatus) {
     final v = _statusVisual(context, itemStatus);
     return Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(v.icon, size: 15, color: v.foreground),
-        const SizedBox(width: 6),
-        Text(
-          v.label,
-          style: TextStyle(
-            color: v.foreground,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
+        _statusIcon(context, itemStatus, 15),
+        const SizedBox(width: 3),
+        Flexible(
+          child: Text(
+            v.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: v.foreground,
+              fontSize: 11,
+              height: 1.24,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
     );
+  }
+
+  DropdownMenuItem<AttendanceStatus> _statusOption(
+    BuildContext context,
+    AttendanceStatus itemStatus,
+  ) {
+    final visual = _statusVisual(context, itemStatus);
+    return DropdownMenuItem(
+      value: itemStatus,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _statusIcon(context, itemStatus, 16),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              visual.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: visual.foreground,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusIcon(
+    BuildContext context,
+    AttendanceStatus itemStatus,
+    double size,
+  ) {
+    if (itemStatus == AttendanceStatus.arrived) {
+      return SvgPicture.asset(
+        'assets/garden_voice/attendance_check.svg',
+        width: size,
+        height: size,
+      );
+    }
+    final visual = _statusVisual(context, itemStatus);
+    return Icon(visual.icon, size: size, color: visual.foreground);
   }
 }
 
@@ -922,10 +1054,12 @@ class _AbsentNotificationSheet extends StatelessWidget {
   const _AbsentNotificationSheet({
     required this.students,
     required this.unsaved,
+    required this.date,
   });
 
   final List<Child> students;
   final bool unsaved;
+  final DateTime date;
 
   @override
   Widget build(BuildContext context) {
@@ -959,14 +1093,14 @@ class _AbsentNotificationSheet extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            Text('Gửi thông báo đẩy đến phụ huynh của ${students.length} bé vắng hôm nay.'),
+            Text(
+              'Gửi thông báo đẩy đến phụ huynh của ${students.length} bé vắng ngày ${_formatAttendanceDate(date)}.',
+            ),
             if (unsaved) ...[
               const SizedBox(height: 12),
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: theme.brightness == Brightness.dark
-                      ? const Color(0xFF3A2F1A)
-                      : KColors.warnTint,
+                  color: context.k.warnTint,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Padding(
@@ -1044,58 +1178,53 @@ _StatusVisual _statusVisual(
   BuildContext context,
   AttendanceStatus status,
 ) {
-  final dark = Theme.of(context).brightness == Brightness.dark;
   return switch (status) {
     AttendanceStatus.arrived => (
-        label: 'Đến',
+        label: 'Đã đến',
         icon: Icons.check_circle_outline,
-        foreground: _attendanceSuccessText(context),
-        background: dark ? const Color(0xFF1E3328) : KColors.okTint,
-        border: KColors.ok.withAlpha(100),
+        foreground: context.k.brand,
+        background: context.k.okTint,
+        border: context.k.okDot.withValues(alpha: .4),
       ),
     AttendanceStatus.absent => (
         label: 'Vắng',
         icon: Icons.event_busy_outlined,
         foreground: _attendanceDangerText(context),
-        background: dark ? const Color(0xFF3A2621) : KColors.badTint,
-        border: KColors.bad.withAlpha(100),
+        background: context.k.badTint,
+        border: context.k.bad.withValues(alpha: .4),
       ),
     AttendanceStatus.excusedAbsent => (
-        label: 'Có Phép',
+        label: 'Có phép',
         icon: Icons.event_available_outlined,
         foreground: _attendanceInfoText(context),
-        background: dark ? const Color(0xFF152A38) : KColors.infoTint,
-        border: KColors.info.withAlpha(100),
+        background: context.k.infoTint,
+        border: context.k.info.withValues(alpha: .4),
       ),
     AttendanceStatus.late => (
-        label: 'Đến Trễ',
+        label: 'Đến trễ',
         icon: Icons.schedule_outlined,
         foreground: _attendanceWarningText(context),
-        background: dark ? const Color(0xFF3A2F1A) : KColors.warnTint,
-        border: KColors.warn.withAlpha(110),
+        background: context.k.accentTint,
+        border: context.k.warnDot.withValues(alpha: .4),
       ),
   };
 }
 
-Color _attendanceInfoText(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF64B5F6)
-        : const Color(0xFF1976D2);
+Color _attendanceInfoText(BuildContext context) => context.k.info;
 
-Color _attendanceSuccessText(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF6FCF8E)
-        : const Color(0xFF2D7048);
+Color _attendanceDangerText(BuildContext context) => context.k.badText;
 
-Color _attendanceDangerText(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFE87B63)
-        : const Color(0xFF923624);
+Color _attendanceWarningText(BuildContext context) => context.k.warnDeep;
 
-Color _attendanceWarningText(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFF5C878)
-        : const Color(0xFF7A510E);
+String _formatAttendanceDate(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+
+String _formatAttendanceTime(String value) {
+  final raw = value.contains('T') ? value.split('T').last : value;
+  final parts = raw.split(':');
+  if (parts.length < 2) return raw;
+  return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+}
 
 String _initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+'));

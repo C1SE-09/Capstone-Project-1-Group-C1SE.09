@@ -121,7 +121,7 @@ class SessionManagementService {
   static const String _keyParentId = 'app_session_parent_id';
   static const String _keyDeviceName = 'app_session_device_name';
   static const String _keyExpiresAt = 'app_session_expires_at';
-  static const Duration sessionTimeout = Duration(hours: 4);
+  static const Duration sessionTimeout = Duration(hours: 1);
 
   bool _canRestoreSession(SharedPreferences prefs) {
     final expiresAt = prefs.get(_keyExpiresAt);
@@ -244,8 +244,6 @@ class SessionManagementService {
       await Future.wait([
         prefs.setString(_keyAccessToken, newAccessToken),
         prefs.setString(_keyRefreshToken, newRefreshToken),
-        prefs.setInt(_keyExpiresAt,
-            DateTime.now().add(sessionTimeout).millisecondsSinceEpoch),
       ]);
     } on Exception catch (_) {}
   }

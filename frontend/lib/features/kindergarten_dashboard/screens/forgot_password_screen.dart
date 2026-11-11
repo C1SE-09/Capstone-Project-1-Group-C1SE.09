@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -22,7 +23,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  late final AuthRepository _authRepository = widget.authRepository ?? AuthRepository();
+  late final AuthRepository _authRepository =
+      widget.authRepository ?? AuthRepository();
 
   int _currentStep = 0; // 0: Nhập email, 1: Nhập OTP, 2: Đặt mật khẩu mới
 
@@ -112,7 +114,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() {
         _errorMessage = getFriendlyErrorMessage(
           e,
-          fallback: 'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.',
+          fallback:
+              'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.',
         );
       });
     } finally {
@@ -151,7 +154,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() {
         _errorMessage = getFriendlyErrorMessage(
           e,
-          fallback: 'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.',
+          fallback:
+              'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.',
         );
       });
     } finally {
@@ -168,7 +172,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      final msg = await _authRepository.requestPasswordReset(_emailController.text.trim());
+      final msg = await _authRepository
+          .requestPasswordReset(_emailController.text.trim());
       if (!mounted) return;
       _startResendTimer();
       setState(() {
@@ -179,7 +184,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() {
         _errorMessage = getFriendlyErrorMessage(
           e,
-          fallback: 'Không thể gửi lại mã xác thực vào lúc này. Vui lòng thử lại sau ít phút.',
+          fallback:
+              'Không thể gửi lại mã xác thực vào lúc này. Vui lòng thử lại sau ít phút.',
         );
       });
     } finally {
@@ -226,17 +232,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           backgroundColor: context.k.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
               Icon(Icons.check_circle_rounded, color: context.k.ok, size: 28),
               const SizedBox(width: 10),
-              Text('Thành công', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: context.k.ink)),
+              Text('Thành công',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: context.k.ink)),
             ],
           ),
           content: Text(
             'Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập với mật khẩu mới.',
-            style: TextStyle(fontSize: 14, height: 1.4, color: context.k.inkSoft),
+            style:
+                TextStyle(fontSize: 14, height: 1.4, color: context.k.inkSoft),
           ),
           actions: [
             ElevatedButton(
@@ -247,7 +259,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: context.k.brand,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('ĐĂNG NHẬP NGAY'),
             ),
@@ -259,7 +272,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() {
         _errorMessage = getFriendlyErrorMessage(
           e,
-          fallback: 'Đặt lại mật khẩu không thành công. Vui lòng thử lại sau ít phút.',
+          fallback:
+              'Đặt lại mật khẩu không thành công. Vui lòng thử lại sau ít phút.',
         );
       });
     } finally {
@@ -269,6 +283,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_currentStep == 0) return _buildGardenVoiceEmailStep();
+
     return Scaffold(
       backgroundColor: context.k.canvas,
       body: SafeArea(
@@ -286,7 +302,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     alignment: Alignment.centerLeft,
                     child: IconButton(
                       onPressed: _isLoading ? null : _goBackToLogin,
-                      icon: Icon(Icons.arrow_back_rounded, color: context.k.inkSoft),
+                      icon: Icon(Icons.arrow_back_rounded,
+                          color: context.k.inkSoft),
                       tooltip: 'Quay lại đăng nhập',
                     ),
                   ),
@@ -299,7 +316,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       height: 52,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [context.k.brand, context.k.brand.withValues(alpha: 0.8)],
+                          colors: [
+                            context.k.brand,
+                            context.k.brand.withValues(alpha: 0.8)
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -312,7 +332,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
+                      child: const Icon(Icons.school_rounded,
+                          color: Colors.white, size: 28),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -345,12 +366,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             decoration: BoxDecoration(
                               color: context.k.badTint,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: context.k.bad.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                  color: context.k.bad.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.error_outline, size: 18, color: context.k.bad),
+                                Icon(Icons.error_outline,
+                                    size: 18, color: context.k.bad),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -375,12 +398,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             decoration: BoxDecoration(
                               color: context.k.infoTint,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: context.k.info.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                  color: context.k.info.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.info_outline, size: 18, color: context.k.info),
+                                Icon(Icons.info_outline,
+                                    size: 18, color: context.k.info),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -399,7 +424,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ],
 
                         // Nội dung từng bước
-                        if (_currentStep == 0) _buildStepEmail(),
                         if (_currentStep == 1) _buildStepOtp(),
                         if (_currentStep == 2) _buildStepNewPassword(),
                       ],
@@ -411,7 +435,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   Center(
                     child: TextButton.icon(
                       onPressed: _isLoading ? null : _goBackToLogin,
-                      icon: Icon(Icons.arrow_back_rounded, size: 16, color: context.k.inkSoft),
+                      icon: Icon(Icons.arrow_back_rounded,
+                          size: 16, color: context.k.inkSoft),
                       label: Text(
                         'Quay lại màn hình đăng nhập',
                         style: TextStyle(
@@ -430,6 +455,123 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
     );
   }
+
+  Widget _buildGardenVoiceEmailStep() => GardenVoiceScope(
+        child: Builder(
+          builder: (context) {
+            final k = context.k;
+            return Scaffold(
+              backgroundColor: k.canvas,
+              body: SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 390),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox.square(
+                                dimension: 44,
+                                child: IconButton(
+                                  onPressed: _isLoading ? null : _goBackToLogin,
+                                  tooltip: 'Quay lại đăng nhập',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                      width: 44, height: 44),
+                                  icon: SvgPicture.asset(
+                                      'assets/notifications/back_44.svg'),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Quên mật khẩu',
+                                      style: TextStyle(
+                                        fontFamily: 'Nunito',
+                                        fontSize: 16,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w700,
+                                        color: k.ink,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Đặt lại mật khẩu qua email',
+                                      style: TextStyle(
+                                        fontFamily: 'Nunito',
+                                        fontSize: 12,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w500,
+                                        color: k.inkSoft,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              for (var step = 0; step < 3; step++) ...[
+                                if (step > 0) const SizedBox(width: 6),
+                                Expanded(
+                                  child: Container(
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          step == 0 ? k.brand : k.surfaceSunken,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Bước 1/3 · Nhập email',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 12,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                              color: k.inkSoft,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Nhập email đã đăng ký tài khoản. KinderLog sẽ gửi mã xác nhận để bạn đặt lại mật khẩu.',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 14,
+                              height: 1.4,
+                              color: k.inkSoft,
+                            ),
+                          ),
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 12),
+                            Text(_errorMessage!,
+                                style: TextStyle(color: k.bad)),
+                          ],
+                          const SizedBox(height: 14),
+                          _buildStepEmail(context),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
 
   // Header 3 bước
   Widget _buildStepperHeader() {
@@ -504,103 +646,78 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   // --- Step 0: Nhập email ---
-  Widget _buildStepEmail() {
+  Widget _buildStepEmail(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: context.k.brandTint,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.mail_outline_rounded, color: context.k.brand, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Quên mật khẩu?',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: context.k.ink,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Nhận mã xác thực qua email đã đăng ký',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.k.inkSoft,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
         Text(
-          'Địa chỉ Email',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: context.k.ink,
-              ),
+          'Email đăng nhập',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 14,
+            height: 1.4,
+            fontWeight: FontWeight.w700,
+            color: context.k.ink,
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.done,
-          style: TextStyle(color: context.k.ink),
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 14,
+            height: 1.4,
+            color: context.k.ink,
+          ),
           onSubmitted: (_) => _handleSendEmail(),
           decoration: InputDecoration(
             hintText: 'vidu@gmail.com',
-            hintStyle: TextStyle(color: context.k.inkFaint),
-            prefixIcon: Icon(Icons.alternate_email_rounded, size: 20, color: context.k.inkSoft),
             filled: true,
-            fillColor: context.k.surfaceSunken,
+            fillColor: context.k.surface,
+            constraints: const BoxConstraints(minHeight: 48),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: context.k.line),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: context.k.inputBorder),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: context.k.line),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: context.k.inputBorder),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 14),
         SizedBox(
           height: 48,
-          child: ElevatedButton(
+          child: KButton(
+            label: _isLoading ? 'Đang gửi mã...' : 'Gửi mã xác nhận',
             onPressed: _isLoading ? null : _handleSendEmail,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.k.brand,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: context.k.surfaceSunken,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            'Không nhận được mã? Kiểm tra hộp thư rác, hoặc chờ 60 giây rồi gửi lại.',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 12,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+              color: context.k.inkSoft,
             ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text('GỬI MÃ XÁC THỰC'),
           ),
         ),
       ],
@@ -689,7 +806,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
         ),
         const SizedBox(height: 12),
@@ -740,8 +858,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              textStyle:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             child: _isLoading
                 ? const SizedBox(
@@ -772,7 +892,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 color: context.k.okTint,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.lock_reset_rounded, color: context.k.ok, size: 22),
+              child:
+                  Icon(Icons.lock_reset_rounded, color: context.k.ok, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -815,14 +936,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           decoration: InputDecoration(
             hintText: 'Nhập mật khẩu mới',
             hintStyle: TextStyle(color: context.k.inkFaint),
-            prefixIcon: Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
+            prefixIcon:
+                Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
             suffixIcon: IconButton(
               icon: Icon(
-                _obscureNewPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                _obscureNewPassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 size: 20,
                 color: context.k.inkSoft,
               ),
-              onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+              onPressed: () =>
+                  setState(() => _obscureNewPassword = !_obscureNewPassword),
             ),
             filled: true,
             fillColor: context.k.surfaceSunken,
@@ -838,7 +963,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -859,14 +985,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           decoration: InputDecoration(
             hintText: 'Nhập lại mật khẩu mới',
             hintStyle: TextStyle(color: context.k.inkFaint),
-            prefixIcon: Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
+            prefixIcon:
+                Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
             suffixIcon: IconButton(
               icon: Icon(
-                _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                _obscureConfirmPassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 size: 20,
                 color: context.k.inkSoft,
               ),
-              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              onPressed: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
             filled: true,
             fillColor: context.k.surfaceSunken,
@@ -882,7 +1012,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: context.k.brand, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ),
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _handleResetPassword(),
@@ -896,8 +1027,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               backgroundColor: context.k.brand,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              textStyle:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             child: _isLoading
                 ? const SizedBox(

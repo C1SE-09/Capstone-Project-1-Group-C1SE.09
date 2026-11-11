@@ -4,7 +4,8 @@ import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' as ui;
+import 'package:adark_frontend/features/kindergarten_dashboard/models.dart'
+    as ui;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,7 +35,8 @@ void main() {
   });
 
   for (final type in ['report_sent', 'report_updated']) {
-    testWidgets('$type mở đúng report_id và child_id sau khi dựng UI', (tester) async {
+    testWidgets('$type mở đúng report_id và child_id sau khi dựng UI',
+        (tester) async {
       push.handleNotificationTap(RemoteMessage(data: {
         'type': type,
         'report_id': 'report-old',
@@ -66,7 +68,25 @@ void main() {
     expect(uri.queryParameters['attendanceDate'], '2026-10-20');
   });
 
-  testWidgets('nhắc điểm danh mở đúng lớp và ngày của giáo viên', (tester) async {
+  testWidgets('quyết định đơn nghỉ mở danh sách đơn của đúng bé',
+      (tester) async {
+    push.handleNotificationTap(const RemoteMessage(data: {
+      'type': 'leave_request_reviewed',
+      'request_id': 'request-1',
+      'child_id': 'child-2',
+      'status': 'approved',
+    }));
+    await tester.pumpWidget(const MaterialApp(home: Scaffold()));
+    await tester.pump();
+
+    final uri = appRouter.routeInformationProvider.value.uri;
+    expect(uri.path, '/parent');
+    expect(uri.queryParameters['childId'], 'child-2');
+    expect(uri.queryParameters['requests'], 'true');
+  });
+
+  testWidgets('nhắc điểm danh mở đúng lớp và ngày của giáo viên',
+      (tester) async {
     await SessionManagementService.instance.saveSession(const AppSession(
       accessToken: 'test-access',
       refreshToken: 'test-refresh',
@@ -106,7 +126,8 @@ void main() {
 
   testWidgets('payload thiếu ID không mở báo cáo khác', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold()));
-    push.handleNotificationTap(const RemoteMessage(data: {'type': 'report_sent'}));
+    push.handleNotificationTap(
+        const RemoteMessage(data: {'type': 'report_sent'}));
     await tester.pump();
 
     expect(appRouter.routeInformationProvider.value.uri.toString(), '/parent');
@@ -132,7 +153,8 @@ void main() {
     expect(appRouter.routeInformationProvider.value.uri.path, '/teacher');
   });
 
-  testWidgets('giữ đích đến qua đăng nhập cho tới khi đích đã hiển thị', (tester) async {
+  testWidgets('giữ đích đến qua đăng nhập cho tới khi đích đã hiển thị',
+      (tester) async {
     await SessionManagementService.instance.clearSession();
     push.handleNotificationTap(const RemoteMessage(data: {
       'type': 'report_updated',
@@ -154,23 +176,32 @@ void main() {
     expect(push.pendingLocationFor('parent'), isNull);
   });
 
-  testWidgets('chạm Xem khi đang foreground không tự hết phiên theo đồng hồ', (tester) async {
+  testWidgets('chạm Xem khi đang foreground không tự hết phiên theo đồng hồ',
+      (tester) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('app_session_expires_at', 0);
     await tester.pumpWidget(const MaterialApp(home: Scaffold()));
     push.handleNotificationTap(const RemoteMessage(data: {
-      'type': 'report_sent', 'report_id': 'report-1', 'child_id': 'child-1',
+      'type': 'report_sent',
+      'report_id': 'report-1',
+      'child_id': 'child-1',
     }));
     await tester.pump();
 
     expect(SessionManagementService.instance.isLoggedIn, isTrue);
-    expect(appRouter.routeInformationProvider.value.uri.queryParameters['reportId'], 'report-1');
+    expect(
+        appRouter
+            .routeInformationProvider.value.uri.queryParameters['reportId'],
+        'report-1');
   });
 
-  testWidgets('server từ chối phiên vẫn giữ đích đến cho lần đăng nhập lại', (tester) async {
+  testWidgets('server từ chối phiên vẫn giữ đích đến cho lần đăng nhập lại',
+      (tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold()));
     push.handleNotificationTap(const RemoteMessage(data: {
-      'type': 'report_updated', 'report_id': 'report-old', 'child_id': 'child-2',
+      'type': 'report_updated',
+      'report_id': 'report-old',
+      'child_id': 'child-2',
     }));
     await tester.pump();
     // Mô phỏng callback phiên bị server thu hồi sau khi đã điều hướng.
@@ -181,28 +212,47 @@ void main() {
     expect(push.pendingLocationFor('parent'), isNotNull);
   });
 
-  testWidgets('mở push không xóa bản điểm danh chưa lưu ở màn đang mở', (tester) async {
+  testWidgets('mở push không xóa bản điểm danh chưa lưu ở màn đang mở',
+      (tester) async {
     await SessionManagementService.instance.saveSession(const AppSession(
-      accessToken: 'test-access', refreshToken: 'test-refresh',
-      sessionId: 'teacher-session', role: 'teacher',
+      accessToken: 'test-access',
+      refreshToken: 'test-refresh',
+      sessionId: 'teacher-session',
+      role: 'teacher',
     ));
     appRouter.go('/teacher?classId=class-2');
     await tester.pumpWidget(MaterialApp.router(routerConfig: appRouter));
     await tester.pumpAndSettle();
-    Navigator.of(tester.element(find.byType(TeacherShell))).push(MaterialPageRoute<void>(
+    Navigator.of(tester.element(find.byType(TeacherShell)))
+        .push(MaterialPageRoute<void>(
       builder: (_) => const AttendanceScreen(
-        classId: 'class-2', className: 'Mầm B', date: '2026-10-20',
-        roster: [ui.Child(id: 'child-1', name: 'Bé An', status: ui.ReportStatus.none,
-          present: true, time: '', severity: ui.Severity.none)],
+        classId: 'class-2',
+        className: 'Mầm B',
+        date: '2026-10-20',
+        roster: [
+          ui.Child(
+              id: 'child-1',
+              name: 'Bé An',
+              status: ui.ReportStatus.none,
+              present: true,
+              time: '',
+              severity: ui.Severity.none)
+        ],
         initialRecords: {'child-1': ui.AttendanceStatus.arrived},
       ),
     ));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bé An'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButton<ui.AttendanceStatus>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Vắng').last);
+    await tester.pumpAndSettle();
 
     push.handleNotificationTap(const RemoteMessage(data: {
-      'type': 'attendance_reminder', 'class_id': 'class-2', 'date': '2026-10-21',
+      'type': 'attendance_reminder',
+      'class_id': 'class-2',
+      'date': '2026-10-21',
     }));
     await tester.pumpAndSettle();
     expect(find.byType(AttendanceScreen, skipOffstage: false), findsOneWidget);
@@ -225,12 +275,15 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: Scaffold()));
       push.handleNotificationTap(RemoteMessage(data: data));
       await tester.pump();
-      expect(appRouter.routeInformationProvider.value.uri.toString(), '/parent');
+      expect(
+          appRouter.routeInformationProvider.value.uri.toString(), '/parent');
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('router mở đích mới mà không hiện sheet cũ, kể cả API không khả dụng', (tester) async {
+  testWidgets(
+      'router mở đích mới mà không hiện sheet cũ, kể cả API không khả dụng',
+      (tester) async {
     await tester.pumpWidget(MaterialApp.router(routerConfig: appRouter));
     await tester.pumpAndSettle();
     showModalBottomSheet<void>(
@@ -241,7 +294,9 @@ void main() {
     expect(find.text('Sheet thông báo cũ'), findsOneWidget);
 
     push.handleNotificationTap(const RemoteMessage(data: {
-      'type': 'report_updated', 'report_id': 'report-old', 'child_id': 'child-2',
+      'type': 'report_updated',
+      'report_id': 'report-old',
+      'child_id': 'child-2',
     }));
     await tester.pumpAndSettle();
 

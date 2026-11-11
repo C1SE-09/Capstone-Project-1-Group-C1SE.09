@@ -106,17 +106,25 @@ void main() {
   }
 
   Future<void> submit(WidgetTester tester) async {
-    await tester.ensureVisible(find.text('ĐĂNG NHẬP'));
-    await tester.tap(find.text('ĐĂNG NHẬP'));
+    final button = find.text('Đăng nhập');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
     await tester.pumpAndSettle();
   }
 
-  testWidgets('checkbox mặc định tắt và không tự gửi yêu cầu đăng nhập',
+  Future<void> toggleRemember(WidgetTester tester) async {
+    final checkbox = find.byType(CheckboxListTile);
+    await tester.ensureVisible(checkbox);
+    await tester.tap(checkbox);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('checkbox mặc định bật và không tự gửi yêu cầu đăng nhập',
       (tester) async {
     final adapter = await pumpLogin(tester);
     expect(find.byType(CheckboxListTile), findsOneWidget);
     expect(tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
-        isFalse);
+        isTrue);
     expect(adapter.requests, isEmpty);
   });
 
@@ -142,7 +150,7 @@ void main() {
         home: LoginScreen(onLogin: (_) {}),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Nhớ tài khoản'), findsOneWidget);
+      expect(find.text('Lưu mật khẩu'), findsOneWidget);
       expect(tester.getSize(find.byType(CheckboxListTile)).height,
           greaterThanOrEqualTo(48));
       expect(tester.takeException(), isNull);
@@ -165,14 +173,12 @@ void main() {
     expect(SessionManagementService.instance.isLoggedIn, isTrue);
   });
 
-  testWidgets('chọn nhớ và login thành công mới ghi vào kho mã hóa',
+  testWidgets('checkbox bật chỉ ghi vào kho mã hóa sau khi login thành công',
       (tester) async {
     await pumpLogin(tester);
     await tester.enterText(find.byType(TextField).first, '  teacher.demo  ');
     await tester.enterText(find.byType(TextField).last, _savedPassword);
     expect(find.byType(CheckboxListTile), findsOneWidget);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
     expect(await _storage.read(key: _rememberedKey), isNull);
     await submit(tester);
     expect(jsonDecode((await _storage.read(key: _rememberedKey))!), {
@@ -194,8 +200,7 @@ void main() {
     await seedCredentials();
     final adapter = await pumpLogin(tester);
     expect(find.byType(CheckboxListTile), findsOneWidget);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
+    await toggleRemember(tester);
     expect(await _storage.read(key: _rememberedKey), isNull);
     expect(adapter.requests, isEmpty);
   });
@@ -203,6 +208,7 @@ void main() {
   testWidgets('login không chọn nhớ không lưu tài khoản hoặc mật khẩu',
       (tester) async {
     await pumpLogin(tester);
+    await toggleRemember(tester);
     await tester.enterText(find.byType(TextField).first, _savedUsername);
     await tester.enterText(find.byType(TextField).last, _savedPassword);
     await submit(tester);
@@ -247,7 +253,7 @@ void main() {
     await pumpLogin(tester);
     expect(find.byType(CheckboxListTile), findsOneWidget);
     expect(tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
-        isFalse);
+        isTrue);
     expect(
         tester.widget<TextField>(find.byType(TextField).first).controller!.text,
         isEmpty);
@@ -261,8 +267,6 @@ void main() {
         tester.widget<TextField>(find.byType(TextField).first).enabled, isTrue);
     await tester.enterText(find.byType(TextField).first, _savedUsername);
     await tester.enterText(find.byType(TextField).last, _savedPassword);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
     await submit(tester);
     expect(SessionManagementService.instance.isLoggedIn, isTrue);
     expect(find.byType(SnackBar), findsOneWidget);

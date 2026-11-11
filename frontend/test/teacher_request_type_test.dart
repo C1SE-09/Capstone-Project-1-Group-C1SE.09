@@ -36,8 +36,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Báo đi trễ'), findsOneWidget);
-    expect(find.textContaining('08:30'), findsOneWidget);
+    expect(find.text('Đi trễ'), findsOneWidget);
+    expect(find.textContaining('08:30'), findsNWidgets(2));
     expect(find.text('Lý do đi trễ:'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

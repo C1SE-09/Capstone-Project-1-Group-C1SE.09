@@ -1,10 +1,13 @@
-name: Flutter Analysis
+name: Flutter Analysis and UI Capture
 
 on:
   pull_request:
     branches: [ "develop", "main" ]
     paths:
       - "frontend/**"
+      - "AGENTS.md"
+      - "design-system/kinderlog/**"
+      - "docs/design/**"
       - ".github/workflows/flutter.yml"
 
 concurrency:
@@ -14,6 +17,8 @@ concurrency:
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Ho_Chi_Minh
 
     steps:
     - name: Checkout code
@@ -22,13 +27,29 @@ jobs:
     - name: Set up Flutter environment
       uses: subosito/flutter-action@v2
       with:
+        flutter-version: '3.47.5'
         channel: 'stable'
         cache: true
 
     - name: Install dependencies
+      id: dependencies
       working-directory: ./frontend
       run: flutter pub get
 
     - name: Run Flutter Analyze
       working-directory: ./frontend
       run: flutter analyze
+
+    - name: Run UI layout tests and capture screenshots
+      if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+      working-directory: ./frontend
+      run: flutter test --no-pub --dart-define=UI_CAPTURE_DIR=build/ui-captures test/figma_request_layout_test.dart
+
+    - name: Upload UI screenshots
+      if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: flutter-ui-captures
+        path: frontend/build/ui-captures/*.png
+        if-no-files-found: error
+        retention-days: 7

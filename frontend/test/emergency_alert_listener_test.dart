@@ -11,8 +11,10 @@ import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -88,7 +90,9 @@ void main() {
       expect(service.isPlaying, isFalse);
     });
 
-    test('playSiren và stopSiren an toàn khi enabled = false hoặc khi có lỗi plugin', () async {
+    test(
+        'playSiren và stopSiren an toàn khi enabled = false hoặc khi có lỗi plugin',
+        () async {
       final service = EmergencySirenService.instance;
       service.enabled = false;
       await service.playSiren();
@@ -115,71 +119,181 @@ void main() {
       incidentType: 'Ngã chấn thương đầu gối',
       teacherName: 'Cô Trần Ngọc Mai',
       teacherPhone: '0909123456',
-      description: 'Bé vấp ngã khi chạy trong giờ ra chơi, cô đã sát trùng và băng lại.',
+      description:
+          'Bé vấp ngã khi chạy trong giờ ra chơi, cô đã sát trùng và băng lại.',
       temperature: '36.8',
       createdAt: DateTime.parse('2026-10-28T15:10:00Z'),
     );
 
-    testWidgets('Hiển thị đầy đủ thông tin cảnh báo khẩn cấp và nút gọi điện thoại', (tester) async {
+    testWidgets(
+        'Hiển thị đầy đủ thông tin cảnh báo khẩn cấp và nút gọi điện thoại',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
+          home: GardenVoiceScope(
+            child: Scaffold(
+              body: EmergencyAlertSummaryScreen(
+                alert: alert,
+                onDismiss: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Cảnh báo khẩn'), findsOneWidget);
+
+      // Kiểm tra thông tin bé
+      expect(find.text('Bé Minh Triết'), findsOneWidget);
+      expect(find.text('Ngã chấn thương đầu gối'), findsOneWidget);
+      expect(find.textContaining('36.8°C'), findsOneWidget);
+
+      // Kiểm tra ghi chú của giáo viên
+      expect(
+        find.text(
+            'Bé vấp ngã khi chạy trong giờ ra chơi, cô đã sát trùng và băng lại.'),
+        findsOneWidget,
+      );
+
+      expect(find.textContaining('Cô Trần Ngọc Mai'), findsWidgets);
+
+      // Kiểm tra nút gọi điện thoại
+      expect(find.text('Gọi cho Cô Trần Ngọc Mai'), findsOneWidget);
+
+      expect(find.text('Đã nắm thông tin · Tắt chuông'), findsOneWidget);
+    });
+
+    testWidgets('invalid teacher phone cannot launch tel:', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: GardenVoiceScope(
+          child: Scaffold(
+            body: EmergencyAlertSummaryScreen(
+              alert: EmergencyAlertData(
+                incidentId: 'inc-invalid-phone',
+                childId: 'child-101',
+                childName: 'Bé Minh Triết',
+                incidentType: 'Sốt cao',
+                teacherName: 'Cô Trần Ngọc Mai',
+                teacherPhone: '*21*0909123456#',
+                createdAt: DateTime(2026, 10, 28, 15, 10),
+              ),
+              onDismiss: () {},
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final callButton = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Gọi cho Cô Trần Ngọc Mai'));
+      expect(callButton.onPressed, isNull);
+      expect(
+          find.textContaining('Chưa có số điện thoại hợp lệ'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('valid teacher phone hands off tel: to the operating system',
+        (tester) async {
+      const channel = MethodChannel('plugins.flutter.io/url_launcher');
+      final calls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        (call) async {
+          calls.add(call);
+          return true;
+        },
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null));
+
+      await tester.pumpWidget(MaterialApp(
+        home: GardenVoiceScope(
+          child: Scaffold(
             body: EmergencyAlertSummaryScreen(
               alert: alert,
               onDismiss: () {},
             ),
           ),
         ),
-      );
+      ));
+      await tester.pump();
+      await tester
+          .tap(find.widgetWithText(FilledButton, 'Gọi cho Cô Trần Ngọc Mai'));
       await tester.pump();
 
-      // Kiểm tra Header
-      expect(find.text('CẢNH BÁO SỰ CỐ KHẨN CẤP'), findsOneWidget);
-
-      // Kiểm tra thông tin bé
-      expect(find.text('Bé Minh Triết'), findsOneWidget);
-      expect(find.text('Ngã chấn thương đầu gối'), findsOneWidget);
-      expect(find.text('36.8°C'), findsOneWidget);
-
-      // Kiểm tra ghi chú của giáo viên
-      expect(
-        find.text('Bé vấp ngã khi chạy trong giờ ra chơi, cô đã sát trùng và băng lại.'),
-        findsOneWidget,
-      );
-
-      // Kiểm tra tên cô giáo
-      expect(find.text('Cô giáo xử lý: Cô Trần Ngọc Mai'), findsOneWidget);
-
-      // Kiểm tra nút gọi điện thoại
-      expect(find.text('GỌI CHO CÔ GIÁO: 0909123456'), findsOneWidget);
-      expect(find.byIcon(Icons.phone_in_talk), findsOneWidget);
-
-      // Kiểm tra nút tắt chuông
-      expect(find.text('Đã nắm thông tin & Tắt chuông'), findsOneWidget);
-      expect(find.byIcon(Icons.volume_off), findsOneWidget);
+      expect(calls, hasLength(1));
+      expect(calls.single.method, 'launch');
+      expect((calls.single.arguments as Map)['url'], 'tel:0909123456');
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Bấm nút tắt chuông kích hoạt callback onDismiss', (tester) async {
+    testWidgets('Bấm nút tắt chuông kích hoạt callback onDismiss',
+        (tester) async {
       bool dismissed = false;
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EmergencyAlertSummaryScreen(
-              alert: alert,
-              onDismiss: () {
-                dismissed = true;
-              },
+          home: GardenVoiceScope(
+            child: Scaffold(
+              body: EmergencyAlertSummaryScreen(
+                alert: alert,
+                onDismiss: () {
+                  dismissed = true;
+                },
+              ),
             ),
           ),
         ),
       );
       await tester.pump();
 
-      await tester.tap(find.text('Đã nắm thông tin & Tắt chuông'));
+      await tester.tap(find.text('Đã nắm thông tin · Tắt chuông'));
       await tester.pump();
 
       expect(dismissed, isTrue);
+    });
+
+    testWidgets('header back also dismisses the alert through its callback',
+        (tester) async {
+      var dismissed = false;
+      await tester.pumpWidget(MaterialApp(
+        home: GardenVoiceScope(
+          child: Scaffold(
+            body: EmergencyAlertSummaryScreen(
+              alert: alert,
+              onDismiss: () => dismissed = true,
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pump();
+
+      expect(dismissed, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('system back dismisses the alert before popping its route',
+        (tester) async {
+      var dismissed = false;
+      await tester.pumpWidget(MaterialApp(
+        home: GardenVoiceScope(
+          child: Scaffold(
+            body: EmergencyAlertSummaryScreen(
+              alert: alert,
+              onDismiss: () => dismissed = true,
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+
+      expect(dismissed, isTrue);
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -198,7 +312,9 @@ void main() {
       await EmergencySirenService.instance.stopSiren();
     });
 
-    testWidgets('Chạm push health_incident_alert mở đúng màn /parent/emergency-alert', (tester) async {
+    testWidgets(
+        'Chạm push health_incident_alert mở đúng màn /parent/emergency-alert',
+        (tester) async {
       push.handleNotificationTap(const RemoteMessage(data: {
         'type': 'health_incident_alert',
         'incident_id': 'inc-777',

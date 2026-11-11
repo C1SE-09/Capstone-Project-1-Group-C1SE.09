@@ -5,13 +5,13 @@ import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
-import 'package:adark_frontend/core/notifications/emergency_siren_service.dart';
 import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey =
@@ -29,8 +29,11 @@ String initialRouteFor(AppSession? session) {
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   redirect: (context, state) {
-    final isPublicRoute = state.uri.path == '/login' || state.uri.path == '/forgot-password';
-    if (!isPublicRoute && !SessionManagementService.instance.isLoggedIn) return '/login';
+    final isPublicRoute =
+        state.uri.path == '/login' || state.uri.path == '/forgot-password';
+    if (!isPublicRoute && !SessionManagementService.instance.isLoggedIn) {
+      return '/login';
+    }
     return null;
   },
   // Đọc phiên đã nạp từ main() — top-level final nên chỉ chạy lần đầu appRouter
@@ -58,27 +61,32 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
         path: '/teacher',
         pageBuilder: (context, state) => NoTransitionPage(
-          key: ValueKey(state.uri.toString()),
-          child: TeacherShell(
-            onLogout: _goLogin,
-            classId: state.uri.queryParameters['classId'] ??
-                'aaaaaaaa-0000-0000-0000-000000000001',
-            initialAttendanceDate: state.uri.queryParameters['attendanceDate'],
-            notificationId: state.uri.queryParameters['notification'],
-          ),
-        )),
+              key: ValueKey(state.uri.toString()),
+              child: TeacherShell(
+                onLogout: _goLogin,
+                classId: state.uri.queryParameters['classId'] ??
+                    'aaaaaaaa-0000-0000-0000-000000000001',
+                initialAttendanceDate:
+                    state.uri.queryParameters['attendanceDate'],
+                notificationId: state.uri.queryParameters['notification'],
+              ),
+            )),
     GoRoute(
       path: '/timetable',
-      builder: (context, state) => TimetableScreen(
-        classId: state.uri.queryParameters['classId'] ??
-            'aaaaaaaa-0000-0000-0000-000000000001',
-        className: state.uri.queryParameters['className'] ?? 'Lớp học',
-        isReadOnly: state.uri.queryParameters['isReadOnly'] == 'true',
+      builder: (context, state) => GardenVoiceScope(
+        child: TimetableScreen(
+          classId: state.uri.queryParameters['classId'] ??
+              'aaaaaaaa-0000-0000-0000-000000000001',
+          className: state.uri.queryParameters['className'] ?? 'Lớp học',
+          isReadOnly: state.uri.queryParameters['isReadOnly'] == 'true',
+        ),
       ),
     ),
     GoRoute(
       path: '/teacher/medications',
-      builder: (context, state) => const TeacherMedicationScreen(),
+      builder: (context, state) => const GardenVoiceScope(
+        child: TeacherMedicationScreen(),
+      ),
     ),
     GoRoute(
       path: '/parent',
@@ -87,6 +95,7 @@ final GoRouter appRouter = GoRouter(
         child: ParentFlow(
           onLogout: _goLogin,
           initialOpenReport: state.uri.queryParameters['report'] == 'today',
+          initialOpenRequests: state.uri.queryParameters['requests'] == 'true',
           initialReportId: state.uri.queryParameters['reportId'],
           childId: state.uri.queryParameters['childId'],
           initialAttendanceDate: state.uri.queryParameters['attendanceDate'],
@@ -101,27 +110,16 @@ final GoRouter appRouter = GoRouter(
         return MaterialPage(
           key: ValueKey(state.uri.toString()),
           fullscreenDialog: true,
-          child: Scaffold(
-            backgroundColor: const Color(0xFFF0F2F5),
-            body: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                    child: EmergencyAlertSummaryScreen(
-                      alert: alert,
-                      onDismiss: () {
-                        EmergencySirenService.instance.stopSiren();
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/parent');
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ),
+          child: GardenVoiceScope(
+            child: EmergencyAlertSummaryScreen(
+              alert: alert,
+              onDismiss: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/parent');
+                }
+              },
             ),
           ),
         );
@@ -180,7 +178,8 @@ class _LoginRoute extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LoginScreen(
         onLogin: (role) {
-          final target = PushNotificationService.instance.pendingLocationFor(role.name);
+          final target =
+              PushNotificationService.instance.pendingLocationFor(role.name);
           if (target != null) {
             appRouter.go(target);
             return;

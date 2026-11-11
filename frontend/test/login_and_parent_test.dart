@@ -103,17 +103,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify Title & Logo
-    expect(find.text('Đăng nhập'), findsOneWidget);
+    // Verify Figma welcome and brand
+    expect(find.text('Chào mừng trở lại!'), findsOneWidget);
     expect(find.text('KinderLog'), findsOneWidget);
+    expect(find.byKey(const ValueKey('loginIllustration')), findsOneWidget);
 
     // Verify Fields & Controls
-    expect(find.text('Tên đăng nhập hoặc Gmail'), findsOneWidget);
-    expect(find.text('Mật khẩu'), findsOneWidget);
-    expect(find.text('ĐĂNG NHẬP'), findsOneWidget);
+    expect(find.text('TÊN ĐĂNG NHẬP'), findsOneWidget);
+    expect(find.text('MẬT KHẨU'), findsOneWidget);
+    expect(find.text('Đăng nhập'), findsOneWidget);
 
     // Verify deleted items per user request
-    expect(find.text('Nhớ tài khoản'), findsOneWidget);
+    expect(find.text('Lưu mật khẩu'), findsOneWidget);
     expect(find.text('Quên mật khẩu?'), findsOneWidget);
     expect(find.text('Chưa có tài khoản? '), findsNothing);
     expect(find.text('Đăng ký ngay'), findsNothing);
@@ -150,12 +151,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify parent name and child name
-    expect(find.text('Xin chào,'), findsOneWidget);
+    expect(find.text('Chào buổi sáng,'), findsOneWidget);
     expect(find.text('Trần Văn Tuấn'), findsOneWidget);
     expect(find.text('Trần Bảo Bảo'), findsWidgets);
-    expect(find.text('Lớp Mầm A · Cô Nguyễn Thị Mai'), findsOneWidget);
+    expect(find.text('Cô Nguyễn Thị Mai'), findsOneWidget);
     expect(find.text('Báo cáo hôm nay'), findsOneWidget);
-    expect(find.text('Đã có báo cáo'), findsOneWidget);
+    expect(find.text('Ăn uống'), findsOneWidget);
 
     // Verify Scaffold ancestor is present (prevents yellow underline bug)
     expect(find.byType(Scaffold), findsWidgets);
@@ -175,11 +176,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify initially "Đã gửi" is visible in recent reports
-    expect(find.text('Đã gửi'), findsWidgets);
+    // Card báo cáo hôm nay mở sheet từ dữ liệu thật.
+    expect(find.text('Ăn uống'), findsOneWidget);
 
     // Tap on recent report to open detail
-    await tester.tap(find.byIcon(Icons.chevron_right).last);
+    await tester.tap(find.text('Ăn uống'));
     await tester.pumpAndSettle();
 
     // Verify report sheet is displayed with 'Báo cáo hằng ngày' and 'Đã đọc' badge
@@ -191,8 +192,8 @@ void main() {
     await tester.tap(find.byTooltip('Quay lại'));
     await tester.pumpAndSettle();
 
-    // Verify back on home screen and recent report status is now updated to "Đã đọc"
-    expect(find.text('Đã đọc'), findsOneWidget);
+    // Quay về tổng quan sau khi đánh dấu đã đọc.
+    expect(find.text('Báo cáo hôm nay'), findsOneWidget);
   });
 
   testWidgets('ParentFlow clicking logout shows confirmation popup and handles Cancel/Logout',
@@ -219,7 +220,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Nút đăng xuất nằm ở cuối tab Tài khoản
-    await tester.tap(find.text('Tài khoản'));
+    await tester.tap(find.byTooltip('Tài khoản'));
     await tester.pumpAndSettle();
 
     final logoutBtn = find.widgetWithText(KButton, 'Đăng xuất');
@@ -255,6 +256,9 @@ void main() {
 
   testWidgets('ParentFlow displays timetable action and navigates to TimetableScreen',
       (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
         theme: kinderTheme(),
@@ -267,12 +271,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify timetable button is visible on child card
-    // (header không còn icon TKB — thiết kế v4 chỉ để TKB ở card bé)
-    expect(find.text('Thời khóa biểu của lớp'), findsOneWidget);
+    // Garden Voice giữ shortcut lịch học cho luồng hiện có.
+    expect(find.text('Lịch học'), findsOneWidget);
 
     // Tap on timetable button
-    await tester.tap(find.text('Thời khóa biểu của lớp'));
+    await tester.tap(find.text('Lịch học'));
     await tester.pumpAndSettle();
 
     // Verify TimetableScreen is opened

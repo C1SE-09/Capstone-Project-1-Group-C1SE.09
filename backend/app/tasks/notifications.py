@@ -13,16 +13,67 @@ import uuid
 
 from app.core.database import SessionLocal
 from app.models.device_token import DeviceToken
+from app.models.leave_request import LeaveRequest, LeaveRequestStatus
 from app.models.report import DailyReport
 from app.models.user import User
 from app.services.notification_service import (
     is_invalid_token,
+    child_parents_device_tokens,
     parent_device_tokens,
     send_push_notification,
 )
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+def _deliver_leave_request_notification(db, request_id: str) -> dict:
+    try:
+        request_uuid = uuid.UUID(request_id)
+    except ValueError:
+        logger.warning("[Notify] request_id không hợp lệ: %s", request_id)
+        return {"sent": 0, "removed": 0, "reason": "invalid_request_id"}
+
+    request = db.query(LeaveRequest).filter(LeaveRequest.leave_id == request_uuid).first()
+    if request is None:
+        return {"sent": 0, "removed": 0, "reason": "request_not_found"}
+    if request.status not in (LeaveRequestStatus.APPROVED, LeaveRequestStatus.REJECTED):
+        return {"sent": 0, "removed": 0, "reason": "not_reviewed"}
+
+    child = request.child
+    if child is None:
+        return {"sent": 0, "removed": 0, "reason": "no_child"}
+    tokens = child_parents_device_tokens(db, child.child_id)
+    if not tokens:
+        return {"sent": 0, "removed": 0, "reason": "no_device_tokens"}
+
+    status = request.status.value
+    decision = "được duyệt" if request.status == LeaveRequestStatus.APPROVED else "bị từ chối"
+    child_name = child.full_name.strip() if child.full_name else (child.nickname or "bé")
+    sent = removed = 0
+    for device_token in tokens:
+        try:
+            send_push_notification(
+                token=device_token.token,
+                title="KinderLog",
+                body=f"Đơn xin phép của {child_name} đã {decision}",
+                data={
+                    "type": "leave_request_reviewed",
+                    "request_id": str(request.leave_id),
+                    "child_id": str(request.child_id),
+                    "status": status,
+                },
+            )
+            sent += 1
+        except Exception as error:
+            if is_invalid_token(error):
+                db.delete(device_token)
+                removed += 1
+            else:
+                logger.exception("[Notify] Gửi quyết định đơn lỗi request_id=%s", request_id)
+
+    db.commit()
+    return {"sent": sent, "removed": removed}
 
 
 def _deliver_report_notification(db, report_id: str, is_update: bool = False) -> dict:
@@ -146,6 +197,24 @@ def send_report_notifications(self, report_id: str, is_update: bool = False) -> 
         logger.exception(
             "[Notify] Task lỗi report_id=%s — sẽ thử lại", report_id
         )
+        raise self.retry(exc=error)
+    finally:
+        db.close()
+
+
+@celery_app.task(
+    bind=True,
+    name="send_leave_request_notifications",
+    max_retries=3,
+    default_retry_delay=30,
+)
+def send_leave_request_notifications(self, request_id: str) -> dict:
+    db = SessionLocal()
+    try:
+        return _deliver_leave_request_notification(db, request_id)
+    except Exception as error:
+        db.rollback()
+        logger.exception("[Notify] Task lỗi request_id=%s — sẽ thử lại", request_id)
         raise self.retry(exc=error)
     finally:
         db.close()

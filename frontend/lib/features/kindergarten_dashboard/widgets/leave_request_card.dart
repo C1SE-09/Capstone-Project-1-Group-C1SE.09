@@ -75,7 +75,7 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
                   child: Row(children: [
                     CircleAvatar(
                         radius: 21,
-                        backgroundColor: k.brandTint,
+                        backgroundColor: late ? k.warnTint : k.brandTint,
                         backgroundImage: item.childAvatarUrl == null
                             ? null
                             : NetworkImage(item.childAvatarUrl!),
@@ -84,7 +84,7 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
                                 style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
-                                    color: k.brand))
+                                    color: late ? k.warnDeep : k.brand))
                             : null),
                     const SizedBox(width: 10),
                     Expanded(
@@ -95,24 +95,32 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
                               style: const TextStyle(
                                   fontSize: 14, fontWeight: FontWeight.w700)),
                           Text(
-                              '${widget.className == null ? '' : '${widget.className} · '}${requestTimestamp(item.createdAt)}',
+                              late
+                                  ? 'Báo đi trễ ${requestDate(item.fromDate)} · dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'chưa cập nhật'}'
+                                  : '${widget.className == null ? '' : '${widget.className} · '}Nghỉ ${item.totalDays} ngày · gửi ${requestTimestamp(item.createdAt).split(', ').last}',
                               style: TextStyle(fontSize: 11, color: k.inkSoft)),
                         ])),
                     const SizedBox(width: 8),
                     Flexible(
+                        flex: MediaQuery.textScalerOf(context).scale(1) > 1.3
+                            ? 1
+                            : 0,
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                          MedicationBadge(late ? 'Báo đi trễ' : 'Xin nghỉ',
-                              status: late ? 'pending' : 'given'),
-                          if (!pending) ...[
-                            const SizedBox(height: 4),
-                            ParentRequestStatus(item.status)
-                          ],
-                        ])),
-                    const SizedBox(width: 4),
-                    Icon(_open ? Icons.expand_less : Icons.chevron_right,
-                        size: 18, color: k.inkFaint),
+                              MedicationBadge(late ? 'Đi trễ' : 'Xin nghỉ',
+                                  tone: late
+                                      ? MedicationTone.warn
+                                      : MedicationTone.brand),
+                              if (!pending) ...[
+                                const SizedBox(height: 4),
+                                ParentRequestStatus(item.status)
+                              ],
+                            ])),
+                    if (!_open) ...[
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right, size: 18, color: k.inkFaint),
+                    ],
                   ])))),
       if (_open) ...[
         const SizedBox(height: 10),

@@ -287,6 +287,7 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
           if (!didPop) _discard(result);
         },
         child: ParentRequestLayout(
+            gardenVoice: true,
             title: _late ? 'Báo đi trễ' : 'Tạo đơn xin nghỉ',
             child: _ParentRequestFormFields(this)),
       );

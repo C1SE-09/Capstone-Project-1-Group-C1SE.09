@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
+import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
+import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
-import 'package:adark_frontend/domain/entities/child/child.dart' as domain_child;
+import 'package:adark_frontend/domain/entities/child/child.dart'
+    as domain_child;
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -18,17 +22,33 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_notifications_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 
 enum TeacherTab { overview, classList, history, account }
 
 class TeacherShell extends StatefulWidget {
-  const TeacherShell({super.key, required this.onLogout, this.classId, this.repository, this.classRepository, this.initialAttendanceDate, this.notificationId});
+  const TeacherShell(
+      {super.key,
+      required this.onLogout,
+      this.classId,
+      this.repository,
+      this.classRepository,
+      this.leaveRequestRepository,
+      this.attendanceRepository,
+      this.medicationRepository,
+      this.initialAttendanceDate,
+      this.notificationId});
   final VoidCallback onLogout;
   final String? classId;
   final HttpDashboardRepository? repository;
   final HttpClassDataRepository? classRepository;
+  final HttpLeaveRequestRepository? leaveRequestRepository;
+  final HttpAttendanceRepository? attendanceRepository;
+  final HttpMedicationRepository? medicationRepository;
   final String? initialAttendanceDate;
   final String? notificationId;
 
@@ -38,12 +58,21 @@ class TeacherShell extends StatefulWidget {
 
 class _TeacherShellState extends State<TeacherShell> {
   TeacherTab tab = TeacherTab.overview;
-  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
-  late final HttpClassDataRepository classRepository = widget.classRepository ?? HttpClassDataRepository();
+  late final HttpDashboardRepository repository =
+      widget.repository ?? HttpDashboardRepository();
+  late final HttpClassDataRepository classRepository =
+      widget.classRepository ?? HttpClassDataRepository();
+  late final HttpLeaveRequestRepository leaveRequestRepository =
+      widget.leaveRequestRepository ?? HttpLeaveRequestRepository();
+  late final HttpAttendanceRepository attendanceRepository =
+      widget.attendanceRepository ?? HttpAttendanceRepository();
+  late final HttpMedicationRepository medicationRepository =
+      widget.medicationRepository ?? HttpMedicationRepository();
   late Future<String> classNameFuture;
   late Future<List<Child>> childrenFuture;
   late Future<void> _initFuture;
   String? _activeClassId;
+  String? _teacherName;
   bool _hasNoClass = false;
   bool _notificationOpened = false;
 
@@ -68,7 +97,11 @@ class _TeacherShellState extends State<TeacherShell> {
 
   Future<void> _openInitialAttendance() async {
     final date = widget.initialAttendanceDate;
-    if (_notificationOpened || date == null || DateTime.tryParse(date) == null) return;
+    if (_notificationOpened ||
+        date == null ||
+        DateTime.tryParse(date) == null) {
+      return;
+    }
     final loading = _initFuture;
     try {
       await loading;
@@ -76,10 +109,14 @@ class _TeacherShellState extends State<TeacherShell> {
       final values = await Future.wait([classNameFuture, childrenFuture]);
       if (!mounted || _initFuture != loading) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _initFuture == loading && ModalRoute.of(context)?.isCurrent == true) {
+        if (mounted &&
+            _initFuture == loading &&
+            ModalRoute.of(context)?.isCurrent == true) {
           _notificationOpened = true;
-          openAttendance(values[0] as String, values[1] as List<Child>, date: date);
-          PushNotificationService.instance.completePendingNotification(widget.notificationId);
+          openAttendance(values[0] as String, values[1] as List<Child>,
+              date: date);
+          PushNotificationService.instance
+              .completePendingNotification(widget.notificationId);
         }
       });
       WidgetsBinding.instance.ensureVisualUpdate();
@@ -147,21 +184,40 @@ class _TeacherShellState extends State<TeacherShell> {
     ]);
     final roster = values[0] as List<domain_child.Child>;
     final dashboard = values[1] as ClassDashboardSummary;
-    final statuses = {for (final item in dashboard.pendingChildren) item.child.childId: item};
+    final rawTeacher = dashboard.teacherName.trim();
+    if (rawTeacher.isNotEmpty) {
+      _teacherName =
+          rawTeacher.startsWith('Cô ') || rawTeacher.startsWith('Thầy ')
+              ? rawTeacher
+              : 'Cô $rawTeacher';
+    }
+    final statuses = {
+      for (final item in dashboard.pendingChildren) item.child.childId: item
+    };
     return roster.map((child) {
       final item = statuses[child.childId];
       return item == null
-          ? uiChildFromDomain(child: child, reportStatus: ReportStatus.none, severity: severityFromDescription(null))
-          : uiChildFromDomainWithReport(child: child, reportStatus: item.status, severity: severityFromDescription(null), updatedAt: item.updatedAt);
+          ? uiChildFromDomain(
+              child: child,
+              reportStatus: ReportStatus.none,
+              severity: severityFromDescription(null))
+          : uiChildFromDomainWithReport(
+              child: child,
+              reportStatus: item.status,
+              severity: severityFromDescription(null),
+              updatedAt: item.updatedAt);
     }).toList();
   }
+
   bool healthOnly = false;
 
   Child childByName(String name, List<Child> children) {
     final clean = name.trim().toLowerCase();
     for (final child in children) {
       final childClean = child.name.trim().toLowerCase();
-      if (childClean == clean || clean.contains(childClean) || childClean.contains(clean)) {
+      if (childClean == clean ||
+          clean.contains(childClean) ||
+          childClean.contains(clean)) {
         return child;
       }
     }
@@ -179,7 +235,11 @@ class _TeacherShellState extends State<TeacherShell> {
     final reportStatus = report != null
         ? uiReportStatusFromBackend(report.status.name)
         : child.status;
-    final readOnly = {ReportStatus.submitted, ReportStatus.read, ReportStatus.attention}.contains(reportStatus);
+    final readOnly = {
+      ReportStatus.submitted,
+      ReportStatus.read,
+      ReportStatus.attention
+    }.contains(reportStatus);
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ReportEditorScreen(
         classId: _activeClassId ?? '',
@@ -190,7 +250,8 @@ class _TeacherShellState extends State<TeacherShell> {
         readOnly: readOnly,
         onSent: () {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã lưu bản nháp báo cáo')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Đã lưu bản nháp báo cáo')));
         },
       ),
     ));
@@ -198,8 +259,21 @@ class _TeacherShellState extends State<TeacherShell> {
 
   void openRecord(String className) {
     Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => RecordHubScreen(
+        classId: _activeClassId ?? '',
+        repository: repository,
+        classRepository: classRepository,
+        onClass: () => _openRecordFlow(RecordMode.classroom, className),
+        onChild: (child) => _openRecordFlow(RecordMode.child, className, child),
+      ),
+    ));
+  }
+
+  void _openRecordFlow(RecordMode mode, String className, [Child? child]) {
+    Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => RecordFlowScreen(
-        mode: RecordMode.classroom,
+        mode: mode,
+        child: child,
         classId: _activeClassId ?? '',
         className: className,
         repository: repository,
@@ -207,38 +281,156 @@ class _TeacherShellState extends State<TeacherShell> {
     ));
   }
 
-  Future<void> openTimetable(String className) async {
+  Future<void> openTimetable(String className, [List<Child>? children]) async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TimetableScreen(
-        classId: _activeClassId ?? '',
-        className: className,
-        isReadOnly: true,
+      builder: (_) => GardenVoiceScope(
+        child: TimetableScreen(
+          classId: _activeClassId ?? '',
+          className: className,
+          teacherName: _teacherName,
+          isReadOnly: true,
+          onNavigationSelected: (destination) => _selectTeacherDestination(
+            destination,
+            className,
+            popCurrentRoute: true,
+          ),
+          onOpenClassList: () => _selectTeacherDestination(
+            GardenVoiceTeacherDestination.classList,
+            className,
+            popCurrentRoute: true,
+          ),
+          onOpenAttendance: children == null
+              ? null
+              : () => openAttendance(className, children),
+          onOpenLeaveRequests: children == null
+              ? null
+              : () => openLeaveRequests(className, children),
+          onOpenNotifications: children == null
+              ? null
+              : () => openNotifications(className, children),
+        ),
       ),
     ));
     if (mounted) setState(() {});
   }
 
-  Future<void> openAttendance(String className, List<Child> children, {String? date}) async {
+  Future<void> openAttendance(String className, List<Child> children,
+      {String? date}) async {
     final now = DateTime.now();
-    final dateStr = date ?? '${now.year.toString().padLeft(4, '0')}-'
-        '${now.month.toString().padLeft(2, '0')}-'
-        '${now.day.toString().padLeft(2, '0')}';
+    final dateStr = date ??
+        '${now.year.toString().padLeft(4, '0')}-'
+            '${now.month.toString().padLeft(2, '0')}-'
+            '${now.day.toString().padLeft(2, '0')}';
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => AttendanceScreen(
-        classId: _activeClassId ?? '',
-        className: className,
-        date: dateStr,
-        roster: children,
+      builder: (_) => GardenVoiceScope(
+        child: AttendanceScreen(
+          classId: _activeClassId ?? '',
+          className: className,
+          date: dateStr,
+          roster: children,
+          teacherName: _teacherName,
+          onNavigationSelected: (destination) => _selectTeacherDestination(
+              destination, className,
+              popCurrentRoute: true),
+          onOpenClassList: () => _selectTeacherDestination(
+              GardenVoiceTeacherDestination.classList, className,
+              popCurrentRoute: true),
+          onOpenLeaveRequests: () => openLeaveRequests(className, children),
+          onOpenNotifications: () => openNotifications(className, children),
+          onOpenTimetable: () {
+            Navigator.of(context).pop();
+            openTimetable(className, children);
+          },
+        ),
       ),
     ));
     if (mounted) setState(() => _initData());
   }
 
-  Future<void> openMedications() async {
+  Future<void> openMedications(String className) async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => const TeacherMedicationScreen(),
+      builder: (_) => GardenVoiceScope(
+        child: TeacherMedicationScreen(
+          repository: medicationRepository,
+          dashboardRepository: repository,
+          onNavigationSelected: (destination) => _selectTeacherDestination(
+            destination,
+            className,
+            popCurrentRoute: true,
+          ),
+        ),
+      ),
     ));
     if (mounted) setState(() => _initData());
+  }
+
+  Future<void> openNotifications(String className, List<Child> children) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => TeacherNotificationsScreen(
+              classId: _activeClassId ?? '',
+              className: className,
+              repository: leaveRequestRepository,
+              onNavigationSelected: (destination) => _selectTeacherDestination(
+                  destination, className,
+                  popCurrentRoute: true),
+              onOpenAttendance: () => openAttendance(className, children),
+              onOpenTimetable: () => openTimetable(className, children),
+            )));
+  }
+
+  Future<void> openLeaveRequests(String className, List<Child> children) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => LeaveRequestReviewScreen(
+              classId: _activeClassId ?? '',
+              className: className,
+              repository: leaveRequestRepository,
+              onNavigationSelected: (destination) => _selectTeacherDestination(
+                  destination, className,
+                  popCurrentRoute: true),
+              onOpenClassList: () => _selectTeacherDestination(
+                  GardenVoiceTeacherDestination.classList, className,
+                  popCurrentRoute: true),
+              onOpenAttendance: () {
+                Navigator.of(context).pop();
+                openAttendance(className, children);
+              },
+              onOpenAttendanceForDate: (date) {
+                Navigator.of(context).pop();
+                final dateStr = '${date.year.toString().padLeft(4, '0')}-'
+                    '${date.month.toString().padLeft(2, '0')}-'
+                    '${date.day.toString().padLeft(2, '0')}';
+                openAttendance(className, children, date: dateStr);
+              },
+              onOpenTimetable: () {
+                Navigator.of(context).pop();
+                openTimetable(className, children);
+              },
+            )));
+    if (mounted) setState(() => _initData());
+  }
+
+  void _selectTeacherDestination(
+    GardenVoiceTeacherDestination destination,
+    String className, {
+    bool popCurrentRoute = false,
+  }) {
+    if (popCurrentRoute) Navigator.of(context).pop();
+    if (destination == GardenVoiceTeacherDestination.record) {
+      openRecord(className);
+      return;
+    }
+    setState(() {
+      if (destination != GardenVoiceTeacherDestination.classList) {
+        healthOnly = false;
+      }
+      tab = switch (destination) {
+        GardenVoiceTeacherDestination.home => TeacherTab.overview,
+        GardenVoiceTeacherDestination.classList => TeacherTab.classList,
+        GardenVoiceTeacherDestination.reports => TeacherTab.history,
+        GardenVoiceTeacherDestination.account => TeacherTab.account,
+        GardenVoiceTeacherDestination.record => tab,
+      };
+    });
   }
 
   void openEmergencySheet(List<Child> children) {
@@ -250,14 +442,18 @@ class _TeacherShellState extends State<TeacherShell> {
         future: _initFuture,
         builder: (context, initSnapshot) {
           if (initSnapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
           }
-          if (_hasNoClass || _activeClassId == null || _activeClassId!.isEmpty) {
+          if (_hasNoClass ||
+              _activeClassId == null ||
+              _activeClassId!.isEmpty) {
             return NoAssignmentScreen(
-              title: 'Chưa có lớp được đăng ký',
-              message: 'Tài khoản giáo viên của bạn hiện chưa được phân công phụ trách lớp học nào.\nVui lòng liên hệ ban quản trị nhà trường để được xếp lớp.',
-              icon: Icons.school_outlined,
+              title: 'Chưa được phân lớp',
+              message:
+                  'Tài khoản của bạn chưa được Ban giám hiệu phân vào lớp nào. Vui lòng liên hệ nhà trường để được hỗ trợ, hoặc thử đăng nhập lại sau.',
               onBack: widget.onLogout,
+              gardenVoice: true,
             );
           }
           final currentClassId = _activeClassId!;
@@ -265,14 +461,16 @@ class _TeacherShellState extends State<TeacherShell> {
             future: childrenFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()));
               }
               if (snapshot.hasError) {
                 return Scaffold(
                   body: Center(
                     child: TextButton(
                       onPressed: () => setState(_initData),
-                      child: const Text('Không tải được danh sách lớp · Thử lại'),
+                      child:
+                          const Text('Không tải được danh sách lớp · Thử lại'),
                     ),
                   ),
                 );
@@ -282,14 +480,16 @@ class _TeacherShellState extends State<TeacherShell> {
                 future: classNameFuture,
                 builder: (context, classSnapshot) {
                   if (classSnapshot.connectionState != ConnectionState.done) {
-                    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
                   }
                   if (classSnapshot.hasError || classSnapshot.data == null) {
                     return Scaffold(
                       body: Center(
                         child: TextButton(
                           onPressed: () => setState(() => _initData()),
-                          child: const Text('Không tải được thông tin lớp · Thử lại'),
+                          child: const Text(
+                              'Không tải được thông tin lớp · Thử lại'),
                         ),
                       ),
                     );
@@ -299,56 +499,111 @@ class _TeacherShellState extends State<TeacherShell> {
                     TeacherTab.overview => OverviewScreen(
                         classId: currentClassId,
                         repository: repository,
-                        onOpenTimetable: () => openTimetable(className),
-                        onOpenAttendance: () => openAttendance(className, children),
-                        onOpenMedications: () => openMedications(),
+                        attendanceRepository: attendanceRepository,
+                        medicationRepository: medicationRepository,
+                        onStartReport: () => openRecord(className),
+                        onOpenTimetable: () =>
+                            openTimetable(className, children),
+                        onOpenAttendance: () =>
+                            openAttendance(className, children),
+                        onOpenMedications: () => openMedications(className),
                         onEmergencyAlert: () => openEmergencySheet(children),
-                        onOpenReport: (name) => openReport(childByName(name, children)),
-                        onHistory: () => setState(() => tab = TeacherTab.history),
-                        onHealth: () => setState(() { healthOnly = true; tab = TeacherTab.classList; }),
+                        onOpenNotifications: () =>
+                            openNotifications(className, children),
+                        onOpenReport: (name) =>
+                            openReport(childByName(name, children)),
+                        onHistory: () =>
+                            setState(() => tab = TeacherTab.history),
+                        onHealth: () => setState(() {
+                          healthOnly = true;
+                          tab = TeacherTab.classList;
+                        }),
                       ),
                     TeacherTab.classList => ClassListScreen(
                         initialHealthOnly: healthOnly,
                         children: children,
                         classId: currentClassId,
                         className: className,
+                        teacherName: _teacherName,
                         schoolName: 'Chưa có thông tin trường',
                         onRefresh: () async {
                           try {
                             final c = await _loadChildren();
-                            if (mounted) setState(() => childrenFuture = Future.value(c));
+                            if (mounted) {
+                              setState(() => childrenFuture = Future.value(c));
+                            }
                           } catch (_) {
                             if (mounted) {
-                              ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(
-                                content: Text('Không tải được danh sách lớp. Vui lòng thử lại.'),
+                              ScaffoldMessenger.of(this.context)
+                                  .showSnackBar(const SnackBar(
+                                content: Text(
+                                    'Không tải được danh sách lớp. Vui lòng thử lại.'),
                               ));
                             }
                           }
                         },
-                        onOpenTimetable: () => openTimetable(className),
-                        onOpenAttendance: () => openAttendance(className, children),
-                        onRecord: (child) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecordFlowScreen(mode: RecordMode.child, child: child, classId: currentClassId, className: className, repository: repository))),
+                        onOpenTimetable: () =>
+                            openTimetable(className, children),
+                        onOpenAttendance: () =>
+                            openAttendance(className, children),
+                        onOpenLeaveRequests: () =>
+                            openLeaveRequests(className, children),
+                        onOpenNotifications: () =>
+                            openNotifications(className, children),
+                        onRecord: (child) => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => RecordFlowScreen(
+                                    mode: RecordMode.child,
+                                    child: child,
+                                    classId: currentClassId,
+                                    className: className,
+                                    repository: repository))),
                         onEdit: openReport,
                       ),
-                    TeacherTab.history => HistoryScreen(children: children, onOpenReport: (child, report) => openReport(child, report)),
+                    TeacherTab.history => HistoryScreen(
+                        children: children,
+                        repository: repository,
+                        onOpenReport: (child, report) =>
+                            openReport(child, report)),
                     TeacherTab.account => AccountScreen(
                         onLogout: widget.onLogout,
                         classId: currentClassId,
                         repository: repository,
+                        classRepository: classRepository,
+                        onOpenNotifications: () =>
+                            openNotifications(className, children),
                       ),
                   };
-                  return Scaffold(
-                    body: SafeArea(
-                      bottom: false,
-                      child: page,
-                    ),
-                    bottomNavigationBar: _TeacherNavigation(
-                      tab: tab,
-                      onTab: (value) => setState(() {
-                        if (value != TeacherTab.classList) healthOnly = false;
-                        tab = value;
-                      }),
-                      onRecord: () => openRecord(className),
+                  return GardenVoiceScope(
+                    child: Builder(
+                      builder: (context) => Scaffold(
+                        backgroundColor: context.k.canvas,
+                        body: SafeArea(
+                          bottom: false,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) => Align(
+                              alignment: Alignment.topCenter,
+                              child: SizedBox(
+                                width: constraints.maxWidth > 480
+                                    ? 480
+                                    : constraints.maxWidth,
+                                height: constraints.maxHeight,
+                                child: page,
+                              ),
+                            ),
+                          ),
+                        ),
+                        bottomNavigationBar: _TeacherNavigation(
+                          tab: tab,
+                          onTab: (value) => setState(() {
+                            if (value != TeacherTab.classList) {
+                              healthOnly = false;
+                            }
+                            tab = value;
+                          }),
+                          onRecord: () => openRecord(className),
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -360,78 +615,27 @@ class _TeacherShellState extends State<TeacherShell> {
 }
 
 class _TeacherNavigation extends StatelessWidget {
-  const _TeacherNavigation({required this.tab, required this.onTab, required this.onRecord});
+  const _TeacherNavigation(
+      {required this.tab, required this.onTab, required this.onRecord});
   final TeacherTab tab;
   final ValueChanged<TeacherTab> onTab;
   final VoidCallback onRecord;
 
   @override
-  Widget build(BuildContext context) {
-    const items = [
-      (TeacherTab.overview, Icons.grid_view_outlined, 'Tổng quan'),
-      (TeacherTab.classList, Icons.groups_outlined, 'Lớp'),
-      (TeacherTab.history, Icons.description_outlined, 'Lịch sử'),
-      (TeacherTab.account, Icons.person_outline, 'Tài khoản'),
-    ];
-    Widget navItem((TeacherTab, IconData, String) item) => Expanded(
-          child: InkWell(
-            onTap: () => onTab(item.$1),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(item.$2, size: 22, color: tab == item.$1 ? context.k.brand : context.k.inkFaint),
-                  const SizedBox(height: 3),
-                  Text(
-                    item.$3,
-                    style: TextStyle(fontSize: 11, fontWeight: tab == item.$1 ? FontWeight.w600 : FontWeight.w500, color: tab == item.$1 ? context.k.brand : context.k.inkFaint),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-    return DecoratedBox(
-      decoration: BoxDecoration(color: context.k.surface, border: Border(top: BorderSide(color: context.k.line))),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 76,
-          child: Row(
-            children: [
-              navItem(items[0]),
-              navItem(items[1]),
-              SizedBox(
-                width: 68,
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Transform.translate(
-                    offset: const Offset(0, -18),
-                    child: Material(
-                      color: context.k.brand,
-                      elevation: 7,
-                      shadowColor: context.k.brand.withValues(alpha: .45),
-                      shape: CircleBorder(side: BorderSide(color: context.k.surface, width: 4)),
-                      child: Semantics(
-                        button: true,
-                        label: 'Ghi nhận hoạt động',
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: onRecord,
-                          child: const SizedBox.square(dimension: 60, child: Icon(Icons.mic_none_rounded, size: 28, color: Colors.white)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              navItem(items[2]),
-              navItem(items[3]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => GardenVoiceTeacherNavigation(
+        selected: switch (tab) {
+          TeacherTab.overview => GardenVoiceTeacherDestination.home,
+          TeacherTab.classList => GardenVoiceTeacherDestination.classList,
+          TeacherTab.history => GardenVoiceTeacherDestination.reports,
+          TeacherTab.account => GardenVoiceTeacherDestination.account,
+        },
+        onSelected: (destination) => switch (destination) {
+          GardenVoiceTeacherDestination.home => onTab(TeacherTab.overview),
+          GardenVoiceTeacherDestination.classList =>
+            onTab(TeacherTab.classList),
+          GardenVoiceTeacherDestination.record => onRecord(),
+          GardenVoiceTeacherDestination.reports => onTab(TeacherTab.history),
+          GardenVoiceTeacherDestination.account => onTab(TeacherTab.account),
+        },
+      );
 }

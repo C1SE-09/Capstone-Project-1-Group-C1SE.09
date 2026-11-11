@@ -1,7 +1,10 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+
+typedef AudioPlayerFactory = AudioPlayer Function();
 
 /// AudioSource từ bytes trong bộ nhớ, dùng cho just_audio.
 // ignore: experimental_member_use
@@ -26,9 +29,14 @@ class BytesAudioSource extends StreamAudioSource {
 }
 
 class AudioPlayerCard extends StatefulWidget {
-  const AudioPlayerCard({super.key, required this.recordedBytes});
+  const AudioPlayerCard({
+    super.key,
+    required this.recordedBytes,
+    this.audioPlayerFactory,
+  });
 
   final Uint8List recordedBytes;
+  final AudioPlayerFactory? audioPlayerFactory;
 
   @override
   State<AudioPlayerCard> createState() => _AudioPlayerCardState();
@@ -49,7 +57,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   Future<void> _initPlayer() async {
     if (widget.recordedBytes.isEmpty) return;
-    final player = AudioPlayer();
+    final player = widget.audioPlayerFactory?.call() ?? AudioPlayer();
     _player = player;
 
     player.playerStateStream.listen((state) {
@@ -105,131 +113,146 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     return '$m:$s';
   }
 
+  String _formatProgress(double ratio) =>
+      '${_formatDuration(Duration(milliseconds: (ratio.clamp(0.0, 1.0) * _duration.inMilliseconds).round()))} / ${_formatDuration(_duration)}';
+
+  void _seekToRatio(double ratio) {
+    if (_duration.inMilliseconds == 0) return;
+    _player?.seek(Duration(
+      milliseconds: (ratio.clamp(0.0, 1.0) * _duration.inMilliseconds).round(),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
+    const List<double> heights = [
+      8,
+      16,
+      24,
+      12,
+      20,
+      28,
+      14,
+      22,
+      10,
+      18,
+      26,
+      12,
+      20,
+      8,
+      16,
+      22
+    ];
+    final progress = _duration.inMilliseconds == 0
+        ? 0.0
+        : (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: context.k.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.k.brand.withValues(alpha: 0.28)),
+        color: context.k.reviewSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.k.lineStrong),
         boxShadow: [
           BoxShadow(
-            color: context.k.brand.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
+              color: context.k.ink.withValues(alpha: .055),
+              blurRadius: 16,
+              offset: const Offset(0, 4)),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: context.k.brandTint,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.headphones_rounded,
-                    color: context.k.brand, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Nghe lại bản ghi âm',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: context.k.ink),
+          GestureDetector(
+            onTap: _togglePlay,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Chạm để nghe lại giọng nói cô vừa ghi âm',
-                      style:
-                          TextStyle(fontSize: 11, color: context.k.inkSoft),
-                    ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: _togglePlay,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: context.k.brand,
-                    shape: BoxShape.circle,
-                  ),
-                  child: _isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(9),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Icon(
-                          _isPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                ),
-              ),
-            ],
+                  )
+                : _isPlaying
+                    ? Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                            color: context.k.brand, shape: BoxShape.circle),
+                        child: Icon(Icons.pause,
+                            color: context.k.surface, size: 22),
+                      )
+                    : SvgPicture.asset('assets/garden_voice/review_play.svg'),
           ),
-          const SizedBox(height: 8),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 3,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 12),
-              activeTrackColor: context.k.brand,
-              inactiveTrackColor: context.k.brand.withValues(alpha: 0.18),
-              thumbColor: context.k.brand,
-              overlayColor: context.k.brand.withValues(alpha: 0.15),
-            ),
-            child: Slider(
-              value: (_duration.inMilliseconds > 0)
-                  ? (_position.inMilliseconds / _duration.inMilliseconds)
-                      .clamp(0.0, 1.0)
-                  : 0.0,
-              onChanged: (v) {
-                if (_duration.inMilliseconds > 0) {
-                  _player?.seek(Duration(
-                      milliseconds:
-                          (v * _duration.inMilliseconds).round()));
+          const SizedBox(width: 12),
+          Expanded(
+            child: Focus(
+              onKeyEvent: (_, event) {
+                if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+                  return KeyEventResult.ignored;
                 }
+                final key = event.logicalKey;
+                final step = key == LogicalKeyboardKey.arrowRight ||
+                        key == LogicalKeyboardKey.arrowUp
+                    ? .05
+                    : key == LogicalKeyboardKey.arrowLeft ||
+                            key == LogicalKeyboardKey.arrowDown
+                        ? -.05
+                        : null;
+                if (step == null) return KeyEventResult.ignored;
+                _seekToRatio(progress + step);
+                return KeyEventResult.handled;
               },
+              child: Semantics(
+                label: 'Tiến trình bản ghi âm',
+                value: _formatProgress(progress),
+                increasedValue: _formatProgress(progress + .05),
+                decreasedValue: _formatProgress(progress - .05),
+                slider: true,
+                onIncrease: () => _seekToRatio(progress + .05),
+                onDecrease: () => _seekToRatio(progress - .05),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => GestureDetector(
+                    key: const ValueKey('audio-waveform'),
+                    excludeFromSemantics: true,
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) => _seekToRatio(
+                        details.localPosition.dx / constraints.maxWidth),
+                    onHorizontalDragUpdate: (details) => _seekToRatio(
+                        details.localPosition.dx / constraints.maxWidth),
+                    child: SizedBox(
+                      height: 36,
+                      child: Row(
+                        spacing: 2,
+                        children: [
+                          for (var index = 0; index < heights.length; index++)
+                            Container(
+                              width: 3,
+                              height: heights[index],
+                              decoration: BoxDecoration(
+                                color: index / heights.length < progress
+                                    ? context.k.brand
+                                    : context.k.line,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                Text(
-                  _formatDuration(_position),
-                  style:
-                      TextStyle(fontSize: 11, color: context.k.inkSoft),
-                ),
-                const Spacer(),
-                Text(
-                  _formatDuration(_duration),
-                  style:
-                      TextStyle(fontSize: 11, color: context.k.inkSoft),
-                ),
-              ],
-            ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_formatDuration(_duration),
+                  style: TextStyle(fontSize: 12, color: context.k.ink)),
+              Text('Bản ghi gốc',
+                  style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
+            ],
           ),
         ],
       ),

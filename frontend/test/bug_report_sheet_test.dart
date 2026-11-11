@@ -115,9 +115,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Verify Title and Description fields exist
-    expect(find.text('Tiêu đề góp ý / vấn đề *'), findsOneWidget);
-    expect(find.text('Mô tả chi tiết *'), findsOneWidget);
+    expect(find.text('Báo lỗi & góp ý'), findsOneWidget);
+    expect(find.text('Tiêu đề'), findsOneWidget);
+    expect(find.text('Mô tả chi tiết'), findsOneWidget);
+    expect(find.text('Ảnh đính kèm · tối đa 5 ảnh, mỗi ảnh ≤ 5MB'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('Tiêu đề')).style?.color,
+      KPalette.gardenVoice.ink,
+    );
+    final titleDecoration =
+        tester.widget<TextField>(find.byType(TextField).first).decoration!;
+    expect(
+      (titleDecoration.enabledBorder! as OutlineInputBorder).borderSide.color,
+      KPalette.gardenVoice.line,
+    );
 
     // Verify Category and Severity pickers are NOT present
     expect(find.text('Phân loại vấn đề'), findsNothing);
@@ -131,7 +142,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Submit report
-    final submitButton = find.text('Gửi góp ý cải thiện');
+    final submitButton = find.text('Gửi góp ý');
     expect(submitButton, findsOneWidget);
     await tester.ensureVisible(submitButton);
     await tester.pumpAndSettle();

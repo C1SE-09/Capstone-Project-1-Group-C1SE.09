@@ -19,8 +19,7 @@ String requestStatusLabel(LeaveStatus status) => switch (status) {
 
 String requestDate(DateTime value) => DateFormat('dd/MM/yyyy').format(value);
 
-String requestDayLabel(DateTime value) {
-  final day = DateUtils.dateOnly(value);
+String _requestWeekday(DateTime value) {
   const weekdays = [
     'Thứ 2',
     'Thứ 3',
@@ -30,10 +29,18 @@ String requestDayLabel(DateTime value) {
     'Thứ 7',
     'Chủ nhật'
   ];
+  return weekdays[value.weekday - 1];
+}
+
+String _requestDateWithWeekday(DateTime value) =>
+    '${_requestWeekday(value)}, ${requestDate(value)}';
+
+String requestDayLabel(DateTime value) {
+  final day = DateUtils.dateOnly(value);
   final prefix = day.isAtSameMomentAs(DateUtils.dateOnly(DateTime.now()))
       ? 'Hôm nay — '
       : '';
-  return '$prefix${weekdays[day.weekday - 1]}, ${requestDate(day)}';
+  return '$prefix${_requestDateWithWeekday(day)}';
 }
 
 String requestTimestamp(DateTime value) => DateFormat('dd/MM/yyyy, HH:mm')
@@ -43,12 +50,38 @@ String requestRange(LeaveRequestEntity request) => request.totalDays == 1
     ? '${requestDate(request.fromDate)} · 1 ngày'
     : '${requestDate(request.fromDate)} – ${requestDate(request.toDate)} · ${request.totalDays} ngày';
 
+String gardenVoiceRequestRange(LeaveRequestEntity request) => request
+            .totalDays ==
+        1
+    ? '${_requestDateWithWeekday(request.fromDate)} · 1 ngày'
+    : '${_requestDateWithWeekday(request.fromDate)} – ${_requestDateWithWeekday(request.toDate)} · ${request.totalDays} ngày';
+
+String requestListRange(LeaveRequestEntity request) {
+  String shortDate(DateTime value) =>
+      '${_requestWeekday(value)}, ${DateFormat('dd/MM').format(value)}';
+  return request.totalDays == 1
+      ? '${shortDate(request.fromDate)} · 1 ngày'
+      : '${shortDate(request.fromDate)} – ${shortDate(request.toDate)} · ${request.totalDays} ngày';
+}
+
 class ParentRequestLayout extends StatelessWidget {
-  const ParentRequestLayout(
-      {super.key, this.title, required this.child, this.actions});
+  const ParentRequestLayout({
+    super.key,
+    this.title,
+    this.subtitle,
+    required this.child,
+    this.actions,
+    this.bottomNavigationBar,
+    this.onBack,
+    this.gardenVoice = false,
+  });
   final String? title;
+  final String? subtitle;
   final Widget child;
   final List<Widget>? actions;
+  final Widget? bottomNavigationBar;
+  final VoidCallback? onBack;
+  final bool gardenVoice;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -59,17 +92,36 @@ class ParentRequestLayout extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 480),
             child: Scaffold(
               backgroundColor: context.k.canvas,
+              bottomNavigationBar: bottomNavigationBar,
               appBar: title == null
                   ? null
                   : AppBar(
-                      title: Text(title!,
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: context.k.ink)),
-                      titleSpacing: 8,
-                      leadingWidth: 32,
-                      toolbarHeight: 56 +
+                      title: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title!,
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: gardenVoice
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  color: context.k.ink)),
+                          if (subtitle != null)
+                            Text(subtitle!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: gardenVoice ? 12 : 11.5,
+                                    fontWeight: gardenVoice
+                                        ? FontWeight.w500
+                                        : FontWeight.w400,
+                                    color: context.k.inkSoft)),
+                        ],
+                      ),
+                      titleSpacing: gardenVoice ? 4 : 8,
+                      leadingWidth: gardenVoice ? 56 : 32,
+                      toolbarHeight: (gardenVoice ? 74 : 56) +
                           (MediaQuery.textScalerOf(context).scale(16) - 16) * 2,
                       backgroundColor: context.k.canvas,
                       foregroundColor: context.k.ink,
@@ -78,15 +130,19 @@ class ParentRequestLayout extends StatelessWidget {
                       leading: IconButton(
                           tooltip: MaterialLocalizations.of(context)
                               .backButtonTooltip,
-                          onPressed: () => Navigator.maybePop(context),
-                          icon: const Icon(Icons.chevron_left, size: 28)),
+                          onPressed:
+                              onBack ?? () => Navigator.maybePop(context),
+                          icon: Icon(Icons.chevron_left,
+                              size: gardenVoice ? 24 : 28)),
                       actions: actions,
                     ),
               body: SafeArea(
                 top: title == null,
                 child: DefaultTextStyle.merge(
                   style: TextStyle(
-                      fontSize: 13, height: 1.4, color: context.k.ink),
+                      fontSize: gardenVoice ? 14 : 13,
+                      height: 1.4,
+                      color: context.k.ink),
                   child: child,
                 ),
               ),
@@ -113,15 +169,17 @@ class ParentRequestCard extends StatelessWidget {
 }
 
 class ParentRequestStatus extends StatelessWidget {
-  const ParentRequestStatus(this.status, {super.key});
+  const ParentRequestStatus(this.status, {super.key, this.gardenVoice = false});
   final LeaveStatus status;
+  final bool gardenVoice;
 
   @override
   Widget build(BuildContext context) {
     final k = context.k;
     final (ink, tint) = switch (status) {
       LeaveStatus.pending => (k.warnDeep, k.warnTint),
-      LeaveStatus.approved => (k.ok, k.okTint),
+      LeaveStatus.approved =>
+        gardenVoice ? (k.surface, k.brand) : (k.ok, k.okTint),
       LeaveStatus.rejected => (k.bad, k.badTint),
       LeaveStatus.cancelled => (k.inkSoft, k.surfaceSunken),
     };
@@ -129,9 +187,14 @@ class ParentRequestStatus extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration:
           BoxDecoration(color: tint, borderRadius: BorderRadius.circular(20)),
-      child: Text(requestStatusLabel(status),
-          style:
-              TextStyle(color: ink, fontSize: 10, fontWeight: FontWeight.w600)),
+      child: Text(
+          gardenVoice && status == LeaveStatus.rejected
+              ? 'Đã từ chối'
+              : requestStatusLabel(status),
+          style: TextStyle(
+              color: ink,
+              fontSize: gardenVoice ? 12 : 10,
+              fontWeight: gardenVoice ? FontWeight.w500 : FontWeight.w600)),
     );
   }
 }
@@ -157,11 +220,11 @@ class ParentRequestButton extends StatelessWidget {
               minimumSize: const Size(0, 48),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               textStyle: const TextStyle(
-                  fontFamily: 'BeVietnamPro',
+                  fontFamily: 'Nunito',
                   fontSize: 13,
                   fontWeight: FontWeight.w700),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10))),
+                  borderRadius: BorderRadius.circular(24))),
           child: Wrap(
               alignment: WrapAlignment.center,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -248,7 +311,7 @@ Future<bool> showParentRequestDialog(
                                     side: BorderSide(color: k.line, width: 1.5),
                                     shape: const StadiumBorder(),
                                     textStyle: const TextStyle(
-                                        fontFamily: 'BeVietnamPro',
+                                        fontFamily: 'Nunito',
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700)),
                                 child: Text(cancelLabel))),
@@ -263,7 +326,7 @@ Future<bool> showParentRequestDialog(
                                     minimumSize: const Size(0, 48),
                                     shape: const StadiumBorder(),
                                     textStyle: const TextStyle(
-                                        fontFamily: 'BeVietnamPro',
+                                        fontFamily: 'Nunito',
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700)),
                                 child: Text(confirmLabel))),
@@ -289,9 +352,11 @@ class ParentRequestError extends StatelessWidget {
 }
 
 class ParentRequestInfo extends StatelessWidget {
-  const ParentRequestInfo(this.label, this.value, {super.key});
+  const ParentRequestInfo(this.label, this.value,
+      {super.key, this.gardenVoice = false});
   final String label;
   final Widget value;
+  final bool gardenVoice;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -299,14 +364,17 @@ class ParentRequestInfo extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
               child: Text(label,
-                  style: TextStyle(color: context.k.inkSoft, fontSize: 12.5))),
+                  style: TextStyle(
+                      color: context.k.inkSoft,
+                      fontSize: gardenVoice ? 14 : 12.5))),
           const SizedBox(width: 8),
           Expanded(
               flex: 3,
               child: Align(
                   alignment: Alignment.centerRight,
                   child: DefaultTextStyle.merge(
-                      style: const TextStyle(fontSize: 12.5), child: value))),
+                      style: TextStyle(fontSize: gardenVoice ? 14 : 12.5),
+                      child: value))),
         ]),
       );
 }
@@ -322,32 +390,33 @@ class ParentRequestChild extends StatelessWidget {
   final String teacherName;
 
   @override
-  Widget build(BuildContext context) => ParentRequestCard(
-          child: Row(children: [
-        CircleAvatar(
-            radius: 18,
-            backgroundColor: context.k.brandTint,
-            child: Text(
-                child.fullName.trim().isEmpty
-                    ? '?'
-                    : child.fullName.trim().characters.first,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: context.k.brand))),
-        const SizedBox(width: 10),
-        Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(child.fullName,
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(
-              [className, teacherName]
-                  .where((e) => e.trim().isNotEmpty)
-                  .join(' · '),
-              style: TextStyle(color: context.k.inkSoft, fontSize: 11)),
-        ])),
-      ]));
+  Widget build(BuildContext context) {
+    final name = child.fullName.trim();
+    final initials = name.isEmpty ? '?' : name.split(RegExp(r'\s+')).last;
+    return ParentRequestCard(
+        child: Row(children: [
+      CircleAvatar(
+          radius: 18,
+          backgroundColor: context.k.brandTint,
+          child: Text(initials,
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: context.k.brand))),
+      const SizedBox(width: 10),
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(child.fullName,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(
+            [className, teacherName]
+                .where((e) => e.trim().isNotEmpty)
+                .join(' · '),
+            style: TextStyle(color: context.k.inkSoft, fontSize: 11)),
+      ])),
+    ]));
+  }
 }
 
 class ParentRequestPill extends StatelessWidget {
@@ -368,23 +437,27 @@ class ParentRequestPill extends StatelessWidget {
         child: TextButton(
           onPressed: onPressed,
           style: TextButton.styleFrom(
-              minimumSize: const Size(48, 48),
+              minimumSize: Size(brandTone ? 48 : 36, brandTone ? 24 : 36),
               padding: EdgeInsets.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap),
           child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: EdgeInsets.symmetric(
+                  horizontal: brandTone ? 8 : 14, vertical: brandTone ? 3 : 7),
               decoration: BoxDecoration(
                   color: selected
-                      ? (brandTone ? context.k.brandTint : context.k.ink)
+                      ? (brandTone ? context.k.brandTint : context.k.brand)
                       : context.k.surface,
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(20),
+                  border: selected || brandTone
+                      ? null
+                      : Border.all(color: context.k.line)),
               child: Text(label,
                   style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
+                      fontSize: brandTone ? 12 : 14,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                       color: selected
                           ? (brandTone ? context.k.brand : context.k.surface)
-                          : context.k.ink))),
+                          : context.k.inkSoft))),
         ),
       );
 }

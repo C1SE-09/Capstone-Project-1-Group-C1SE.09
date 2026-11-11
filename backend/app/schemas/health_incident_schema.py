@@ -92,6 +92,22 @@ class HealthIncidentResponse(BaseModel):
     )
 
 
+class HealthIncidentListItem(BaseModel):
+    """Thông tin tối thiểu để giáo viên xem lịch sử sự cố trong lớp."""
+
+    incident_id: uuid.UUID
+    child_id: uuid.UUID
+    child_name: str
+    class_id: uuid.UUID
+    incident_type: str
+    incident_type_label: str
+    description: str
+    temperature: float | None = None
+    action_taken: str | None = None
+    reported_at: dt.datetime
+    reported_by_name: str | None = None
+
+
 class ChildEmergencyContactsResponse(BaseModel):
     """Danh bạ khẩn cấp của học sinh để cô tra cứu và bấm gọi ngay lập tức."""
     model_config = ConfigDict(from_attributes=True)

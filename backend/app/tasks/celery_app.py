@@ -74,6 +74,7 @@ celery_app.conf.update(
     task_routes={
         "process_audio_task": {"queue": "audio"},
         "send_report_notifications": {"queue": "notifications"},
+        "send_leave_request_notifications": {"queue": "notifications"},
         "bug_report_notify_admin": {"queue": "notifications"},
         "bug_report_notify_user": {"queue": "notifications"},
         "send_medication_confirmed_notification": {"queue": "notifications"},

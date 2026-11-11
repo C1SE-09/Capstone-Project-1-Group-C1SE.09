@@ -4,26 +4,31 @@
 // Tab Tài khoản nằm ở parent_account.dart.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
+import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
+import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
-import 'package:adark_frontend/domain/entities/report/report_status.dart' as domain_status;
+import 'package:adark_frontend/domain/entities/report/report_status.dart'
+    as domain_status;
 
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/models.dart' hide Child;
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_account.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_notifications.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/widgets/parent_navigation_bar.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:dio/dio.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_navigation.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_overview.dart';
 
 class NoChildAssignedException implements Exception {
   final String message;
@@ -34,15 +39,28 @@ class NoChildAssignedException implements Exception {
 
 class ParentFlow extends StatefulWidget {
   const ParentFlow({
-     super.key, this.repository, this.leaveRequestRepository, this.onLogout, this.initialOpenReport = false,
-    this.childId, this.initialReportId, this.initialAttendanceDate, this.notificationId,
+    super.key,
+    this.repository,
+    this.leaveRequestRepository,
+    this.onLogout,
+    this.initialOpenReport = false,
+    this.initialOpenRequests = false,
+    this.childId,
+    this.initialReportId,
+    this.initialAttendanceDate,
+    this.notificationId,
+    this.medicationRepository,
+    this.scheduleRepository,
   });
   final HttpDashboardRepository? repository;
   final HttpLeaveRequestRepository? leaveRequestRepository;
+  final HttpMedicationRepository? medicationRepository;
+  final ScheduleRepository? scheduleRepository;
   final VoidCallback? onLogout;
 
   /// True khi mở từ push notification: vào thẳng báo cáo hôm nay (Scope A).
   final bool initialOpenReport;
+  final bool initialOpenRequests;
   final String? childId;
   final String? initialReportId;
   final String? initialAttendanceDate;
@@ -52,7 +70,8 @@ class ParentFlow extends StatefulWidget {
 }
 
 class _ParentFlowState extends State<ParentFlow> {
-  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
+  late final HttpDashboardRepository repository =
+      widget.repository ?? HttpDashboardRepository();
   late Future<_ParentData> future;
   int _tab = 0;
   bool _notificationsOpen = false;
@@ -70,6 +89,7 @@ class _ParentFlowState extends State<ParentFlow> {
     if (widget.childId != oldWidget.childId ||
         widget.initialReportId != oldWidget.initialReportId ||
         widget.initialAttendanceDate != oldWidget.initialAttendanceDate ||
+        widget.initialOpenRequests != oldWidget.initialOpenRequests ||
         widget.notificationId != oldWidget.notificationId ||
         (widget.initialOpenReport && !oldWidget.initialOpenReport)) {
       _notificationOpened = false;
@@ -80,13 +100,35 @@ class _ParentFlowState extends State<ParentFlow> {
   void _reload() {
     future = _load();
     _openInitialReport();
+    _openInitialRequests();
+  }
+
+  void _openInitialRequests() {
+    if (_notificationOpened || !widget.initialOpenRequests) return;
+    final loading = future;
+    loading.then((data) {
+      if (!mounted || future != loading) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted ||
+            future != loading ||
+            ModalRoute.of(context)?.isCurrent != true) {
+          return;
+        }
+        _notificationOpened = true;
+        _openRequests(data);
+        PushNotificationService.instance
+            .completePendingNotification(widget.notificationId);
+      });
+      WidgetsBinding.instance.ensureVisualUpdate();
+    }, onError: (_) {});
   }
 
   void _openInitialReport() {
     if (_notificationOpened) return;
     final loading = future;
     final reportId = widget.initialReportId;
-    final attendanceDate = DateTime.tryParse(widget.initialAttendanceDate ?? '');
+    final attendanceDate =
+        DateTime.tryParse(widget.initialAttendanceDate ?? '');
     final openToday = widget.initialOpenReport;
     if (reportId == null && attendanceDate == null && !openToday) return;
     loading.then(
@@ -107,14 +149,20 @@ class _ParentFlowState extends State<ParentFlow> {
         }
         if (!mounted || future != loading) return;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || future != loading || ModalRoute.of(context)?.isCurrent != true) return;
+          if (!mounted ||
+              future != loading ||
+              ModalRoute.of(context)?.isCurrent != true) {
+            return;
+          }
           if (attendanceDate != null) {
             _notificationOpened = true;
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Thông báo bé vắng: ${data.overview.child.fullName}, '
+              content: Text(
+                  'Thông báo bé vắng: ${data.overview.child.fullName}, '
                   'ngày ${kDateLabel(attendanceDate)}. Vui lòng liên hệ giáo viên để xác nhận.'),
             ));
-            PushNotificationService.instance.completePendingNotification(widget.notificationId);
+            PushNotificationService.instance
+                .completePendingNotification(widget.notificationId);
           } else if (failed) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Không thể mở báo cáo này. Vui lòng thử lại sau.'),
@@ -122,7 +170,8 @@ class _ParentFlowState extends State<ParentFlow> {
           } else if (report != null) {
             _notificationOpened = true;
             _openReport(data, report);
-            PushNotificationService.instance.completePendingNotification(widget.notificationId);
+            PushNotificationService.instance
+                .completePendingNotification(widget.notificationId);
           }
         });
         WidgetsBinding.instance.ensureVisualUpdate();
@@ -138,7 +187,8 @@ class _ParentFlowState extends State<ParentFlow> {
     try {
       final overview = childId == null
           ? await repository.getPrimaryChildOverview(parent.parentId)
-          : await repository.getChildOverviewForParent(parent.parentId, childId);
+          : await repository.getChildOverviewForParent(
+              parent.parentId, childId);
       final reports = await repository.getRecentReports(
         overview.child.childId,
         includeDraft: false,
@@ -152,7 +202,8 @@ class _ParentFlowState extends State<ParentFlow> {
       return _ParentData(parent, overview, reports, todayReport);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404 ||
-          (e.response?.data is Map && e.response?.data['detail'] == 'Child not found')) {
+          (e.response?.data is Map &&
+              e.response?.data['detail'] == 'Child not found')) {
         throw NoChildAssignedException();
       }
       rethrow;
@@ -235,16 +286,76 @@ class _ParentFlowState extends State<ParentFlow> {
 
   /// Báo cáo chưa đọc (đã gửi nhưng phụ huynh chưa mở).
   int _unreadCount(_ParentData data) {
-    return data.notificationReports.where((r) => r.status != domain_status.ReportStatus.read).length;
+    return data.notificationReports
+        .where((r) => r.status != domain_status.ReportStatus.read)
+        .length;
   }
 
   void _openRequests(_ParentData data) {
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ParentRequestsScreen(
-      child: data.overview.child,
-      className: data.overview.className,
-      teacherName: data.overview.teacherName,
-      repository: widget.leaveRequestRepository,
-    )));
+    Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => GardenVoiceScope(
+              child: ParentRequestsScreen(
+                child: data.overview.child,
+                className: data.overview.className,
+                teacherName: data.overview.teacherName,
+                repository: widget.leaveRequestRepository,
+              ),
+            )));
+  }
+
+  void _openMedication(_ParentData data) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => GardenVoiceScope(
+              child: ParentMedicationScreen(
+                child: data.overview.child,
+                className: data.overview.className,
+                repository: widget.medicationRepository,
+              ),
+            )));
+  }
+
+  void _openTimetable(_ParentData data) {
+    final overview = data.overview;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.k.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => SizedBox.expand(
+        child: GardenVoiceScope(
+          child: TimetableScreen(
+            classId: overview.child.classId?.isNotEmpty == true
+                ? overview.child.classId!
+                : 'aaaaaaaa-0000-0000-0000-000000000001',
+            className: overview.className.isNotEmpty
+                ? 'Lớp ${overview.className}'
+                : 'Lớp của bé',
+            repository: widget.scheduleRepository,
+            isReadOnly: true,
+            embedded: true,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _markAllNotificationsRead(_ParentData data) async {
+    final unread = data.notificationReports
+        .where((report) => report.status != domain_status.ReportStatus.read);
+    await Future.wait(unread.map((report) async {
+      try {
+        final updated = await repository.markReportAsRead(report.dailyReportId);
+        if (!mounted) return;
+        setState(() {
+          future = future.then((current) => current.withReport(updated));
+        });
+      } catch (_) {
+        // Một báo cáo lỗi vẫn giữ trạng thái chưa đọc; các báo cáo khác tiếp tục.
+      }
+    }));
   }
 
   void _selectTab(int index) {
@@ -265,27 +376,23 @@ class _ParentFlowState extends State<ParentFlow> {
 
   // Renders loading, error, empty, and fetched parent data states.
   @override
-  Widget build(BuildContext context) => ColoredBox(
-        color: context.k.canvas,
-        child: Center(
-          child: ConstrainedBox(
-            key: const ValueKey('parent-mobile-frame'),
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: PopScope(
-        canPop: !_notificationsOpen,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop && _notificationsOpen) setState(() => _notificationsOpen = false);
-        },
-        child: _buildContent(context),
-            ),
-          ),
+  Widget build(BuildContext context) => GardenVoiceScope(
+        child: PopScope(
+          canPop: !_notificationsOpen,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop && _notificationsOpen) {
+              setState(() => _notificationsOpen = false);
+            }
+          },
+          child: _buildContent(context),
         ),
       );
 
   Widget _buildContent(BuildContext context) => FutureBuilder<_ParentData>(
         future: future,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done && !snapshot.hasData) {
+          if (snapshot.connectionState != ConnectionState.done &&
+              !snapshot.hasData) {
             return Scaffold(
               backgroundColor: context.k.canvas,
               body: const Center(child: CircularProgressIndicator()),
@@ -299,7 +406,8 @@ class _ParentFlowState extends State<ParentFlow> {
             if (isNoChild) {
               return NoAssignmentScreen(
                 title: 'Chưa có bé được đăng ký',
-                message: 'Tài khoản phụ huynh của bạn hiện chưa được liên kết với hồ sơ bé nào.\nVui lòng liên hệ nhà trường để được cập nhật thông tin bé.',
+                message:
+                    'Tài khoản phụ huynh của bạn hiện chưa được liên kết với hồ sơ bé nào.\nVui lòng liên hệ nhà trường để được cập nhật thông tin bé.',
                 icon: Icons.child_care_outlined,
                 onBack: () {
                   if (widget.onLogout != null) {
@@ -319,7 +427,8 @@ class _ParentFlowState extends State<ParentFlow> {
                     builder: (context, constraints) => SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        constraints:
+                            BoxConstraints(minHeight: constraints.maxHeight),
                         child: _loadError(() => setState(_reload)),
                       ),
                     ),
@@ -339,7 +448,8 @@ class _ParentFlowState extends State<ParentFlow> {
                     builder: (context, constraints) => SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        constraints:
+                            BoxConstraints(minHeight: constraints.maxHeight),
                         child: _loadError(() => setState(_reload)),
                       ),
                     ),
@@ -349,46 +459,92 @@ class _ParentFlowState extends State<ParentFlow> {
             );
           }
           final unread = _unreadCount(data);
+          final page = _notificationsOpen
+              ? ParentNotifications(
+                  reports: data.notificationReports,
+                  childName: data.overview.child.fullName,
+                  teacherName: data.overview.teacherName,
+                  onOpenReport: (report) => _openReport(data, report),
+                  onMarkAllRead: () => _markAllNotificationsRead(data),
+                )
+              : _tab == 0
+                  ? GardenVoiceParentOverview(
+                      parent: data.parent,
+                      overview: data.overview,
+                      report: data.today,
+                      unreadCount: unread,
+                      onOpenReport: (report) => _openReport(data, report),
+                      onOpenNotifications: () =>
+                          setState(() => _notificationsOpen = true),
+                      onOpenTimetable: () => _openTimetable(data),
+                      onOpenRequests: () => _openRequests(data),
+                      onOpenMedication: () => _openMedication(data),
+                    )
+                  : ParentAccount(
+                      parent: data.parent,
+                      overview: data.overview,
+                      reports: data.reports,
+                      repository: repository,
+                      medicationRepository: widget.medicationRepository,
+                      onOpenReport: (report) => _openReport(data, report),
+                      onPhoneUpdated: _onPhoneUpdated,
+                      onHealthUpdated: _onHealthUpdated,
+                      onParentUpdated: _onParentUpdated,
+                      onChildUpdated: _onChildUpdated,
+                      onLogout: widget.onLogout,
+                      onOpenNotifications: () =>
+                          setState(() => _notificationsOpen = true),
+                    );
           return Scaffold(
-            backgroundColor: _notificationsOpen ? context.k.surface : context.k.canvas,
+            backgroundColor:
+                _notificationsOpen ? context.k.surface : context.k.canvas,
             body: SafeArea(
-              child: RefreshIndicator(
-                onRefresh: _handleRefresh,
-                child: _notificationsOpen
-                    ? ParentNotifications(
-                        reports: data.notificationReports,
-                        childName: data.overview.child.fullName,
-                        teacherName: data.overview.teacherName,
-                        onOpenReport: (report) => _openReport(data, report),
-                        onBack: () => setState(() => _notificationsOpen = false),
-                        onSettings: () => _selectTab(1),
-                      )
-                    : _tab == 0
-                    ? _ParentOverview(
-                        data: data,
-                        onOpenReport: (report) => _openReport(data, report),
-                        onOpenNotifications: () => setState(() => _notificationsOpen = true),
-                        onOpenRequests: () => _openRequests(data),
-                      )
-                    : ParentAccount(
-                        parent: data.parent,
-                        overview: data.overview,
-                        reports: data.reports,
-                        repository: repository,
-                        onOpenReport: (report) => _openReport(data, report),
-                        onPhoneUpdated: _onPhoneUpdated,
-                        onHealthUpdated: _onHealthUpdated,
-                        onParentUpdated: _onParentUpdated,
-                        onChildUpdated: _onChildUpdated,
-                        onLogout: widget.onLogout,
-                      ),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    key: const ValueKey('parent-mobile-frame'),
+                    width:
+                        constraints.maxWidth > 480 ? 480 : constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    child: RefreshIndicator(
+                      onRefresh: _handleRefresh,
+                      child: page,
+                    ),
+                  ),
+                ),
               ),
             ),
-            bottomNavigationBar: ParentNavigationBar(
-              selectedIndex: _tab,
-              onSelected: _selectTab,
-              unreadCount: unread,
-              backgroundColor: _notificationsOpen ? context.k.brandTint : context.k.surface,
+            bottomNavigationBar: GardenVoiceParentNavigation(
+              selected: _notificationsOpen
+                  ? GardenVoiceParentDestination.notifications
+                  : _tab == 1
+                      ? GardenVoiceParentDestination.account
+                      : GardenVoiceParentDestination.home,
+              onSelected: (destination) {
+                switch (destination) {
+                  case GardenVoiceParentDestination.home:
+                    _selectTab(0);
+                    break;
+                  case GardenVoiceParentDestination.reports:
+                    if (data.today == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Chưa có báo cáo hôm nay.'),
+                        ),
+                      );
+                    } else {
+                      _openReport(data, data.today!);
+                    }
+                    break;
+                  case GardenVoiceParentDestination.notifications:
+                    setState(() => _notificationsOpen = true);
+                    break;
+                  case GardenVoiceParentDestination.account:
+                    _selectTab(1);
+                    break;
+                }
+              },
             ),
           );
         },
@@ -427,7 +583,8 @@ class _ParentData {
       }
     }
     return unique.values.toList()
-      ..sort((a, b) => (b.publishedAt ?? b.reportDate).compareTo(a.publishedAt ?? a.reportDate));
+      ..sort((a, b) => (b.publishedAt ?? b.reportDate)
+          .compareTo(a.publishedAt ?? a.reportDate));
   }
 
   _ParentData withReport(DailyReport updated) => _ParentData(
@@ -438,277 +595,6 @@ class _ParentData {
             .toList(),
         today?.dailyReportId == updated.dailyReportId ? updated : today,
       );
-}
-
-/// Tab Tổng quan: lời chào, card bé + thời khoá biểu, lưu ý sức khỏe,
-/// báo cáo hôm nay và báo cáo gần đây.
-class _ParentOverview extends StatelessWidget {
-  const _ParentOverview({required this.data, required this.onOpenReport,
-    required this.onOpenNotifications, required this.onOpenRequests});
-
-  final _ParentData data;
-  final ValueChanged<DailyReport> onOpenReport;
-  final VoidCallback onOpenNotifications;
-  final VoidCallback onOpenRequests;
-
-  void _openTimetable(BuildContext context) {
-    final overview = data.overview;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TimetableScreen(
-          classId: overview.child.classId?.isNotEmpty == true
-              ? overview.child.classId!
-              : 'aaaaaaaa-0000-0000-0000-000000000001',
-          className: overview.className.isNotEmpty ? 'Lớp ${overview.className}' : 'Lớp của bé',
-          isReadOnly: true,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final overview = data.overview;
-    final child = overview.child;
-    final date = kDateLabel(DateTime.now());
-    final hasTodayReport = data.today != null;
-    final allergy = child.allergy; // đã bỏ "Không có" + tiền tố "Dị ứng"
-
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Xin chào,',
-                    style: TextStyle(fontSize: 13, color: context.k.inkSoft),
-                  ),
-                  Text(
-                    data.parent.fullName.isEmpty ? 'Phụ huynh bé ${child.fullName}' : data.parent.fullName,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: context.k.ink,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: onOpenNotifications,
-              tooltip: 'Thông báo',
-              icon: Icon(Icons.notifications_outlined, color: context.k.inkSoft),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        KCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Avatar(name: child.fullName, size: 48),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          child.fullName,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
-                        ),
-                        Text(
-                          'Lớp ${overview.className} · ${overview.teacherName}',
-                          style: TextStyle(fontSize: 12, color: context.k.inkFaint),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              InkWell(
-                onTap: () => _openTimetable(context),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.calendar_month_outlined, size: 18, color: context.k.brand),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(
-                        'Thời khóa biểu của lớp',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: context.k.brand,
-                        ),
-                      )),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (allergy != null && allergy.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: context.k.badTint,
-              borderRadius: BorderRadius.circular(KRadii.control),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.health_and_safety_outlined, size: 20, color: context.k.bad),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Lưu ý sức khỏe',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: context.k.bad,
-                        ),
-                      ),
-                      Text(
-                        'Bé bị dị ứng $allergy',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                      Text(
-                        'Cập nhật trong Hồ sơ sức khỏe để cô giáo lưu ý.',
-                        style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        Padding(
-          padding: const EdgeInsets.only(top: 24, bottom: 10),
-          child: Text(
-            'Báo cáo hôm nay',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink),
-          ),
-        ),
-        KCard(
-          onTap: hasTodayReport ? () => onOpenReport(data.today!) : null,
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: context.k.brandTint,
-                foregroundColor: context.k.brand,
-                child: const Icon(Icons.description_outlined),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasTodayReport ? 'Đã có báo cáo' : 'Chưa có báo cáo hôm nay',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    Text(date, style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
-                  ],
-                ),
-              ),
-              if (hasTodayReport) ...[
-                Text(
-                  'Xem báo cáo',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.k.brand),
-                ),
-                Icon(Icons.chevron_right, size: 18, color: context.k.brand),
-              ],
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 24, bottom: 10),
-          child: Text(
-            'Báo cáo gần đây',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.k.ink),
-          ),
-        ),
-        if (data.reports.isEmpty)
-          const KCard(padding: EdgeInsets.all(16), child: Text('Chưa có báo cáo gần đây.'))
-        else
-          KCard(
-            child: Column(
-              children: [
-                for (var index = 0; index < data.reports.length; index++) ...[
-                  ListTile(
-                    onTap: () => onOpenReport(data.reports[index]),
-                    leading: Icon(Icons.description_outlined, color: context.k.inkSoft),
-                    title: Text(
-                      kDateLabel(data.reports[index].reportDate),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          uiReportStatusFromBackend(data.reports[index].status.name).label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: data.reports[index].status.name == 'read' ||
-                                    data.reports[index].status.name == 'sent' ||
-                                    data.reports[index].status.name == 'published'
-                                ? context.k.brand
-                                : context.k.inkFaint,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.chevron_right, color: context.k.inkFaint),
-                      ],
-                    ),
-                  ),
-                  if (index < data.reports.length - 1) const Divider(),
-                ],
-              ],
-            ),
-          ),
-        const SizedBox(height: KSpace.x4),
-        KCard(
-          onTap: onOpenRequests,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: KSpace.x3),
-          child: Row(
-            children: [
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Xin nghỉ / Báo trễ', style: TextStyle(
-                    fontSize: 13.5, fontWeight: FontWeight.w600, color: context.k.ink,
-                  )),
-                  const SizedBox(height: 2),
-                  Text('Gửi đơn xin nghỉ hoặc báo đi trễ, giáo viên duyệt ngay trong app.',
-                    style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
-                ],
-              )),
-              const SizedBox(width: KSpace.x3),
-              Text('Tạo đơn', style: TextStyle(fontSize: 12.5,
-                fontWeight: FontWeight.w600, color: context.k.brand)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 /// Sheet báo cáo hằng ngày — mở từ card báo cáo, danh sách gần đây,
@@ -723,12 +609,14 @@ Future<void> showParentReportSheet(
 }) {
   return showKSheet(
     context,
-    _ParentReportBody(
-      report: report,
-      childName: childName,
-      teacherName: teacherName,
-      repository: repository,
-      onReportRead: onReportRead,
+    GardenVoiceScope(
+      child: _ParentReportBody(
+        report: report,
+        childName: childName,
+        teacherName: teacherName,
+        repository: repository,
+        onReportRead: onReportRead,
+      ),
     ),
   );
 }
@@ -785,7 +673,21 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
   @override
   Widget build(BuildContext context) {
     final report = _currentReport;
-    final date = kDateLabel(report?.reportDate ?? DateTime.now());
+    final reportDate = report?.reportDate;
+    final dayName = reportDate == null
+        ? null
+        : switch (reportDate.weekday) {
+            1 => 'Thứ 2',
+            2 => 'Thứ 3',
+            3 => 'Thứ 4',
+            4 => 'Thứ 5',
+            5 => 'Thứ 6',
+            6 => 'Thứ 7',
+            _ => 'Chủ nhật',
+          };
+    final date = reportDate == null
+        ? null
+        : '$dayName · ${DateFormat('dd/MM').format(reportDate)}';
 
     // Chỉ hiển thị các mục có dữ liệu thực tế được giáo viên nhập/ghi âm
     final eating = _nonEmpty(report?.eating);
@@ -803,67 +705,123 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
         note != null;
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          KAppBar(
-            title: 'Báo cáo hằng ngày',
-            subtitle: date,
-            onBack: () => Navigator.pop(context),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Báo cáo ngày',
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.ink,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Đóng báo cáo',
+                onPressed: () => Navigator.pop(context),
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints.tightFor(width: 44, height: 44),
+                icon: SvgPicture.asset(
+                  'assets/garden_voice/parent_report_close.svg',
+                  width: 44,
+                  height: 44,
+                ),
+              ),
+              if (date != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: context.k.brandTint,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    date,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                      color: context.k.brand,
+                    ),
+                  ),
+                ),
+            ],
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.only(top: KSpace.x3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Avatar(name: widget.childName, size: 48),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(widget.childName, style: Theme.of(context).textTheme.titleMedium),
-                            Text(
-                              'Báo cáo hoạt động · ${widget.teacherName}',
-                              style: TextStyle(fontSize: 12, color: context.k.inkFaint),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_currentReport != null)
-                        StatusBadge(uiReportStatusFromBackend(_currentReport!.status.name)),
-                    ],
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.asset(
+                      'assets/garden_voice/teacher_garden.png',
+                      width: double.infinity,
+                      height: 106,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: KSpace.x3),
                   if (eating != null)
-                    _ReportField(icon: Icons.restaurant_outlined, label: 'Ăn uống', value: eating),
+                    _ReportField(
+                        iconAsset: 'assets/garden_voice/review_bowl.svg',
+                        label: 'Ăn uống',
+                        value: eating),
                   if (sleeping != null)
-                    _ReportField(icon: Icons.bedtime_outlined, label: 'Giấc ngủ', value: sleeping),
+                    _ReportField(
+                        iconAsset: 'assets/garden_voice/review_moon.svg',
+                        label: 'Giấc ngủ',
+                        value: sleeping),
                   if (activities != null)
-                    _ReportField(icon: Icons.palette_outlined, label: 'Hoạt động', value: activities),
+                    _ReportField(
+                        iconAsset:
+                            'assets/garden_voice/review_artist_palette.svg',
+                        label: 'Hoạt động',
+                        value: activities),
                   if (mood != null)
-                    _ReportField(icon: Icons.sentiment_satisfied_outlined, label: 'Tâm trạng', value: mood),
+                    _ReportField(
+                        icon: Icons.sentiment_satisfied_outlined,
+                        label: 'Tâm trạng',
+                        value: mood),
                   if (health != null)
-                    _ReportField(icon: Icons.health_and_safety_outlined, label: 'Sức khỏe', value: health),
+                    _ReportField(
+                        icon: Icons.health_and_safety_outlined,
+                        label: 'Sức khỏe',
+                        value: health),
                   if (note != null)
-                    _ReportField(icon: Icons.edit_note, label: 'Ghi chú của cô', value: note),
+                    _ReportField(
+                        icon: Icons.edit_note,
+                        label: 'Lời nhắn của ${widget.teacherName}',
+                        value: note,
+                        highlighted: true),
                   if (!hasAnyData)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Center(
                         child: Text(
                           'Chưa có thông tin ghi nhận cho ngày này.',
-                          style: TextStyle(color: context.k.inkFaint, fontSize: 13),
+                          style: TextStyle(
+                              color: context.k.inkFaint, fontSize: 13),
                         ),
                       ),
                     ),
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: KSpace.x3),
+          KButton(
+            label: 'Đã đọc báo cáo ✓',
+            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
@@ -873,33 +831,58 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
 
 /// A single labelled field card in the parent report view.
 class _ReportField extends StatelessWidget {
-  const _ReportField({required this.icon, required this.label, required this.value});
-  final IconData icon;
+  const _ReportField({
+    required this.label,
+    required this.value,
+    this.icon,
+    this.iconAsset,
+    this.highlighted = false,
+  });
+  final IconData? icon;
+  final String? iconAsset;
   final String label;
   final String value;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: KSpace.x2),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: context.k.surface,
-        border: Border.all(color: context.k.line),
-        borderRadius: BorderRadius.circular(KRadii.card),
+        color: highlighted ? context.k.accentTint : context.k.reviewSurface,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: context.k.brand),
-              const SizedBox(width: 6),
-              Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
-            ],
+          if (iconAsset != null)
+            SvgPicture.asset(iconAsset!)
+          else if (icon != null)
+            Icon(icon, size: 24, color: context.k.brand),
+          if (icon != null || iconAsset != null)
+            const SizedBox(width: KSpace.x3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 14,
+                        height: 1.4,
+                        fontWeight: FontWeight.w700,
+                        color: highlighted
+                            ? context.k.accentDeep
+                            : context.k.ink)),
+                const SizedBox(height: KSpace.x1),
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color:
+                            highlighted ? context.k.ink : context.k.inkSoft)),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 14, height: 1.55)),
         ],
       ),
     );

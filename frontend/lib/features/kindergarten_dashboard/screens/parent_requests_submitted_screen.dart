@@ -17,6 +17,7 @@ class ParentRequestSubmittedScreen extends StatelessWidget {
           }
         },
         child: ParentRequestLayout(
+            gardenVoice: true,
             child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 80, 18, 24),
           children: [
@@ -38,17 +39,22 @@ class ParentRequestSubmittedScreen extends StatelessWidget {
                   'Loại đơn',
                   Text(requestTypeLabel(request.requestType),
                       textAlign: TextAlign.end,
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  gardenVoice: true),
               ParentRequestInfo(
                   'Thời gian',
-                  Text(requestRange(request),
+                  Text(gardenVoiceRequestRange(request),
                       textAlign: TextAlign.end,
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  gardenVoice: true),
               if (request.expectedArrivalTime != null)
                 ParentRequestInfo('Giờ đến dự kiến',
-                    Text(request.expectedArrivalTime!.substring(0, 5))),
+                    Text(request.expectedArrivalTime!.substring(0, 5)),
+                    gardenVoice: true),
               ParentRequestInfo(
-                  'Trạng thái', ParentRequestStatus(request.status)),
+                  'Trạng thái',
+                  ParentRequestStatus(request.status, gardenVoice: true),
+                  gardenVoice: true),
             ])),
             const SizedBox(height: 12),
             Text(

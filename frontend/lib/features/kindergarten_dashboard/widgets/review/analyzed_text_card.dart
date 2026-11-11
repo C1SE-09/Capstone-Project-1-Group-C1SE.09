@@ -6,10 +6,12 @@ class AnalyzedTextCard extends StatefulWidget {
   const AnalyzedTextCard({
     super.key,
     required this.text,
+    required this.matchedChildCount,
     this.onEdit,
   });
 
   final String text;
+  final int matchedChildCount;
   final VoidCallback? onEdit;
 
   @override
@@ -17,7 +19,7 @@ class AnalyzedTextCard extends StatefulWidget {
 }
 
 class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
-  bool isExpanded = false;
+  bool isExpanded = true;
 
   void _copy() {
     Clipboard.setData(ClipboardData(text: widget.text));
@@ -35,17 +37,16 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
     if (widget.text.trim().isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      key: const ValueKey('analyzed-text-card'),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: context.k.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.k.brand.withValues(alpha: 0.28)),
+        color: context.k.reviewSurface,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: context.k.brand.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
+              color: context.k.ink.withValues(alpha: .055),
+              blurRadius: 16,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -53,107 +54,156 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
         children: [
           InkWell(
             onTap: () => setState(() => isExpanded = !isExpanded),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: context.k.brandTint,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.text_snippet_outlined,
-                        color: context.k.brand, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final textScaler = MediaQuery.textScalerOf(context);
+                  final titleTextStyle =
+                      DefaultTextStyle.of(context).style.merge(
+                            TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: context.k.ink),
+                          );
+                  final badgeTextStyle =
+                      DefaultTextStyle.of(context).style.merge(
+                            TextStyle(
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500,
+                                color: context.k.brandStrong),
+                          );
+                  final titleWidth = (TextPainter(
+                    text: TextSpan(
+                        text: 'Văn bản đã phân tích', style: titleTextStyle),
+                    textDirection: Directionality.of(context),
+                    textScaler: textScaler,
+                  )..layout())
+                      .width;
+                  final badgeTextWidth = widget.matchedChildCount == 0
+                      ? 0.0
+                      : (TextPainter(
+                          text: TextSpan(
+                            text: 'Đã tách ${widget.matchedChildCount} bé',
+                            style: badgeTextStyle,
+                          ),
+                          textDirection: Directionality.of(context),
+                          textScaler: textScaler,
+                        )..layout())
+                          .width;
+                  final compact = constraints.maxWidth < 300 ||
+                      textScaler.scale(1) > 1.3 ||
+                      titleWidth +
+                              badgeTextWidth +
+                              (widget.matchedChildCount == 0 ? 0 : 28) >
+                          constraints.maxWidth;
+                  final title =
+                      Text('Văn bản đã phân tích', style: titleTextStyle);
+                  final badge = widget.matchedChildCount == 0
+                      ? const SizedBox.shrink()
+                      : Container(
+                          key: const ValueKey('analyzed-text-badge-pill'),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: context.k.brandTint,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 6,
+                            children: [
+                              Container(
+                                key: const ValueKey('analyzed-text-badge-dot'),
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                    color: context.k.infoDot,
+                                    shape: BoxShape.circle),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  'Đã tách ${widget.matchedChildCount} bé',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w500,
+                                      color: context.k.brandStrong),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                  if (compact) {
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Xem lại text đã phân tích',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: context.k.ink),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isExpanded
-                              ? 'Chạm để thu gọn'
-                              : 'Chạm để xem lại toàn bộ text đã ghi âm',
-                          style: TextStyle(
-                              fontSize: 11, color: context.k.inkSoft),
-                        ),
+                        title,
+                        if (widget.matchedChildCount > 0) ...[
+                          const SizedBox(height: 8),
+                          badge,
+                        ],
                       ],
-                    ),
-                  ),
-                  Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: context.k.inkSoft,
-                  ),
-                ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      title,
+                      Expanded(
+                        child: Divider(
+                          key: const ValueKey('analyzed-text-divider'),
+                          height: 1,
+                          color: context.k.line,
+                        ),
+                      ),
+                      badge,
+                    ],
+                  );
+                },
               ),
             ),
           ),
           if (isExpanded) ...[
-            const Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: context.k.canvas,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: context.k.line),
-                    ),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        widget.text,
-                        style: TextStyle(
-                            fontSize: 13, height: 1.55, color: context.k.ink),
-                      ),
-                    ),
+                  Text(
+                    widget.text,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 14, height: 1.4, color: context.k.inkSoft),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
                     children: [
-                      if (widget.onEdit != null) ...[
-                        OutlinedButton.icon(
-                          onPressed: widget.onEdit,
-                          icon: const Icon(Icons.edit_note_rounded, size: 16),
-                          label: const Text('Sửa & Phân tích lại',
-                              style: TextStyle(fontSize: 12)),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      FilledButton.tonalIcon(
+                      TextButton(
                         onPressed: _copy,
-                        icon: const Icon(Icons.copy_rounded, size: 15),
-                        label: const Text('Sao chép',
-                            style: TextStyle(fontSize: 12)),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 6),
-                          visualDensity: VisualDensity.compact,
-                        ),
+                        style: TextButton.styleFrom(
+                            foregroundColor: context.k.brand,
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        child: const Text('Sao chép',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
                       ),
+                      if (widget.onEdit != null) ...[
+                        TextButton(
+                          onPressed: widget.onEdit,
+                          style: TextButton.styleFrom(
+                              foregroundColor: context.k.brand,
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                          child: const Text('Sửa & Phân tích lại',
+                              style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ],
                     ],
                   ),
                 ],

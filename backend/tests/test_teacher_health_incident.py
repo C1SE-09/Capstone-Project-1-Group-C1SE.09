@@ -249,6 +249,63 @@ def test_get_child_emergency_contacts_direct(
     assert any(c["phone"] == "0911222333" for c in data["emergency_contacts"])
 
 
+def test_list_health_incidents_returns_only_class_incidents(
+    mock_db, teacher_user, teacher_profile, sample_child_and_parents
+):
+    child, *_ = sample_child_and_parents
+    incident = HealthIncident(
+        incident_id=uuid.uuid4(),
+        child_id=child.child_id,
+        class_id=OWN_CLASS_ID,
+        reported_by_id=TEACHER_ID,
+        incident_type="high_fever",
+        description="Bé sốt cao",
+        reported_at=datetime.now(timezone.utc),
+        child=child,
+        reported_by=teacher_profile,
+    )
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: teacher_user
+    mock_db.scalar.return_value = teacher_profile
+    mock_db.scalars.return_value.all.return_value = [incident]
+
+    response = TestClient(app).get(
+        "/api/teacher/health-incidents", params={"class_id": str(OWN_CLASS_ID)}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "incident_id": str(incident.incident_id),
+            "child_id": str(child.child_id),
+            "child_name": "Nguyễn Văn Bé",
+            "class_id": str(OWN_CLASS_ID),
+            "incident_type": "high_fever",
+            "incident_type_label": "Sốt cao",
+            "description": "Bé sốt cao",
+            "temperature": None,
+            "action_taken": None,
+            "reported_at": incident.reported_at.isoformat(),
+            "reported_by_name": "Cô Mai",
+        }
+    ]
+
+
+def test_list_health_incidents_rejects_another_class(
+    mock_db, teacher_user, teacher_profile
+):
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: teacher_user
+    mock_db.scalar.return_value = teacher_profile
+
+    response = TestClient(app).get(
+        "/api/teacher/health-incidents", params={"class_id": str(OTHER_CLASS_ID)}
+    )
+
+    assert response.status_code == 403
+    mock_db.scalars.assert_not_called()
+
+
 def test_update_health_incident_post_emergency(
     mock_db, teacher_user, teacher_profile, sample_child_and_parents
 ):

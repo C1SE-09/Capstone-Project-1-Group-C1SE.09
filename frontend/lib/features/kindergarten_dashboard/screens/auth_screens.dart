@@ -165,276 +165,442 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.k.canvas,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // App Brand Logo & Title
-                  Center(
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [context.k.brand, context.k.brand.withValues(alpha: 0.8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.k.brand.withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.school_rounded, color: Colors.white, size: 30),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      'KinderLog',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Center(
-                    child: Text(
-                      'Hệ thống sổ liên lạc & báo cáo mầm non',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: context.k.inkSoft,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 36),
-
-                  // Login Form Card
-                  KCard(
-                    padding: const EdgeInsets.all(24),
+    final baseTheme = Theme.of(context);
+    final palette = KPalette.loginWarmSage;
+    return Theme(
+      data: baseTheme.copyWith(
+        colorScheme: baseTheme.colorScheme.copyWith(
+          primary: palette.brand,
+          surface: palette.surface,
+        ),
+        scaffoldBackgroundColor: palette.surface,
+        textTheme: baseTheme.textTheme.apply(
+          fontFamily: 'BeVietnamPro',
+          bodyColor: palette.ink,
+          displayColor: palette.ink,
+        ),
+        extensions: [
+          ...baseTheme.extensions.values.where((extension) => extension is! KPalette),
+          palette,
+        ],
+      ),
+      child: Builder(
+        builder: (context) {
+          final k = context.k;
+          return Scaffold(
+            backgroundColor: k.surface,
+            body: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 342),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          'Đăng nhập',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: k.brand,
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              child: Text(
+                                'K',
+                                style: TextStyle(
+                                  color: k.canvas,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'KinderLog',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: k.ink,
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        AspectRatio(
+                          aspectRatio: 342 / 220,
+                          child: Image.asset(
+                            'assets/garden_voice/login_classroom.png',
+                            key: const ValueKey('loginIllustration'),
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                            semanticLabel:
+                                'Cô và các bé cùng đọc sách trong lớp',
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Chào mừng trở lại!',
+                          style: TextStyle(
+                            color: k.ink,
+                            fontSize: 24,
+                            height: 32 / 24,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Nhập thông tin tài khoản của bạn để tiếp tục',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: context.k.inkSoft,
-                              ),
+                          'Cùng gia đình lưu giữ từng khoảnh khắc khôn lớn của bé.',
+                          style: TextStyle(
+                            color: k.inkSoft,
+                            fontSize: 15,
+                            height: 21 / 15,
+                          ),
                         ),
-                        const SizedBox(height: 24),
-
-                        // Error Banner if any
-                        if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: context.k.badTint,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: context.k.bad.withValues(alpha: .35)),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.error_outline, size: 20, color: context.k.bad),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: context.k.ink,
-                                      fontWeight: FontWeight.w500,
+                        const SizedBox(height: 20),
+                        Container(
+                          constraints: const BoxConstraints(minHeight: 58),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: k.surfaceSunken,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: k.inputBorder),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'TÊN ĐĂNG NHẬP',
+                                style: TextStyle(
+                                  color: k.inkSoft,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              TextField(
+                                  controller: _usernameController,
+                                  enabled: !_busy,
+                                  textInputAction: TextInputAction.next,
+                                  autofillHints: const [AutofillHints.username],
+                                  style: TextStyle(
+                                    color: k.ink,
+                                    fontSize: 14.5,
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Nhập tên đăng nhập hoặc Gmail',
+                                    hintStyle: TextStyle(
+                                      color: k.inkSoft,
+                                      fontSize: 14,
+                                    ),
+                                    isDense: true,
+                                    filled: false,
+                                    contentPadding: EdgeInsets.zero,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          constraints: const BoxConstraints(minHeight: 58),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: k.surfaceSunken,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: k.inputBorder),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'MẬT KHẨU',
+                                style: TextStyle(
+                                  color: k.inkSoft,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              TextField(
+                                  controller: _passwordController,
+                                  enabled: !_busy,
+                                  obscureText: _obscurePassword,
+                                  textInputAction: TextInputAction.done,
+                                  autofillHints: const [AutofillHints.password],
+                                  onSubmitted: (_) => _handleLogin(),
+                                  style: TextStyle(
+                                    color: k.ink,
+                                    fontSize: 14.5,
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Nhập mật khẩu',
+                                    hintStyle: TextStyle(
+                                      color: k.inkSoft,
+                                      fontSize: 14,
+                                    ),
+                                    isDense: true,
+                                    filled: false,
+                                    contentPadding: EdgeInsets.zero,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    suffixIconConstraints: const BoxConstraints(
+                                      minHeight: 28,
+                                      minWidth: 28,
+                                    ),
+                                    suffixIcon: IconButton(
+                                      tooltip: _obscurePassword
+                                          ? 'Hiện mật khẩu'
+                                          : 'Ẩn mật khẩu',
+                                      padding: EdgeInsets.zero,
+                                      iconSize: 18,
+                                      onPressed: () => setState(() =>
+                                          _obscurePassword = !_obscurePassword),
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                        color: k.inkSoft,
+                                      ),
                                     ),
                                   ),
                                 ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Builder(
+                          builder: (context) {
+                            final remember = CheckboxListTile(
+                              value: _rememberAccount,
+                              onChanged: _busy ? null : _setRememberAccount,
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(
+                                'Lưu mật khẩu',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: k.inkSoft,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                            final forgot = TextButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () {
+                                      if (widget.onForgotPassword != null) {
+                                        widget.onForgotPassword!();
+                                      } else {
+                                        context.push('/forgot-password');
+                                      }
+                                    },
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 44),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                foregroundColor: k.brand,
+                              ),
+                              child: Text(
+                                'Quên mật khẩu?',
+                                style: TextStyle(
+                                  color: k.brand,
+                                  fontFamily: 'BeVietnamPro',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                            if (MediaQuery.textScalerOf(context).scale(1) > 1.2 ||
+                                MediaQuery.sizeOf(context).width < 360) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  remember,
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: forgot,
+                                  ),
+                                ],
+                              );
+                            }
+                            return Row(
+                              children: [
+                                Expanded(child: remember),
+                                forgot,
                               ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // Username / Gmail Field
-                        Text(
-                          'Tên đăng nhập hoặc Gmail',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _usernameController,
-                          enabled: !_busy,
-                          decoration: InputDecoration(
-                            hintText: 'Nhập tên đăng nhập hoặc Gmail',
-                            prefixIcon: const Icon(Icons.person_outline, size: 20),
-                            filled: true,
-                            fillColor: context.k.surfaceSunken,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: context.k.line),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: context.k.line),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: context.k.brand, width: 1.5),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          ),
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: 18),
-
-                        // Password Field
-                        Text(
-                          'Mật khẩu',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _passwordController,
-                          enabled: !_busy,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            hintText: 'Nhập mật khẩu',
-                            prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                            suffixIcon: IconButton(
-                              tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                size: 20,
-                              ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                            filled: true,
-                            fillColor: context.k.surfaceSunken,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: context.k.line),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: context.k.line),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: context.k.brand, width: 1.5),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          ),
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _handleLogin(),
-                        ),
-                        const SizedBox(height: 8),
-
-                        CheckboxListTile(
-                          value: _rememberAccount,
-                          onChanged: _busy ? null : _setRememberAccount,
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          title: const Text('Lưu mật khẩu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                          subtitle: const Text(
-                            'Tự động điền tài khoản & mật khẩu cho lần sau',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
+                        const SizedBox(height: 16),
                         if (_rememberError != null)
                           Semantics(
                             liveRegion: true,
-                            child: Text(_rememberError!,
-                                style: TextStyle(fontSize: 12, color: context.k.bad)),
-                          ),
-
-                        // Forgot password button
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _busy ? null : () {
-                              if (widget.onForgotPassword != null) {
-                                widget.onForgotPassword!();
-                              } else {
-                                context.push('/forgot-password');
-                              }
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(50, 30),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'Quên mật khẩu?',
-                              style: TextStyle(
-                                color: KColors.brand,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                _rememberError!,
+                                style: TextStyle(
+                                  color: k.bad,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Login Action Button (ĐĂNG NHẬP)
+                        if (_errorMessage != null) ...[
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: k.badTint,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(color: k.bad, fontSize: 13),
+                            ),
+                          ),
+                        ],
                         SizedBox(
-                          height: 48,
+                          height: 52,
                           child: ElevatedButton(
                             onPressed: _busy ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: context.k.brand,
-                              foregroundColor: Colors.white,
+                              backgroundColor: k.brand,
+                              foregroundColor: k.canvas,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(26),
+                                side: BorderSide(color: k.brandStrong),
                               ),
                               textStyle: const TextStyle(
-                                fontSize: 16,
+                                fontFamily: 'BeVietnamPro',
+                                fontSize: 14.5,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
                               ),
                             ),
                             child: _isLoading
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 22,
                                     height: 22,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      strokeWidth: 2,
+                                      color: k.canvas,
                                     ),
                                   )
-                                : const Text('ĐĂNG NHẬP'),
+                                : Text(
+                                    'Đăng nhập',
+                                    style: TextStyle(
+                                      color: k.canvas,
+                                      fontFamily: 'BeVietnamPro',
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: k.reviewSurface,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Khám phá KinderLog',
+                                style: TextStyle(
+                                  color: k.inkSoft,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _LoginRolePill(label: 'Giáo viên'),
+                                  SizedBox(width: 12),
+                                  _LoginRolePill(label: 'Phụ huynh'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Kết nối lớp học · An tâm mỗi ngày',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: k.inkFaint,
+                            fontSize: 11,
+                            height: 18 / 11,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LoginRolePill extends StatelessWidget {
+  const _LoginRolePill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Container(
+      width: 116,
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: k.surfaceSunken,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: k.ink,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

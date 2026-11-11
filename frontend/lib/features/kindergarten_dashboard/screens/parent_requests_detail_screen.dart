@@ -29,7 +29,7 @@ class ParentRequestDetailScreen extends StatefulWidget {
 class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
   late HttpLeaveRequestRepository _repository;
   late Future<LeaveRequestEntity> _request;
-  bool _cancelling = false, _dialog = false;
+  bool _cancelling = false, _dialog = false, _cancelAttemptFailed = false;
   int _version = 0;
   String? _cancelError;
 
@@ -49,6 +49,7 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
       _version++;
       _cancelling = false;
       _cancelError = null;
+      _cancelAttemptFailed = false;
       _repository = widget.repository ?? HttpLeaveRequestRepository();
       _request = _fetch();
     }
@@ -86,6 +87,7 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
     setState(() {
       _cancelling = true;
       _cancelError = null;
+      _cancelAttemptFailed = false;
     });
     try {
       final result = await repository.cancelRequest(request.requestId);
@@ -98,9 +100,12 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
               className: className)));
     } catch (error) {
       if (!mounted || version != _version) return;
-      setState(() => _cancelError = error is LeaveRequestException
-          ? error.message
-          : 'Chưa xác nhận hủy. Hãy tải lại trạng thái trước khi thử lại.');
+      setState(() {
+        _cancelAttemptFailed = true;
+        _cancelError = error is LeaveRequestException
+            ? error.message
+            : 'Chưa xác nhận hủy. Hãy tải lại trạng thái trước khi thử lại.';
+      });
       if (error is LeaveRequestException &&
           {400, 409}.contains(error.statusCode)) {
         await _reload();
@@ -119,8 +124,17 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
     } catch (_) {/* FutureBuilder hiển thị lỗi và nút thử lại. */}
   }
 
+  Future<void> _refresh() {
+    setState(() {
+      _cancelError = null;
+      _cancelAttemptFailed = false;
+    });
+    return _reload();
+  }
+
   @override
   Widget build(BuildContext context) => ParentRequestLayout(
+      gardenVoice: true,
       title: 'Chi tiết đơn',
       child: FutureBuilder<LeaveRequestEntity>(
           future: _request,
@@ -142,10 +156,10 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
             }
             final request = snapshot.data!;
             return RefreshIndicator(
-                onRefresh: _reload,
+                onRefresh: _refresh,
                 child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
                     children: [
                       _ReviewStatus(request),
                       const SizedBox(height: 12),
@@ -154,23 +168,28 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                             ParentRequestInfo('Loại đơn',
-                                _value(requestTypeLabel(request.requestType))),
+                                _value(requestTypeLabel(request.requestType)),
+                                gardenVoice: true),
                             ParentRequestInfo(
                                 'Bé',
                                 _value(
-                                    '${widget.child.fullName}${widget.className.isEmpty ? '' : ' — ${widget.className}'}')),
-                            ParentRequestInfo(
-                                'Thời gian', _value(requestRange(request))),
+                                    '${widget.child.fullName}${widget.className.isEmpty ? '' : ' — ${widget.className}'}'),
+                                gardenVoice: true),
+                            ParentRequestInfo('Thời gian',
+                                _value(gardenVoiceRequestRange(request)),
+                                gardenVoice: true),
                             if (request.expectedArrivalTime != null)
                               ParentRequestInfo(
                                   'Giờ đến dự kiến',
                                   _value(request.expectedArrivalTime!
-                                      .substring(0, 5))),
+                                      .substring(0, 5)),
+                                  gardenVoice: true),
                             ParentRequestInfo(
                                 'Đính kèm',
                                 _value(request.attachmentUrl == null
                                     ? 'Không có'
-                                    : 'Ảnh y tế')),
+                                    : 'Ảnh y tế'),
+                                gardenVoice: true),
                             Text('Lý do',
                                 style: TextStyle(
                                     fontSize: 12, color: context.k.inkSoft)),
@@ -209,22 +228,37 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
                             child: Text(_cancelError!,
                                 style: TextStyle(color: context.k.bad)))
                       ],
-                      const SizedBox(height: 12),
-                      MedicationAction(
-                          label: 'Hủy đơn này',
-                          danger: true,
-                          busy: _cancelling,
-                          onPressed: request.canCancel && !_cancelling
-                              ? () => _cancel(request)
-                              : null),
-                      const SizedBox(height: 8),
-                      Text(
-                          request.canCancel
-                              ? 'Có thể hủy trước ${request.cancelBefore == null ? 'thời hạn máy chủ' : requestTimestamp(request.cancelBefore!)}. Máy chủ kiểm tra lại khi hủy.'
-                              : request.cancelBlockReason ??
-                                  'Đơn hiện không thể hủy. Vui lòng liên hệ giáo viên.',
-                          style: TextStyle(
-                              fontSize: 11, color: context.k.inkSoft)),
+                      if (request.canCancel ||
+                          request.status == LeaveStatus.pending ||
+                          _cancelAttemptFailed ||
+                          _cancelError != null ||
+                          request.cancelBlockReason?.isNotEmpty == true) ...[
+                        const SizedBox(height: 12),
+                        MedicationAction(
+                            label: 'Hủy đơn này',
+                            danger: true,
+                            busy: _cancelling,
+                            onPressed: !request.canCancel ||
+                                    _cancelling ||
+                                    _cancelAttemptFailed ||
+                                    _cancelError != null
+                                ? null
+                                : () => _cancel(request)),
+                        const SizedBox(height: 8),
+                        Text(
+                            request.canCancel
+                                ? 'Có thể hủy trước ${request.cancelBefore == null ? 'thời hạn máy chủ' : requestTimestamp(request.cancelBefore!)}. Máy chủ kiểm tra lại khi hủy.'
+                                : request.cancelBlockReason ??
+                                    _cancelError ??
+                                    'Đơn hiện không thể hủy. Vui lòng liên hệ giáo viên.',
+                            style: TextStyle(
+                                fontSize: 11, color: context.k.inkSoft)),
+                      ] else if (request.cancelBlockReason?.isNotEmpty == true)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(request.cancelBlockReason!,
+                                style: TextStyle(
+                                    fontSize: 11, color: context.k.inkSoft))),
                       const SizedBox(height: 12),
                       ParentRequestCard(
                           color: context.k.brandTint,
@@ -250,6 +284,21 @@ class _ReviewStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    if (request.status == LeaveStatus.approved) {
+      return ParentRequestCard(
+          color: k.okTint,
+          child: Column(children: [
+            Text('✓ ĐƠN ĐÃ ĐƯỢC DUYỆT',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700, color: k.ok)),
+            const SizedBox(height: 3),
+            Text(
+                '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' duyệt lúc ${requestTimestamp(request.reviewedAt!)}'}',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11.5, color: k.inkSoft)),
+          ]));
+    }
     final (ink, tint) = switch (request.status) {
       LeaveStatus.pending => (k.warnDeep, k.warnTint),
       LeaveStatus.approved => (k.ok, k.okTint),
@@ -294,6 +343,17 @@ class _Timeline extends StatelessWidget {
         const Text('Tiến trình xử lý',
             style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
+        if (request.status == LeaveStatus.approved) ...[
+          Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                  color: context.k.brandTint,
+                  borderRadius: BorderRadius.circular(10)),
+              child: Text('Chưa có xác nhận đồng bộ điểm danh từ hệ thống.',
+                  style: TextStyle(fontSize: 12, color: context.k.brand))),
+          const SizedBox(height: 8),
+        ],
         _step(context, 'Đã gửi đơn',
             '${requestTimestamp(request.createdAt)}${request.parentName == null ? '' : ' · ${request.parentName}'}'),
         const SizedBox(height: 8),
