@@ -78,7 +78,7 @@ class TimeSlot(Base, TimestampMixin):
 
     # Relationships
     schedules: Mapped[list[ClassSchedule]] = relationship(
-        "ClassSchedule", back_populates="time_slot", cascade="all, delete-orphan"
+        "ClassSchedule", back_populates="time_slot", passive_deletes=True
     )
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -197,13 +197,23 @@ class ClassSchedule(Base, TimestampMixin):
         nullable=False,
         comment="Subject entity",
     )
-    slot_id: Mapped[uuid.UUID] = mapped_column(
+    slot_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
-            "time_slot.slot_id", ondelete="CASCADE", name="fk_class_schedule_slot_id"
+            "time_slot.slot_id", ondelete="SET NULL", name="fk_class_schedule_slot_id"
         ),
-        nullable=False,
-        comment="Time slot entity",
+        nullable=True,
+        comment="Standard time slot entity (NULL when using custom_start_time/custom_end_time)",
+    )
+    custom_start_time: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        comment="Custom start time (HH:MM) when not linked to a time_slot",
+    )
+    custom_end_time: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        comment="Custom end time (HH:MM) when not linked to a time_slot",
     )
     teacher_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -248,7 +258,7 @@ class ClassSchedule(Base, TimestampMixin):
     subject: Mapped[Subject] = relationship(
         "Subject", back_populates="schedules", lazy="joined"
     )
-    time_slot: Mapped[TimeSlot] = relationship(
+    time_slot: Mapped[TimeSlot | None] = relationship(
         "TimeSlot", back_populates="schedules", lazy="joined"
     )
     teacher: Mapped[Teacher | None] = relationship("Teacher", lazy="joined")

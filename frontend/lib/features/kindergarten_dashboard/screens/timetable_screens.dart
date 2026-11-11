@@ -1041,7 +1041,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   Map<String, ClassSchedule> _conflictMap(List<ClassSchedule> items) {
     final byKey = <String, List<ClassSchedule>>{};
     for (final item in items) {
-      byKey.putIfAbsent('${item.dayIndex}:${item.slotId}', () => []).add(item);
+      byKey.putIfAbsent('${item.dayIndex}:${item.timeKey}', () => []).add(item);
     }
     final map = <String, ClassSchedule>{};
     for (final group in byKey.values) {

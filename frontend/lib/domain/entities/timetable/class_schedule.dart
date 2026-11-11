@@ -13,6 +13,8 @@ class ClassSchedule extends BaseEntity {
     required this.classId,
     required this.subjectId,
     required this.slotId,
+    this.customStartTime,
+    this.customEndTime,
     this.teacherId,
     required this.dayOfWeek,
     this.activityName,
@@ -28,6 +30,8 @@ class ClassSchedule extends BaseEntity {
   final String classId;
   final String subjectId;
   final String slotId;
+  final String? customStartTime;
+  final String? customEndTime;
   final String? teacherId;
   final int dayOfWeek; // backend: 2=Thứ 2 … 7=Thứ 7
   final String? activityName;
@@ -44,8 +48,18 @@ class ClassSchedule extends BaseEntity {
   String get displayName =>
       (activityName?.trim().isNotEmpty ?? false) ? activityName!.trim() : (subject?.name ?? 'Hoạt động');
 
-  String get startTime => timeSlot?.startTime ?? '';
-  String get endTime => timeSlot?.endTime ?? '';
+  bool get isCustomTime =>
+      slotId.isEmpty &&
+      (customStartTime?.isNotEmpty ?? false) &&
+      (customEndTime?.isNotEmpty ?? false);
+
+  String get startTime =>
+      (customStartTime?.isNotEmpty ?? false) ? customStartTime! : (timeSlot?.startTime ?? '');
+
+  String get endTime =>
+      (customEndTime?.isNotEmpty ?? false) ? customEndTime! : (timeSlot?.endTime ?? '');
+
+  String get timeKey => slotId.isNotEmpty ? slotId : 'custom:$startTime-$endTime';
   String get teacherLabel => (teacherName?.trim().isNotEmpty ?? false) ? teacherName!.trim() : '';
   String get roomLabel => (roomName?.trim().isNotEmpty ?? false) ? roomName!.trim() : '';
 
@@ -59,6 +73,8 @@ class ClassSchedule extends BaseEntity {
       classId: (data['class_id'] ?? data['classId'] ?? '').toString(),
       subjectId: (data['subject_id'] ?? data['subjectId'] ?? '').toString(),
       slotId: (data['slot_id'] ?? data['slotId'] ?? '').toString(),
+      customStartTime: data['custom_start_time']?.toString() ?? data['customStartTime']?.toString(),
+      customEndTime: data['custom_end_time']?.toString() ?? data['customEndTime']?.toString(),
       teacherId: data['teacher_id']?.toString() ?? data['teacherId']?.toString(),
       dayOfWeek: data['day_of_week'] is int ? data['day_of_week'] as int : 2,
       activityName: data['activity_name']?.toString() ?? data['activityName']?.toString(),
