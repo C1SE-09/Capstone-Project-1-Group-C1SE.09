@@ -285,7 +285,7 @@ def test_list_health_incidents_returns_only_class_incidents(
             "description": "Bé sốt cao",
             "temperature": None,
             "action_taken": None,
-            "reported_at": incident.reported_at.isoformat(),
+            "reported_at": incident.reported_at.isoformat().replace("+00:00", "Z"),
             "reported_by_name": "Cô Mai",
         }
     ]
