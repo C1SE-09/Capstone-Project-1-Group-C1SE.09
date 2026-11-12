@@ -1688,17 +1688,21 @@ class _RecordingScreenState extends State<RecordingScreen>
                   ),
                   const SizedBox(height: 14),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'DANH SÁCH BẢN GHI TRONG NGÀY',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: k.ink,
-                          letterSpacing: .3,
+                      Expanded(
+                        child: Text(
+                          'DANH SÁCH BẢN GHI TRONG NGÀY',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: k.ink,
+                            letterSpacing: .3,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         'Tổng ${_formatSessionDuration(clips)}',
                         style: TextStyle(

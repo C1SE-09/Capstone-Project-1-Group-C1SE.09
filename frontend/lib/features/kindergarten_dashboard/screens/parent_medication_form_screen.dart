@@ -290,17 +290,22 @@ class _ParentMedicationFormScreenState
           shadowColor: Colors.transparent,
           elevation: 0,
           pressElevation: 0,
-          labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          padding: EdgeInsets.zero,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.standard,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           labelStyle: TextStyle(
               fontSize: context.k.isGardenVoice ? 12 : 11,
-              fontWeight: FontWeight.w600,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              fontVariations: [FontVariation('wght', selected ? 700 : 600)],
               color: selected
                   ? Theme.of(context).colorScheme.onPrimary
                   : context.k.inkSoft),
-          side: BorderSide.none,
-          shape: const StadiumBorder(),
-          visualDensity: VisualDensity.compact);
+          side: BorderSide(
+            color: selected ? context.k.brand : context.k.line,
+            width: 1.2,
+          ),
+          shape: const StadiumBorder());
   Widget _dateButton(bool end) => OutlinedButton(
       onPressed: _busy || _stale ? null : () => _pickDate(end),
       style: OutlinedButton.styleFrom(

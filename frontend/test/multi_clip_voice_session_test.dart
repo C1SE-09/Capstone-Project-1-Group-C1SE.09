@@ -288,6 +288,8 @@ void main() {
       'Sáng nay bé Gia Bảo và Ngọc Ánh ăn hết suất.',
     );
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Lưu chữ'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lưu chữ'));
     await tester.pumpAndSettle();
 

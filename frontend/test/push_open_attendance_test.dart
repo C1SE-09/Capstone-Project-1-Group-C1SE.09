@@ -63,14 +63,17 @@ class _ClassRepository extends HttpClassDataRepository {
 }
 
 class _LeaveRequestRepository extends HttpLeaveRequestRepository {
+  _LeaveRequestRepository({this.pendingCount = 0});
+  final int pendingCount;
+
   @override
   Future<LeaveRequestBatchResult> getLeaveRequests(
           {required String classId,
           required String tab,
           int offset = 0,
           int limit = 50}) async =>
-      const LeaveRequestBatchResult(
-          pendingCount: 0, reviewedCount: 0, items: []);
+      LeaveRequestBatchResult(
+          pendingCount: pendingCount, reviewedCount: 0, items: const []);
 }
 
 class _AttendanceRepository extends HttpAttendanceRepository {
@@ -269,5 +272,44 @@ void main() {
     await tester.tap(find.byTooltip('Quay lại'));
     await tester.pumpAndSettle();
     expect(find.byType(AttendanceScreen), findsNothing);
+  });
+
+  testWidgets(
+      'tải sẵn badge số đơn nghỉ chờ duyệt ngay khi chưa bấm vào tab Đơn nghỉ',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: TeacherShell(
+      onLogout: () {},
+      classId: 'class-2',
+      repository: _DashboardRepository(),
+      classRepository: _ClassRepository(),
+      leaveRequestRepository: _LeaveRequestRepository(pendingCount: 2),
+      attendanceRepository: _AttendanceRepository(),
+      medicationRepository: _MedicationRepository(),
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Lớp'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ClassListScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<ClassListScreen>(find.byType(ClassListScreen))
+          .pendingLeaveCount,
+      2,
+    );
+    expect(find.text('2'), findsOneWidget);
+
+    await tester.tap(find.text('Điểm danh'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<AttendanceScreen>(find.byType(AttendanceScreen))
+          .pendingLeaveCount,
+      2,
+    );
+    expect(find.text('2 đơn nghỉ đang chờ duyệt'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
