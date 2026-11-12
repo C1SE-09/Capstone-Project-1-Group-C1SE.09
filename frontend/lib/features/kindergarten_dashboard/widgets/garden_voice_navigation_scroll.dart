@@ -49,7 +49,7 @@ class _GardenVoiceNavigationFrameState
         event.metrics.axis != Axis.vertical) {
       return false;
     }
-    if (event.context != null && !TickerMode.valuesOf(event.context!).enabled) {
+    if (event.context != null && !TickerMode.of(event.context!)) {
       return false;
     }
     if (MediaQuery.disableAnimationsOf(context) ||
@@ -95,7 +95,7 @@ class _GardenVoiceNavigationFrameState
               child: NotificationListener<ScrollMetricsNotification>(
                 onNotification: (event) {
                   if (event.depth == 0 &&
-                      TickerMode.valuesOf(event.context).enabled &&
+                      TickerMode.of(event.context) &&
                       event.metrics.axis == Axis.vertical &&
                       event.metrics.maxScrollExtent <=
                           event.metrics.minScrollExtent) {
