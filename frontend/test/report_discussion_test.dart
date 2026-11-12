@@ -434,5 +434,29 @@ void main() {
       expect(repUnread.hasUnreadResponses, isTrue);
       expect(repUnread.unreadResponseCount, 2);
     });
+
+    testWidgets('Input TextField has transparent fill and borderless decoration',
+        (tester) async {
+      final mockRepo = MockReportResponseRepository(initialList: []);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: kinderTheme(),
+          home: Scaffold(
+            body: ReportDiscussionSection(
+              reportId: 'rep-test-input',
+              childName: 'Bảo',
+              teacherName: 'Cô Nguyễn Thị Mai',
+              isTeacher: true,
+              repository: mockRepo,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.decoration?.filled, isFalse);
+      expect(textField.decoration?.fillColor, Colors.transparent);
+    });
   });
 }

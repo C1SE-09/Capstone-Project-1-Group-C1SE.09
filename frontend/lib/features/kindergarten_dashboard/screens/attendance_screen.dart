@@ -59,6 +59,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _allowPop = false;
   bool _loading = false;
   String _query = '';
+  final FocusNode _searchFocusNode = FocusNode();
   late DateTime _selectedDate;
 
   List<Child> get _filteredRoster {
@@ -436,48 +437,68 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _buildSearchField(BuildContext context) => Container(
-        constraints: const BoxConstraints(minHeight: 39),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(
-          color: context.k.activityRowTint,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.k.lineStrong),
-        ),
-        child: Row(
-          children: [
-            SvgPicture.asset(
-              'assets/garden_voice/class_search.svg',
-              width: 24,
-              height: 24,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                onChanged: (value) => setState(() => _query = value),
-                style:
-                    TextStyle(fontSize: 15, height: 1.24, color: context.k.ink),
-                decoration: InputDecoration(
-                  hintText: 'Tìm tên bé…',
-                  hintStyle: TextStyle(fontSize: 15, color: context.k.inkSoft),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  suffixIcon: _query.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Xóa tìm kiếm',
-                          onPressed: () => setState(() => _query = ''),
-                          icon: const Icon(Icons.clear, size: 18),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                ),
+  @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  Widget _buildSearchField(BuildContext context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _searchFocusNode.requestFocus(),
+        child: ListenableBuilder(
+          listenable: _searchFocusNode,
+          builder: (context, _) => Container(
+            constraints: const BoxConstraints(minHeight: 39),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+            decoration: BoxDecoration(
+              color: context.k.activityRowTint,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _searchFocusNode.hasFocus
+                    ? context.k.brand
+                    : context.k.lineStrong,
+                width: _searchFocusNode.hasFocus ? 1.5 : 1.0,
               ),
             ),
-          ],
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/garden_voice/class_search.svg',
+                  width: 24,
+                  height: 24,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    focusNode: _searchFocusNode,
+                    onChanged: (value) => setState(() => _query = value),
+                    style: TextStyle(
+                        fontSize: 15, height: 1.24, color: context.k.ink),
+                    decoration: InputDecoration(
+                      hintText: 'Tìm tên bé…',
+                      hintStyle:
+                          TextStyle(fontSize: 15, color: context.k.inkSoft),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      suffixIcon: _query.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Xóa tìm kiếm',
+                              onPressed: () => setState(() => _query = ''),
+                              icon: const Icon(Icons.clear, size: 18),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
 

@@ -39,6 +39,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
 
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _inputFocusNode = FocusNode();
 
   List<ReportResponse> _responses = [];
   bool _isLoading = true;
@@ -51,6 +52,11 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
   @override
   void initState() {
     super.initState();
+    _inputFocusNode.addListener(() {
+      if (_inputFocusNode.hasFocus) {
+        _scrollToBottom();
+      }
+    });
     if (widget.initialResponses != null) {
       _responses = List.from(widget.initialResponses!);
       _isLoading = false;
@@ -61,6 +67,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
 
   @override
   void dispose() {
+    _inputFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -414,7 +421,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             style: TextStyle(
               fontSize: 12.5,
               color: context.k.bad,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
@@ -743,80 +750,99 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
   }
 
   Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      decoration: BoxDecoration(
-        color: context.k.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: context.k.line),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: 'Đính kèm ảnh',
-            onPressed: _isSending ? null : _showImageSourcePicker,
-            icon: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: context.k.surfaceSunken,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.camera_alt_outlined,
-                size: 19,
-                color: context.k.inkSoft,
-              ),
+    return ListenableBuilder(
+      listenable: _inputFocusNode,
+      builder: (context, _) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _inputFocusNode.requestFocus(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          decoration: BoxDecoration(
+            color: context.k.surface,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: _inputFocusNode.hasFocus
+                  ? context.k.brand
+                  : context.k.line,
+              width: _inputFocusNode.hasFocus ? 1.5 : 1.0,
             ),
           ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              enabled: !_isSending,
-              minLines: 1,
-              maxLines: 4,
-              style: TextStyle(fontSize: 13, color: context.k.ink),
-              decoration: InputDecoration(
-                hintText: widget.isTeacher
-                    ? 'Nhắn phản hồi cho phụ huynh về báo cáo này...'
-                    : 'Nhắn cho cô giáo về báo cáo này...',
-                hintStyle: TextStyle(fontSize: 12.5, color: context.k.inkFaint),
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Đính kèm ảnh',
+                onPressed: _isSending ? null : _showImageSourcePicker,
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: context.k.surfaceSunken,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    size: 19,
+                    color: context.k.inkSoft,
+                  ),
+                ),
               ),
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _handleSend(),
-            ),
-          ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: ElevatedButton(
-              onPressed: _isSending ? null : _handleSend,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.k.brand,
-                foregroundColor: Colors.white,
-                shape: const CircleBorder(),
-                padding: EdgeInsets.zero,
-                elevation: 0,
+              const SizedBox(width: 4),
+              Expanded(
+                child: TextField(
+                  controller: _textController,
+                  focusNode: _inputFocusNode,
+                  enabled: !_isSending,
+                  minLines: 1,
+                  maxLines: 4,
+                  style: TextStyle(fontSize: 13, color: context.k.ink),
+                  decoration: InputDecoration(
+                    hintText: widget.isTeacher
+                        ? 'Nhắn phản hồi cho phụ huynh về báo cáo này...'
+                        : 'Nhắn cho cô giáo về báo cáo này...',
+                    hintStyle:
+                        TextStyle(fontSize: 12.5, color: context.k.inkFaint),
+                    isDense: true,
+                    filled: false,
+                    fillColor: Colors.transparent,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _handleSend(),
+                ),
               ),
-              child: _isSending
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.send_rounded, size: 18),
-            ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: _isSending ? null : _handleSend,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.k.brand,
+                    foregroundColor: Colors.white,
+                    shape: const CircleBorder(),
+                    padding: EdgeInsets.zero,
+                    elevation: 0,
+                  ),
+                  child: _isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.send_rounded, size: 18),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

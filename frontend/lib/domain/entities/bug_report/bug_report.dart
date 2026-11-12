@@ -105,17 +105,6 @@ class BugReport extends BaseEntity {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  /// True nếu status hiện tại là open (mới gửi, chưa ai xem).
-  bool get isOpen => status == BugStatus.open;
-
-  /// True nếu report đã open > 7 ngày mà chưa có ai xử lý (dùng cho badge SLA).
-  bool get isStale =>
-      status == BugStatus.open &&
-      DateTime.now().difference(createdAt).inDays > 7;
-
-  /// True nếu report đã có teacher được gán.
-  bool get hasAssignee => teacher != null;
-
   factory BugReport.fromJson(Map<String, dynamic> json) {
     final userRaw = json['user'];
     final teacherRaw = json['teacher'];

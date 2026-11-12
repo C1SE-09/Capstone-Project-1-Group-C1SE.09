@@ -80,6 +80,9 @@ class _MyAppState extends State<MyApp> {
           routerConfig: appRouter,
           theme: kinderTheme(),
           darkTheme: kinderThemeDark(),
+          builder: (context, child) => GardenVoiceScope(
+            child: child ?? const SizedBox.shrink(),
+          ),
           locale: const Locale('vi'),
           supportedLocales: const [Locale('vi'), Locale('en')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,

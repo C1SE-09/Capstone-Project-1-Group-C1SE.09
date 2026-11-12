@@ -12,7 +12,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   setUpAll(() async {
     final font = FontLoader('Nunito')
-      ..addFont(rootBundle.load('assets/fonts/Nunito-VariableFont_wght.ttf'));
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Regular.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Medium.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-SemiBold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Bold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-ExtraBold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Black.ttf'));
     await font.load();
   });
 
@@ -198,5 +203,87 @@ void main() {
     expect(schedulePos.dx, lessThan(leavePos.dx));
     expect(leavePos.dx, lessThan(medPos.dx));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Chấm đỏ unread hiển thị khi có tin nhắn mới và ẩn khi đã đọc',
+      (tester) async {
+    final reportWithUnread = DailyReport(
+      dailyReportId: 'rep-unread-1',
+      childId: 'child-1',
+      reportDate: DateTime.now(),
+      status: ReportStatus.read,
+      responseCount: 3,
+      unreadResponseCount: 2,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: kinderTheme(),
+        home: Scaffold(
+          body: GardenVoiceParentOverview(
+            parent:
+                const Parent(parentId: 'parent-1', fullName: 'Trần Văn Tuấn'),
+            overview: const ChildOverview(
+              child: Child(
+                childId: 'child-1',
+                classId: 'class-1',
+                fullName: 'Trần Gia Bảo',
+              ),
+              className: 'Mầm A',
+              teacherName: 'Cô Nguyễn Thị Mai',
+            ),
+            report: reportWithUnread,
+            unreadCount: 1,
+            onOpenReport: (_) {},
+            onOpenNotifications: () {},
+            onOpenTimetable: () {},
+            onOpenRequests: () {},
+            onOpenMedication: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Hiển thị chấm đỏ
+    expect(find.byKey(const ValueKey('parent-report-unread-dot')), findsOneWidget);
+    // Không còn chip 'Có trao đổi' hay 'tin mới'
+    expect(find.text('Có trao đổi'), findsNothing);
+    expect(find.textContaining('tin mới'), findsNothing);
+    expect(find.text('Đã có trao đổi với giáo viên'), findsNothing);
+
+    // Khi đã đọc hết tin nhắn
+    final reportAllRead = reportWithUnread.copyWith(unreadResponseCount: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: kinderTheme(),
+        home: Scaffold(
+          body: GardenVoiceParentOverview(
+            parent:
+                const Parent(parentId: 'parent-1', fullName: 'Trần Văn Tuấn'),
+            overview: const ChildOverview(
+              child: Child(
+                childId: 'child-1',
+                classId: 'class-1',
+                fullName: 'Trần Gia Bảo',
+              ),
+              className: 'Mầm A',
+              teacherName: 'Cô Nguyễn Thị Mai',
+            ),
+            report: reportAllRead,
+            unreadCount: 0,
+            onOpenReport: (_) {},
+            onOpenNotifications: () {},
+            onOpenTimetable: () {},
+            onOpenRequests: () {},
+            onOpenMedication: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Chấm đỏ biến mất
+    expect(find.byKey(const ValueKey('parent-report-unread-dot')), findsNothing);
   });
 }

@@ -94,46 +94,18 @@ class GardenVoiceParentOverview extends StatelessWidget {
                             color: k.ink,
                           ),
                         ),
-                        if (report != null && report!.hasDiscussion)
+                        if (report != null && report!.hasUnreadResponses) ...[
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
+                            key: const ValueKey('parent-report-unread-dot'),
+                            width: 8,
+                            height: 8,
                             decoration: BoxDecoration(
-                              color: report!.hasUnreadResponses
-                                  ? k.badTint
-                                  : k.accentTint,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.chat_bubble_rounded,
-                                  size: 13,
-                                  color: report!.hasUnreadResponses
-                                      ? k.bad
-                                      : k.accent,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  report!.hasUnreadResponses
-                                      ? (report!.unreadResponseCount > 1
-                                          ? '${report!.unreadResponseCount} tin mới'
-                                          : 'Có tin mới')
-                                      : 'Có trao đổi',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: report!.hasUnreadResponses
-                                        ? k.bad
-                                        : k.accent,
-                                  ),
-                                ),
-                              ],
+                              color: k.bad,
+                              shape: BoxShape.circle,
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ),
@@ -144,7 +116,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
                         : kDateLabel(report!.reportDate),
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: k.inkSoft,
                     ),
                   ),
@@ -269,7 +241,7 @@ class _ParentNotificationButton extends StatelessWidget {
                   '$unreadCount',
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w700,
                     color: k.surface,
                   ),
                 ),
@@ -445,41 +417,6 @@ class _DailyReportSummary extends StatelessWidget {
                 label: 'Hoạt động',
                 detail: report!.activitiesText ?? 'Chưa cập nhật',
               ),
-              if (report!.hasDiscussion) ...[
-                Divider(height: 1, color: k.line),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 16,
-                        color: report!.hasUnreadResponses ? k.bad : k.brand,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          report!.hasUnreadResponses
-                              ? 'Có phản hồi mới (${report!.unreadResponseCount})'
-                              : 'Đã có trao đổi với giáo viên',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: report!.hasUnreadResponses
-                                ? k.bad
-                                : k.inkSoft,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 16,
-                        color: k.inkSoft,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
         ),

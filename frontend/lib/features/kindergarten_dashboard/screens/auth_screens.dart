@@ -31,6 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
   late final AuthRepository _authRepository = widget.authRepository ?? AuthRepository();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _usernameFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _loadingCredentials = true;
@@ -91,6 +93,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+    _usernameFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -265,147 +269,179 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Container(
-                          constraints: const BoxConstraints(minHeight: 58),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: k.surfaceSunken,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: k.inputBorder),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'TÊN ĐĂNG NHẬP',
-                                style: TextStyle(
-                                  color: k.inkSoft,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _usernameFocus.requestFocus(),
+                          child: ListenableBuilder(
+                            listenable: _usernameFocus,
+                            builder: (context, _) => Container(
+                              constraints: const BoxConstraints(minHeight: 58),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: k.surfaceSunken,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _usernameFocus.hasFocus
+                                      ? k.brand
+                                      : k.inputBorder,
+                                  width: _usernameFocus.hasFocus ? 1.5 : 1.0,
                                 ),
                               ),
-                              TextField(
-                                  controller: _usernameController,
-                                  enabled: !_busy,
-                                  textInputAction: TextInputAction.next,
-                                  autofillHints: const [AutofillHints.username],
-                                  style: TextStyle(
-                                    color: k.ink,
-                                    fontSize: 14.5,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Nhập tên đăng nhập hoặc Gmail',
-                                    hintStyle: TextStyle(
-                                      color: k.inkSoft,
-                                      fontSize: 14,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'TÊN ĐĂNG NHẬP',
+                                    style: TextStyle(
+                                      color: _usernameFocus.hasFocus
+                                          ? k.brand
+                                          : k.inkSoft,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                    isDense: true,
-                                    filled: false,
-                                    contentPadding: EdgeInsets.zero,
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    errorBorder: InputBorder.none,
-                                    focusedErrorBorder: InputBorder.none,
-                                    disabledBorder: InputBorder.none,
                                   ),
-                                ),
-                            ],
+                                  TextField(
+                                    controller: _usernameController,
+                                    focusNode: _usernameFocus,
+                                    enabled: !_busy,
+                                    textInputAction: TextInputAction.next,
+                                    autofillHints: const [AutofillHints.username],
+                                    style: TextStyle(
+                                      color: k.ink,
+                                      fontSize: 14.5,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Nhập tên đăng nhập hoặc Gmail',
+                                      hintStyle: TextStyle(
+                                        color: k.inkSoft,
+                                        fontSize: 14,
+                                      ),
+                                      isDense: true,
+                                      filled: false,
+                                      contentPadding: EdgeInsets.zero,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      focusedErrorBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Container(
-                          constraints: const BoxConstraints(minHeight: 58),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: k.surfaceSunken,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: k.inputBorder),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'MẬT KHẨU',
-                                      style: TextStyle(
-                                        color: k.inkSoft,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    TextField(
-                                      controller: _passwordController,
-                                      enabled: !_busy,
-                                      obscureText: _obscurePassword,
-                                      textInputAction: TextInputAction.done,
-                                      autofillHints: const [
-                                        AutofillHints.password
-                                      ],
-                                      onSubmitted: (_) => _handleLogin(),
-                                      style: TextStyle(
-                                        color: k.ink,
-                                        fontSize: 14.5,
-                                        height: 1.4,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: 'Nhập mật khẩu',
-                                        hintStyle: TextStyle(
-                                          color: k.inkSoft,
-                                          fontSize: 14,
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _passwordFocus.requestFocus(),
+                          child: ListenableBuilder(
+                            listenable: _passwordFocus,
+                            builder: (context, _) => Container(
+                              constraints: const BoxConstraints(minHeight: 58),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: k.surfaceSunken,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _passwordFocus.hasFocus
+                                      ? k.brand
+                                      : k.inputBorder,
+                                  width: _passwordFocus.hasFocus ? 1.5 : 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'MẬT KHẨU',
+                                          style: TextStyle(
+                                            color: _passwordFocus.hasFocus
+                                                ? k.brand
+                                                : k.inkSoft,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
-                                        isDense: true,
-                                        filled: false,
-                                        contentPadding: EdgeInsets.zero,
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        errorBorder: InputBorder.none,
-                                        focusedErrorBorder: InputBorder.none,
-                                        disabledBorder: InputBorder.none,
-                                      ),
+                                        TextField(
+                                          controller: _passwordController,
+                                          focusNode: _passwordFocus,
+                                          enabled: !_busy,
+                                          obscureText: _obscurePassword,
+                                          textInputAction: TextInputAction.done,
+                                          autofillHints: const [
+                                            AutofillHints.password
+                                          ],
+                                          onSubmitted: (_) => _handleLogin(),
+                                          style: TextStyle(
+                                            color: k.ink,
+                                            fontSize: 14.5,
+                                            height: 1.4,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText: 'Nhập mật khẩu',
+                                            hintStyle: TextStyle(
+                                              color: k.inkSoft,
+                                              fontSize: 14,
+                                            ),
+                                            isDense: true,
+                                            filled: false,
+                                            contentPadding: EdgeInsets.zero,
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            focusedErrorBorder:
+                                                InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    tooltip: _obscurePassword
+                                        ? 'Hiện mật khẩu'
+                                        : 'Ẩn mật khẩu',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints.tightFor(
+                                      width: 36,
+                                      height: 36,
+                                    ),
+                                    style: IconButton.styleFrom(
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    iconSize: 18,
+                                    onPressed: () => setState(() =>
+                                        _obscurePassword = !_obscurePassword),
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: k.inkSoft,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                tooltip: _obscurePassword
-                                    ? 'Hiện mật khẩu'
-                                    : 'Ẩn mật khẩu',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints.tightFor(
-                                  width: 36,
-                                  height: 36,
-                                ),
-                                style: IconButton.styleFrom(
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                iconSize: 18,
-                                onPressed: () => setState(() =>
-                                    _obscurePassword = !_obscurePassword),
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: k.inkSoft,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),

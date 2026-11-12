@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
-    show FilterChipButton, kDateLabel;
+    show FilterChipButton, kDateLabel, kWeekdayLabel;
 
 enum _NotificationFilter {
   all('Tất cả', 'Chưa có thông báo.'),
@@ -225,7 +225,8 @@ class _ReportNotification extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
-    final unread = report.status != ReportStatus.read;
+    final unread =
+        report.status != ReportStatus.read || report.hasUnreadResponses;
     // published_at chỉ có ngày; không tự suy ra giờ gửi báo cáo.
     final dateLabel =
         DateFormat('dd/MM').format(report.publishedAt ?? report.reportDate);
@@ -235,15 +236,7 @@ class _ReportNotification extends StatelessWidget {
       if (report.sleeping?.trim().isNotEmpty == true) 'Giấc ngủ',
       if (report.activitiesText?.trim().isNotEmpty == true) 'Hoạt động',
     ].join(' · ');
-    final weekday = switch (report.reportDate.weekday) {
-      1 => 'thứ 2',
-      2 => 'thứ 3',
-      3 => 'thứ 4',
-      4 => 'thứ 5',
-      5 => 'thứ 6',
-      6 => 'thứ 7',
-      _ => 'chủ nhật',
-    };
+    final weekday = kWeekdayLabel(report.reportDate, capitalize: false);
     final description = details.isNotEmpty
         ? '$details của $childName ${today ? 'hôm nay' : weekday}'
         : report.summaryText?.trim().isNotEmpty == true
@@ -303,7 +296,7 @@ class _ReportNotification extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w700,
                                   color: k.brand,
                                 ),
                               ),

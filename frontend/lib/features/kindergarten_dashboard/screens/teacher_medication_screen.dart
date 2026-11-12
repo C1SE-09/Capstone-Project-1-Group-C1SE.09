@@ -15,7 +15,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_me
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
-    show Avatar, KButton;
+    show Avatar, KButton, kWeekdayLabel;
 
 class TeacherMedicationScreen extends StatefulWidget {
   const TeacherMedicationScreen({
@@ -58,15 +58,6 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
     'noon': 'Trưa',
     'afternoon': 'Chiều'
   };
-  static const _weekdays = [
-    'Thứ 2',
-    'Thứ 3',
-    'Thứ 4',
-    'Thứ 5',
-    'Thứ 6',
-    'Thứ 7',
-    'Chủ nhật'
-  ];
   @override
   void initState() {
     super.initState();
@@ -243,7 +234,7 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
     final today = DateTime(vn.year, vn.month, vn.day);
     final dateLabel = date == null
         ? data.date
-        : '${_weekdays[date.weekday - 1]}, ${DateFormat(DateUtils.isSameDay(date, today) ? 'dd/MM' : 'dd/MM/yyyy').format(date)}';
+        : '${kWeekdayLabel(date)}, ${DateFormat(DateUtils.isSameDay(date, today) ? 'dd/MM' : 'dd/MM/yyyy').format(date)}';
     final className = data.className?.trim();
     if (className == null || className.isEmpty) return dateLabel;
     final classLabel =

@@ -253,7 +253,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                               'Giáo viên chủ nhiệm',
                               style: TextStyle(
                                 fontSize: 13.5,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                                 height: 1.24,
                                 color: k.inkSoft,
                               ),
@@ -265,7 +265,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                                 height: 1.24,
                                 color: k.inkSoft,
                               ),

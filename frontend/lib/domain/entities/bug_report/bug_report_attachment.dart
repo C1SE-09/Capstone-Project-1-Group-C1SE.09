@@ -28,22 +28,6 @@ class BugReportAttachment extends BaseEntity {
   final String? description;
   final DateTime? createdAt;
 
-  /// Đoán xem file có phải ảnh không (để hiển thị grid vs icon).
-  bool get isImage {
-    final m = mimeType?.toLowerCase();
-    if (m == null) return false;
-    return m.startsWith('image/');
-  }
-
-  /// Format kích thước file thành chuỗi dễ đọc: "248 KB", "1.2 MB".
-  String get fileSizeLabel {
-    final s = fileSize;
-    if (s == null) return '';
-    if (s < 1024) return '$s B';
-    if (s < 1024 * 1024) return '${(s / 1024).toStringAsFixed(0)} KB';
-    return '${(s / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
   factory BugReportAttachment.fromJson(Map<String, dynamic> json) {
     return BugReportAttachment(
       attachmentId: json['attachment_id'] as String,

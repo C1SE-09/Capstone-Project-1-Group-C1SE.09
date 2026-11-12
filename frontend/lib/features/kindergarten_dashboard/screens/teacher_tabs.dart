@@ -269,7 +269,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
                             hintText: 'Tìm tên bé…',
                             hintStyle: TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.w400,
+                              fontWeight: FontWeight.w600,
                               height: 1.24,
                               color: k.inkSoft,
                             ),
@@ -543,7 +543,7 @@ class _ChildRow extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         height: 1.4,
                         color: subtitleColor,
                       ),
@@ -581,6 +581,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   String query = '';
   String filter = 'Tất cả';
+  final Set<String> _readResponseReportIds = <String>{};
   late final HttpDashboardRepository repository =
       widget.repository ?? HttpDashboardRepository();
   late Future<List<_HistoryRow>> future;
@@ -800,12 +801,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         index < groups[groupIndex].value.length;
                                         index++) ...[
                                       InkWell(
-                                        onTap: () => widget.onOpenReport(
-                                          groups[groupIndex].value[index].child,
-                                          groups[groupIndex]
-                                              .value[index]
-                                              .report,
-                                        ),
+                                        onTap: () {
+                                          final row = groups[groupIndex]
+                                              .value[index];
+                                          if (row.report.hasUnreadResponses) {
+                                            setState(() {
+                                              _readResponseReportIds
+                                                  .add(row.report.dailyReportId);
+                                            });
+                                          }
+                                          widget.onOpenReport(
+                                            row.child,
+                                            row.report,
+                                          );
+                                        },
                                         child: ConstrainedBox(
                                           constraints: const BoxConstraints(
                                               minHeight: 66),
@@ -850,7 +859,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                         style: TextStyle(
                                                           fontSize: 12,
                                                           fontWeight:
-                                                              FontWeight.w400,
+                                                              FontWeight.w600,
                                                           height: 1.28,
                                                           color: k.inkSoft,
                                                         ),
@@ -865,78 +874,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                   mainAxisAlignment:
                                                       MainAxisAlignment.center,
                                                   children: [
-                                                    _HistoryStatusPill(
-                                                      status: _rowStatus(
-                                                        groups[groupIndex]
-                                                            .value[index],
-                                                      ),
-                                                    ),
-                                                    if (groups[groupIndex]
-                                                        .value[index]
-                                                        .report
-                                                        .hasDiscussion) ...[
-                                                      const SizedBox(height: 4),
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 2,
-                                                        ),
-                                                        decoration: BoxDecoration(
-                                                          color: groups[groupIndex]
+                                                    Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        if (groups[groupIndex]
+                                                                .value[index]
+                                                                .report
+                                                                .hasUnreadResponses &&
+                                                            !_readResponseReportIds
+                                                                .contains(
+                                                              groups[groupIndex]
                                                                   .value[index]
                                                                   .report
-                                                                  .hasUnreadResponses
-                                                              ? k.badTint
-                                                              : k.surfaceSunken,
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(6),
-                                                        ),
-                                                        child: Row(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            Icon(
-                                                              Icons
-                                                                  .chat_bubble_rounded,
-                                                              size: 10,
-                                                              color: groups[groupIndex]
-                                                                      .value[index]
-                                                                      .report
-                                                                      .hasUnreadResponses
-                                                                  ? k.bad
-                                                                  : k.inkSoft,
+                                                                  .dailyReportId,
+                                                            )) ...[
+                                                          Container(
+                                                            key: const ValueKey(
+                                                                'teacher-unread-response-dot'),
+                                                            width: 8,
+                                                            height: 8,
+                                                            margin:
+                                                                const EdgeInsets
+                                                                    .only(
+                                                                    right: 6),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: k.bad,
+                                                              shape: BoxShape
+                                                                  .circle,
                                                             ),
-                                                            const SizedBox(
-                                                                width: 3),
-                                                            Text(
-                                                              groups[groupIndex]
-                                                                      .value[index]
-                                                                      .report
-                                                                      .hasUnreadResponses
-                                                                  ? (groups[groupIndex].value[index].report.unreadResponseCount > 1
-                                                                      ? 'Tin mới (${groups[groupIndex].value[index].report.unreadResponseCount})'
-                                                                      : 'Tin mới')
-                                                                  : 'Trao đổi',
-                                                              style: TextStyle(
-                                                                fontSize: 10.5,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w700,
-                                                                color: groups[groupIndex]
-                                                                        .value[index]
-                                                                        .report
-                                                                        .hasUnreadResponses
-                                                                    ? k.bad
-                                                                    : k.inkSoft,
-                                                              ),
-                                                            ),
-                                                          ],
+                                                          ),
+                                                        ],
+                                                        _HistoryStatusPill(
+                                                          status: _rowStatus(
+                                                            groups[groupIndex]
+                                                                .value[index],
+                                                          ),
                                                         ),
-                                                      ),
-                                                    ],
+                                                      ],
+                                                    ),
                                                   ],
                                                 ),
                                               ],

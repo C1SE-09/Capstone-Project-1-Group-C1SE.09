@@ -535,7 +535,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                     Text('Báo cáo ngày $reportDateText', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
                   ],
                 ),

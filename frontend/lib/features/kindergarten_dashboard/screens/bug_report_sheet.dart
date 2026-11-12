@@ -266,7 +266,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                     Expanded(
                       child: Text(
                         _formError!,
-                        style: TextStyle(fontSize: 13, color: k.bad, fontWeight: FontWeight.w500),
+                        style: TextStyle(fontSize: 13, color: k.bad, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],

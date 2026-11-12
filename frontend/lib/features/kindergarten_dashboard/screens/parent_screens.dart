@@ -218,6 +218,12 @@ class _ParentFlowState extends State<ParentFlow> {
   }
 
   void _openReport(_ParentData data, DailyReport report) {
+    if (report.hasUnreadResponses) {
+      final cleared = report.copyWith(unreadResponseCount: 0);
+      setState(() {
+        future = future.then((current) => current.withReport(cleared));
+      });
+    }
     showParentReportSheet(
       context,
       report: report,
@@ -285,10 +291,12 @@ class _ParentFlowState extends State<ParentFlow> {
     });
   }
 
-  /// Báo cáo chưa đọc (đã gửi nhưng phụ huynh chưa mở).
+  /// Báo cáo chưa đọc (đã gửi nhưng phụ huynh chưa mở hoặc có phản hồi mới).
   int _unreadCount(_ParentData data) {
     return data.notificationReports
-        .where((r) => r.status != domain_status.ReportStatus.read)
+        .where((r) =>
+            r.status != domain_status.ReportStatus.read ||
+            r.hasUnreadResponses)
         .length;
   }
 
@@ -675,17 +683,8 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
   Widget build(BuildContext context) {
     final report = _currentReport;
     final reportDate = report?.reportDate;
-    final dayName = reportDate == null
-        ? null
-        : switch (reportDate.weekday) {
-            1 => 'Thứ 2',
-            2 => 'Thứ 3',
-            3 => 'Thứ 4',
-            4 => 'Thứ 5',
-            5 => 'Thứ 6',
-            6 => 'Thứ 7',
-            _ => 'Chủ nhật',
-          };
+    final dayName =
+        reportDate == null ? null : kWeekdayLabel(reportDate);
     final date = reportDate == null
         ? null
         : '$dayName · ${DateFormat('dd/MM').format(reportDate)}';
@@ -749,7 +748,7 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
                     style: TextStyle(
                       fontSize: 12,
                       height: 1.4,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w700,
                       color: context.k.brand,
                     ),
                   ),

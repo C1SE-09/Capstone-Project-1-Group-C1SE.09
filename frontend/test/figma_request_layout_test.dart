@@ -927,8 +927,10 @@ void main() {
       fonts.addFont(rootBundle.load('assets/fonts/BeVietnamPro-$weight.ttf'));
     }
     await fonts.load();
-    final nunito = FontLoader('Nunito')
-      ..addFont(rootBundle.load('assets/fonts/Nunito-VariableFont_wght.ttf'));
+    final nunito = FontLoader('Nunito');
+    for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold', 'Black']) {
+      nunito.addFont(rootBundle.load('assets/fonts/Nunito-$weight.ttf'));
+    }
     await nunito.load();
     final icons = FontLoader('MaterialIcons')
       ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
@@ -1572,7 +1574,7 @@ void main() {
     expect(reviewAudioPlayer.sourceLoaded, isTrue);
     expect(find.byKey(const ValueKey('analyzed-text-card')), findsOneWidget);
     expect(tester.getTopLeft(find.byKey(const ValueKey('analyzed-text-card'))),
-        const Offset(20, 197));
+        const Offset(20, 196));
     expect(tester.getSize(find.byKey(const ValueKey('analyzed-text-card'))),
         const Size(350, 187)); // card 173px + 14px bottom gap
     expect(find.byType(Slider), findsNothing);
@@ -1668,7 +1670,7 @@ void main() {
     );
     expect(find.text('Hoàn thành'), findsOneWidget);
     expect(find.text('Bỏ duyệt'), findsOneWidget);
-    expect(tester.getTopLeft(find.byType(SurfaceBox)), const Offset(20, 384));
+    expect(tester.getTopLeft(find.byType(SurfaceBox)), const Offset(20, 383));
     expect(tester.getSize(find.byType(SurfaceBox)), const Size(352, 246));
     expect(tester.getSize(find.byType(AudioPlayerCard)), const Size(350, 82));
     final discardButton =
@@ -1679,7 +1681,7 @@ void main() {
     );
     expect(
       tester.getTopLeft(find.widgetWithText(FilledButton, 'Hoàn thành')),
-      const Offset(20, 644),
+      const Offset(20, 643),
     );
     expect(
       tester.getSize(find.widgetWithText(FilledButton, 'Hoàn thành')),

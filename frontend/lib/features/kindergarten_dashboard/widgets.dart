@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -163,8 +161,7 @@ class KAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ? TextStyle(
                         fontSize: onBack == null ? 14 : 12,
                         height: 1.4,
-                        fontWeight:
-                            onBack == null ? FontWeight.w400 : FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: context.k.inkSoft,
                       )
                     : Theme.of(context).textTheme.bodySmall),
@@ -211,7 +208,7 @@ class Avatar extends StatelessWidget {
         : words.first.characters.first;
     final pair = colors[name.length % colors.length];
     final double gvFontSize = size <= 32 ? 12 : (size <= 40 ? 14 : 16);
-    final FontWeight gvWeight = size <= 32 ? FontWeight.w500 : FontWeight.w700;
+    final FontWeight gvWeight = size <= 32 ? FontWeight.w600 : FontWeight.w700;
     return Container(
       width: size,
       height: size,
@@ -282,7 +279,7 @@ class StatusBadge extends StatelessWidget {
               style: TextStyle(
                   fontSize: isGardenVoice ? 12 : 11,
                   height: isGardenVoice ? 1.4 : null,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w700,
                   color: colors.$3)),
         ],
       ),
@@ -312,7 +309,7 @@ class SeverityChip extends StatelessWidget {
         const SizedBox(width: 6),
         Text(severity.label,
             style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w500, color: colors.$2)),
+                fontSize: 12, fontWeight: FontWeight.w700, color: colors.$2)),
       ],
     );
   }
@@ -419,8 +416,8 @@ class FilterChipButton extends StatelessWidget {
               fontSize: isGardenVoice ? 14 : 13,
               height: isGardenVoice ? 1.4 : null,
               fontWeight: isGardenVoice
-                  ? (selected ? FontWeight.w700 : FontWeight.w400)
-                  : FontWeight.w500,
+                  ? (selected ? FontWeight.w700 : FontWeight.w600)
+                  : FontWeight.w600,
               color: selected
                   ? (isGardenVoice ? context.k.surface : Colors.white)
                   : unselectedTextColor ?? context.k.inkSoft,
@@ -432,84 +429,6 @@ class FilterChipButton extends StatelessWidget {
   }
 }
 
-class ProgressRing extends StatelessWidget {
-  const ProgressRing({super.key, required this.value, required this.total});
-  final int value;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = total == 0 ? 0.0 : value / total;
-    return SizedBox.square(
-      dimension: 76,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox.square(
-            dimension: 76,
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 7,
-              strokeCap: StrokeCap.round,
-              color: context.k.brand,
-              backgroundColor: context.k.surfaceSunken,
-            ),
-          ),
-          Text('${(progress * 100).round()}%',
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-}
-
-class StatCard extends StatelessWidget {
-  const StatCard(
-      {super.key,
-      required this.value,
-      required this.label,
-      required this.icon,
-      this.tone,
-      this.onTap});
-  final int value;
-  final String label;
-  final IconData icon;
-  final Color? tone;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = tone ?? context.k.inkSoft;
-    return KCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, size: 18, color: color),
-          ),
-          const SizedBox(height: 10),
-          Text('$value',
-              style: const TextStyle(
-                  fontSize: 24, height: 1, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 5),
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: context.k.inkSoft)),
-        ],
-      ),
-    );
-  }
-}
 
 Future<T?> showKSheet<T>(BuildContext context, Widget child) {
   return showModalBottomSheet<T>(
@@ -520,13 +439,15 @@ Future<T?> showKSheet<T>(BuildContext context, Widget child) {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (context) => SafeArea(
       top: false,
-      child: Padding(
+      child: AnimatedPadding(
         padding: EdgeInsets.only(
           left: KSpace.x5,
           right: KSpace.x5,
           top: KSpace.x3,
           bottom: MediaQuery.viewInsetsOf(context).bottom + KSpace.x5,
         ),
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -537,7 +458,7 @@ Future<T?> showKSheet<T>(BuildContext context, Widget child) {
                     color: context.k.lineStrong,
                     borderRadius: BorderRadius.circular(99))),
             const SizedBox(height: KSpace.x4),
-            child,
+            Flexible(child: child),
           ],
         ),
       ),
@@ -545,145 +466,6 @@ Future<T?> showKSheet<T>(BuildContext context, Widget child) {
   );
 }
 
-class StepIndicator extends StatefulWidget {
-  const StepIndicator({super.key, required this.steps, required this.active});
-  final List<String> steps;
-  final int active;
-
-  @override
-  State<StepIndicator> createState() => _StepIndicatorState();
-}
-
-class _StepIndicatorState extends State<StepIndicator>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1500))
-    ..repeat();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return Column(
-      children: List.generate(widget.steps.length, (index) {
-        final done = index < widget.active;
-        final active = index == widget.active;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 28,
-              child: Column(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: done || active
-                          ? context.k.brand
-                          : context.k.surfaceSunken,
-                      boxShadow: active
-                          ? [
-                              BoxShadow(
-                                  color: context.k.brand.withValues(alpha: .16),
-                                  blurRadius: 0,
-                                  spreadRadius: 5)
-                            ]
-                          : null,
-                    ),
-                    alignment: Alignment.center,
-                    child: done
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
-                        : Text('${index + 1}',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: active
-                                    ? Colors.white
-                                    : context.k.inkFaint)),
-                  ),
-                  if (index < widget.steps.length - 1)
-                    Container(
-                        width: 1,
-                        height: active ? 58 : 44,
-                        color: done ? context.k.brand : context.k.line),
-                ],
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.steps[index],
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.45,
-                        fontWeight: active
-                            ? FontWeight.w600
-                            : done
-                                ? FontWeight.w500
-                                : FontWeight.w400,
-                        color:
-                            done || active ? context.k.ink : context.k.inkFaint,
-                      ),
-                    ),
-                    if (active) ...[
-                      const SizedBox(height: 9),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(99),
-                        child: SizedBox(
-                          width: 180,
-                          height: 4,
-                          child: ColoredBox(
-                            color: context.k.surfaceSunken,
-                            child: reduceMotion
-                                ? Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: FractionallySizedBox(
-                                        widthFactor: .4,
-                                        child:
-                                            ColoredBox(color: context.k.brand)))
-                                : AnimatedBuilder(
-                                    animation: _controller,
-                                    builder: (context, _) {
-                                      final t = _controller.value;
-                                      final width =
-                                          .4 + .15 * math.sin(t * math.pi);
-                                      final left = -width + (1 + width) * t;
-                                      return Align(
-                                        alignment: Alignment(left * 2 - 1, 0),
-                                        child: FractionallySizedBox(
-                                            widthFactor: width,
-                                            child: ColoredBox(
-                                                color: context.k.brand)),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-}
 
 class BottomActionBar extends StatelessWidget {
   const BottomActionBar({super.key, required this.child});
@@ -705,6 +487,18 @@ class BottomActionBar extends StatelessWidget {
 /// Định dạng ngày kiểu Việt Nam: 12/03/2026.
 String kDateLabel(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+/// Định dạng thứ trong tuần bằng tiếng Việt (ví dụ: 'Thứ 2', 'Chủ nhật').
+String kWeekdayLabel(DateTime date, {bool capitalize = true}) =>
+    switch (date.weekday) {
+      1 => capitalize ? 'Thứ 2' : 'thứ 2',
+      2 => capitalize ? 'Thứ 3' : 'thứ 3',
+      3 => capitalize ? 'Thứ 4' : 'thứ 4',
+      4 => capitalize ? 'Thứ 5' : 'thứ 5',
+      5 => capitalize ? 'Thứ 6' : 'thứ 6',
+      6 => capitalize ? 'Thứ 7' : 'thứ 7',
+      _ => capitalize ? 'Chủ nhật' : 'chủ nhật',
+    };
 
 /// Một dòng nhãn — giá trị, dùng cho các card thông tin (liên hệ, thông tin bé).
 class KInfoRow extends StatelessWidget {
@@ -861,7 +655,7 @@ class ThemeSelector extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         height: 1.4,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w600,
                         color: context.k.inkSoft,
                       ),
                     ),
@@ -874,7 +668,7 @@ class ThemeSelector extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.4,
-                            fontWeight: FontWeight.w400,
+                            fontWeight: FontWeight.w600,
                             color: context.k.inkSoft,
                           ),
                         ),
@@ -992,7 +786,7 @@ class ThemeSelector extends StatelessWidget {
                                   labelText,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w700,
                                     color: mode == value
                                         ? context.k.brand
                                         : context.k.inkFaint,

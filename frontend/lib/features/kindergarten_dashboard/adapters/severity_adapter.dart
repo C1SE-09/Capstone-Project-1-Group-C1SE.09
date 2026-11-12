@@ -18,10 +18,3 @@ ui.Severity severityFromDescription(String? description) {
     _ => ui.Severity.none,
   };
 }
-
-String severityToActivityMarker(ui.Severity severity) =>
-    switch (severity) {
-      ui.Severity.none => 'Mức độ sức khỏe: none',
-      ui.Severity.mild => 'Mức độ sức khỏe: mild',
-      ui.Severity.moderate => 'Mức độ sức khỏe: moderate',
-    };

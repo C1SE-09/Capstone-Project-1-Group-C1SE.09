@@ -174,7 +174,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                         style: TextStyle(
                                           fontSize: 12,
                                           height: 1.4,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w600,
                                           color: k.inkSoft,
                                         )),
                                   ],
@@ -199,7 +199,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w600,
                                   color: k.inkFaint,
                                 )),
                           ),
@@ -254,7 +254,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 height: 1.4,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w700,
                                 color: k.inkFaint,
                               )),
                         ],
@@ -325,7 +325,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                                         fontSize: 12,
                                                         height: 1.4,
                                                         fontWeight:
-                                                            FontWeight.w500,
+                                                            FontWeight.w700,
                                                         color: k.warn,
                                                       )),
                                                 if ((child.careNotes ?? '')
@@ -420,7 +420,7 @@ class _GardenVoiceRecordHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.4,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: k.inkSoft,
                       )),
                 ],
@@ -455,7 +455,7 @@ class _GardenVoiceRecordHeader extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 height: 1.4,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
                 color: k.inkSoft,
               )),
         ],
@@ -502,7 +502,7 @@ class _GardenVoiceRecordStatus extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 height: 1.4,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
                 color: foreground,
               )),
         ],
@@ -1070,7 +1070,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w600,
                                   color: k.inkSoft,
                                 ),
                               ),
@@ -1079,7 +1079,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                                     style: TextStyle(
                                       fontSize: 12,
                                       height: 1.4,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w700,
                                       color: k.warn,
                                     )),
                             ],
@@ -1177,7 +1177,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.4,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                             color: k.inkSoft,
                           ),
                         ),
@@ -1280,7 +1280,7 @@ class _GardenVoiceRecorderPanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: recording ? 14 : 13,
                     height: 1.4,
-                    fontWeight: recording ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: recording ? FontWeight.w800 : FontWeight.w700,
                     color: recording ? k.bad : k.inkSoft,
                   ),
                 ),
@@ -2019,8 +2019,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: index == active
-                                              ? FontWeight.w700
-                                              : FontWeight.w400,
+                                              ? FontWeight.w800
+                                              : FontWeight.w600,
                                           color: index <= active
                                               ? k.ink
                                               : k.inkSoft,
@@ -4228,7 +4228,7 @@ class _ObservationTile extends StatelessWidget {
                             style: TextStyle(
                                 fontSize: 12,
                                 height: 1.4,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w700,
                                 color: context.k.ok)),
                       ],
                     ),
@@ -4532,7 +4532,7 @@ class _ObservationTile extends StatelessWidget {
               child: Text(label,
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w700,
                       color: foreground)),
             ),
             Expanded(

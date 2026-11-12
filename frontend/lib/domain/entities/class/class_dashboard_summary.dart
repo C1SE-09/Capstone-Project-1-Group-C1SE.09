@@ -1,4 +1,4 @@
-﻿// frontend/lib/domain/entities/class/class_dashboard_summary.dart
+// frontend/lib/domain/entities/class/class_dashboard_summary.dart
 // =========================================================
 // Đối tượng tổng hợp cho màn "Tổng quan" của giáo viên.
 
@@ -41,9 +41,6 @@ class ClassDashboardSummary {
 
   /// Tỉ lệ hoàn thành 0.0 → 1.0 (cho thanh tiến độ).
   double get ratio => totalChildren == 0 ? 0 : completedCount / totalChildren;
-
-  /// Phần trăm hoàn thành (số nguyên) — "75%".
-  int get percent => (ratio * 100).round();
 
   /// Số trẻ CHƯA có báo cáo hoàn chỉnh (nháp + chưa có).
   int get notCompletedCount => totalChildren - completedCount;
