@@ -262,6 +262,10 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.text('Nguyễn Minh An')).style?.fontWeight,
+      FontWeight.w800,
+    );
     await tester.tap(find.text('Nguyễn Minh An'));
     await tester.pumpAndSettle();
 

@@ -331,67 +331,80 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: k.inputBorder),
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                'MẬT KHẨU',
-                                style: TextStyle(
-                                  color: k.inkSoft,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              TextField(
-                                  controller: _passwordController,
-                                  enabled: !_busy,
-                                  obscureText: _obscurePassword,
-                                  textInputAction: TextInputAction.done,
-                                  autofillHints: const [AutofillHints.password],
-                                  onSubmitted: (_) => _handleLogin(),
-                                  style: TextStyle(
-                                    color: k.ink,
-                                    fontSize: 14.5,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Nhập mật khẩu',
-                                    hintStyle: TextStyle(
-                                      color: k.inkSoft,
-                                      fontSize: 14,
-                                    ),
-                                    isDense: true,
-                                    filled: false,
-                                    contentPadding: EdgeInsets.zero,
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    errorBorder: InputBorder.none,
-                                    focusedErrorBorder: InputBorder.none,
-                                    disabledBorder: InputBorder.none,
-                                    suffixIconConstraints: const BoxConstraints(
-                                      minHeight: 28,
-                                      minWidth: 28,
-                                    ),
-                                    suffixIcon: IconButton(
-                                      tooltip: _obscurePassword
-                                          ? 'Hiện mật khẩu'
-                                          : 'Ẩn mật khẩu',
-                                      padding: EdgeInsets.zero,
-                                      iconSize: 18,
-                                      onPressed: () => setState(() =>
-                                          _obscurePassword = !_obscurePassword),
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility_off_outlined
-                                            : Icons.visibility_outlined,
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'MẬT KHẨU',
+                                      style: TextStyle(
                                         color: k.inkSoft,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                                  ),
+                                    TextField(
+                                      controller: _passwordController,
+                                      enabled: !_busy,
+                                      obscureText: _obscurePassword,
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [
+                                        AutofillHints.password
+                                      ],
+                                      onSubmitted: (_) => _handleLogin(),
+                                      style: TextStyle(
+                                        color: k.ink,
+                                        fontSize: 14.5,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: 'Nhập mật khẩu',
+                                        hintStyle: TextStyle(
+                                          color: k.inkSoft,
+                                          fontSize: 14,
+                                        ),
+                                        isDense: true,
+                                        filled: false,
+                                        contentPadding: EdgeInsets.zero,
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        errorBorder: InputBorder.none,
+                                        focusedErrorBorder: InputBorder.none,
+                                        disabledBorder: InputBorder.none,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Hiện mật khẩu'
+                                    : 'Ẩn mật khẩu',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints.tightFor(
+                                  width: 36,
+                                  height: 36,
+                                ),
+                                style: IconButton.styleFrom(
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                iconSize: 18,
+                                onPressed: () => setState(() =>
+                                    _obscurePassword = !_obscurePassword),
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: k.inkSoft,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -408,9 +421,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: k.inkSoft,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
+                                  color: k.ink,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             );
@@ -529,32 +542,59 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: k.reviewSurface,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Khám phá KinderLog',
-                                style: TextStyle(
-                                  color: k.inkSoft,
-                                  fontSize: 11.5,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Ứng dụng dành cho:',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: k.inkSoft,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        color: k.brand,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 14,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: const _LoginRolePill(
+                                          label: 'Giáo viên',
+                                          isPrimary: false,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        color: const Color(0xFFEAEEF1),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 14,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: const _LoginRolePill(
+                                          label: 'Phụ huynh',
+                                          isPrimary: true,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _LoginRolePill(label: 'Giáo viên'),
-                                  SizedBox(width: 12),
-                                  _LoginRolePill(label: 'Phụ huynh'),
-                                ],
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                         Text(
@@ -580,27 +620,34 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _LoginRolePill extends StatelessWidget {
-  const _LoginRolePill({required this.label});
+  const _LoginRolePill({
+    required this.label,
+    this.isPrimary = false,
+  });
 
   final String label;
+  final bool isPrimary;
 
   @override
   Widget build(BuildContext context) {
     final k = context.k;
     return Container(
-      width: 116,
-      height: 44,
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 44),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: k.surfaceSunken,
-        borderRadius: BorderRadius.circular(18),
+        color: isPrimary ? k.brand : k.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: isPrimary ? Border.all(color: k.brandStrong) : null,
       ),
       child: Text(
         label,
+        textAlign: TextAlign.center,
         style: TextStyle(
-          color: k.ink,
-          fontSize: 11.5,
-          fontWeight: FontWeight.w600,
+          color: isPrimary ? k.canvas : k.ink,
+          fontSize: 12.5,
+          fontWeight: isPrimary ? FontWeight.w700 : FontWeight.w600,
         ),
       ),
     );

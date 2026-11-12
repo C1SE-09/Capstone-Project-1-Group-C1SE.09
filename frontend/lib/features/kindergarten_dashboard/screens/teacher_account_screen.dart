@@ -13,7 +13,6 @@ import 'package:adark_frontend/domain/entities/class/class_info.dart'
     as domain_class;
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class TeacherAccountScreen extends StatefulWidget {
@@ -136,18 +135,6 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
     );
   }
 
-  void _openThemeSelector() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const GardenVoiceScope(
-          child: Scaffold(
-            body: ThemeSelector(),
-          ),
-        ),
-      ),
-    );
-  }
-
   static String _displayTeacherName(String fullName) {
     final trimmed = fullName.trim();
     if (trimmed.isEmpty) return 'Giáo viên';
@@ -156,9 +143,6 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
     }
     return 'Cô $trimmed';
   }
-
-  static String _shortThemeBadgeLabel(ThemeMode mode) =>
-      mode == ThemeMode.dark ? 'Tối' : 'Sáng';
 
   @override
   Widget build(BuildContext context) {
@@ -338,17 +322,6 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                       onTap: widget.onOpenNotifications,
                     ),
                     Divider(height: 0.6, thickness: 0.6, color: k.line),
-                    ValueListenableBuilder<ThemeMode>(
-                      valueListenable: ThemeController.instance,
-                      builder: (context, mode, _) => _AccountMenuRow(
-                        iconAsset: 'assets/garden_voice/account_palette.svg',
-                        iconTileColor: k.activityRowTint,
-                        label: 'Giao diện',
-                        badgeText: _shortThemeBadgeLabel(mode),
-                        onTap: _openThemeSelector,
-                      ),
-                    ),
-                    Divider(height: 0.6, thickness: 0.6, color: k.line),
                     _AccountMenuRow(
                       iconAsset: 'assets/garden_voice/account_settings.svg',
                       iconTileColor: k.sleepRowTint,
@@ -492,14 +465,12 @@ class _AccountMenuRow extends StatelessWidget {
     required this.iconAsset,
     required this.iconTileColor,
     required this.label,
-    this.badgeText,
     this.onTap,
   });
 
   final String iconAsset;
   final Color iconTileColor;
   final String label;
-  final String? badgeText;
   final VoidCallback? onTap;
 
   @override
@@ -537,28 +508,6 @@ class _AccountMenuRow extends StatelessWidget {
                 ),
               ),
             ),
-            if (badgeText != null) ...[
-              Container(
-                constraints: const BoxConstraints(minHeight: 28),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: k.okTint,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  badgeText!,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    height: 1.24,
-                    color: k.brand,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
             SvgPicture.asset(
               'assets/garden_voice/account_chevron_right.svg',
               width: 17,

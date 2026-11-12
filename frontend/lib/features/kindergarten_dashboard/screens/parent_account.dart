@@ -25,7 +25,6 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_repor
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_health_profile_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_child_edit_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/parent_profile_sheet.dart';
 export '../widgets/parent_profile_sheet.dart'
     show
@@ -176,14 +175,6 @@ class _ParentAccountState extends State<ParentAccount> {
           childName: widget.overview.child.fullName,
           onEdit: (onSaved) => _openProfileSheet(onSaved: onSaved),
         ),
-      ),
-    ));
-  }
-
-  void _openThemeSelector() {
-    Navigator.of(context).push<void>(MaterialPageRoute(
-      builder: (_) => const GardenVoiceScope(
-        child: Scaffold(body: ThemeSelector()),
       ),
     ));
   }
@@ -497,8 +488,6 @@ class _ParentAccountState extends State<ParentAccount> {
                 trailing: Switch(value: _pushEnabled, onChanged: _setPush),
               ),
               const Divider(height: 1),
-              const ThemeSelector(),
-              const Divider(height: 1),
               _settingsRow(
                 context,
                 icon: Icons.info_outline,
@@ -669,45 +658,6 @@ class _ParentAccountState extends State<ParentAccount> {
                     ? 'Đã bật trên thiết bị'
                     : 'Đã tắt trên thiết bị',
                 trailing: Switch(value: _pushEnabled, onChanged: _setPush),
-              ),
-              ValueListenableBuilder<ThemeMode>(
-                valueListenable: ThemeController.instance,
-                builder: (context, mode, _) => _accountMenuRow(
-                  icon: 'assets/garden_voice/account_moon.svg',
-                  label: 'Giao diện',
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: k.okTint,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          switch (mode) {
-                            ThemeMode.light => 'Sáng',
-                            ThemeMode.dark => 'Tối',
-                            ThemeMode.system => 'Theo máy',
-                          },
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: k.ok,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SvgPicture.asset(
-                        'assets/garden_voice/account_chevron_right.svg',
-                        width: 18,
-                        height: 18,
-                      ),
-                    ],
-                  ),
-                  onTap: _openThemeSelector,
-                ),
               ),
             ],
           ),

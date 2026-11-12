@@ -92,8 +92,7 @@ void main() {
     await tester.pumpWidget(app(
         TeacherMedicationScreen(repository: medicationRepository(transport))));
     await tester.pumpAndSettle();
-    await tester.tap(find
-        .textContaining(RegExp(r'^(ĐÃ CHO UỐNG THUỐC|Đã cho uống thuốc)$')));
+    await tester.tap(find.text('Xác nhận đã cho uống thuốc'));
     await tester.pumpAndSettle();
     expect(transport.requests.where((r) => r.method == 'GET'), hasLength(2));
     expect(
@@ -174,7 +173,7 @@ void main() {
       ),
     )));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Đã cho uống thuốc'));
+    await tapVisible(tester, find.text('Xác nhận đã cho uống thuốc'));
     await tester.pumpAndSettle();
 
     expect(find.text('Xác nhận đã khóa để tránh trùng liều'), findsOneWidget);
@@ -204,7 +203,7 @@ void main() {
       ),
     )));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Đã cho uống thuốc'));
+    await tapVisible(tester, find.text('Xác nhận đã cho uống thuốc'));
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byTooltip('Quay lại'));
 
@@ -226,12 +225,11 @@ void main() {
     await tester.pumpWidget(app(
         TeacherMedicationScreen(repository: medicationRepository(transport))));
     await tester.pumpAndSettle();
-    await tester.tap(find
-        .textContaining(RegExp(r'^(ĐÃ CHO UỐNG THUỐC|Đã cho uống thuốc)$')));
+    await tester.tap(find.text('Xác nhận đã cho uống thuốc'));
     await tester.pumpAndSettle();
     expect(find.textContaining('08:32'), findsWidgets);
     expect(find.textContaining('Cô Mai'), findsWidgets);
-    expect(find.text('Đã cho uống thuốc'), findsNothing);
+    expect(find.text('Xác nhận đã cho uống thuốc'), findsNothing);
     expect(transport.requests.where((r) => r.method == 'PUT'), hasLength(1));
   });
 

@@ -112,10 +112,31 @@ void main() {
     expect(find.text('TÊN ĐĂNG NHẬP'), findsOneWidget);
     expect(find.text('MẬT KHẨU'), findsOneWidget);
     expect(find.text('Đăng nhập'), findsOneWidget);
+    final usernameBox = find
+        .ancestor(
+          of: find.text('TÊN ĐĂNG NHẬP'),
+          matching: find.byType(Container),
+        )
+        .first;
+    final passwordBox = find
+        .ancestor(
+          of: find.text('MẬT KHẨU'),
+          matching: find.byType(Container),
+        )
+        .first;
+    expect(tester.getSize(passwordBox), tester.getSize(usernameBox));
 
     // Verify deleted items per user request
     expect(find.text('Lưu mật khẩu'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('Lưu mật khẩu')).style?.fontWeight,
+      FontWeight.w700,
+    );
     expect(find.text('Quên mật khẩu?'), findsOneWidget);
+    expect(find.text('Khám phá KinderLog'), findsNothing);
+    expect(find.text('Ứng dụng dành cho:'), findsOneWidget);
+    expect(find.text('Giáo viên'), findsOneWidget);
+    expect(find.text('Phụ huynh'), findsOneWidget);
     expect(find.text('Chưa có tài khoản? '), findsNothing);
     expect(find.text('Đăng ký ngay'), findsNothing);
 

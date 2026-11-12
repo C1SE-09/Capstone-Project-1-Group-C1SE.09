@@ -101,6 +101,45 @@ class _TeacherNotificationsScreenState
 
   bool _unread(_InboxNotice item) => item.unread && !_read.contains(item.key);
 
+  Future<List<MedicationDose>> _loadMedicationsSafe() async {
+    try {
+      return await _medicationRepository.getClassMedicationRequests(
+          classId: widget.classId);
+    } on MedicationRequestException catch (e) {
+      if (e.code == 'invalid_response' && e.message.contains('lớp')) {
+        throw const LeaveRequestException(
+            'Không thể xác minh thông báo của lớp.');
+      }
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadIncidentsSafe() async {
+    try {
+      return await _medicationRepository.getHealthIncidents(
+          classId: widget.classId);
+    } on MedicationRequestException catch (e) {
+      if (e.code == 'invalid_response' && e.message.contains('lớp')) {
+        throw const LeaveRequestException(
+            'Không thể xác minh thông báo của lớp.');
+      }
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<ClassDashboardSummary?> _loadDashboardSafe() async {
+    try {
+      return await _dashboardRepository.getClassDashboard(
+          widget.classId, medicationDateInVietnam(DateTime.now()));
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _load({bool more = false}) async {
     if (more && _loading) return;
     final version = ++_version;
@@ -110,43 +149,40 @@ class _TeacherNotificationsScreenState
       _retryMore = more;
     });
     try {
-      final results = await Future.wait<Object>([
-        Future.wait([
-          _repository.getLeaveRequests(
-              classId: widget.classId,
-              tab: 'pending',
-              offset: more ? _pendingOffset : 0),
-          _repository.getLeaveRequests(
-              classId: widget.classId,
-              tab: 'reviewed',
-              offset: more ? _reviewedOffset : 0),
-        ]),
-        if (!more)
-          _medicationRepository.getClassMedicationRequests(
-              classId: widget.classId),
-        if (!more)
-          _medicationRepository.getHealthIncidents(classId: widget.classId),
-        if (!more)
-          _attendanceRepository.getClassAttendanceDetails(
-              widget.classId, medicationDateInVietnam(DateTime.now())),
-        if (!more)
-          _dashboardRepository.getClassDashboard(
-              widget.classId, medicationDateInVietnam(DateTime.now())),
+      final leaveFuture = Future.wait([
+        _repository.getLeaveRequests(
+            classId: widget.classId,
+            tab: 'pending',
+            offset: more ? _pendingOffset : 0),
+        _repository.getLeaveRequests(
+            classId: widget.classId,
+            tab: 'reviewed',
+            offset: more ? _reviewedOffset : 0),
       ]);
+      final medicationsFuture = more
+          ? Future.value(_medications)
+          : _loadMedicationsSafe();
+      final incidentsFuture =
+          more ? Future.value(_incidents) : _loadIncidentsSafe();
+      final attendanceFuture = more
+          ? Future.value(_attendance)
+          : _attendanceRepository.getClassAttendanceDetails(
+              widget.classId, medicationDateInVietnam(DateTime.now()));
+      final dashboardFuture =
+          more ? Future.value(_reports) : _loadDashboardSafe();
+
+      final pages = await leaveFuture;
+      final medications = await medicationsFuture;
+      final incidents = await incidentsFuture;
+      final attendance = await attendanceFuture;
+      final reports = await dashboardFuture;
+
       if (!mounted || version != _version) return;
-      final pages = results[0] as List<LeaveRequestBatchResult>;
-      final medications =
-          more ? _medications : results[1] as List<MedicationDose>;
-      final incidents =
-          more ? _incidents : results[2] as List<Map<String, dynamic>>;
-      final attendance =
-          more ? _attendance : results[3] as Map<String, AttendanceChildRecord>;
-      final reports = more ? _reports : results[4] as ClassDashboardSummary;
       final fetched = pages.expand((page) => page.items).toList();
       if (fetched.any((item) => item.classId != widget.classId) ||
           medications.any((item) => item.classId != widget.classId) ||
           incidents.any((item) => item['class_id'] != widget.classId) ||
-          reports?.classInfo.classId != widget.classId) {
+          (reports != null && reports.classInfo.classId != widget.classId)) {
         throw const LeaveRequestException(
             'Không thể xác minh thông báo của lớp.');
       }
@@ -174,7 +210,9 @@ class _TeacherNotificationsScreenState
       if (mounted && version == _version) {
         setState(() => _error = e is LeaveRequestException
             ? e.message
-            : 'Không thể tải thông báo. Vui lòng thử lại.');
+            : e is MedicationRequestException
+                ? e.message
+                : 'Không thể tải thông báo. Vui lòng thử lại.');
       }
     } finally {
       if (mounted && version == _version) setState(() => _loading = false);
@@ -250,7 +288,7 @@ class _TeacherNotificationsScreenState
         ..._incidents.map((item) => _InboxNotice(
             key: 'incident:${item['incident_id']}',
             category: 'SỰ CỐ',
-            time: DateTime.parse(item['reported_at'] as String),
+            time: DateTime.tryParse(item['reported_at']?.toString() ?? ''),
             title: 'Sự cố sức khỏe — ${item['child_name']}',
             detail: '${item['incident_type_label']} · ${item['description']}')),
       if (_filter == 'Tất cả')

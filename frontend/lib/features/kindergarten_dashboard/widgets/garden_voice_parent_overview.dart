@@ -110,7 +110,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
               const SizedBox(height: 14),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final stacked = constraints.maxWidth < 350 ||
+                  final stacked = constraints.maxWidth < 260 ||
                       MediaQuery.textScalerOf(context).scale(12) > 15;
                   final actions = [
                     _ParentShortcut(
@@ -134,6 +134,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
                   ];
                   if (stacked) {
                     return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         for (var index = 0;
                             index < actions.length;
@@ -501,26 +502,45 @@ class _ParentShortcut extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: SizedBox(
             height: largeText ? 96 : 66,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ExcludeSemantics(
-                  child: SvgPicture.asset(icon, width: 24, height: 24),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  label,
-                  maxLines: largeText ? 2 : 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.28,
-                    fontWeight: FontWeight.w700,
-                    color: k.ink,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ExcludeSemantics(
+                    child: SvgPicture.asset(icon, width: 24, height: 24),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 5),
+                  if (largeText)
+                    Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.28,
+                        fontWeight: FontWeight.w700,
+                        color: k.ink,
+                      ),
+                    )
+                  else
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.28,
+                          fontWeight: FontWeight.w700,
+                          color: k.ink,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

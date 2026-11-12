@@ -520,4 +520,42 @@ void main() {
     expect(find.text('Sự cố sức khỏe — Bé Bình'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+      'inbox vẫn tải đơn nghỉ và điểm danh khi API sự cố/thuốc phụ trợ lỗi (405/503)',
+      (tester) async {
+    final leaveTransport = RequestTransport((options) => jsonBody({
+          'pending_count': 1,
+          'reviewed_count': 0,
+          'items': options.queryParameters['tab'] == 'pending'
+              ? [
+                  {...requestJson(), 'child_name': 'Bảo Châu'}
+                ]
+              : [],
+        }));
+    final failingMedTransport = RequestTransport((options) {
+      if (options.path == '/api/teacher/health-incidents') {
+        return jsonBody({'detail': 'Method Not Allowed'}, 405);
+      }
+      return jsonBody({'detail': 'Service Unavailable'}, 503);
+    });
+
+    await tester.pumpWidget(app(TeacherNotificationsScreen(
+      classId: 'class-1',
+      repository: HttpLeaveRequestRepository(
+          dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
+            ..httpClientAdapter = leaveTransport),
+      medicationRepository: HttpMedicationRepository(
+          dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
+            ..httpClientAdapter = failingMedTransport),
+      attendanceRepository: attendanceRepository(leaveTransport),
+      dashboardRepository: dashboardRepository(leaveTransport),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Đơn xin nghỉ mới — Bảo Châu'), findsOneWidget);
+    expect(find.text('Không thể tải thông báo. Vui lòng thử lại.'),
+        findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
