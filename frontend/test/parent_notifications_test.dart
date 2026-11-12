@@ -175,6 +175,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Xin nghỉ · Trễ'), 300);
+    // Nav nổi che một phần viewport: đưa shortcut lên trên nav trước khi bấm.
+    await Scrollable.ensureVisible(tester.element(find.text('Xin nghỉ · Trễ')),
+        alignment: .5);
+    await tester.pumpAndSettle();
+    expect(find.text('Xin nghỉ · Trễ').hitTestable(), findsOneWidget);
     await tester.tap(find.text('Xin nghỉ · Trễ'));
     await tester.pumpAndSettle();
     expect(find.text('Xin phép nghỉ / báo trễ'), findsOneWidget);
@@ -200,6 +205,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Dặn thuốc'), 300);
+    await Scrollable.ensureVisible(tester.element(find.text('Dặn thuốc')),
+        alignment: .5);
+    await tester.pumpAndSettle();
+    expect(find.text('Dặn thuốc').hitTestable(), findsOneWidget);
     await tester.tap(find.text('Dặn thuốc'));
     await tester.pumpAndSettle();
     expect(find.byType(ParentMedicationScreen), findsOneWidget);

@@ -11,6 +11,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  assert(() {
+    final features =
+        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
+    debugPrint('KinderLog entry=lib/main.dart theme=light '
+        'disableAnimations=${features.disableAnimations} '
+        'accessibleNavigation=${features.accessibleNavigation}');
+    return true;
+  }());
   // Khởi tạo hệ thống bắt lỗi & lưu crash log toàn cục
   await CrashLoggingService.instance.initialize();
   await ThemeController.instance.load();
@@ -74,21 +82,15 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
-        valueListenable: ThemeController.instance,
-        builder: (context, mode, _) => MaterialApp.router(
-          routerConfig: appRouter,
-          theme: kinderTheme(),
-          darkTheme: kinderThemeDark(),
-          builder: (context, child) => GardenVoiceScope(
-            child: child ?? const SizedBox.shrink(),
-          ),
-          locale: const Locale('vi'),
-          supportedLocales: const [Locale('vi'), Locale('en')],
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          themeMode: mode,
-          scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
-          debugShowCheckedModeBanner: false,
-        ),
+  Widget build(BuildContext context) => MaterialApp.router(
+        routerConfig: appRouter,
+        theme: kinderTheme(),
+        locale: const Locale('vi'),
+        supportedLocales: const [Locale('vi'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        // Dark chưa được duyệt; không theo theme máy hoặc tùy chọn cũ.
+        themeMode: ThemeMode.light,
+        scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
+        debugShowCheckedModeBanner: false,
       );
 }

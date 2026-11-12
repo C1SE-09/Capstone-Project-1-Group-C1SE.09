@@ -26,19 +26,12 @@ void main() {
     final navigation =
         find.byKey(const ValueKey('garden-voice-teacher-navigation'));
     expect(tester.getSize(navigation), const Size(362, 60));
-    final activePill = find.byWidgetPredicate(
-      (widget) =>
-          widget is Container &&
-          widget.decoration is BoxDecoration &&
-          (widget.decoration! as BoxDecoration).shape == BoxShape.circle &&
-          (widget.decoration! as BoxDecoration).color ==
-              KPalette.gardenVoice.brandTint,
-    );
+    final activePill = find.byKey(const ValueKey('navigation-selected-indicator'));
     expect(activePill, findsOneWidget);
-    expect(tester.getSize(activePill), const Size(48, 48));
+    expect(tester.getSize(activePill), const Size(67.6, 48));
     final navRect = tester.getRect(navigation);
     final pillRect = tester.getRect(activePill);
-    expect(pillRect.left, greaterThan(navRect.left + 12));
+    expect(pillRect.left, navRect.left + 6);
     expect(pillRect.top, greaterThanOrEqualTo(navRect.top + 6));
     expect(pillRect.bottom, lessThanOrEqualTo(navRect.bottom - 6));
     for (final label in [

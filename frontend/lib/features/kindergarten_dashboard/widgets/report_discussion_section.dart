@@ -358,7 +358,10 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
     final count = _responses.length;
     final hasResponses = count > 0;
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           widget.isTeacher ? 'Trao đổi với phụ huynh' : 'Trao đổi với giáo viên',
@@ -368,7 +371,6 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             color: context.k.ink,
           ),
         ),
-        const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -384,7 +386,6 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ),
           ),
         ),
-        const Spacer(),
         if (hasResponses)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

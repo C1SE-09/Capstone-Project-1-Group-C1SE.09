@@ -1,6 +1,7 @@
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 
@@ -147,8 +148,12 @@ class _ParentNotificationsState extends State<ParentNotifications> {
         Expanded(
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding:
-                const EdgeInsets.fromLTRB(KSpace.x5, 0, KSpace.x5, KSpace.x6),
+            padding: EdgeInsets.fromLTRB(
+                KSpace.x5,
+                0,
+                KSpace.x5,
+                KSpace.x6 +
+                    GardenVoiceNavigationFrame.bottomPaddingOf(context)),
             children: [
               if (reports.isEmpty)
                 Padding(

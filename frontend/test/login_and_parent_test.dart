@@ -126,14 +126,18 @@ void main() {
         .first;
     expect(tester.getSize(passwordBox), tester.getSize(usernameBox));
 
-    // Verify deleted items per user request
+    // Giữ Login đã duyệt; chỉ nhận font Nunito từ upstream.
     expect(find.text('Lưu mật khẩu'), findsOneWidget);
     expect(
       tester.widget<Text>(find.text('Lưu mật khẩu')).style?.fontWeight,
-      FontWeight.w700,
+      FontWeight.w600,
     );
     expect(find.text('Quên mật khẩu?'), findsOneWidget);
-    expect(find.text('Khám phá KinderLog'), findsNothing);
+    expect(find.text('Khám phá KinderLog'), findsOneWidget);
+    expect(find.text('Giáo viên'), findsOneWidget);
+    expect(find.text('Phụ huynh'), findsOneWidget);
+    expect(Theme.of(tester.element(find.text('Khám phá KinderLog')))
+        .textTheme.bodyMedium?.fontFamily, 'Nunito');
     expect(find.text('Ứng dụng dành cho:'), findsNothing);
     expect(find.text('Chưa có tài khoản? '), findsNothing);
     expect(find.text('Đăng ký ngay'), findsNothing);

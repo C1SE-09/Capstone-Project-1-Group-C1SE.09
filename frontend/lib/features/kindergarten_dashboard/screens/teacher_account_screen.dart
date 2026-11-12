@@ -4,6 +4,7 @@
 // - Thông tin giáo viên, lớp phụ trách, đổi mật khẩu, góp ý bug report, đăng xuất.
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
@@ -174,7 +175,9 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
             },
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: EdgeInsets.only(
+                  bottom:
+                      24 + GardenVoiceNavigationFrame.bottomPaddingOf(context)),
               children: [
                 ConstrainedBox(
                   constraints: const BoxConstraints(
@@ -399,9 +402,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
         );
       },
     );
-    return context.k.isGardenVoice
-        ? content
-        : GardenVoiceScope(child: content);
+    return context.k.isGardenVoice ? content : GardenVoiceScope(child: content);
   }
 }
 

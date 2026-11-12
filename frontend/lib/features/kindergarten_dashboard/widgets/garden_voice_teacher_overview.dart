@@ -7,6 +7,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
     show kWeekdayLabel;
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class GardenVoiceTeacherOverview extends StatelessWidget {
@@ -106,7 +107,8 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
             onRefresh: onRefresh ?? () async {},
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(17, 24, 17, 24),
+              padding: EdgeInsets.fromLTRB(17, 24, 17,
+                  24 + GardenVoiceNavigationFrame.bottomPaddingOf(context)),
               children: [
                 SizedBox(
                   height: 222,

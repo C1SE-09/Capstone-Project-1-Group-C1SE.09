@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
@@ -17,7 +18,8 @@ import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_class_header.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_account_screen.dart';
-export 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_account_screen.dart' show TeacherAccountScreen;
+export 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_account_screen.dart'
+    show TeacherAccountScreen;
 
 class OverviewScreen extends StatefulWidget {
   const OverviewScreen({
@@ -60,14 +62,19 @@ class OverviewScreen extends StatefulWidget {
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
-  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
+  late final HttpDashboardRepository repository =
+      widget.repository ?? HttpDashboardRepository();
   late final HttpAttendanceRepository attendanceRepository =
       widget.attendanceRepository ?? HttpAttendanceRepository();
   late final HttpMedicationRepository medicationRepository =
       widget.medicationRepository ?? HttpMedicationRepository();
   late Future<_OverviewData> future;
   @override
-  void initState() { super.initState(); future = _load(); }
+  void initState() {
+    super.initState();
+    future = _load();
+  }
+
   // Tải dữ liệu thật cho các khối Garden Voice; số không có nguồn không được suy diễn.
   Future<_OverviewData> _load() async {
     final today = DateTime.now();
@@ -92,6 +99,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
       return null;
     }
   }
+
   // Renders overview loading, error and data states.
   @override
   Widget build(BuildContext context) => GardenVoiceScope(
@@ -205,10 +213,10 @@ class _ClassListScreenState extends State<ClassListScreen> {
       final matches = child.name.toLowerCase().contains(query.toLowerCase());
       return matches && (!healthOnly || child.severity != Severity.none);
     }).toList();
-    final subtitleText = (widget.teacherName != null &&
-            widget.teacherName!.trim().isNotEmpty)
-        ? widget.teacherName!.trim()
-        : widget.schoolName;
+    final subtitleText =
+        (widget.teacherName != null && widget.teacherName!.trim().isNotEmpty)
+            ? widget.teacherName!.trim()
+            : widget.schoolName;
     final content = Builder(
       builder: (context) {
         final k = context.k;
@@ -308,7 +316,13 @@ class _ClassListScreenState extends State<ClassListScreen> {
                         )
                       : ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          padding: EdgeInsets.fromLTRB(
+                              20,
+                              0,
+                              20,
+                              20 +
+                                  GardenVoiceNavigationFrame.bottomPaddingOf(
+                                      context)),
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -357,9 +371,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
         );
       },
     );
-    return context.k.isGardenVoice
-        ? content
-        : GardenVoiceScope(child: content);
+    return context.k.isGardenVoice ? content : GardenVoiceScope(child: content);
   }
 
   void _showActions(Child child) {
@@ -599,8 +611,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final childLists = await Future.wait(
       validChildren.map((child) async {
         try {
-          final reports = await repository.getRecentReports(child.id,
-              includeDraft: true);
+          final reports =
+              await repository.getRecentReports(child.id, includeDraft: true);
           return reports.map((report) => _HistoryRow(child, report)).toList();
         } catch (e) {
           debugPrint('Error loading reports for child ${child.id}: $e');
@@ -766,7 +778,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         )
                       : ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          padding: EdgeInsets.fromLTRB(
+                              20,
+                              0,
+                              20,
+                              20 +
+                                  GardenVoiceNavigationFrame.bottomPaddingOf(
+                                      context)),
                           children: [
                             for (var groupIndex = 0;
                                 groupIndex < groups.length;
@@ -943,9 +961,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         );
       },
     );
-    return context.k.isGardenVoice
-        ? content
-        : GardenVoiceScope(child: content);
+    return context.k.isGardenVoice ? content : GardenVoiceScope(child: content);
   }
 }
 
@@ -965,10 +981,11 @@ class _HistoryStatusPill extends StatelessWidget {
         ),
       ReportStatus.read => (k.okTint, k.ok, 'Đã đọc'),
       ReportStatus.attention => (k.accentTint, k.warn, 'Cần chú ý'),
-      ReportStatus.draft ||
-      ReportStatus.processing ||
-      ReportStatus.none =>
-        (k.surfaceSunken, k.inkSoft, 'Bản nháp'),
+      ReportStatus.draft || ReportStatus.processing || ReportStatus.none => (
+          k.surfaceSunken,
+          k.inkSoft,
+          'Bản nháp'
+        ),
     };
     return Container(
       constraints: const BoxConstraints(minHeight: 26),

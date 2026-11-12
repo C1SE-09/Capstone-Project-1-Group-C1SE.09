@@ -120,6 +120,12 @@ Future<void> captureUi(WidgetTester tester, String name,
 
 class _Dashboard extends HttpDashboardRepository {
   @override
+  Future<List<DailyReport>> getRecentReports(String childId,
+          {int limit = 7, bool includeDraft = true}) =>
+      _Batch1TeacherDashboard().getRecentReports(childId,
+          limit: limit, includeDraft: includeDraft);
+
+  @override
   Future<Teacher> getCurrentTeacher() async => const Teacher(
       teacherId: 'teacher-1',
       fullName: 'Cô Nguyễn Thị Mai',
@@ -2350,8 +2356,9 @@ void main() {
         findsOneWidget);
     expect(find.text('Đang dùng'), findsOneWidget);
     expect(find.text('Nền giấy ấm, rõ trong lớp học'), findsOneWidget);
-    expect(find.text('Giảm chói khi xem buổi tối'), findsOneWidget);
-    expect(find.text('Tự đổi theo cài đặt điện thoại'), findsOneWidget);
+    // Dark/Theo máy tạm ngưng theo yêu cầu duyệt UI hiện tại.
+    expect(find.text('Giảm chói khi xem buổi tối'), findsNothing);
+    expect(find.text('Tự đổi theo cài đặt điện thoại'), findsNothing);
     await captureUi(tester, 'teacher-theme-selector-gv');
     expect(tester.takeException(), isNull);
 
@@ -2638,6 +2645,117 @@ void main() {
     expect(find.text('Đã nắm thông tin · Tắt chuông'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final parent in [false, true]) {
+    for (final (width, dark) in [
+      (390.0, false),
+      (320.0, false),
+      (412.0, false),
+      (390.0, true),
+    ]) {
+      final role = parent ? 'parent' : 'teacher';
+      final variant = dark ? 'dark' : '${width.toInt()}';
+      testWidgets('Batch A navigation captures $role $variant', (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(RepaintBoundary(
+          key: const ValueKey('capture'),
+          child: app(
+            parent
+                ? ParentFlow(
+                    key: UniqueKey(),
+                    repository: _ParentDashboard(),
+                    onLogout: () {},
+                  )
+                : TeacherShell(
+                    key: UniqueKey(),
+                    classId: 'class-1',
+                    repository: _Dashboard(),
+                    classRepository: _Class(),
+                    attendanceRepository: _Attendance(),
+                    medicationRepository: _Medication(),
+                    onLogout: () {},
+                  ),
+            dark: dark,
+          ),
+        ));
+        await tester.pumpAndSettle();
+        await captureUi(tester, '$role-home-$variant');
+        if (width == 390 && !dark) {
+          final navigation = find.byKey(
+              ValueKey('garden-voice-$role-navigation'));
+          final tabs = parent
+              ? [('Mở thông báo', 'notifications'), ('Tài khoản', 'account')]
+              : [('Lớp', 'class'), ('Báo cáo', 'reports'), ('Tài khoản', 'account')];
+          for (final (tooltip, name) in tabs) {
+            await tester.tap(find.descendant(
+              of: navigation,
+              matching: find.byTooltip(tooltip),
+            ));
+            await tester.pumpAndSettle();
+            await captureUi(tester, '$role-$name-390');
+          }
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  for (final (width, scale) in [(390.0, 1.0), (320.0, 2.0)]) {
+    testWidgets('Login empty and keyboard layout at ${width}dp, text $scale',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(RepaintBoundary(
+        key: const ValueKey('capture'),
+        child: app(
+          LoginScreen(
+            authRepository: _Batch5AuthRepository(),
+            onLogin: (_) {},
+          ),
+          textScale: scale,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      final fields = find.byType(TextField);
+      for (final field in tester.widgetList<TextField>(fields)) {
+        field.controller!.clear();
+      }
+      await tester.pumpAndSettle();
+      await captureUi(tester, 'login-empty-${width.toInt()}');
+
+      for (final label in ['Giáo viên', 'Phụ huynh']) {
+        final text = find.text(label);
+        final pill = find
+            .ancestor(of: text, matching: find.byType(Container))
+            .first;
+        final bounds = tester.getRect(pill);
+        final textBounds = tester.getRect(text);
+        expect(textBounds.top, greaterThanOrEqualTo(bounds.top));
+        expect(textBounds.bottom, lessThanOrEqualTo(bounds.bottom));
+        final paragraph = tester.renderObject<RenderParagraph>(text);
+        expect(paragraph.getMaxIntrinsicHeight(paragraph.size.width),
+            lessThanOrEqualTo(paragraph.size.height));
+      }
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.enterText(fields.last, 'test-password');
+      await tester.ensureVisible(fields.last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byTooltip('Hiện mật khẩu'));
+      await tester.tap(find.byTooltip('Hiện mật khẩu'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(fields.last).obscureText, isFalse);
+      await tester.ensureVisible(find.text('Đăng nhập'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.text('Đăng nhập')).bottom,
+          lessThanOrEqualTo(844 - 300));
+      await captureUi(tester, 'login-keyboard-${width.toInt()}');
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('Batch 5 captures the assigned auth, report, and recorder states',
       (tester) async {
