@@ -73,6 +73,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
     showKSheet(
       context,
       Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -94,7 +95,10 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                 child: KButton(
                   label: 'Đăng xuất',
                   icon: Icons.logout,
-                  onPressed: widget.onLogout,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    widget.onLogout();
+                  },
                 ),
               ),
             ],
@@ -108,6 +112,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
     showKSheet(
       context,
       Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(

@@ -7,7 +7,7 @@ User story: "Giữ nhiều lần ghi âm rồi thực hiện gửi trích xuất
 
 Test cases
 ----------
-1. merge_transcripts nối transcript của N bản bằng newline
+1. merge_transcripts nối transcript của N bản bằng dấu cách (không xuống hàng, bỏ dấu chấm cuối)
 2. merge_transcripts bỏ qua bản chưa STT xong (PENDING/PROCESSING/FAILED)
 3. merge_transcripts bỏ qua bản có transcript rỗng
 4. merge_transcripts giữ thứ tự ghi (created_at tăng dần)
@@ -161,7 +161,7 @@ def client(mock_db):
 class TestMergeTranscripts:
     """Gộp transcript của N bản thành 1 text."""
 
-    def test_merges_multiple_clips_with_newline(self):
+    def test_merges_multiple_clips_with_space(self):
         clips = [
             _make_clip("Bé Lan ăn sáng cháo.", created_offset=0),
             _make_clip("Bé Lan ăn chiều cơm.", created_offset=1),
@@ -170,11 +170,11 @@ class TestMergeTranscripts:
 
         merged = merge_transcripts(session)
 
-        assert merged == "Bé Lan ăn sáng cháo.\nBé Lan ăn chiều cơm."
+        assert merged == "Bé Lan ăn sáng cháo Bé Lan ăn chiều cơm"
 
     def test_single_clip_returns_its_transcript(self):
         session = _make_session([_make_clip("Chỉ có một bản ghi.")])
-        assert merge_transcripts(session) == "Chỉ có một bản ghi."
+        assert merge_transcripts(session) == "Chỉ có một bản ghi"
 
     def test_skips_clips_not_completed(self):
         clips = [
@@ -187,7 +187,7 @@ class TestMergeTranscripts:
 
         merged = merge_transcripts(session)
 
-        assert merged == "Đã xong."
+        assert merged == "Đã xong"
         # Các bản lỗi không được làm hỏng cả phiên.
         assert "Đang xử lý" not in merged
         assert "Chờ xử lý" not in merged
@@ -200,7 +200,7 @@ class TestMergeTranscripts:
         ]
         session = _make_session(clips)
 
-        assert merge_transcripts(session) == "Nội dung thật."
+        assert merge_transcripts(session) == "Nội dung thật"
 
     def test_preserves_recording_order(self):
         clips = [
@@ -212,11 +212,7 @@ class TestMergeTranscripts:
 
         merged = merge_transcripts(session)
 
-        assert merged.split("\n") == [
-            "Bản thứ nhất.",
-            "Bản thứ hai.",
-            "Bản thứ ba.",
-        ]
+        assert merged == "Bản thứ nhất Bản thứ hai Bản thứ ba"
 
     def test_clip_order_wins_over_created_at(self):
         """clip_order là nguồn thứ tự chuẩn – created_at có thể trùng nhau."""
@@ -230,7 +226,7 @@ class TestMergeTranscripts:
 
         merged = merge_transcripts(session)
 
-        assert merged.split("\n") == ["Bản A.", "Bản B.", "Bản C."]
+        assert merged == "Bản A Bản B Bản C"
 
     def test_clips_without_clip_order_fall_back_to_created_at(self):
         clips = [
@@ -241,7 +237,7 @@ class TestMergeTranscripts:
 
         merged = merge_transcripts(session)
 
-        assert merged.split("\n") == ["Cũ nhất.", "Mới nhất."]
+        assert merged == "Cũ nhất Mới nhất"
 
     def test_returns_empty_string_when_no_valid_clips(self):
         session = _make_session(
