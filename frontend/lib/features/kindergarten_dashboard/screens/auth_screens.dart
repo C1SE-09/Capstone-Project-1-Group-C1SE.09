@@ -302,8 +302,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   decoration: InputDecoration(
                                     hintText: 'Nhập tên đăng nhập hoặc Gmail',
                                     hintStyle: TextStyle(
-                                      color: k.inkSoft,
+                                      color: k.inkFaint,
                                       fontSize: 14,
+                                      fontWeight: FontWeight.w400,
                                     ),
                                     isDense: true,
                                     filled: false,
@@ -322,10 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 12),
                         Container(
                           constraints: const BoxConstraints(minHeight: 58),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 7,
-                          ),
+                          padding: const EdgeInsets.only(left: 16, right: 4),
                           decoration: BoxDecoration(
                             color: k.surfaceSunken,
                             borderRadius: BorderRadius.circular(14),
@@ -334,67 +332,62 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Row(
                             children: [
                               Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'MẬT KHẨU',
-                                      style: TextStyle(
-                                        color: k.inkSoft,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    TextField(
-                                      controller: _passwordController,
-                                      enabled: !_busy,
-                                      obscureText: _obscurePassword,
-                                      textInputAction: TextInputAction.done,
-                                      autofillHints: const [
-                                        AutofillHints.password
-                                      ],
-                                      onSubmitted: (_) => _handleLogin(),
-                                      style: TextStyle(
-                                        color: k.ink,
-                                        fontSize: 14.5,
-                                        height: 1.4,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: 'Nhập mật khẩu',
-                                        hintStyle: TextStyle(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 7),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'MẬT KHẨU',
+                                        style: TextStyle(
                                           color: k.inkSoft,
-                                          fontSize: 14,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
                                         ),
-                                        isDense: true,
-                                        filled: false,
-                                        contentPadding: EdgeInsets.zero,
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        errorBorder: InputBorder.none,
-                                        focusedErrorBorder: InputBorder.none,
-                                        disabledBorder: InputBorder.none,
                                       ),
-                                    ),
-                                  ],
+                                      TextField(
+                                        controller: _passwordController,
+                                        enabled: !_busy,
+                                        obscureText: _obscurePassword,
+                                        textInputAction: TextInputAction.done,
+                                        autofillHints: const [
+                                          AutofillHints.password,
+                                        ],
+                                        onSubmitted: (_) => _handleLogin(),
+                                        style: TextStyle(
+                                          color: k.ink,
+                                          fontSize: 14.5,
+                                          height: 1.4,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: 'Nhập mật khẩu',
+                                          hintStyle: TextStyle(
+                                            color: k.inkFaint,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                          isDense: true,
+                                          filled: false,
+                                          contentPadding: EdgeInsets.zero,
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          errorBorder: InputBorder.none,
+                                          focusedErrorBorder: InputBorder.none,
+                                          disabledBorder: InputBorder.none,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               IconButton(
                                 tooltip: _obscurePassword
                                     ? 'Hiện mật khẩu'
                                     : 'Ẩn mật khẩu',
                                 padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints.tightFor(
-                                  width: 36,
-                                  height: 36,
-                                ),
-                                style: IconButton.styleFrom(
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
                                 iconSize: 18,
                                 onPressed: () => setState(() =>
                                     _obscurePassword = !_obscurePassword),
@@ -421,9 +414,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: k.ink,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
+                                  color: k.inkSoft,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             );
@@ -542,6 +535,34 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: k.reviewSurface,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Khám phá KinderLog',
+                                style: TextStyle(
+                                  color: k.inkSoft,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _LoginRolePill(label: 'Giáo viên'),
+                                  SizedBox(width: 12),
+                                  _LoginRolePill(label: 'Phụ huynh'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
                         Text(
                           'Kết nối lớp học · An tâm mỗi ngày',
                           textAlign: TextAlign.center,
@@ -559,6 +580,30 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _LoginRolePill extends StatelessWidget {
+  const _LoginRolePill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Container(
+      width: 116,
+      constraints: const BoxConstraints(minHeight: 44),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(
+          color: k.ink,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

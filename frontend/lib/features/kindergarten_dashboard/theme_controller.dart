@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// App-wide theme preference. Mirrors the Figma Make "Sáng / Tối / Theo máy"
-/// switcher: the choice is remembered across restarts.
+/// Tạm khóa Sáng; chỉ mở lại Dark/Theo máy sau khi người dùng duyệt UI.
 class ThemeController extends ValueNotifier<ThemeMode> {
-  ThemeController._() : super(ThemeMode.system);
+  ThemeController._() : super(ThemeMode.light);
 
   static final ThemeController instance = ThemeController._();
 
@@ -18,24 +17,22 @@ class ThemeController extends ValueNotifier<ThemeMode> {
 
   static String label(ThemeMode mode) => _labels[mode]!;
 
-  /// Loads the saved preference. Falls back to following the system setting.
+  /// Tạm chỉ dùng Sáng cho tới khi giao diện tối được duyệt lại.
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    value = switch (prefs.getString(_prefsKey)) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      _ => ThemeMode.system,
-    };
+    value = ThemeMode.light;
   }
 
   /// Persists and applies the chosen mode.
   Future<void> set(ThemeMode mode) async {
+    if (mode != ThemeMode.light) return;
     value = mode;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, switch (mode) {
-      ThemeMode.light => 'light',
-      ThemeMode.dark => 'dark',
-      ThemeMode.system => 'system',
-    });
+    await prefs.setString(
+        _prefsKey,
+        switch (mode) {
+          ThemeMode.light => 'light',
+          ThemeMode.dark => 'dark',
+          ThemeMode.system => 'system',
+        });
   }
 }

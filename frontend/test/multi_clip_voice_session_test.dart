@@ -392,14 +392,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    final tempDir = await Directory.systemTemp.createTemp('us78_test_');
+    final tempDir = Directory.systemTemp.createTempSync('us78_test_');
     final tempAudio = File('${tempDir.path}/clip.m4a');
-    await tempAudio.writeAsBytes([1, 2, 3, 4, 5]);
-    addTearDown(() async {
-      if (await tempDir.exists()) {
-        await tempDir.delete(recursive: true);
-      }
-    });
+    tempAudio.writeAsBytesSync([1, 2, 3, 4, 5]);
+    addTearDown(() => tempDir.deleteSync(recursive: true));
 
     final recorder = _FakeRecorder()..nextStopPath = tempAudio.path;
     final repo = _FakeSessionTeacherRepo(
@@ -434,7 +430,11 @@ void main() {
     expect(find.text('Lưu đoạn'), findsOneWidget);
 
     // Stop & save clip into session
-    await tester.tap(find.text('Lưu đoạn'));
+    // Đọc file thật ngoài fake-async, giống test upload hiện có.
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Lưu đoạn'));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    });
     await tester.pumpAndSettle();
 
     expect(repo.uploadToSessionCalls, 1);

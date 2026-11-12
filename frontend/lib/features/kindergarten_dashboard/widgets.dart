@@ -792,14 +792,10 @@ class ThemeSelector extends StatelessWidget {
 
   static const _options = <(ThemeMode, String, IconData)>[
     (ThemeMode.light, 'Sáng', Icons.wb_sunny_outlined),
-    (ThemeMode.dark, 'Tối', Icons.dark_mode_outlined),
-    (ThemeMode.system, 'Theo máy', Icons.smartphone_outlined),
   ];
 
   static const _gardenVoiceOptions = <(ThemeMode, String, String)>[
     (ThemeMode.light, 'Sáng', 'Nền giấy ấm, rõ trong lớp học'),
-    (ThemeMode.dark, 'Tối', 'Giảm chói khi xem buổi tối'),
-    (ThemeMode.system, 'Theo máy', 'Tự đổi theo cài đặt điện thoại'),
   ];
 
   static String _labelForMode(ThemeMode mode) => switch (mode) {

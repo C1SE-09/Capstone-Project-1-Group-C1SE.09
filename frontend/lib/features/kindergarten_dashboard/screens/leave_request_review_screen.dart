@@ -414,7 +414,6 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         selected: GardenVoiceTeacherDestination.classList,
         onSelected: (destination) {
           if (widget.onNavigationSelected != null) {
-            Navigator.of(context).maybePop();
             widget.onNavigationSelected!(destination);
           }
         },

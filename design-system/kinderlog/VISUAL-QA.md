@@ -7,6 +7,37 @@ thiết kế tại thời điểm review.
 
 ## Môi trường chuẩn
 
+### [Fix][Flutter UI] Giữ Login/navigation đã duyệt khi tích hợp develop — 12/11/2026
+
+- Đã fast-forward `fix/flutter-ui-review` tới `origin/develop` `8f5bbe0`, rồi
+  giải quyết ba file conflict từ autostash. Login đối chiếu bản dự phòng: chỉ
+  khác bốn khai báo font `BeVietnamPro` → `Nunito`; layout/hành vi local giữ nguyên.
+  Nunito toàn app theo quyết định mới của người dùng; rules để lượt sau.
+- Navigation giữ pill local, motion 220ms/ease-out, tab retention, action return,
+  auto-hide toàn bộ tab chính và vùng đáy dùng được. SVG dùng
+  `SvgPicture(SvgAssetLoader(..., colorMapper: ...))` tương thích `flutter_svg`
+  2.0.10 của upstream; không nâng dependency hoặc thay lockfile upstream.
+- Giữ implementation ghi âm nhiều clip và thảo luận của teammate. Test ghi âm
+  bị treo do I/O thật trong fake-async: tạo fixture đồng bộ và dừng ghi trong
+  `tester.runAsync`, theo test upload hiện có. Không skip hoặc bỏ assertion.
+- Regression mở báo cáo từ nav bắt được header thảo luận tràn 144px tại
+  `report_discussion_section.dart`; đổi Row sang Wrap để giữ đầy đủ nhãn khi
+  thiếu chỗ. Test parent action-return đã RED trước sửa và GREEN sau sửa.
+- Kiểm tra cuối: `flutter analyze --no-pub` sạch; UI capture suite **50/50 pass**;
+  full suite **441 pass / 10 fail / 0 skip** (`build/integration-final.jsonl`).
+  Chín tên lỗi trùng baseline trước tích hợp; lỗi thêm `Hiển thị tab và thẻ thuốc
+  đầy đủ thông tin` đã tái hiện ở bản archive upstream nguyên trạng `8f5bbe0`
+  (`teacher_medication_test.dart:189`, thiếu `Buổi trưa`). Vì vậy full suite vẫn
+  đỏ; không tuyên bố toàn bộ test xanh. Differential: `build/integration-test-differential.json`.
+- APK debug ARM64 từ `lib/main.dart` build thành công sau sửa cuối. Không cài lại
+  hoặc thao tác điện thoại trong lượt tích hợp này. Ảnh mới tại
+  `build/integration-ui-captures/`; đã xem Login 390, Login bàn phím 320/chữ200%,
+  teacher home390 và parent overview: role labels/pill còn nguyên, không thấy
+  tràn trong các ảnh này. Không phải lượt nghiệm thu pixel mới với Figma live.
+- Chỉ thay Flutter và tài liệu bằng chứng; không cần restart/rebuild Docker.
+  Đổi font/asset: dừng rồi bấm ▶ chạy lại Flutter. Chưa commit/push tại lượt ghi này;
+  giữ backup và autostash `8333c66`, không đưa config cá nhân/build output vào staging.
+
 | Thuộc tính | Capture hiện có | Khi review một màn từ Figma |
 |---|---|---|
 | Flutter | CI pin **3.47.5**; SDK local được kiểm kê cùng version | Dùng cùng SDK; không tự cập nhật baseline khi đổi SDK |
@@ -475,6 +506,261 @@ che một thay đổi bố cục chưa giải thích. Thay SDK/font cần review
 Xem [Flutter matchesGoldenFile](https://api.flutter.dev/flutter/flutter_test/matchesGoldenFile.html).
 
 ## Bằng chứng trong kết quả task / PR
+
+### [Fix][Login Screen] Sửa layout mật khẩu và màu gợi ý — 12/11/2026
+
+- Branch `fix/flutter-ui-review`, Figma live `496:3859` (390×844), đọc metadata,
+  context, screenshot và variables. Các ô `496:3869/3872` cao 58dp; nhãn demo
+  `496:3882/3884` không có fill riêng, khung ngoài `496:3879` vẫn nền `#F7FBFA`.
+- `screens/auth_screens.dart`: đưa icon mắt sang cạnh cả nhãn + input thay vì
+  `suffixIcon` dưới nhãn. Test tái hiện ô cũ cao 79dp; sau sửa hai ô cao 58dp ở
+  chữ thường, icon có vùng bấm 48×48dp và căn giữa. Chiều cao vẫn tự giãn khi
+  chữ lớn; không ép `TextScaler` hay bỏ hiện/ẩn mật khẩu.
+- Hint rỗng dùng `context.k.inkFaint`, weight 400 theo yêu cầu, khác chữ nhập
+  weight 600. Test kiểm tra tương phản ít nhất 4.5:1 trên nền input. Figma đang
+  có dữ liệu điền sẵn, không cung cấp state hint riêng.
+- Bỏ fill riêng của hai nhãn demo; min-height 44 thay fixed-height để không cắt
+  chữ ở 200%. Giữ nhãn tĩnh hiện có, không thêm demo-login/credential.
+- Ảnh trước: `frontend/build/ui-captures-login-before/teacher-login-gv.png`.
+  Ảnh sau: `frontend/build/ui-captures-login/teacher-login-gv.png`,
+  `login-empty-390.png`, `login-empty-320.png`, `login-keyboard-390.png`,
+  `login-keyboard-320.png`. Đã xem ảnh có dữ liệu, hint rỗng và keyboard/chữ 200%.
+  Render bằng widget test Windows, Flutter 3.47.5, font local BeVietnamPro;
+  keyboard mô phỏng inset 300dp. Không cài/chạy bản sửa lên Android thật.
+- `flutter analyze`: No issues found; capture login 390dp/320dp + Batch 5:
+  3/3 pass; test geometry/hint mới: 2/2 pass. Ba file
+  `garden_voice_batch5_layout_test.dart`, `remember_login_test.dart`,
+  `figma_request_layout_test.dart` chạy cùng: **77/77 pass**; detector layout:
+  `[]`. Full `flutter test --no-pub`:
+  **391 pass / 9 fail** ngoài login, giữ nguyên assertions và test hiện có:
+  - `login_and_parent_test.dart`: `ParentFlow opening report marks it as read and displays Đã đọc status badge`;
+    `ParentFlow clicking logout shows confirmation popup and handles Cancel/Logout`;
+    `ParentFlow displays timetable action and navigates to TimetableScreen`.
+  - `push_open_report_test.dart`: `mở đúng báo cáo cũ của bé thứ hai thay vì báo cáo hôm nay`;
+    `initialOpenReport = true mở thẳng báo cáo hôm nay`;
+    `chạm thông báo khi màn phụ huynh đang mở vẫn mở báo cáo`.
+  - `push_open_attendance_test.dart`: `nhắc điểm danh đợi dữ liệu rồi mở đúng lớp/ngày và danh sách bé`.
+  - `teacher_medication_test.dart`: `Bấm 1-chạm xác nhận gọi API và cập nhật trạng thái`;
+    `Hiển thị form báo sự cố và phát cảnh báo thành công`.
+- Chưa sửa các lỗi ngoài login, chưa sign-off pixel toàn màn (subtitle vẫn khác
+  line-wrap Figma, mật khẩu dùng glyph/input thực và giữ icon mắt). Không thay
+  theme toàn app, asset, nghiệp vụ hoặc golden; không cần restart/rebuild Docker.
+
+### [UI][Bottom Navigation] Khớp navigation theo vai trò — Batch A, 12/11/2026
+
+**Đã triển khai layout, chờ người dùng duyệt ảnh; dừng trước Batch B.** Không sửa
+Figma, route, trạng thái tab, action sheet/ghi âm, dependency hoặc golden. Giữ nguyên
+các thay đổi Login có trước; chưa commit/push.
+
+#### Đối chiếu nguồn → code
+
+File Figma `9RurF0HiJlYLVDV7ljp2bH`; context/screenshot live đã đọc trong lượt này.
+
+| Vai trò/state | Frame / navigation instance | Flutter |
+|---|---|---|
+| Teacher Home | `453:584` / `618:2046` | `GardenVoiceTeacherNavigation`, Home selected |
+| Teacher Class | `564:1706` / `618:2203` | Wrapper trên, Class selected |
+| Teacher Reports | `453:1389` / `618:2165` | Wrapper trên, Reports selected |
+| Teacher Account | `454:827` / `618:2354` | Wrapper trên, Account selected |
+| Parent Home | `454:1907` / `463:1701` | `GardenVoiceParentNavigation`, Home selected |
+| Parent Notifications | `454:2048` / `464:1664` | Wrapper trên, Notifications selected |
+| Parent Account | `454:2445` / `463:1828` | Wrapper trên, Account selected |
+
+- `widgets/garden_voice_navigation.dart` dùng renderer chung, giữ enum/callback của
+  từng wrapper. Auto Layout → Row gap 3, inset 6 (padding 5 + stroke trong 1), shell
+  60dp, selected 48dp/radius 24, bottom 16dp + SafeArea một lần. Teacher shell radius
+  30, 5 item bằng nhau; Parent shell radius 24, selected có border 1 và rộng hơn 2dp.
+- `theme.dart` bổ sung token navigation riêng, không đổi `brandTint`; SVG local đã
+  xuất lại 7 state sai fill (xem COMPONENT-MAP). Shell/edge/selected light lần lượt
+  `#F1F7F6/#B5D4CE/#CBE9DE`; selected border Parent `#A1CFC0`.
+- Live properties: shell **FIXED 362**, không min/maxWidth hoặc fill-container.
+  Teacher constraints `MIN`, không có frame responsive >390dp để xác nhận alignment
+  màn rộng. App giữ cách căn giữa sẵn có, max362, lề tối thiểu14; đây là adaptation
+  của Flutter, **không phải quy tắc responsive do Figma chứng minh**. Kiểm tra
+  geometry ở 320/390/412/480/768dp, capture thêm 412dp. Rộng 390dp: teacher item
+  67.6dp; Parent selected 86.75dp, inactive 84.75dp.
+- Parent Reports là action mở sheet; không có screen-instance Reports-selected để
+  dùng làm target. Component `456:1754` khác radius/border screen-instance, không
+  dùng nó ghi đè thiết kế màn. Các thuộc tính dark và quy tắc responsive từ designer
+  ngoài 390dp: **chưa xác minh**. Shadow blur CSS/Figma/Flutter khác renderer nên
+  chưa kết luận tương đương từng pixel.
+
+#### Ảnh bàn giao
+
+Thư mục local (git-ignored): `frontend/build/nav-batch-a/`.
+
+- `compare-{teacher-home,teacher-class,teacher-reports,teacher-account,parent-home,parent-notifications,parent-account}.png`:
+  Figma bên trái / Flutter bên phải, mỗi nguồn **390×844**, không scale pixel.
+  `nav-compare-*.png` crop phần navigation cùng state để dễ duyệt. Đã xem đủ 7 crop;
+  màu, pill, gap, inset và icon đúng state; shadow/raster vẫn có sai khác nhìn thấy.
+  Dữ liệu/ngày/nội dung thân màn khác fixture, không tuyên bố cả màn pixel-perfect.
+- `{teacher,parent}-home-{390,320,412,dark}.png`: widget capture Windows,
+  Flutter 3.47.5, DPR1, locale vi, text1, font local; zero system insets. Dark capture
+  390×844 chỉ chứng minh navigation đổi màu theo palette tối. Nền/body Garden Voice
+  còn sáng do scope cũ; chưa có node dark để xác nhận thiết kế.
+- `android-{teacher,parent}-320.png`: Android emulator API37/x86_64 (system image37.1),
+  framebuffer 640×1688, density320 → viewport320×844 logical, gesture inset thực;
+  navigation co còn292dp, không cắt icon. Preview `test/support/navigation_review_app.dart`
+  dùng repository giả, không login/backend/FCM hoặc trẻ thật. Thân màn có khác biệt
+  sẵn có ở320dp (hero Parent che một phần tên), ngoài phạm vi sửa navigation.
+  Ảnh Parent có viền xanh bao viewport sau điều khiển bàn phím preview; không thuộc
+  thiết kế navigation. Có thêm `android-*-dark-320.png`; không coi emulator là máy thật.
+- Ảnh và JSON kết quả chỉ ở build local, không tự có trong git/CI artifact. Không
+  đưa URL asset Figma tạm vào runtime. Chưa tạo golden hoặc nghiệm thu pixel.
+
+#### Xác minh
+
+```powershell
+flutter analyze --no-pub
+flutter test --no-pub test/garden_voice_navigation_layout_test.dart test/garden_voice_teacher_navigation_test.dart test/garden_voice_parent_navigation_test.dart test/garden_voice_theme_test.dart test/navigation_review_app_test.dart
+flutter test --no-pub --dart-define=UI_CAPTURE_DIR=build/nav-batch-a test/figma_request_layout_test.dart --plain-name "Batch A navigation captures"
+flutter test --no-pub --reporter json
+flutter build apk --debug --no-pub --target-platform android-x64 -t test/support/navigation_review_app.dart
+```
+
+- Analyze: **No issues found**. Navigation/theme/preview: **21/21 pass**;
+  Batch A capture: **8/8 pass**. Geometry/theme assertions mới đã thấy fail trước
+  implementation rồi pass; kiểm tra 200% text, bottom inset24, touch target48.
+- Full suite trước Batch A: **391 pass / 9 fail**; sau Batch A: **414 pass / 9 fail**,
+  **không thêm lỗi**, không skip test. Đếm JSON loại sự kiện loading/hidden. Chín
+  tên test lỗi giữ nguyên như danh sách Login ngay trên (3 ParentFlow, 3 push report,
+  1 push attendance, 2 teacher medication/emergency). Log `build/batch-a-baseline.jsonl`,
+  `build/batch-a-final.jsonl`; differential `build/nav-batch-a/test-differential.json`.
+- APK preview build thành công và đã chạy trên emulator. Có warning toolchain cũ
+  Gradle/AGP/Kotlin và `l10n.yaml` synthetic-package; không nâng toolchain trong batch.
+- Review độc lập đã thử nhưng không chạy được do giới hạn quota; không nhận là đã
+  được agent khác duyệt. Tự đọc diff và xem ảnh, vẫn cần người dùng duyệt hình.
+- Chưa kiểm tra máy Android vật lý, backend thật, audio/push hoặc Batch B return
+  context/motion. Chỉ thay Flutter/tài liệu: không cần restart/rebuild Docker;
+  dừng app rồi bấm ▶ chạy lại để chắc asset SVG mới được nạp.
+
+### [UI][Bottom Navigation] Motion và giữ ngữ cảnh — Batch B, 12/11/2026
+
+**Batch A đã được người dùng duyệt trước khi bắt đầu Batch B.** Giữ geometry,
+palette và SVG của từng vai trò đã duyệt; không sửa Figma, Login hoặc merge PR
+teammate. Chưa commit/push. Hide/show chỉ pilot hai danh sách đã chốt, chưa nhân
+rộng sang mọi màn có thanh điều hướng.
+
+| Yêu cầu đã duyệt | Điểm triển khai / bằng chứng |
+|---|---|
+| Pill trượt ngang220ms/ease-out, retarget từ vị trí hiện tại | `garden_voice_navigation.dart`: một indicator `AnimatedPositioned` dùng chung; test cả hai vai trò bấm đổi đích2lần trước khi animation kết thúc, kết thúc đúng slot cuối |
+| Icon cũ nhạt dần, icon mới teal | `TweenAnimationBuilder` crossfade hai SVG local, giữ ColorMapper theo theme; không nhuộm một màu lên toàn icon |
+| Micro/Báo cáo là action, giữ tab nguồn | Teacher không pop màn con trước khi mở RecordHub; LeaveRequest bỏ pop kép. Parent vẫn mở report sheet, không đổi selected. Test root Micro, Micro từ Điểm danh (giữ cùng State instance), sheet PH và offset sau khi đóng |
+| Vuốt lên ẩn xuống / vuốt xuống hiện lên,20dp | `GardenVoiceNavigationFrame`: tích lũy drag dọc cùng hướng, reset khi đổi hướng/đầu list/đổi tab; bỏ qua horizontal, programmatic, rebound; metrics list ngắn hiện thanh lại |
+| Không dải trắng khi ẩn, không nhảy khi hiện | Pilot dùng Stack overlay; viewport giữ nguyên; padding76dp cuối nằm trong list, gesture inset tách riêng. Test tap tại y780 trong vùng thanh cũ, với inset24; test mục cuối cuộn lên trên thanh và bấm được |
+| Giữ tab/filter/scroll | Lazy `IndexedStack` trong TeacherShell/ParentFlow; same-class refresh giữ cây đang mount; health filter không reset khi đổi tab. Parent subtree keyed bằng childId; regression đổi trẻ reset filter/scroll cũ |
+| Reduced motion/trợ năng | DisableAnimations chuyển selected tức thời/bỏ micro scale và giữ thanh hiện; accessibleNavigation giữ thanh hiện. Hidden nav loại khỏi hit-test/focus/semantics; SDK3.47.5 IndexedStack tự ExcludeFocus cho tab ẩn, có test focus thực |
+
+**Hai video local:**
+
+- [Giáo viên — Lịch sử báo cáo](../../frontend/build/nav-batch-b/teacher-motion.mp4),
+  MP4 H.264,780×1688, khoảng33.28giây.
+- [Phụ huynh — Thông báo](../../frontend/build/nav-batch-b/parent-motion.mp4),
+  MP4 H.264,780×1688, khoảng37.62giây.
+- Quay Android emulator API37, density320 →390×844logical; fixture30báo cáo trong
+  `test/support/navigation_review_app.dart`, không backend/FCM/login hoặc trẻ thật.
+  Mỗi video có bấm nhanh nhiều tab, list dài vuốt lên ẩn/vuốt xuống hiện, đổi tab
+  quay lại, mở/đóng action. Bản quay đầu khi app chưa nạp xong không dùng; bản bàn
+  giao quay sau warm-up. `*-events.json` là mốc script, không timestamp tuyệt đối MP4.
+- Đã giải mã cả2MP4 bằng Chrome local và xem frame mẫu2–28s cùng checkpoint PNG:
+  teacher20s mở RecordHub; parent22s mở sheet/24s trở lại Notifications; các frame
+  hidden có nội dung đến gesture inset và shown giữ viewport. Đây là kiểm tra frame
+  mẫu, không đo hiệu năng máy thật hoặc tuyên bố mọi frame đạt60fps. SwiftShader/AVC
+  có frame chuyển động mờ; PNG trực tiếp rõ hơn. Parent preview có contour xanh
+  ngoài viewport sau keyboard role-switch, không thuộc navigation thiết kế.
+- `frontend/build/nav-batch-b/README.md` có link video/giới hạn; `static/` giữ capture
+  mới390/320/412/dark. Đã xem Home390/light/dark cả2vai trò; Dark vẫn chỉ navigation,
+  chưa migrate nền toàn màn. Build/media bị git-ignore, không tự đi theo commit/CI.
+
+**Kiểm tra cuối:**
+
+- `flutter analyze --no-pub`: **No issues found**.
+- Bảy file navigation motion/scroll/flow/layout + role wrappers + preview:
+  **25/25 pass**. Nhóm8test capture Batch A chạy lại sau B: **8/8 pass**.
+- Full `flutter test --no-pub --reporter json`: **422 pass / 9 fail / 0 skip**;
+  baseline sau A **414 pass / 9 fail**; cùng9tên lỗi đã liệt kê ở mục Login,
+  **không thêm lỗi**. Log `build/batch-b-final.jsonl`, differential
+  `build/nav-batch-b/test-differential.json`. Hai regression shortcut từ overlay
+  blanket đã được test bắt và sửa ở production, không đổi/skip assertions cũ.
+- APK preview debug Android x64 build thành công và đã cài/chạy để quay video.
+  Gradle/AGP/Kotlin vẫn có warning toolchain cũ, không nâng trong batch.
+- Có review độc lập:3vấn đề được tái hiện RED→GREEN (refresh mất State, filter bị
+  reset, đổi trẻ giữ state cũ). Lo ngại focus đã đối chiếu SDK và test: IndexedStack
+  hiện có ExcludeFocus, không thêm wrapper trùng. Thêm test Micro từ màn con và
+  identity source; không có lượt re-review sau fix, dùng regression + full suite.
+- Chưa kiểm tra Android vật lý/TalkBack thủ công/audio/push thật. Không merge
+  `origin/develop` vì PR22file còn cần tích hợp riêng theo quyết định giữ Login và
+  navigation local; chi phí là chưa chứng minh tương thích với PR mới đó.
+- Flutter bấm ▶ chạy lại; không cần restart/rebuild Docker.
+
+### [Fix][Android Navigation] Tạm khóa Light, đối chiếu qua main.dart — 12/11/2026
+
+Người dùng báo video preview đúng nhưng app chạy main.dart đổi nền navigation và
+không có motion; **chưa nghiệm thu Batch B trên Android người dùng**. Yêu cầu mới
+ưu tiên: bỏ Dark khỏi UI trước, không tự thiết kế hoặc bật nền tối chưa duyệt.
+
+- Tái hiện bằng test **MyApp thật + router /parent + repository HTTP production**,
+  chỉ mock biên HttpClient: preference Dark + platformBrightness Dark làm nav dark.
+  Test này RED trước sửa. `main.dart` nay bỏ darkTheme/cố định Light; controller bỏ
+  áp Dark/System cũ và không cho chọn, selector chỉ Sáng; sau sửa GREEN. Không xóa
+  preference cũ hoặc palette/test legacy, không sửa authentication/router/API.
+- Test motion qua cùng MyApp/router **pass cả trước sửa theme**: pill có vị trí
+  trung gian80ms rồi về slot Notifications; vuốt lên ẩn, xuống hiện; viewport tới
+  bottom844. Vì vậy **không kết luận đổi theme sửa được lỗi motion trên máy thật**.
+  Đã thêm dòng log debug-only ở cold start main: entrypoint,Light,disableAnimations,
+  accessibleNavigation; không token/user/audio. Chưa có thiết bị ADB để đọc flag
+  thực tế, không ép bỏ qua trợ năng để làm giống video.
+- Ảnh `frontend/build/nav-main-runtime/main-parent-{before,moving-80ms,selected,hidden,shown}.png`
+  là390×844 widget capture, font local, zero systeminsets, JSON giả30report. Đã xem
+  before/80ms/hidden; có pill đang trượt và list dùng vùng đáy. Không phải video
+  bản Android thật và khác data/insets so với MP4. Không dùng preview làm bằng
+  chứng thay thế app đăng nhập qua main. README trong thư mục ghi chính xác phạm vi.
+- Build `flutter build apk --debug --no-pub --target-platform android-arm64,android-x64 -t lib/main.dart`
+  thành công; file output hiện là **entrypoint main**, không preview. Chưa cài/test
+  bản này trên máy Android người dùng. Toolchain có warning cũ, không nâng trong fix.
+- Test theme selector cũ từng đòi description Dark/System đã được đổi thành assertions
+  **không được xuất hiện**, theo yêu cầu Light-only; giữ nguyên các check khác,
+  không skip hoặc xóa test. Chạy 3test main/runtime và capture tabs/theme liên quan.
+- Sau sửa cần **Stop app rồi Run main.dart lại**, không chỉ Hot Reload vì có init/
+  singleton preferences. Chỉ Flutter, không cần restart/rebuild Docker; chưa merge/
+  commit/push. Motion Android vẫn cần xác minh trực tiếp trước khi báo hoàn tất.
+- Xác minh cuối: `flutter analyze --no-pub` không issue; 3test root/runtime + test
+  capture tabs/theme liên quan **4/4 pass**. Full **425 pass / 9 fail / 0 skip**,
+  cùng9lỗi baseline422pass/9fail, không thêm lỗi. Differential trong
+  `build/nav-main-runtime/test-differential.json`; `git diff --check` không lỗi
+  whitespace. Lượt analyze đầu timeout khi build/test chạy song song; lượt chạy
+  riêng sau sửa lint test đã sạch, không bỏ qua check.
+
+### [Fix][Bottom Navigation] Bật auto-hide trên Tổng quan và các tab chính
+
+- Người dùng xác nhận màn không ẩn là **Tổng quan**. Samsung đã kết nối ADB;
+  log main báo `disableAnimations=false`, `accessibleNavigation=false`, animation
+  scales1.0. Không phải giả định máy tắt animation: nguyên nhân code là Teacher
+  `autoHide: tab == TeacherTab.history`, Parent `autoHide: _notificationsOpen`.
+  Hai cờ giới hạn pilot đã bị mình báo hoàn tất quá rộng so với trải nghiệm người dùng.
+- Sửa nhỏ ở hai shell: bật auto-hide cho mọi tab chính. Bổ sung3regression test:
+  Teacher/Parent Overview và MyApp/router Overview. Đã thấy cả3RED (viewport640
+  bị chặn còn564), sau sửaGREEN: viewport640, drag ẩn/hiện, không đổi rect khi
+  thanh dịch ra/vào. Reuse cơ chế hit-test y780 với gesture inset24 và last item
+  bấm được ở phía trên nav; không tạo dải trắng76dp cố định ngoài list.
+- Hai test shortcut trên Overview dùng `scrollUntilVisible` không tính vùng nav nổi
+  đã được cập nhật thêm ensureVisible(alignment.5) và assertion **hitTestable** trước
+  khi tap. Giữ toàn bộ assertion nghiệp vụ; không tắt cảnh báo hay skip test.
+- Phạm vi: Teacher Tổng quan/Lớp/Báo cáo/Tài khoản; Parent Tổng quan/Thông báo/
+  Tài khoản. Màn con có Scaffold/nav riêng không được báo là đã rollout trong fix này.
+  List ngắn không thực sự cuộn vẫn giữ thanh hiện; Dark tiếp tục tắt theo quyết định mới.
+- `flutter analyze --no-pub`: không issue. Nhóm runtime/flow/scroll/notifications
+  **28/28 pass**; full **428 pass / 9 baseline fail / 0 skip**, cùng9tên lỗi đã liệt
+  kê, không thêm lỗi. Log `build/overview-navigation-final.jsonl`; differential
+  `build/nav-main-runtime/overview-test-differential.json`.
+- Build debug ARM64 từ **lib/main.dart** thành công; đã cài bằng `adb install -r`
+  lên Samsung đang kết nối (Success), không uninstall/clear-data; đã gọi mở app.
+  Ảnh debug thiết bị chỉ ở thư mục Temp, không dùng dữ liệu thật làm fixture/commit.
+- **Chưa nghiệm thu cuộn trực tiếp trên Samsung:** các ảnh kiểm tra ban đầu là
+  AOD/home; sau cài bản mới, người dùng chọn **Tôi tự kiểm tra**, nên đã dừng thao
+  tác trên điện thoại. Không coi việc install thành công là native acceptance.
+  Không quay video thay thế hoặc tuyên bố đã kiểm tra tay khi chưa có bằng chứng.
+- Không cần restart/rebuild Docker; APK mới đã cập nhật. Chưa merge/commit/push.
 
 Ghi node + state đã dùng, screenshot Figma/app, môi trường render, lệnh kiểm tra
 và kết quả, sai khác còn lại. Nếu chỉ chạy analyze/test mà chưa xem ảnh, ghi đúng

@@ -111,6 +111,11 @@ class KPalette extends ThemeExtension<KPalette> {
     required this.buttonHeight,
     required this.buttonRadius,
     required this.isGardenVoice,
+    required this.navigationSurface,
+    required this.navigationSelected,
+    required this.navigationSelectedBorder,
+    required this.navigationPortrait,
+    required this.navigationShadow,
   });
 
   final Color canvas;
@@ -151,6 +156,11 @@ class KPalette extends ThemeExtension<KPalette> {
   final double buttonHeight;
   final double buttonRadius;
   final bool isGardenVoice;
+  final Color navigationSurface;
+  final Color navigationSelected;
+  final Color navigationSelectedBorder;
+  final Color navigationPortrait;
+  final Color navigationShadow;
 
   static const light = KPalette(
     canvas: KColors.canvas,
@@ -191,6 +201,11 @@ class KPalette extends ThemeExtension<KPalette> {
     buttonHeight: 44,
     buttonRadius: KRadii.control,
     isGardenVoice: false,
+    navigationSurface: KColors.surface,
+    navigationSelected: KColors.brandTint,
+    navigationSelectedBorder: KColors.lineStrong,
+    navigationPortrait: KColors.surfaceSunken,
+    navigationShadow: Color(0x1A0D1F1C),
   );
 
   static final loginWarmSage = light.copyWith(
@@ -248,6 +263,11 @@ class KPalette extends ThemeExtension<KPalette> {
     buttonHeight: 44,
     buttonRadius: KRadii.control,
     isGardenVoice: false,
+    navigationSurface: KColors.surfaceDark,
+    navigationSelected: KColors.brandTintDark,
+    navigationSelectedBorder: KColors.lineStrongDark,
+    navigationPortrait: KColors.surfaceSunkenDark,
+    navigationShadow: Color(0x66000000),
   );
 
   /// Token Garden Voice chỉ dùng cho các màn đã chuyển theo trang Figma 08.
@@ -290,6 +310,11 @@ class KPalette extends ThemeExtension<KPalette> {
     buttonHeight: 48,
     buttonRadius: 24,
     isGardenVoice: true,
+    navigationSurface: Color(0xFFF1F7F6),
+    navigationSelected: Color(0xFFCBE9DE),
+    navigationSelectedBorder: Color(0xFFA1CFC0),
+    navigationPortrait: Color(0xFFF4F5F9),
+    navigationShadow: Color(0x1A0D1F1C),
   );
 
   @override
@@ -332,6 +357,11 @@ class KPalette extends ThemeExtension<KPalette> {
     double? buttonHeight,
     double? buttonRadius,
     bool? isGardenVoice,
+    Color? navigationSurface,
+    Color? navigationSelected,
+    Color? navigationSelectedBorder,
+    Color? navigationPortrait,
+    Color? navigationShadow,
   }) {
     return KPalette(
       canvas: canvas ?? this.canvas,
@@ -372,6 +402,12 @@ class KPalette extends ThemeExtension<KPalette> {
       buttonHeight: buttonHeight ?? this.buttonHeight,
       buttonRadius: buttonRadius ?? this.buttonRadius,
       isGardenVoice: isGardenVoice ?? this.isGardenVoice,
+      navigationSurface: navigationSurface ?? this.navigationSurface,
+      navigationSelected: navigationSelected ?? this.navigationSelected,
+      navigationSelectedBorder:
+          navigationSelectedBorder ?? this.navigationSelectedBorder,
+      navigationPortrait: navigationPortrait ?? this.navigationPortrait,
+      navigationShadow: navigationShadow ?? this.navigationShadow,
     );
   }
 
@@ -418,6 +454,12 @@ class KPalette extends ThemeExtension<KPalette> {
       buttonHeight: buttonHeight + (other.buttonHeight - buttonHeight) * t,
       buttonRadius: buttonRadius + (other.buttonRadius - buttonRadius) * t,
       isGardenVoice: t < 0.5 ? isGardenVoice : other.isGardenVoice,
+      navigationSurface: mix(navigationSurface, other.navigationSurface),
+      navigationSelected: mix(navigationSelected, other.navigationSelected),
+      navigationSelectedBorder:
+          mix(navigationSelectedBorder, other.navigationSelectedBorder),
+      navigationPortrait: mix(navigationPortrait, other.navigationPortrait),
+      navigationShadow: mix(navigationShadow, other.navigationShadow),
     );
   }
 }
@@ -425,6 +467,18 @@ class KPalette extends ThemeExtension<KPalette> {
 /// Reads the active palette from the widget tree: `context.k.brand`.
 extension KThemeContext on BuildContext {
   KPalette get k => Theme.of(this).extension<KPalette>() ?? KPalette.light;
+}
+
+// Chỉ thanh điều hướng theo theme tối; không đổi palette của các màn GV khác.
+ThemeData gardenVoiceNavigationTheme(ThemeData base) {
+  final inherited = base.extension<KPalette>();
+  final palette = base.brightness == Brightness.dark
+      ? (inherited?.isGardenVoice == false ? inherited! : KPalette.dark)
+      : (inherited?.isGardenVoice == true ? inherited! : KPalette.gardenVoice);
+  return base.copyWith(extensions: [
+    ...base.extensions.values.where((extension) => extension is! KPalette),
+    palette,
+  ]);
 }
 
 /// Phạm vi Garden Voice để các màn chuyển dần không làm đổi giao diện cũ.

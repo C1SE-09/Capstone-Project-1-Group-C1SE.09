@@ -28,6 +28,7 @@ import 'package:dio/dio.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_navigation.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/report_discussion_section.dart';
 
@@ -76,6 +77,7 @@ class _ParentFlowState extends State<ParentFlow> {
   late Future<_ParentData> future;
   int _tab = 0;
   bool _notificationsOpen = false;
+  final _pages = <int, Widget>{};
   bool _notificationOpened = false;
 
   @override
@@ -94,6 +96,7 @@ class _ParentFlowState extends State<ParentFlow> {
         widget.notificationId != oldWidget.notificationId ||
         (widget.initialOpenReport && !oldWidget.initialOpenReport)) {
       _notificationOpened = false;
+      if (widget.childId != oldWidget.childId) _pages.clear();
       _reload();
     }
   }
@@ -496,56 +499,72 @@ class _ParentFlowState extends State<ParentFlow> {
                       onOpenNotifications: () =>
                           setState(() => _notificationsOpen = true),
                     );
+          final activePage = _notificationsOpen ? 1 : (_tab == 1 ? 2 : 0);
+          _pages[activePage] = page;
           return Scaffold(
             backgroundColor:
                 _notificationsOpen ? context.k.surface : context.k.canvas,
-            body: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) => Align(
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    key: const ValueKey('parent-mobile-frame'),
-                    width:
-                        constraints.maxWidth > 480 ? 480 : constraints.maxWidth,
-                    height: constraints.maxHeight,
-                    child: RefreshIndicator(
-                      onRefresh: _handleRefresh,
-                      child: page,
+            body: GardenVoiceNavigationFrame(
+              activeTab: activePage,
+              autoHide: true,
+              body: SafeArea(
+                bottom: false,
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      key: const ValueKey('parent-mobile-frame'),
+                      width: constraints.maxWidth > 480
+                          ? 480
+                          : constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: RefreshIndicator(
+                        onRefresh: _handleRefresh,
+                        child: KeyedSubtree(
+                            key: ValueKey(data.overview.child.childId),
+                            child: IndexedStack(index: activePage, children: [
+                              for (var index = 0; index < 3; index++)
+                                TickerMode(
+                                    enabled: index == activePage,
+                                    child: _pages[index] ??
+                                        const SizedBox.shrink()),
+                            ])),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            bottomNavigationBar: GardenVoiceParentNavigation(
-              selected: _notificationsOpen
-                  ? GardenVoiceParentDestination.notifications
-                  : _tab == 1
-                      ? GardenVoiceParentDestination.account
-                      : GardenVoiceParentDestination.home,
-              onSelected: (destination) {
-                switch (destination) {
-                  case GardenVoiceParentDestination.home:
-                    _selectTab(0);
-                    break;
-                  case GardenVoiceParentDestination.reports:
-                    if (data.today == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Chưa có báo cáo hôm nay.'),
-                        ),
-                      );
-                    } else {
-                      _openReport(data, data.today!);
-                    }
-                    break;
-                  case GardenVoiceParentDestination.notifications:
-                    setState(() => _notificationsOpen = true);
-                    break;
-                  case GardenVoiceParentDestination.account:
-                    _selectTab(1);
-                    break;
-                }
-              },
+              navigation: GardenVoiceParentNavigation(
+                selected: _notificationsOpen
+                    ? GardenVoiceParentDestination.notifications
+                    : _tab == 1
+                        ? GardenVoiceParentDestination.account
+                        : GardenVoiceParentDestination.home,
+                onSelected: (destination) {
+                  switch (destination) {
+                    case GardenVoiceParentDestination.home:
+                      _selectTab(0);
+                      break;
+                    case GardenVoiceParentDestination.reports:
+                      if (data.today == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Chưa có báo cáo hôm nay.'),
+                          ),
+                        );
+                      } else {
+                        _openReport(data, data.today!);
+                      }
+                      break;
+                    case GardenVoiceParentDestination.notifications:
+                      setState(() => _notificationsOpen = true);
+                      break;
+                    case GardenVoiceParentDestination.account:
+                      _selectTab(1);
+                      break;
+                  }
+                },
+              ),
             ),
           );
         },

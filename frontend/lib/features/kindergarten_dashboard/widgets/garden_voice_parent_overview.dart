@@ -5,6 +5,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
     show kDateLabel;
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class GardenVoiceParentOverview extends StatelessWidget {
@@ -40,7 +41,8 @@ class GardenVoiceParentOverview extends StatelessWidget {
           final k = context.k;
           return ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 20, 20,
+                24 + GardenVoiceNavigationFrame.bottomPaddingOf(context)),
             children: [
               Row(
                 children: [
