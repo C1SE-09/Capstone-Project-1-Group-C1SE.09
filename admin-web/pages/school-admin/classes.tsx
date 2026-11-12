@@ -263,19 +263,22 @@ export default function SchoolAdminClassesPage() {
               mutate();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="kbtn kbtn-secondary"
+            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
             title="Làm mới"
           >
             ↻
           </button>
           <button
             onClick={handleExportExcel}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Xuất danh sách ra file Excel"
           >
             📥 Xuất Excel
           </button>
-          <button onClick={openCreate} className="kbtn kbtn-primary">
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
+          >
             + Thêm lớp
           </button>
         </div>
@@ -440,17 +443,24 @@ export default function SchoolAdminClassesPage() {
                           {count}{c.capacity != null ? `/${c.capacity}` : " bé"}
                         </Pill>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => openEdit(c)} className="kbtn kbtn-ghost text-xs">
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => setConfirmDel(c)}
-                          className="kbtn kbtn-ghost text-xs text-bad"
-                          title={count > 0 ? `Lớp còn ${count} bé — phải chuyển hết mới xóa được` : "Xóa lớp"}
-                        >
-                          Xóa
-                        </button>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(c)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-ink hover:bg-slate-100 transition-colors"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDel(c)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-bad hover:bg-bad-tint transition-colors"
+                            title={count > 0 ? `Lớp còn ${count} bé — phải chuyển hết mới xóa được` : "Xóa lớp"}
+                          >
+                            Xóa
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

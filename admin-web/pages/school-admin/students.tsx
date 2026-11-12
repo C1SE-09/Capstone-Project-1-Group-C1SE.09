@@ -1289,8 +1289,9 @@ export default function SchoolAdminStudentsPage() {
               mutate();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
+            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition disabled:opacity-50"
             title="Làm mới"
+            disabled={isEditMode}
           >
             ↻
           </button>
@@ -1307,36 +1308,26 @@ export default function SchoolAdminStudentsPage() {
           </button>
           <button
             onClick={() => setImportOpen(true)}
-            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
             title="Nhập dữ liệu từ file Excel / CSV"
+            disabled={isEditMode}
           >
             📤 Nhập file
           </button>
-          {/* Nút Chỉnh sửa */}
-          <button
-            onClick={() => {
-              if (isEditMode && dirtyRows.length > 0) {
-                if (window.confirm("Bạn đang có thay đổi chưa lưu. Bạn có muốn thoát chế độ sửa và hủy thay đổi không?")) {
-                  cancelAllEdits();
-                }
-                return;
-              }
-              setIsEditMode(!isEditMode);
-              setOpenParentDropdownId(null);
-            }}
-            className={`px-4 py-2 rounded-full border border-[#E5E8EB] text-xs font-bold flex items-center gap-1.5 transition ${
-              isEditMode
-                ? "bg-[#FFF0D9] text-[#B0791B] border-[#B0791B]"
-                : "bg-white text-[#087F70] hover:bg-[#E6F3EB]"
-            }`}
-            title="Bật/tắt chế độ chỉnh sửa trực tiếp trên bảng"
-          >
-            <span>✏️</span>
-            <span>{isEditMode ? "Đang chỉnh sửa" : "Chỉnh sửa"}</span>
-          </button>
-
-          {/* Nút Lưu tất cả thay đổi khi ở Edit Mode */}
-          {isEditMode && (
+          {!isEditMode ? (
+            <button
+              onClick={() => {
+                setIsEditMode(true);
+                setOpenParentDropdownId(null);
+              }}
+              className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
+              disabled={filtered.length === 0}
+            >
+              <span>✏️</span>
+              <span>Chỉnh sửa bảng</span>
+            </button>
+          ) : (
             <>
               <button
                 onClick={cancelAllEdits}
@@ -1344,12 +1335,12 @@ export default function SchoolAdminStudentsPage() {
                 className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
                 title="Hủy bỏ mọi thay đổi chưa lưu"
               >
-                ✕ Hủy thay đổi
+                ✕ Hủy bỏ
               </button>
               <button
                 onClick={handleSaveAllEdits}
                 disabled={savingTable}
-                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
+                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
                 title="Lưu tất cả thay đổi trên mọi dòng"
               >
                 {savingTable ? (
@@ -1360,9 +1351,9 @@ export default function SchoolAdminStudentsPage() {
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu tất cả thay đổi</span>
+                    <span>Lưu thay đổi</span>
                     {dirtyRows.length > 0 && (
-                      <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-1">
+                      <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                         {dirtyRows.length}
                       </span>
                     )}
@@ -1372,12 +1363,14 @@ export default function SchoolAdminStudentsPage() {
             </>
           )}
 
-          <button
-            onClick={openCreate}
-            className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
-          >
-            + Thêm học sinh
-          </button>
+          {!isEditMode && (
+            <button
+              onClick={openCreate}
+              className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
+            >
+              + Thêm học sinh
+            </button>
+          )}
         </div>
       }
     >
@@ -1449,7 +1442,16 @@ export default function SchoolAdminStudentsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed min-w-[980px]">
+              <colgroup>
+                <col className="w-11" />
+                <col className="w-[22%]" />
+                <col className="w-[14%]" />
+                <col />
+                <col className="w-[15%]" />
+                <col className="w-[15%]" />
+                <col className="w-[100px]" />
+              </colgroup>
               <thead
                 className="text-xs uppercase tracking-wider transition-colors duration-200"
                 style={{
@@ -1459,7 +1461,7 @@ export default function SchoolAdminStudentsPage() {
               >
                 {selectedIds.length > 0 ? (
                   <tr className="border-b border-[#F2D5CE]">
-                    <th className="px-3 py-2.5 text-center w-10">
+                    <th className="px-3 py-2.5 text-center">
                       <input
                         type="checkbox"
                         className="rounded cursor-pointer"
@@ -1504,7 +1506,7 @@ export default function SchoolAdminStudentsPage() {
                   </tr>
                 ) : (
                   <tr>
-                    <th className="px-3 py-3 text-center w-10">
+                    <th className="px-3 py-3 text-center">
                       <input
                         type="checkbox"
                         className="rounded cursor-pointer"
@@ -1542,9 +1544,9 @@ export default function SchoolAdminStudentsPage() {
                     return pName.includes(qParent) || pPhone.includes(qParent) || pRel.includes(qParent);
                   });
 
-                  // Class ô input ở Chế độ Sửa: viền mỏng xám nhạt, padding thoải mái
+                  // Class ô input ở Chế độ Sửa: đồng bộ kích thước/padding với View Mode
                   const editInputBase =
-                    "w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 transition-all focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none";
+                    "w-full bg-white border border-slate-300 rounded px-2 py-0.5 text-sm text-slate-800 transition-colors focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none";
 
                   return (
                     <tr
@@ -1558,108 +1560,110 @@ export default function SchoolAdminStudentsPage() {
                       }`}
                     >
                       {/* Checkbox chọn dòng + Chấm tròn báo dirty */}
-                      <td className="px-3 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {isDirty ? (
-                            <span
-                              className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"
-                              title="Dòng này có thay đổi chưa lưu"
-                            />
-                          ) : (
-                            <span className="w-2 h-2 shrink-0" />
-                          )}
-                          <input
-                            type="checkbox"
-                            className="rounded cursor-pointer text-brand focus:ring-brand/30"
-                            checked={isSelected}
-                            onChange={() => toggleSelect(c.id)}
-                            title="Chọn dòng"
+                      <td className="relative px-3 py-3 text-center">
+                        {isEditMode && isDirty && (
+                          <span
+                            className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse pointer-events-none"
+                            title="Dòng này có thay đổi chưa lưu"
                           />
-                        </div>
+                        )}
+                        <input
+                          type="checkbox"
+                          className="rounded cursor-pointer text-brand focus:ring-brand/30"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(c.id)}
+                          title="Chọn dòng"
+                        />
                       </td>
 
                       {/* Cột Họ tên: Avatar + Tên (đậm) + Biệt danh */}
-                      <td className="px-3.5 py-3">
-                        <div className="flex items-center gap-2.5">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className="w-8 h-8 flex items-center justify-center rounded-full text-white text-xs font-semibold shrink-0 shadow-2xs"
                             style={{ background: "#8A5E12" }}
                           >
                             {(rowData.full_name || "B").charAt(0).toUpperCase()}
                           </div>
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                            {isEditMode ? (
+                              <>
+                                <input
+                                  type="text"
+                                  className={`${editInputBase} font-semibold ${
+                                    isCellDirty(c, "full_name")
+                                      ? "bg-amber-50 border-amber-400 text-amber-950"
+                                      : ""
+                                  }`}
+                                  value={rowData.full_name}
+                                  onChange={(e) => updateCell(c, "full_name", e.target.value)}
+                                  placeholder="Họ và tên học sinh..."
+                                />
+                                <input
+                                  type="text"
+                                  className={`${editInputBase} text-xs text-slate-500 ${
+                                    isCellDirty(c, "nickname")
+                                      ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                      : ""
+                                  }`}
+                                  value={rowData.nickname}
+                                  onChange={(e) => updateCell(c, "nickname", e.target.value)}
+                                  placeholder="Biệt danh (ở nhà)..."
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-full px-2 py-0.5 border border-transparent rounded font-semibold text-slate-800 text-sm truncate">
+                                  {c.full_name}
+                                  {isDirty && (
+                                    <span className="ml-1.5 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
+                                      chưa lưu
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="w-full px-2 py-0.5 border border-transparent rounded text-xs text-slate-500 font-normal truncate">
+                                  {c.nickname ? `Biệt danh: ${c.nickname}` : "—"}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Cột Lớp: Tag/Pill ở View Mode vs Select ở Edit Mode */}
+                      <td className="px-4 py-3">
+                        <div className="-mx-2">
                           {isEditMode ? (
-                            <div className="flex flex-col gap-2 flex-1 min-w-[160px]">
-                              <input
-                                type="text"
-                                className={`${editInputBase} font-semibold ${
-                                  isCellDirty(c, "full_name")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950"
-                                    : ""
-                                }`}
-                                value={rowData.full_name}
-                                onChange={(e) => updateCell(c, "full_name", e.target.value)}
-                                placeholder="Họ và tên học sinh..."
-                              />
-                              <input
-                                type="text"
-                                className={`${editInputBase} text-[11px] text-slate-500 py-1 ${
-                                  isCellDirty(c, "nickname")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                    : ""
-                                }`}
-                                value={rowData.nickname}
-                                onChange={(e) => updateCell(c, "nickname", e.target.value)}
-                                placeholder="Biệt danh (ở nhà)..."
-                              />
-                            </div>
+                            <select
+                              className={`w-full bg-white border rounded px-2 py-1 text-xs font-medium transition-colors focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none ${
+                                isCellDirty(c, "class_id")
+                                  ? "bg-amber-50 border-amber-400 text-amber-950"
+                                  : "border-slate-300 text-slate-800"
+                              }`}
+                              value={rowData.class_id ?? ""}
+                              onChange={(e) => updateCell(c, "class_id", e.target.value || null)}
+                            >
+                              <option value="">-- Chưa xếp lớp --</option>
+                              {classes.map((cls) => (
+                                <option key={cls.id} value={cls.id}>
+                                  {cls.name}
+                                </option>
+                              ))}
+                            </select>
                           ) : (
-                            <div className="max-w-[170px] truncate">
-                              <div className="font-semibold text-slate-800 text-sm truncate">
-                                {c.full_name}
-                                {isDirty && (
-                                  <span className="ml-1.5 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
-                                    chưa lưu
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-500 font-normal mt-0.5 truncate">
-                                {c.nickname ? `Biệt danh: ${c.nickname}` : "—"}
-                              </div>
+                            <div className="w-full px-2 py-1 border border-transparent rounded">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs truncate max-w-full">
+                                {c.class_name || "Chưa xếp lớp"}
+                              </span>
                             </div>
                           )}
                         </div>
                       </td>
 
-                      {/* Cột Lớp: Tag/Pill ở View Mode vs Select ở Edit Mode */}
-                      <td className="px-3.5 py-3">
-                        {isEditMode ? (
-                          <select
-                            className={`${editInputBase} min-w-[130px] ${
-                              isCellDirty(c, "class_id")
-                                ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                : ""
-                            }`}
-                            value={rowData.class_id ?? ""}
-                            onChange={(e) => updateCell(c, "class_id", e.target.value || null)}
-                          >
-                            <option value="">-- Chưa xếp lớp --</option>
-                            {classes.map((cls) => (
-                              <option key={cls.id} value={cls.id}>
-                                {cls.name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs truncate max-w-[120px]">
-                            {c.class_name || "Chưa xếp lớp"}
-                          </span>
-                        )}
-                      </td>
-
                       {/* Cột Phụ huynh: Dropdown Multi-select ở Edit Mode vs Tag Badge ở View Mode */}
-                      <td className="px-3.5 py-3 relative">
+                      <td className="px-4 py-3 relative">
                         {isEditMode ? (
-                          <div className="min-w-[190px] relative">
+                          <div className="-mx-2 relative">
                             {/* Nút mở Dropdown chọn Phụ huynh */}
                             <button
                               type="button"
@@ -1667,7 +1671,7 @@ export default function SchoolAdminStudentsPage() {
                                 setOpenParentDropdownId(openParentDropdownId === c.id ? null : c.id);
                                 setParentSearchQuery("");
                               }}
-                              className={`w-full text-left bg-white border rounded px-2.5 py-1.5 text-xs flex items-center justify-between gap-1 transition-all ${
+                              className={`w-full text-left bg-white border rounded px-2 py-1 text-xs flex items-center justify-between gap-1 transition-colors ${
                                 isCellDirty(c, "parent_ids")
                                   ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
                                   : "border-slate-300 hover:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 text-slate-800"
@@ -1787,113 +1791,122 @@ export default function SchoolAdminStudentsPage() {
                           </div>
                         ) : (
                           /* View Mode: Hiển thị Phụ huynh dạng text + tag sạch sẽ */
-                          <div className="max-w-xs">
-                            {parentObjects.length === 0 ? (
-                              <div className="text-ink line-clamp-1">
-                                {c.parents_summary || <span className="text-slate-400 italic text-xs">Chưa liên kết</span>}
-                              </div>
-                            ) : parentObjects.length === 1 ? (
-                              <div className="truncate">
-                                <div className="font-semibold text-slate-800 text-xs truncate">
-                                  {parentObjects[0].full_name}
-                                  {parentObjects[0].relationship && (
-                                    <span className="text-slate-500 font-normal ml-1">({parentObjects[0].relationship})</span>
+                          <div className="-mx-2">
+                            <div className="w-full px-2 py-1 border border-transparent rounded">
+                              {parentObjects.length === 0 ? (
+                                <div className="text-ink line-clamp-1">
+                                  {c.parents_summary || <span className="text-slate-400 italic text-xs">Chưa liên kết</span>}
+                                </div>
+                              ) : parentObjects.length === 1 ? (
+                                <div className="truncate">
+                                  <div className="font-semibold text-slate-800 text-xs truncate">
+                                    {parentObjects[0].full_name}
+                                    {parentObjects[0].relationship && (
+                                      <span className="text-slate-500 font-normal ml-1">({parentObjects[0].relationship})</span>
+                                    )}
+                                  </div>
+                                  {parentObjects[0].phone && (
+                                    <div className="text-xs text-slate-500 font-normal mt-0.5 truncate">
+                                      {parentObjects[0].phone}
+                                    </div>
                                   )}
                                 </div>
-                                {parentObjects[0].phone && (
-                                  <div className="text-xs text-slate-500 font-normal mt-0.5 truncate">
-                                    {parentObjects[0].phone}
+                              ) : (
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <div className="truncate max-w-[130px]">
+                                    <span className="font-semibold text-slate-800 text-xs truncate">
+                                      {parentObjects[0].full_name}
+                                    </span>
                                   </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 truncate">
-                                <div className="truncate max-w-[130px]">
-                                  <span className="font-semibold text-slate-800 text-xs truncate">
-                                    {parentObjects[0].full_name}
+                                  <span
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-brand/10 text-brand border border-brand/20 cursor-help shrink-0"
+                                    title={parentObjects.map((p) => `${p.full_name} (${p.phone || "Chưa có SĐT"})`).join(", ")}
+                                  >
+                                    +{parentObjects.length - 1}
                                   </span>
                                 </div>
-                                <span
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-brand/10 text-brand border border-brand/20 cursor-help shrink-0"
-                                  title={parentObjects.map((p) => `${p.full_name} (${p.phone || "Chưa có SĐT"})`).join(", ")}
-                                >
-                                  +{parentObjects.length - 1}
-                                </span>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
 
                       {/* Cột Ngày sinh / Giới tính: Input date chuẩn + Dropdown nhỏ gọn ở Edit Mode */}
-                      <td className="px-3.5 py-3 text-ink-soft">
-                        {isEditMode ? (
-                          <div className="flex flex-col gap-1.5 min-w-[130px]">
-                            <input
-                              type="date"
-                              className={`${editInputBase} py-1 px-2 ${
-                                isCellDirty(c, "date_of_birth")
-                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                  : ""
-                              }`}
-                              value={rowData.date_of_birth}
-                              onChange={(e) => updateCell(c, "date_of_birth", e.target.value)}
-                              title="Ngày sinh (DD/MM/YYYY)"
-                            />
-                            <select
-                              className={`${editInputBase} py-1 px-2 text-[11px] ${
-                                isCellDirty(c, "gender")
-                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                  : ""
-                              }`}
-                              value={rowData.gender}
-                              onChange={(e) => updateCell(c, "gender", e.target.value)}
-                            >
-                              <option value="male">Nam</option>
-                              <option value="female">Nữ</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-slate-700 text-xs font-medium">
-                              {c.date_of_birth ? formatDate(c.date_of_birth) : "—"}
-                            </span>
-                            {c.gender === "female" ? (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-pink-50 text-pink-700 border border-pink-200 font-medium">
-                                Nữ
+                      <td className="px-4 py-3 text-ink-soft">
+                        <div className="-mx-2">
+                          {isEditMode ? (
+                            <div className="flex flex-col gap-0.5">
+                              <input
+                                type="date"
+                                className={`w-full bg-white border rounded px-2 py-0.5 text-xs text-slate-700 transition-colors focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none ${
+                                  isCellDirty(c, "date_of_birth")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : "border-slate-300"
+                                }`}
+                                value={rowData.date_of_birth}
+                                onChange={(e) => updateCell(c, "date_of_birth", e.target.value)}
+                                title="Ngày sinh (DD/MM/YYYY)"
+                              />
+                              <select
+                                className={`w-full bg-white border rounded px-2 py-0.5 text-xs text-slate-700 transition-colors focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none ${
+                                  isCellDirty(c, "gender")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : "border-slate-300"
+                                }`}
+                                value={rowData.gender}
+                                onChange={(e) => updateCell(c, "gender", e.target.value)}
+                              >
+                                <option value="male">Nam</option>
+                                <option value="female">Nữ</option>
+                              </select>
+                            </div>
+                          ) : (
+                            <div className="w-full px-2 py-1 border border-transparent rounded flex items-center gap-1.5">
+                              <span className="text-slate-700 text-xs font-medium truncate">
+                                {c.date_of_birth ? formatDate(c.date_of_birth) : "—"}
                               </span>
-                            ) : (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium">
-                                Nam
-                              </span>
-                            )}
-                          </div>
-                        )}
+                              {c.gender === "female" ? (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-pink-50 text-pink-700 border border-pink-200 font-medium shrink-0">
+                                  Nữ
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium shrink-0">
+                                  Nam
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Cột Ghi chú: Text tĩnh ở View Mode vs Input ở Edit Mode */}
-                      <td className="px-3.5 py-3 text-ink-soft">
-                        {isEditMode ? (
-                          <input
-                            type="text"
-                            className={`${editInputBase} min-w-[140px] ${
-                              isCellDirty(c, "medical_allergies")
-                                ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                : ""
-                            }`}
-                            value={rowData.medical_allergies}
-                            onChange={(e) => updateCell(c, "medical_allergies", e.target.value)}
-                            placeholder="Ghi chú / dị ứng..."
-                          />
-                        ) : (
-                          <div className="max-w-xs truncate text-xs text-slate-600" title={c.note || ""}>
-                            {c.note || "—"}
-                          </div>
-                        )}
+                      <td className="px-4 py-3 text-ink-soft">
+                        <div className="-mx-2">
+                          {isEditMode ? (
+                            <input
+                              type="text"
+                              className={`w-full bg-white border rounded px-2 py-1 text-xs text-slate-800 transition-colors focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none ${
+                                isCellDirty(c, "medical_allergies")
+                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                  : "border-slate-300"
+                              }`}
+                              value={rowData.medical_allergies}
+                              onChange={(e) => updateCell(c, "medical_allergies", e.target.value)}
+                              placeholder="Ghi chú / dị ứng..."
+                            />
+                          ) : (
+                            <div
+                              className="w-full px-2 py-1 border border-transparent rounded truncate text-xs text-slate-600"
+                              title={c.note || ""}
+                            >
+                              {c.note || "—"}
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Cột Thao tác: Icon Sửa ✏️ & Xóa 🗑️ (màu đỏ) */}
-                      <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"

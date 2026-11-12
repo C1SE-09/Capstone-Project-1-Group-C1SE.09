@@ -811,7 +811,16 @@ export default function SchoolAdminTeachersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed min-w-[960px]">
+                <colgroup>
+                  <col className="w-11" />
+                  <col className="w-[22%]" />
+                  <col />
+                  <col className="w-[15%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[120px]" />
+                </colgroup>
                 <thead
                   className="text-xs uppercase tracking-wider transition-colors duration-200"
                   style={{
@@ -821,7 +830,7 @@ export default function SchoolAdminTeachersPage() {
                 >
                   {selectedIds.length > 0 ? (
                     <tr className="border-b border-[#F2D5CE]">
-                      <th className="px-3 py-2.5 text-center w-10">
+                      <th className="px-3 py-2.5 text-center">
                         <input
                           type="checkbox"
                           className="rounded cursor-pointer"
@@ -866,7 +875,7 @@ export default function SchoolAdminTeachersPage() {
                     </tr>
                   ) : (
                     <tr>
-                      <th className="px-3 py-3 text-center w-10">
+                      <th className="px-3 py-3 text-center">
                         <input
                           type="checkbox"
                           className="rounded cursor-pointer"
@@ -900,7 +909,7 @@ export default function SchoolAdminTeachersPage() {
                       return { id: cid, name: found?.name || cid };
                     });
                     const editInputBase =
-                      "w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 transition-all focus:border-[#16665a] focus:ring-1 focus:ring-[#16665a]/30 focus:outline-none";
+                      "w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm text-ink transition-colors focus:border-[#16665a] focus:ring-1 focus:ring-[#16665a]/30 focus:outline-none";
 
                     return (
                       <tr
@@ -913,27 +922,22 @@ export default function SchoolAdminTeachersPage() {
                               : "hover:bg-slate-50/60"
                         }`}
                       >
-                        <td className="px-3 py-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {isEditingTable &&
-                              (isDirty ? (
-                                <span
-                                  className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"
-                                  title="Dòng này có thay đổi chưa lưu"
-                                />
-                              ) : (
-                                <span className="w-2 h-2 shrink-0" />
-                              ))}
-                            <input
-                              type="checkbox"
-                              className="rounded cursor-pointer"
-                              checked={isSelected}
-                              onChange={() => toggleSelect(t.id)}
+                        <td className="relative px-3 py-3 text-center">
+                          {isEditingTable && isDirty && (
+                            <span
+                              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse pointer-events-none"
+                              title="Dòng này có thay đổi chưa lưu"
                             />
-                          </div>
+                          )}
+                          <input
+                            type="checkbox"
+                            className="rounded cursor-pointer"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(t.id)}
+                          />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <div
                               className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-white shrink-0"
                               style={{ background: "#16665a" }}
@@ -942,209 +946,237 @@ export default function SchoolAdminTeachersPage() {
                                 .charAt(0)
                                 .toUpperCase()}
                             </div>
-                            {isEditingTable ? (
-                              <input
-                                type="text"
-                                className={`${editInputBase} min-w-[160px] font-semibold ${
-                                  isTeacherCellDirty(t, rowEdit, "full_name")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950"
-                                    : ""
-                                }`}
-                                value={rowData.full_name}
-                                onChange={(e) =>
-                                  updateRowEdit(t, "full_name", e.target.value)
-                                }
-                                placeholder="Họ và tên giáo viên..."
-                              />
-                            ) : (
-                              <div>
-                                <div className="font-bold text-ink">
+                            <div className="flex-1 min-w-0">
+                              {isEditingTable ? (
+                                <input
+                                  type="text"
+                                  className={`${editInputBase} font-bold ${
+                                    isTeacherCellDirty(t, rowEdit, "full_name")
+                                      ? "bg-amber-50 border-amber-400 text-amber-950"
+                                      : ""
+                                  }`}
+                                  value={rowData.full_name}
+                                  onChange={(e) =>
+                                    updateRowEdit(t, "full_name", e.target.value)
+                                  }
+                                  placeholder="Họ và tên giáo viên..."
+                                />
+                              ) : (
+                                <div className="w-full px-2 py-1 border border-transparent rounded font-bold text-sm text-ink truncate">
                                   {t.full_name}
                                 </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="-mx-2 flex flex-col gap-0.5">
+                            {isEditingTable ? (
+                              <>
+                                <input
+                                  type="email"
+                                  className={`${editInputBase} py-0.5 ${
+                                    isTeacherCellDirty(t, rowEdit, "email")
+                                      ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                      : ""
+                                  }`}
+                                  value={rowData.email}
+                                  onChange={(e) =>
+                                    updateRowEdit(t, "email", e.target.value)
+                                  }
+                                  placeholder="Email (@gmail.com)..."
+                                />
+                                <input
+                                  type="tel"
+                                  className={`${editInputBase} text-xs text-ink-soft py-0.5 ${
+                                    isTeacherCellDirty(t, rowEdit, "phone")
+                                      ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                      : ""
+                                  }`}
+                                  value={rowData.phone}
+                                  onChange={(e) =>
+                                    updateRowEdit(t, "phone", e.target.value)
+                                  }
+                                  placeholder="Số điện thoại (10 số)..."
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-full px-2 py-0.5 border border-transparent rounded text-sm text-ink truncate">
+                                  {t.email}
+                                </div>
+                                <div className="w-full px-2 py-0.5 border border-transparent rounded text-xs text-ink-soft truncate">
+                                  {t.phone}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="-mx-2">
+                            {isEditingTable ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  if (openClassDropdown?.teacherId === t.id) {
+                                    setOpenClassDropdown(null);
+                                    return;
+                                  }
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const spaceBelow = window.innerHeight - rect.bottom;
+                                  const openUpward = spaceBelow < 300 && rect.top > 300;
+                                  const minWidth = Math.max(rect.width, 250);
+                                  const left = Math.max(
+                                    8,
+                                    Math.min(rect.left, window.innerWidth - minWidth - 8),
+                                  );
+                                  setClassSearchQuery("");
+                                  setOpenClassDropdown({
+                                    teacherId: t.id,
+                                    top: openUpward ? undefined : rect.bottom + 6,
+                                    bottom: openUpward
+                                      ? window.innerHeight - rect.top + 6
+                                      : undefined,
+                                    left,
+                                    minWidth,
+                                  });
+                                }}
+                                className={`w-full text-left bg-white border rounded px-2 py-1 text-sm flex items-center justify-between gap-1.5 transition-colors ${
+                                  isTeacherCellDirty(t, rowEdit, "class_ids")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : "border-slate-300 hover:border-[#16665a] text-ink"
+                                }`}
+                                title={
+                                  selectedClassObjs.length > 0
+                                    ? selectedClassObjs.map((c) => c.name).join(", ")
+                                    : "Click để chọn lớp phụ trách"
+                                }
+                              >
+                                <span className="truncate flex-1">
+                                  {selectedClassObjs.length === 0 ? (
+                                    <span className="text-slate-400 italic">
+                                      Chưa phân lớp
+                                    </span>
+                                  ) : selectedClassObjs.length === 1 ? (
+                                    selectedClassObjs[0].name
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 max-w-full">
+                                      <span className="truncate">
+                                        {selectedClassObjs[0].name}
+                                      </span>
+                                      <span className="inline-flex items-center px-1.5 rounded text-[10px] font-bold bg-brand/10 text-brand border border-brand/20 shrink-0">
+                                        +{selectedClassObjs.length - 1}
+                                      </span>
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-slate-400 text-[10px] shrink-0">
+                                  ▼
+                                </span>
+                              </button>
+                            ) : (
+                              <div className="w-full px-2 py-1 border border-transparent rounded text-sm text-ink truncate">
+                                {t.class_name || "Chưa phân lớp"}
                               </div>
                             )}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {isEditingTable ? (
-                            <div className="flex flex-col gap-1.5 min-w-[190px]">
-                              <input
-                                type="email"
-                                className={`${editInputBase} ${
-                                  isTeacherCellDirty(t, rowEdit, "email")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                    : ""
-                                }`}
-                                value={rowData.email}
-                                onChange={(e) =>
-                                  updateRowEdit(t, "email", e.target.value)
-                                }
-                                placeholder="Email (@gmail.com)..."
-                              />
-                              <input
-                                type="tel"
-                                className={`${editInputBase} text-[11px] py-1 ${
-                                  isTeacherCellDirty(t, rowEdit, "phone")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                    : ""
-                                }`}
-                                value={rowData.phone}
-                                onChange={(e) =>
-                                  updateRowEdit(t, "phone", e.target.value)
-                                }
-                                placeholder="Số điện thoại (10 số)..."
-                              />
-                            </div>
-                          ) : (
-                            <>
-                              <div className="text-ink">{t.email}</div>
-                              <div className="text-xs text-ink-soft">{t.phone}</div>
-                            </>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditingTable ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                if (openClassDropdown?.teacherId === t.id) {
-                                  setOpenClassDropdown(null);
-                                  return;
-                                }
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const spaceBelow = window.innerHeight - rect.bottom;
-                                const openUpward = spaceBelow < 300 && rect.top > 300;
-                                const minWidth = Math.max(rect.width, 250);
-                                const left = Math.max(
-                                  8,
-                                  Math.min(rect.left, window.innerWidth - minWidth - 8),
-                                );
-                                setClassSearchQuery("");
-                                setOpenClassDropdown({
-                                  teacherId: t.id,
-                                  top: openUpward ? undefined : rect.bottom + 6,
-                                  bottom: openUpward
-                                    ? window.innerHeight - rect.top + 6
-                                    : undefined,
-                                  left,
-                                  minWidth,
-                                });
-                              }}
-                              className={`min-w-[165px] w-full text-left bg-white border rounded px-2.5 py-1.5 text-xs flex items-center justify-between gap-1.5 transition-all ${
-                                isTeacherCellDirty(t, rowEdit, "class_ids")
-                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                  : "border-slate-300 hover:border-[#16665a] text-slate-800"
-                              }`}
-                              title={
-                                selectedClassObjs.length > 0
-                                  ? selectedClassObjs.map((c) => c.name).join(", ")
-                                  : "Click để chọn lớp phụ trách"
-                              }
-                            >
-                              <div className="truncate flex-1">
-                                {selectedClassObjs.length === 0 ? (
-                                  <span className="text-slate-400 italic">
-                                    Chưa phân lớp
-                                  </span>
-                                ) : selectedClassObjs.length === 1 ? (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[120px]">
-                                    {selectedClassObjs[0].name}
-                                  </span>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[95px]">
-                                      {selectedClassObjs[0].name}
-                                    </span>
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand/10 text-brand border border-brand/20 shrink-0">
-                                      +{selectedClassObjs.length - 1}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-slate-400 text-[10px] shrink-0">
-                                ▼
-                              </span>
-                            </button>
-                          ) : (
-                            <div className="text-ink">
-                              {t.class_name || "Chưa phân lớp"}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditingTable ? (
-                            <div className="min-w-[125px] relative flex items-center">
-                              <span className="absolute left-2.5 text-xs text-slate-400 font-medium pointer-events-none select-none">
-                                @
-                              </span>
-                              <input
-                                type="text"
-                                className={`${editInputBase} pl-6 ${
+                          <div className="-mx-2">
+                            {isEditingTable ? (
+                              <div
+                                className={`w-full px-2 py-1 border rounded text-xs font-medium inline-flex items-center transition-colors focus-within:border-[#16665a] focus-within:ring-1 focus-within:ring-[#16665a]/30 ${
                                   isTeacherCellDirty(t, rowEdit, "username")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                    : ""
+                                    ? "bg-amber-50 border-amber-400 text-amber-950"
+                                    : "bg-white border-slate-300 text-slate-800"
                                 }`}
-                                value={rowData.username}
-                                onChange={(e) =>
-                                  updateRowEdit(t, "username", e.target.value)
-                                }
-                                placeholder="username..."
-                              />
-                            </div>
-                          ) : t.username ? (
-                            <Pill tone="brand">@{t.username}</Pill>
-                          ) : (
-                            <span className="text-xs text-ink-faint">—</span>
-                          )}
+                              >
+                                <span className="text-slate-400 select-none shrink-0">
+                                  @
+                                </span>
+                                <input
+                                  type="text"
+                                  className="w-full min-w-0 bg-transparent text-xs font-medium text-inherit focus:outline-none"
+                                  value={rowData.username}
+                                  onChange={(e) =>
+                                    updateRowEdit(t, "username", e.target.value)
+                                  }
+                                  placeholder="username..."
+                                />
+                              </div>
+                            ) : t.username ? (
+                              <div className="w-full px-2 py-1 border border-transparent rounded text-xs">
+                                <Pill
+                                  tone="brand"
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium max-w-full truncate"
+                                >
+                                  @{t.username}
+                                </Pill>
+                              </div>
+                            ) : (
+                              <div className="w-full px-2 py-1 border border-transparent rounded text-xs text-ink-faint">
+                                —
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
-                          {isEditingTable ? (
-                            <select
-                              className={`${editInputBase} min-w-[115px] ${
-                                isTeacherCellDirty(t, rowEdit, "status")
-                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                  : ""
-                              }`}
-                              value={rowData.status}
-                              onChange={(e) =>
-                                updateRowEdit(t, "status", e.target.value)
-                              }
-                            >
-                              <option value="active">Đang dạy</option>
-                              <option value="on_leave">Nghỉ phép</option>
-                              <option value="inactive">Ngừng</option>
-                            </select>
-                          ) : (
-                            <Pill
-                              tone={
-                                t.status === "active"
-                                  ? "ok"
-                                  : t.status === "on_leave"
-                                    ? "warn"
-                                    : "neutral"
-                              }
-                            >
-                              {t.status === "active"
-                                ? "Đang dạy"
-                                : t.status === "on_leave"
-                                  ? "Nghỉ phép"
-                                  : "Ngừng"}
-                            </Pill>
-                          )}
+                          <div className="-mx-2">
+                            {isEditingTable ? (
+                              <select
+                                className={`w-full px-2 py-1 border rounded text-xs font-medium bg-white transition-colors focus:border-[#16665a] focus:ring-1 focus:ring-[#16665a]/30 focus:outline-none ${
+                                  isTeacherCellDirty(t, rowEdit, "status")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950"
+                                    : "border-slate-300 text-slate-800"
+                                }`}
+                                value={rowData.status}
+                                onChange={(e) =>
+                                  updateRowEdit(t, "status", e.target.value)
+                                }
+                              >
+                                <option value="active">Đang dạy</option>
+                                <option value="on_leave">Nghỉ phép</option>
+                                <option value="inactive">Ngừng</option>
+                              </select>
+                            ) : (
+                              <div className="w-full px-2 py-1 border border-transparent rounded text-xs">
+                                <Pill
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                  tone={
+                                    t.status === "active"
+                                      ? "ok"
+                                      : t.status === "on_leave"
+                                        ? "warn"
+                                        : "neutral"
+                                  }
+                                >
+                                  {t.status === "active"
+                                    ? "Đang dạy"
+                                    : t.status === "on_leave"
+                                      ? "Nghỉ phép"
+                                      : "Ngừng"}
+                                </Pill>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => openEdit(t)}
-                            className="kbtn kbtn-ghost text-xs"
-                          >
-                            Sửa
-                          </button>
-                          <button
-                            onClick={() => setConfirmDel(t)}
-                            className="kbtn kbtn-ghost text-xs text-bad"
-                          >
-                            Xóa
-                          </button>
+                          <div className="inline-flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(t)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-ink hover:bg-slate-100 transition-colors"
+                            >
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDel(t)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-bad hover:bg-bad-tint transition-colors"
+                            >
+                              Xóa
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
