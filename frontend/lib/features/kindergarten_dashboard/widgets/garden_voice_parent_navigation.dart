@@ -49,8 +49,10 @@ class GardenVoiceParentNavigation extends StatelessWidget
                         ),
                         child: SizedBox(
                           height: 60,
-                          child: Row(
-                            children: [
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Row(
+                              children: [
                               _item(
                                 context,
                                 destination: GardenVoiceParentDestination.home,
@@ -92,7 +94,8 @@ class GardenVoiceParentNavigation extends StatelessWidget
                                     'assets/garden_voice/parent_nav_account_inactive.svg',
                                 size: 29,
                               ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -127,18 +130,25 @@ class GardenVoiceParentNavigation extends StatelessWidget
             child: InkWell(
               onTap: () => onSelected(destination),
               borderRadius: BorderRadius.circular(24),
-              child: Container(
+              child: SizedBox(
                 height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isSelected ? context.k.brandTint : Colors.transparent,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: ExcludeSemantics(
-                  child: SvgPicture.asset(
-                    isSelected ? activeAsset : inactiveAsset,
-                    width: size,
-                    height: size,
+                child: Center(
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? context.k.brandTint : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ExcludeSemantics(
+                      child: SvgPicture.asset(
+                        isSelected ? activeAsset : inactiveAsset,
+                        width: size,
+                        height: size,
+                      ),
+                    ),
                   ),
                 ),
               ),
