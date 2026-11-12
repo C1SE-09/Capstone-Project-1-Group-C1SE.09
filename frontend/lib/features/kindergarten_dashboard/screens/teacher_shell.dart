@@ -370,6 +370,9 @@ class _TeacherShellState extends State<TeacherShell> {
               classId: _activeClassId ?? '',
               className: className,
               repository: leaveRequestRepository,
+              medicationRepository: medicationRepository,
+              attendanceRepository: attendanceRepository,
+              dashboardRepository: repository,
               onNavigationSelected: (destination) => _selectTeacherDestination(
                   destination, className,
                   popCurrentRoute: true),

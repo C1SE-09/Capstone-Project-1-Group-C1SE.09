@@ -522,8 +522,8 @@ class _ChildRow extends StatelessWidget {
                   Text(
                     child.name,
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
                       height: 1.4,
                       color: k.ink,
                     ),

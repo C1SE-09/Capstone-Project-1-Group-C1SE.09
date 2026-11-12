@@ -26,7 +26,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assign
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/report_editor.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
-    show KButton, StatusBadge;
+    show KButton, StatusBadge, ThemeSelector;
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart'
@@ -1436,6 +1436,10 @@ void main() {
 
     expect(find.text('Cả Lớp Mầm 1'), findsOneWidget);
     expect(find.text('Minh An'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('Minh An')).style?.fontWeight,
+      FontWeight.w800,
+    );
     expect(find.text('Dị ứng: đậu phộng'), findsOneWidget);
     expect(find.text('5 chưa xong'), findsOneWidget);
     await captureUi(tester, 'teacher-record-hub');
@@ -2328,11 +2332,17 @@ void main() {
     expect(find.text('Cá nhân'), findsOneWidget);
     expect(find.text('Tùy chọn'), findsOneWidget);
     expect(find.text('Hỗ trợ'), findsOneWidget);
+    expect(find.text('Giao diện'), findsNothing);
     await captureUi(tester, 'teacher-account-gv');
     expect(tester.takeException(), isNull);
 
-    // 4. 562:1668 — Chọn giao diện (ThemeSelector)
-    await tester.tap(find.text('Giao diện'));
+    // 4. 562:1668 — Chọn giao diện (ThemeSelector widget)
+    await tester.pumpWidget(RepaintBoundary(
+      key: const ValueKey('capture'),
+      child: app(const GardenVoiceScope(
+        child: Scaffold(body: ThemeSelector()),
+      )),
+    ));
     await tester.pumpAndSettle();
     expect(find.text('Chọn cách hiển thị KinderLog trên thiết bị.'),
         findsOneWidget);
@@ -2547,7 +2557,7 @@ void main() {
     expect(find.byKey(const ValueKey('garden-voice-teacher-navigation')),
         findsOneWidget);
 
-    await tapVisible(tester, find.text('Đã cho uống thuốc').first);
+    await tapVisible(tester, find.text('Xác nhận đã cho uống thuốc').first);
     await tester.pumpAndSettle();
     await captureUi(tester, 'teacher-medication-m7-gv');
     expect(find.text('Xác nhận đã khóa để tránh trùng liều'), findsOneWidget);

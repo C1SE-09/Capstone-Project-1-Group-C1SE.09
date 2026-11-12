@@ -537,13 +537,145 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.w600)))
           else
-            MedicationAction(
-                label: 'Đã cho uống thuốc',
-                busy: _processing.contains(_key(item, date)),
-                onPressed: () => _confirm(item, date)),
+            _ConfirmMedicationButton(
+              busy: _processing.contains(_key(item, date)),
+              onPressed: () => _confirm(item, date),
+            ),
           if (item.prescriptionImageUrl?.isNotEmpty == true)
             MedicationPrivateImage(
                 path: item.prescriptionImageUrl!, repository: _repo),
         ]));
+  }
+}
+
+class _ConfirmMedicationButton extends StatelessWidget {
+  const _ConfirmMedicationButton({
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    final topColor = Color.lerp(k.brand, Colors.white, 0.08) ?? k.brand;
+
+    return Semantics(
+      button: true,
+      enabled: !busy,
+      label: 'Xác nhận đã cho uống thuốc',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          gradient: busy
+              ? null
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [topColor, k.brand, k.brandStrong],
+                ),
+          color: busy ? k.brand.withValues(alpha: 0.72) : null,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: busy ? 0.0 : 0.16),
+          ),
+          boxShadow: busy
+              ? null
+              : [
+                  BoxShadow(
+                    color: k.brand.withValues(alpha: 0.24),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(25),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: busy ? null : onPressed,
+            splashColor: Colors.white.withValues(alpha: 0.18),
+            highlightColor: Colors.white.withValues(alpha: 0.08),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: double.infinity,
+                minHeight: 50,
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: busy
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: onPrimary,
+                              semanticsLabel: 'Đang xử lý',
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Đang xác nhận…',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily:
+                                    k.isGardenVoice ? 'Nunito' : 'BeVietnamPro',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                height: 1.25,
+                                color: onPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.check_rounded,
+                              size: 16,
+                              color: onPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Xác nhận đã cho uống thuốc',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily:
+                                    k.isGardenVoice ? 'Nunito' : 'BeVietnamPro',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                height: 1.25,
+                                color: onPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

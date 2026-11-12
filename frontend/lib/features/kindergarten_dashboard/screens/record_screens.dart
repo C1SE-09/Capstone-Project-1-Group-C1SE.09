@@ -312,7 +312,9 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                               children: [
                                                 Text(child.name,
                                                     style: TextStyle(
-                                                      fontSize: 14,
+                                                      fontSize: 14.5,
+                                                      fontWeight:
+                                                          FontWeight.w800,
                                                       height: 1.4,
                                                       color: k.ink,
                                                     )),

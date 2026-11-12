@@ -311,7 +311,7 @@ void main() {
 
     expect(find.text('Đổi mật khẩu'), findsOneWidget);
     expect(find.text('Thông báo đẩy'), findsOneWidget);
-    expect(find.text('Giao diện'), findsOneWidget);
+    expect(find.text('Giao diện'), findsNothing);
     expect(find.text('Về KinderLog'), findsOneWidget);
     expect(find.text('Đăng xuất'), findsOneWidget);
   });

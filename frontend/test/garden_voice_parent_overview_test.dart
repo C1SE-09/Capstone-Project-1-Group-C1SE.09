@@ -154,4 +154,49 @@ void main() {
     expect(find.text('Báo cáo hôm nay'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Garden Voice parent shortcuts stay horizontal at 360dp phone width',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: kinderTheme(),
+        home: Scaffold(
+          body: GardenVoiceParentOverview(
+            parent:
+                const Parent(parentId: 'parent-1', fullName: 'Trần Văn Tuấn'),
+            overview: const ChildOverview(
+              child: Child(
+                childId: 'child-1',
+                classId: 'class-1',
+                fullName: 'Trần Gia Bảo',
+              ),
+              className: 'Mầm A',
+              teacherName: 'Cô Nguyễn Thị Mai',
+            ),
+            report: null,
+            unreadCount: 0,
+            onOpenReport: (_) {},
+            onOpenNotifications: () {},
+            onOpenTimetable: () {},
+            onOpenRequests: () {},
+            onOpenMedication: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final schedulePos = tester.getTopLeft(find.text('Lịch học'));
+    final leavePos = tester.getTopLeft(find.text('Xin nghỉ · Trễ'));
+    final medPos = tester.getTopLeft(find.text('Dặn thuốc'));
+    expect(schedulePos.dy, closeTo(leavePos.dy, 2));
+    expect(leavePos.dy, closeTo(medPos.dy, 2));
+    expect(schedulePos.dx, lessThan(leavePos.dx));
+    expect(leavePos.dx, lessThan(medPos.dx));
+    expect(tester.takeException(), isNull);
+  });
 }

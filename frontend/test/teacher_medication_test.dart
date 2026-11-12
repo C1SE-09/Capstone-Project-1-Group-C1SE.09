@@ -190,11 +190,11 @@ void main() {
       expect(find.text('Buổi Chiều'),
           findsOneWidget); // Tab (chưa có thuốc buổi chiều)
 
-      // Thẻ bé chưa uống: có nút ĐÃ CHO UỐNG THUỐC
+      // Thẻ bé chưa uống: có nút Xác nhận đã cho uống thuốc
       expect(find.text('Bé Gia Bảo'), findsOneWidget);
       expect(find.textContaining('Hapacol 250mg'), findsOneWidget);
       expect(find.textContaining('1 gói'), findsOneWidget);
-      expect(find.text('Đã cho uống thuốc'), findsOneWidget);
+      expect(find.text('Xác nhận đã cho uống thuốc'), findsOneWidget);
 
       // Thẻ bé đã uống: nút xám hiển thị "Cô Mai đã cho uống..."
       expect(find.text('Bé Minh Anh'), findsOneWidget);
@@ -212,8 +212,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Bấm nút ĐÃ CHO UỐNG THUỐC
-      await tester.tap(find.text('Đã cho uống thuốc'));
+      // Bấm nút Xác nhận đã cho uống thuốc
+      await tester.tap(find.text('Xác nhận đã cho uống thuốc'));
       await tester.pump(); // Start async call
       await tester.pumpAndSettle(); // Settle response
 
@@ -240,7 +240,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Bấm xác nhận
-      await tester.tap(find.text('Đã cho uống thuốc'));
+      await tester.tap(find.text('Xác nhận đã cho uống thuốc'));
       await tester.pump();
       await tester.pumpAndSettle();
 

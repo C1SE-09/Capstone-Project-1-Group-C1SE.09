@@ -47,7 +47,7 @@ class HttpMedicationRepository {
     final sessions = SessionManagementService.instance;
     final sessionId = sessions.currentSession?.sessionId;
     try {
-      final response = await _dio.request(path,
+      var response = await _dio.request(path,
           data: data,
           queryParameters: query,
           options: Options(
@@ -63,16 +63,35 @@ class HttpMedicationRepository {
       if (response.statusCode == 401 &&
           sessionId != null &&
           sessions.currentSession?.sessionId == sessionId) {
+        final String newToken;
         try {
-          await sessions.refreshAccessToken(_dio);
+          newToken = await sessions.refreshAccessToken(_dio);
         } on UserFacingException catch (error) {
           throw MedicationRequestException(error.userMessage,
               statusCode: error.statusCode);
         }
-        throw const MedicationRequestException(
-            'Phiên đã làm mới. Nội dung được giữ lại; hãy kiểm tra trạng thái rồi thử lại.',
-            statusCode: 401,
-            code: 'session_refreshed');
+        if (method == 'GET' &&
+            sessions.currentSession?.sessionId == sessionId) {
+          response = await _dio.request(path,
+              data: data,
+              queryParameters: query,
+              options: Options(
+                  method: method,
+                  responseType: responseType,
+                  headers: {'Authorization': 'Bearer $newToken'},
+                  followRedirects: false,
+                  validateStatus: (_) => true));
+          if (sessions.currentSession?.sessionId != sessionId) {
+            throw const MedicationRequestException(
+                'Phiên đã thay đổi. Vui lòng mở lại dữ liệu của bé.',
+                code: 'session_changed');
+          }
+        } else {
+          throw const MedicationRequestException(
+              'Phiên đã làm mới. Nội dung được giữ lại; hãy kiểm tra trạng thái rồi thử lại.',
+              statusCode: 401,
+              code: 'session_refreshed');
+        }
       }
       if ((response.statusCode ?? 500) >= 300) {
         throw _failure(response.data, response.statusCode);
@@ -187,13 +206,17 @@ class HttpMedicationRepository {
     final items = (response.data as List).map((raw) {
       if (raw is! Map<String, dynamic> ||
           raw['incident_id'] is! String ||
-          raw['class_id'] != classId ||
           raw['child_name'] is! String ||
           raw['incident_type_label'] is! String ||
           raw['description'] is! String ||
           DateTime.tryParse(raw['reported_at']?.toString() ?? '') == null) {
         throw const MedicationRequestException(
             'Dữ liệu sự cố không hợp lệ. Vui lòng tải lại.',
+            code: 'invalid_response');
+      }
+      if (raw['class_id'] != classId) {
+        throw const MedicationRequestException(
+            'Không thể xác minh sự cố của lớp.',
             code: 'invalid_response');
       }
       return raw;
