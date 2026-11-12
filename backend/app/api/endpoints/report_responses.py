@@ -350,10 +350,15 @@ def get_report_responses(
 
     _ensure_can_read_report(db, report, current_user)
 
-    # Chỉ giáo viên/admin mới "đọc" được phản hồi của phụ huynh.
-    if mark_read and role_of(current_user) in {"teacher", "admin"}:
+    # Đánh dấu đã đọc các phản hồi từ đối phương khi mở xem
+    if mark_read:
         try:
-            mark_all_read(db, report_id)
+            mark_all_read(
+                db,
+                report_id,
+                reader_user_id=current_user.user_id,
+                reader_role=role_of(current_user),
+            )
         except Exception:
             db.rollback()
             logger.exception(
@@ -361,10 +366,16 @@ def get_report_responses(
             )
 
     responses = list_responses(db, report_id)
+    user_role = role_of(current_user)
+    if user_role == "parent":
+        unread = sum(1 for r in responses if r.author_role != ResponseAuthorRole.PARENT.value and not r.is_read)
+    else:
+        unread = sum(1 for r in responses if r.author_role == ResponseAuthorRole.PARENT.value and not r.is_read)
+
     return ReportResponseListResponse(
         daily_report_id=report_id,
         total=len(responses),
-        unread_count=count_unread_from_parent(db, report_id),
+        unread_count=unread,
         responses=[ReportResponseOut(**to_dict(r)) for r in responses],
     )
 

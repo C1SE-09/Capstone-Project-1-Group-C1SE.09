@@ -173,7 +173,7 @@ void main() {
           .height,
       closeTo(54, 1),
     );
-    expect(find.text('Cần chú ý hôm nay'), findsOneWidget);
+    expect(find.text('Cần chú ý'), findsOneWidget);
     expect(find.text('Dị ứng đậu phộng'), findsOneWidget);
     expect(find.text('Đã đến trễ lúc 08:30'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
@@ -191,7 +191,7 @@ void main() {
       closeTo(246, 1),
     );
     expect(
-      tester.getTopLeft(find.text('Cần chú ý hôm nay')).dy,
+      tester.getTopLeft(find.text('Cần chú ý')).dy,
       closeTo(542, 1),
     );
 

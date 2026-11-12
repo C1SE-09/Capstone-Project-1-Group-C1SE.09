@@ -24,7 +24,10 @@ class MockReportResponseRepository extends HttpReportResponseRepository {
   final List<ReportResponse> sentResponses = [];
 
   @override
-  Future<List<ReportResponse>> getResponses(String reportId) async {
+  Future<List<ReportResponse>> getResponses(
+    String reportId, {
+    bool markRead = true,
+  }) async {
     return initialList ?? [];
   }
 

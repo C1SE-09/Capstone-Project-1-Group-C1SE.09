@@ -53,9 +53,15 @@ class HttpReportResponseRepository {
 
   final Dio _dio;
 
-  Future<List<ReportResponse>> getResponses(String reportId) async {
+  Future<List<ReportResponse>> getResponses(
+    String reportId, {
+    bool markRead = true,
+  }) async {
     try {
-      final response = await _dio.get('/api/report-responses/reports/$reportId');
+      final response = await _dio.get(
+        '/api/report-responses/reports/$reportId',
+        queryParameters: {'mark_read': markRead},
+      );
       final data = response.data as Map<String, dynamic>;
       final list = data['responses'] as List<dynamic>? ?? [];
       return list

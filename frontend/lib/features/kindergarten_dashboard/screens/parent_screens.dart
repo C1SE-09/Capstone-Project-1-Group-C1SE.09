@@ -691,7 +691,7 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
 
     // Chỉ hiển thị các mục có dữ liệu thực tế được giáo viên nhập/ghi âm
     final eating = _nonEmpty(report?.eating);
-    final sleeping = _nonEmpty(report?.sleeping);
+    final sleeping = _stripSleepMinutes(report?.sleeping);
     final activities = _nonEmpty(report?.activitiesText);
     final mood = _nonEmpty(report?.mood);
     final health = _nonEmpty(report?.health);
@@ -821,6 +821,14 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
                       reportId: report.dailyReportId,
                       childName: widget.childName,
                       teacherName: widget.teacherName,
+                      onDiscussionUpdated: () {
+                        if (!mounted) return;
+                        if (_currentReport != null && _currentReport!.hasUnreadResponses) {
+                          final updated = _currentReport!.copyWith(unreadResponseCount: 0);
+                          setState(() => _currentReport = updated);
+                          widget.onReportRead?.call(updated);
+                        }
+                      },
                     ),
                   ],
                 ],
@@ -903,4 +911,14 @@ String? _nonEmpty(String? value) {
   if (value == null) return null;
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
+}
+
+String? _stripSleepMinutes(String? value) {
+  final clean = _nonEmpty(value);
+  if (clean == null) return null;
+  final stripped = clean
+      .replaceAll(
+          RegExp(r'\s*(?:[·,–-]\s*)?\d+\s*phút\b', caseSensitive: false), '')
+      .trim();
+  return stripped.isEmpty ? clean : stripped;
 }

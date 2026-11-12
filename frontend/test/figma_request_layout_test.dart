@@ -1823,7 +1823,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chỉnh sửa báo cáo'), findsOneWidget);
-    expect(find.text('Thời lượng (phút)'), findsOneWidget);
+    expect(find.text('Giấc ngủ'), findsOneWidget);
     expect(find.text('Sức khỏe'), findsOneWidget);
     expect(find.text('Gửi báo cáo'), findsNothing);
     await captureUi(tester, 'teacher-report-edit-gv');

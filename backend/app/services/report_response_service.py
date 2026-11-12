@@ -152,17 +152,32 @@ def count_unread_from_parent(db: Session, report_id: uuid.UUID) -> int:
     )
 
 
-def mark_all_read(db: Session, report_id: uuid.UUID) -> int:
-    """Đánh dấu đã đọc mọi phản hồi của phụ huynh. Trả về số row đã đổi."""
-    unread = (
-        db.query(ReportResponse)
-        .filter(
-            ReportResponse.daily_report_id == report_id,
-            ReportResponse.author_role == ResponseAuthorRole.PARENT.value,
-            ReportResponse.is_read.is_(False),
-        )
-        .all()
+def mark_all_read(
+    db: Session,
+    report_id: uuid.UUID,
+    reader_user_id: uuid.UUID | None = None,
+    reader_role: str | None = None,
+) -> int:
+    """Đánh dấu đã đọc các phản hồi chưa đọc trong báo cáo.
+
+    - Nếu có reader_user_id: đánh dấu tin do người khác gửi (author_user_id != reader_user_id).
+    - Nếu reader_role là teacher/admin: đánh dấu tin của phụ huynh.
+    - Nếu reader_role là parent: đánh dấu tin của giáo viên.
+    """
+    query = db.query(ReportResponse).filter(
+        ReportResponse.daily_report_id == report_id,
+        ReportResponse.is_read.is_(False),
     )
+    if reader_user_id is not None:
+        query = query.filter(ReportResponse.author_user_id != reader_user_id)
+    elif reader_role in {"teacher", "admin"}:
+        query = query.filter(ReportResponse.author_role == ResponseAuthorRole.PARENT.value)
+    elif reader_role == "parent":
+        query = query.filter(ReportResponse.author_role != ResponseAuthorRole.PARENT.value)
+    else:
+        query = query.filter(ReportResponse.author_role == ResponseAuthorRole.PARENT.value)
+
+    unread = query.all()
     for row in unread:
         row.is_read = True
     if unread:

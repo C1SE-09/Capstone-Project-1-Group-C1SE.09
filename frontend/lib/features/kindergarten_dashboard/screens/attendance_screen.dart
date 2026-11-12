@@ -90,12 +90,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   : AttendanceStatus.absent),
       };
       _draft = Map.of(_saved);
-      _fetchLatest();
+      _fetchLatest(showLoading: false);
     }
   }
 
-  Future<void> _fetchLatest() async {
-    setState(() => _loading = true);
+  Future<void> _fetchLatest({bool showLoading = true}) async {
+    if (showLoading && widget.roster.isEmpty) {
+      setState(() => _loading = true);
+    }
     try {
       final details = await _repository.getClassAttendanceDetails(
         widget.classId,
@@ -115,7 +117,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         });
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted && _loading) setState(() => _loading = false);
   }
 
   bool get _dirty => widget.roster.any(

@@ -408,7 +408,7 @@ class _DailyReportSummary extends StatelessWidget {
                 icon: 'assets/garden_voice/moon.svg',
                 background: k.infoTint.withValues(alpha: .7),
                 label: 'Giấc ngủ',
-                detail: report!.sleeping ?? 'Chưa cập nhật',
+                detail: _stripSleepMinutes(report!.sleeping) ?? 'Chưa cập nhật',
               ),
               Divider(height: 1, color: k.line),
               _ReportRow(
@@ -623,4 +623,15 @@ class _TeacherNote extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _stripSleepMinutes(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return null;
+  final stripped = trimmed
+      .replaceAll(
+          RegExp(r'\s*(?:[·,–-]\s*)?\d+\s*phút\b', caseSensitive: false), '')
+      .trim();
+  return stripped.isEmpty ? trimmed : stripped;
 }

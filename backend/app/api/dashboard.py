@@ -93,7 +93,7 @@ def _child_dict(child: Child) -> dict[str, Any]:
     }
 
 
-def _report_dict(report: DailyReport) -> dict[str, Any]:
+def _report_dict(report: DailyReport, for_role: str | None = None) -> dict[str, Any]:
     """Chuyển 1 DailyReport → dict khớp entity DailyReport (frontend)."""
     category_map: dict[str, str] = {}
     if report.activities:
@@ -104,16 +104,19 @@ def _report_dict(report: DailyReport) -> dict[str, Any]:
 
     # Phản hồi của phụ huynh (phẳng, cũ → mới) — đính kèm luôn để client
     # không phải gọi thêm 1 request khi mở báo cáo.
+    all_responses = getattr(report, "responses", []) or []
     responses_payload = [
         _response_dict(r) for r in sorted(
-            getattr(report, "responses", []) or [],
+            all_responses,
             key=lambda r: (r.created_at or datetime.min.replace(tzinfo=UTC), r.response_id),
         )
     ]
-    unread_count = sum(
-        1 for r in (getattr(report, "responses", []) or [])
-        if r.author_role == "parent" and not r.is_read
-    )
+    if for_role == "parent":
+        unread_count = sum(1 for r in all_responses if r.author_role != "parent" and not r.is_read)
+    elif for_role == "teacher":
+        unread_count = sum(1 for r in all_responses if r.author_role == "parent" and not r.is_read)
+    else:
+        unread_count = sum(1 for r in all_responses if not r.is_read)
 
     return {
         "daily_report_id": str(report.daily_report_id),
@@ -670,8 +673,8 @@ def get_child_reports(
     )
 
     return {
-        "today_report": _report_dict(today_report) if today_report else None,
-        "recent_reports": [_report_dict(r) for r in recent],
+        "today_report": _report_dict(today_report, for_role="parent") if today_report else None,
+        "recent_reports": [_report_dict(r, for_role="parent") for r in recent],
     }
 
 
@@ -693,7 +696,7 @@ def get_parent_report(
         DailyReportStatus.PUBLISHED, DailyReportStatus.SENT, DailyReportStatus.READ,
     ):
         raise HTTPException(status_code=404, detail="Report not found")
-    return _report_dict(report)
+    return _report_dict(report, for_role="parent")
 
 
 @router.post(
@@ -726,7 +729,7 @@ def mark_report_as_read(
         db.commit()
         db.refresh(report)
 
-    return _report_dict(report)
+    return _report_dict(report, for_role="parent")
 
 
 @router.post(

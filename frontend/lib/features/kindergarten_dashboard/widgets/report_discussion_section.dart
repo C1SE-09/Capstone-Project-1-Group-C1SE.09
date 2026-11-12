@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class ReportDiscussionSection extends StatefulWidget {
     this.onPickImage,
     this.initialResponses,
     this.isTeacher = false,
+    this.onDiscussionUpdated,
   });
 
   final String reportId;
@@ -28,6 +30,7 @@ class ReportDiscussionSection extends StatefulWidget {
   final ImagePickerCallback? onPickImage;
   final List<ReportResponse>? initialResponses;
   final bool isTeacher;
+  final VoidCallback? onDiscussionUpdated;
 
   @override
   State<ReportDiscussionSection> createState() => _ReportDiscussionSectionState();
@@ -45,6 +48,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _errorMessage;
+  Timer? _pollTimer;
 
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
@@ -63,10 +67,57 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
     } else {
       _fetchResponses();
     }
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _syncResponsesSilently();
+    });
+  }
+
+  Future<void> _syncResponsesSilently() async {
+    if (!mounted || _isSending) return;
+    try {
+      final list = await _repo.getResponses(widget.reportId);
+      if (!mounted) return;
+      if (list.length != _responses.length ||
+          !_areListsEqual(list, _responses)) {
+        final wasNearBottom = _isNearBottom();
+        setState(() {
+          _responses = list;
+        });
+        widget.onDiscussionUpdated?.call();
+        if (wasNearBottom) {
+          _scrollToBottom();
+        }
+      }
+    } catch (_) {}
+  }
+
+  bool _isNearBottom() {
+    if (!_scrollController.hasClients) return true;
+    final max = _scrollController.position.maxScrollExtent;
+    final current = _scrollController.position.pixels;
+    return (max - current) < 120;
+  }
+
+  bool _areListsEqual(List<ReportResponse> a, List<ReportResponse> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].responseId != b[i].responseId ||
+          a[i].isResolved != b[i].isResolved ||
+          a[i].isRead != b[i].isRead) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _inputFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -87,6 +138,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
         _responses = list;
         _isLoading = false;
       });
+      widget.onDiscussionUpdated?.call();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -245,6 +297,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
         _selectedImageName = null;
         _isSending = false;
       });
+      widget.onDiscussionUpdated?.call();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -562,6 +615,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                         .indexWhere((r) => r.responseId == msg.responseId);
                     if (idx != -1) _responses[idx] = updated;
                   });
+                  widget.onDiscussionUpdated?.call();
                 }
               } catch (_) {}
             },

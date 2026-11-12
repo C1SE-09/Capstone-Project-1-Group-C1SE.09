@@ -228,7 +228,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                 ),
                 const Divider(height: 21),
                 Text(
-                  'Cần chú ý hôm nay',
+                  'Cần chú ý',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
