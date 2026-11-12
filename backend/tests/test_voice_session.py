@@ -545,7 +545,7 @@ class TestVoiceSessionApi:
 
         assert resp.status_code == 200, resp.text
         body = resp.json()
-        assert body["merged_transcript"] == "Bản một.\nBản hai."
+        assert body["merged_transcript"] == "Bản một Bản hai"
         assert body["clip_count"] == 2
         assert body["skipped_clips"] == 0
         assert body["representative_voice_record_id"] == str(clip1.voice_record_id)

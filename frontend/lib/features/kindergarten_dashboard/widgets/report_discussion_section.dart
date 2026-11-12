@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_report_response_repository.dart';
 import 'package:adark_frontend/domain/entities/report/report_response.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -490,21 +491,44 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
     );
   }
 
+  bool _isMe(ReportResponse msg) {
+    final myUserId = AuthRepository.currentUser?.userId;
+    if (myUserId != null &&
+        myUserId.isNotEmpty &&
+        msg.authorUserId != null &&
+        msg.authorUserId!.isNotEmpty) {
+      return msg.authorUserId == myUserId;
+    }
+    // Fallback khi không có userId để so sánh (e.g. trong widget test):
+    if (widget.isTeacher) {
+      return msg.isFromTeacher;
+    } else {
+      return msg.isFromParent;
+    }
+  }
+
   Widget _buildMessagesList() {
     return Column(
       children: [
         for (final msg in _responses) ...[
-          if (msg.isFromParent)
-            _buildParentMessageItem(msg)
+          if (_isMe(msg))
+            _buildSentMessageItem(msg)
           else
-            _buildTeacherMessageItem(msg),
+            _buildReceivedMessageItem(msg),
           const SizedBox(height: 14),
         ],
       ],
     );
   }
 
-  Widget _buildParentMessageItem(ReportResponse msg) {
+  Widget _buildSentMessageItem(ReportResponse msg) {
+    final avatarLetter = msg.authorName.trim().isNotEmpty
+        ? msg.authorName.trim().characters.first.toUpperCase()
+        : 'M';
+    final readText = widget.isTeacher
+        ? (msg.isRead ? 'Đã gửi · Phụ huynh đã đọc' : 'Đã gửi')
+        : (msg.isRead ? 'Đã gửi · Cô đã đọc' : 'Đã gửi');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -532,7 +556,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
               radius: 14,
               backgroundColor: context.k.brandTint,
               child: Text(
-                'M',
+                avatarLetter,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -551,8 +575,8 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(16),
               bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-              topRight: Radius.circular(4),
+              bottomRight: Radius.circular(4),
+              topRight: Radius.circular(16),
             ),
             border: Border.all(color: context.k.line),
             boxShadow: const [
@@ -595,7 +619,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ),
             const SizedBox(width: 4),
             Text(
-              msg.isRead ? 'Đã gửi · Cô đã đọc' : 'Đã gửi',
+              readText,
               style: TextStyle(
                 fontSize: 11,
                 color: context.k.inkSoft,
@@ -603,47 +627,15 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ),
           ],
         ),
-        if (widget.isTeacher && !msg.isResolved) ...[
-          const SizedBox(height: 6),
-          InkWell(
-            onTap: () async {
-              try {
-                final updated =
-                    await _repo.resolveResponse(msg.responseId, resolved: true);
-                if (mounted) {
-                  setState(() {
-                    final idx = _responses
-                        .indexWhere((r) => r.responseId == msg.responseId);
-                    if (idx != -1) _responses[idx] = updated;
-                  });
-                  widget.onDiscussionUpdated?.call();
-                }
-              } catch (_) {}
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_outline_rounded,
-                      size: 14, color: context.k.brand),
-                  const SizedBox(width: 4),
-                  Text('Đánh dấu đã xử lý',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: context.k.brand,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
 
-  Widget _buildTeacherMessageItem(ReportResponse msg) {
+  Widget _buildReceivedMessageItem(ReportResponse msg) {
+    final avatarLetter = msg.authorName.trim().isNotEmpty
+        ? msg.authorName.trim().characters.first.toUpperCase()
+        : '?';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -652,7 +644,16 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             CircleAvatar(
               radius: 14,
               backgroundColor: context.k.surfaceSunken,
-              child: Icon(Icons.school_rounded, size: 14, color: context.k.brand),
+              child: msg.isFromTeacher
+                  ? Icon(Icons.school_rounded, size: 14, color: context.k.brand)
+                  : Text(
+                      avatarLetter,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: context.k.brand,
+                      ),
+                    ),
             ),
             const SizedBox(width: 8),
             Text(
@@ -663,22 +664,24 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                 color: context.k.ink,
               ),
             ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: context.k.brandTint,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                'GVCN',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: context.k.brand,
+            if (msg.isFromTeacher) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: context.k.brandTint,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'GVCN',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.brand,
+                  ),
                 ),
               ),
-            ),
+            ],
             const SizedBox(width: 6),
             Text(
               _formatTime(msg.createdAt),
@@ -694,7 +697,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
           constraints: const BoxConstraints(maxWidth: 320),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
-            color: context.k.brandTint,
+            color: msg.isFromTeacher ? context.k.brandTint : context.k.surfaceSunken,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(4),
               bottomLeft: Radius.circular(16),
@@ -744,6 +747,42 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ],
           ),
         ),
+        if (widget.isTeacher && !msg.isResolved) ...[
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: () async {
+              try {
+                final updated =
+                    await _repo.resolveResponse(msg.responseId, resolved: true);
+                if (mounted) {
+                  setState(() {
+                    final idx = _responses
+                        .indexWhere((r) => r.responseId == msg.responseId);
+                    if (idx != -1) _responses[idx] = updated;
+                  });
+                  widget.onDiscussionUpdated?.call();
+                }
+              } catch (_) {}
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline_rounded,
+                      size: 14, color: context.k.brand),
+                  const SizedBox(width: 4),
+                  Text('Đánh dấu đã xử lý',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: context.k.brand,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

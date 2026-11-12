@@ -129,7 +129,21 @@ def _report_dict(report: DailyReport, for_role: str | None = None) -> dict[str, 
         "summary_text": report.summary_text or category_map.get("other"),
         "status": report.status.value,
         "published_at": (
-            report.published_at.isoformat() if report.published_at else None
+            report.sent_at.isoformat()
+            if getattr(report, "sent_at", None)
+            else (
+                report.created_at.isoformat()
+                if getattr(report, "created_at", None)
+                else (report.published_at.isoformat() if report.published_at else None)
+            )
+        ),
+        "sent_at": (
+            report.sent_at.isoformat() if getattr(report, "sent_at", None) else None
+        ),
+        "created_at": (
+            report.created_at.isoformat()
+            if getattr(report, "created_at", None)
+            else None
         ),
         "activities": [
             {

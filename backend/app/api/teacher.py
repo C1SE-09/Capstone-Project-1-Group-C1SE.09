@@ -1320,6 +1320,8 @@ def publish_report(
 
     report.status = DailyReportStatus.PUBLISHED
     report.published_at = get_today()
+    if not report.sent_at:
+        report.sent_at = datetime.now(UTC)
     db.commit()
     db.refresh(report)
 
@@ -1337,7 +1339,12 @@ def publish_report(
     return {
         "report_id": str(report.daily_report_id),
         "status": report.status.value,
-        "published_at": report.published_at.isoformat(),
+        "published_at": (
+            report.sent_at.isoformat()
+            if report.sent_at
+            else (report.published_at.isoformat() if report.published_at else None)
+        ),
+        "sent_at": report.sent_at.isoformat() if report.sent_at else None,
     }
 
 

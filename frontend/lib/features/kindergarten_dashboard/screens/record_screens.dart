@@ -1166,9 +1166,12 @@ class _RecordingScreenState extends State<RecordingScreen>
     for (final clip in session.clips) {
       if (!clip.isCompleted) continue;
       firstPreviewBytes ??= _clipLocalBytes[clip.voiceRecordId];
-      final text =
+      var text =
           (_editedClipTranscripts[clip.voiceRecordId] ?? clip.transcript ?? '')
               .trim();
+      while (text.endsWith('.')) {
+        text = text.substring(0, text.length - 1).trim();
+      }
       if (text.isNotEmpty) {
         mergedParts.add(text);
       }
@@ -1177,7 +1180,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     widget.onSubmitSession!(
       session: session,
       editedMergedTranscript:
-          mergedParts.isNotEmpty ? mergedParts.join('\n') : null,
+          mergedParts.isNotEmpty ? mergedParts.join(' ') : null,
       previewAudioBytes: firstPreviewBytes,
     );
   }

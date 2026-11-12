@@ -648,18 +648,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   String _rowTimeLabel(_HistoryRow row) {
-    final published = row.report.publishedAt;
-    if (published != null) {
-      return '${published.hour.toString().padLeft(2, '0')}:${published.minute.toString().padLeft(2, '0')}';
+    final rep = row.report;
+    // 1. Kiểm tra các mốc thời gian có thể mang timestamp thực tế (theo múi giờ địa phương)
+    final candidates = [
+      rep.sentAt,
+      rep.publishedAt,
+      rep.createdAt,
+    ];
+    for (final dt in candidates) {
+      if (dt != null) {
+        final local = dt.toLocal();
+        // Chỉ lấy khi có thông tin giờ phút thực tế (khác 00:00)
+        if (local.hour != 0 || local.minute != 0) {
+          return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+        }
+      }
     }
-    final d = row.report.reportDate;
+    // 2. Kiểm tra nếu reportDate có chứa giờ phút (khác 00:00)
+    final d = rep.reportDate.toLocal();
     if (d.hour != 0 || d.minute != 0) {
       return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     }
-    if (row.child.time.trim().isNotEmpty) {
-      return row.child.time.trim();
+    // 3. Kiểm tra child.time nếu hợp lệ và không phải 00:00
+    final childTime = row.child.time.trim();
+    if (childTime.isNotEmpty && childTime != '00:00') {
+      return childTime;
     }
-    return '08:00';
+    // 4. Nếu bản ghi cũ trong database chỉ lưu ngày (date-only) dẫn đến 00:00,
+    // fallback về khung giờ báo cáo chiều mặc định (16:00) của trường mầm non thay vì 00:00.
+    return '16:00';
   }
 
   @override
