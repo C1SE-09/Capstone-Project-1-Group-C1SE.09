@@ -782,8 +782,9 @@ export default function HealthExamPage() {
               mutate();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="kbtn kbtn-secondary text-sm"
+            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition disabled:opacity-50"
             title="Làm mới"
+            disabled={isEditMode}
           >
             ↻
           </button>
@@ -791,7 +792,7 @@ export default function HealthExamPage() {
           {/* Nút Xuất Excel */}
           <button
             onClick={handleExportExcel}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Xuất danh sách sổ sức khoẻ ra file Excel"
           >
             📥 Xuất Excel
@@ -800,62 +801,53 @@ export default function HealthExamPage() {
           {/* Nút Nhập file */}
           <button
             onClick={openImportModal}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
             title="Nhập kết quả từ file Excel"
             disabled={isEditMode}
           >
             📤 Nhập file
           </button>
 
-          {/* Nút Chế độ Sửa (Bulk Edit) - Bỏ switch toggle */}
-          <button
-            onClick={() => {
-              if (isEditMode && dirtyRows.length > 0) {
-                if (window.confirm(`Bạn có ${dirtyRows.length} thay đổi chưa lưu. Bạn có chắc muốn thoát mà không lưu?`)) {
-                  cancelAllEdits();
-                }
-                return;
-              }
-              setIsEditMode(!isEditMode);
-            }}
-            className={`kbtn text-sm flex items-center gap-1.5 transition-all ${
-              isEditMode
-                ? "bg-brand/10 text-brand border border-brand/30 shadow-sm"
-                : "kbtn-secondary hover:border-brand"
-            }`}
-            title="Bật/tắt chế độ chỉnh sửa trực tiếp số liệu trên bảng (Chuẩn Excel)"
-          >
-            <span>✏️</span>
-            <span>{isEditMode ? "Đang chỉnh sửa" : "Chỉnh sửa"}</span>
-          </button>
-
-          {/* Nút Lưu và Hủy thay đổi khi ở Edit Mode */}
-          {isEditMode && (
+          {!isEditMode ? (
+            <button
+              onClick={() => setIsEditMode(true)}
+              className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+              title="Bật chế độ chỉnh sửa trực tiếp số liệu trên bảng (Chuẩn Excel)"
+              disabled={filtered.length === 0}
+            >
+              <span>✏️</span>
+              <span>Chỉnh sửa bảng</span>
+            </button>
+          ) : (
             <>
               <button
                 onClick={cancelAllEdits}
                 disabled={savingTable}
-                className="kbtn kbtn-secondary text-xs hover:border-bad hover:text-bad transition-colors"
+                className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
                 title="Hủy bỏ mọi thay đổi chưa lưu"
               >
-                ✕ Hủy thay đổi
+                ✕ Hủy bỏ
               </button>
               <button
                 onClick={handleSaveAllEdits}
                 disabled={savingTable}
-                className="kbtn text-xs font-bold text-white flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg shadow-md hover:shadow-lg transition-all"
-                style={{ background: "#16665a" }}
+                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
                 title="Lưu toàn bộ thay đổi của tất cả các dòng đã sửa"
               >
                 {savingTable ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu...</span>
+                    <span>Đang lưu ({dirtyRows.length})...</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu tất cả thay đổi {dirtyRows.length > 0 ? `(${dirtyRows.length})` : ""}</span>
+                    <span>Lưu thay đổi</span>
+                    {dirtyRows.length > 0 && (
+                      <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {dirtyRows.length}
+                      </span>
+                    )}
                   </>
                 )}
               </button>

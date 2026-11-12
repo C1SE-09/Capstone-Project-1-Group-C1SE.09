@@ -679,8 +679,9 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               mutate();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
+            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition disabled:opacity-50"
             title="Làm mới"
+            disabled={isEditMode}
           >
             ↻
           </button>
@@ -693,36 +694,26 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           </button>
           <button
             onClick={() => setImportOpen(true)}
-            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
             title="Nhập dữ liệu từ file Excel / CSV"
+            disabled={isEditMode}
           >
             📤 Nhập file
           </button>
-          {/* Nút Chỉnh sửa */}
-          <button
-            onClick={() => {
-              if (isEditMode && dirtyRows.length > 0) {
-                if (window.confirm("Bạn đang có thay đổi chưa lưu. Bạn có muốn thoát chế độ sửa và hủy thay đổi không?")) {
-                  cancelAllEdits();
-                }
-                return;
-              }
-              setIsEditMode(!isEditMode);
-              setOpenChildDropdownId(null);
-            }}
-            className={`px-4 py-2 rounded-full border border-[#E5E8EB] text-xs font-bold flex items-center gap-1.5 transition ${
-              isEditMode
-                ? "bg-[#FFF0D9] text-[#B0791B] border-[#B0791B]"
-                : "bg-white text-[#087F70] hover:bg-[#E6F3EB]"
-            }`}
-            title="Bật/tắt chế độ chỉnh sửa trực tiếp trên bảng"
-          >
-            <span>✏️</span>
-            <span>{isEditMode ? "Đang chỉnh sửa" : "Chỉnh sửa"}</span>
-          </button>
-
-          {/* Nút Lưu tất cả thay đổi khi ở Edit Mode hoặc có thay đổi */}
-          {isEditMode && (
+          {!isEditMode ? (
+            <button
+              onClick={() => {
+                setIsEditMode(true);
+                setOpenChildDropdownId(null);
+              }}
+              className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
+              disabled={filtered.length === 0}
+            >
+              <span>✏️</span>
+              <span>Chỉnh sửa bảng</span>
+            </button>
+          ) : (
             <>
               <button
                 onClick={cancelAllEdits}
@@ -730,12 +721,12 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                 className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
                 title="Hủy bỏ mọi thay đổi chưa lưu"
               >
-                ✕ Hủy thay đổi
+                ✕ Hủy bỏ
               </button>
               <button
                 onClick={handleSaveAllEdits}
                 disabled={savingTable}
-                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
+                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
                 title="Lưu tất cả thay đổi trên mọi dòng"
               >
                 {savingTable ? (
@@ -746,9 +737,9 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu tất cả thay đổi</span>
+                    <span>Lưu thay đổi</span>
                     {dirtyRows.length > 0 && (
-                      <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-1">
+                      <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                         {dirtyRows.length}
                       </span>
                     )}
@@ -758,12 +749,14 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             </>
           )}
 
-          <button
-            onClick={openCreate}
-            className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
-          >
-            + Thêm phụ huynh
-          </button>
+          {!isEditMode && (
+            <button
+              onClick={openCreate}
+              className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
+            >
+              + Thêm phụ huynh
+            </button>
+          )}
         </div>
       }
     >
@@ -835,7 +828,16 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed min-w-[960px]">
+              <colgroup>
+                <col className="w-11" />
+                <col className="w-[23%]" />
+                <col className="w-[17%]" />
+                <col />
+                <col className="w-[13%]" />
+                <col className="w-[14%]" />
+                <col className="w-[100px]" />
+              </colgroup>
               <thead
                 className="text-xs uppercase tracking-wider transition-colors duration-200"
                 style={{
@@ -845,7 +847,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               >
                 {selectedIds.length > 0 ? (
                   <tr className="border-b border-[#F2D5CE]">
-                    <th className="px-3 py-2.5 text-center w-10">
+                    <th className="px-3 py-2.5 text-center">
                       <input
                         type="checkbox"
                         className="rounded cursor-pointer"
@@ -890,7 +892,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                   </tr>
                 ) : (
                   <tr>
-                    <th className="px-3 py-3 text-center w-10">
+                    <th className="px-3 py-3 text-center">
                       <input
                         type="checkbox"
                         className="rounded cursor-pointer"
@@ -928,9 +930,9 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                     return cName.includes(qChild) || clsName.includes(qChild) || nick.includes(qChild);
                   });
 
-                  // Class ô input ở Chế độ Sửa: viền mỏng xám nhạt, padding thoải mái
+                  // Class ô input ở Chế độ Sửa: đồng bộ kích thước/padding với View Mode
                   const editInputBase =
-                    "w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 transition-all focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none";
+                    "w-full bg-white border border-slate-300 rounded px-2 py-0.5 text-sm text-slate-800 transition-colors focus:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 focus:outline-none";
 
                   return (
                     <tr
@@ -944,121 +946,121 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                       }`}
                     >
                       {/* Checkbox chọn dòng */}
-                      <td className="px-3 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {isDirty ? (
-                            <span
-                              className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"
-                              title="Dòng này có thay đổi chưa lưu"
-                            />
-                          ) : (
-                            <span className="w-2 h-2 shrink-0" />
-                          )}
-                          <input
-                            type="checkbox"
-                            className="rounded cursor-pointer text-brand focus:ring-brand/30"
-                            checked={isSelected}
-                            onChange={() => toggleSelect(p.id)}
-                            title="Chọn dòng"
+                      <td className="relative px-3 py-3 text-center">
+                        {isEditMode && isDirty && (
+                          <span
+                            className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse pointer-events-none"
+                            title="Dòng này có thay đổi chưa lưu"
                           />
-                        </div>
+                        )}
+                        <input
+                          type="checkbox"
+                          className="rounded cursor-pointer text-brand focus:ring-brand/30"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(p.id)}
+                          title="Chọn dòng"
+                        />
                       </td>
 
                       {/* Cột Họ tên: View Mode vs Edit Mode */}
-                      <td className="px-3.5 py-3">
-                        <div className="flex items-center gap-2.5">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className="w-8 h-8 flex items-center justify-center rounded-full text-white text-xs font-semibold shrink-0 shadow-2xs"
                             style={{ background: "#4B6F8C" }}
                           >
                             {(rowData.full_name || "P").charAt(0).toUpperCase()}
                           </div>
-                          {isEditMode ? (
-                            <div className="flex flex-col gap-2 flex-1 min-w-[170px]">
-                              <input
-                                type="text"
-                                className={`${editInputBase} font-semibold ${
-                                  isCellDirty(p, "full_name")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950"
-                                    : ""
-                                }`}
-                                value={rowData.full_name}
-                                onChange={(e) => updateCell(p, "full_name", e.target.value)}
-                                placeholder="Họ và tên phụ huynh..."
-                              />
-                              <input
-                                type="email"
-                                className={`${editInputBase} text-[11px] text-slate-500 py-1 ${
-                                  isCellDirty(p, "email")
-                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                    : ""
-                                }`}
-                                value={rowData.email}
-                                onChange={(e) => updateCell(p, "email", e.target.value)}
-                                placeholder="Gmail phụ huynh..."
-                              />
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="font-semibold text-slate-800 text-sm">
-                                {p.full_name}
-                                {isDirty && (
-                                  <span className="ml-1.5 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
-                                    chưa lưu
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-500 font-normal mt-0.5">
-                                {p.email || "—"}
-                              </div>
-                            </div>
-                          )}
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                            {isEditMode ? (
+                              <>
+                                <input
+                                  type="text"
+                                  className={`${editInputBase} font-semibold ${
+                                    isCellDirty(p, "full_name")
+                                      ? "bg-amber-50 border-amber-400 text-amber-950"
+                                      : ""
+                                  }`}
+                                  value={rowData.full_name}
+                                  onChange={(e) => updateCell(p, "full_name", e.target.value)}
+                                  placeholder="Họ và tên phụ huynh..."
+                                />
+                                <input
+                                  type="email"
+                                  className={`${editInputBase} text-xs text-slate-500 ${
+                                    isCellDirty(p, "email")
+                                      ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                      : ""
+                                  }`}
+                                  value={rowData.email}
+                                  onChange={(e) => updateCell(p, "email", e.target.value)}
+                                  placeholder="Gmail phụ huynh..."
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-full px-2 py-0.5 border border-transparent rounded font-semibold text-slate-800 text-sm truncate">
+                                  {p.full_name}
+                                  {isDirty && (
+                                    <span className="ml-1.5 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
+                                      chưa lưu
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="w-full px-2 py-0.5 border border-transparent rounded text-xs text-slate-500 font-normal truncate">
+                                  {p.email || "—"}
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </td>
 
                       {/* Cột SĐT / Quan hệ: View Mode vs Edit Mode */}
-                      <td className="px-3.5 py-3">
-                        {isEditMode ? (
-                          <div className="flex flex-col gap-2 min-w-[130px]">
-                            <input
-                              type="tel"
-                              className={`${editInputBase} font-semibold ${
-                                isCellDirty(p, "phone")
-                                  ? "bg-amber-50 border-amber-400 text-amber-950"
-                                  : ""
-                              }`}
-                              value={rowData.phone}
-                              onChange={(e) => updateCell(p, "phone", e.target.value)}
-                              placeholder="Số điện thoại..."
-                            />
-                            <input
-                              type="text"
-                              className={`${editInputBase} text-[11px] text-slate-500 py-1 ${
-                                isCellDirty(p, "relationship")
-                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                  : ""
-                              }`}
-                              value={rowData.relationship}
-                              onChange={(e) => updateCell(p, "relationship", e.target.value)}
-                              placeholder="Quan hệ (Bố, Mẹ...)"
-                            />
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="font-semibold text-slate-800 text-sm">
-                              {p.phone}
-                            </div>
-                            <div className="text-xs text-slate-500 font-normal mt-0.5">
-                              {p.relationship || "Phụ huynh"}
-                            </div>
-                          </div>
-                        )}
+                      <td className="px-4 py-3">
+                        <div className="-mx-2 flex flex-col gap-0.5">
+                          {isEditMode ? (
+                            <>
+                              <input
+                                type="tel"
+                                className={`${editInputBase} font-semibold ${
+                                  isCellDirty(p, "phone")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950"
+                                    : ""
+                                }`}
+                                value={rowData.phone}
+                                onChange={(e) => updateCell(p, "phone", e.target.value)}
+                                placeholder="Số điện thoại..."
+                              />
+                              <input
+                                type="text"
+                                className={`${editInputBase} text-xs text-slate-500 ${
+                                  isCellDirty(p, "relationship")
+                                    ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
+                                    : ""
+                                }`}
+                                value={rowData.relationship}
+                                onChange={(e) => updateCell(p, "relationship", e.target.value)}
+                                placeholder="Quan hệ (Bố, Mẹ...)"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-full px-2 py-0.5 border border-transparent rounded font-semibold text-slate-800 text-sm truncate">
+                                {p.phone}
+                              </div>
+                              <div className="w-full px-2 py-0.5 border border-transparent rounded text-xs text-slate-500 font-normal truncate">
+                                {p.relationship || "Phụ huynh"}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </td>
 
                       {/* Cột Con liên kết: Dropdown Multi-select ở Edit Mode vs Tag Badge ở View Mode */}
-                      <td className="px-3.5 py-3 relative">
+                      <td className="px-4 py-3 relative">
                         {isEditMode ? (
-                          <div className="min-w-[190px] relative">
+                          <div className="-mx-2 relative">
                             {/* Nút mở Dropdown */}
                             <button
                               type="button"
@@ -1066,7 +1068,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                 setOpenChildDropdownId(openChildDropdownId === p.id ? null : p.id);
                                 setChildSearchQuery("");
                               }}
-                              className={`w-full text-left bg-white border rounded px-2.5 py-1.5 text-xs flex items-center justify-between gap-1 transition-all ${
+                              className={`w-full text-left bg-white border rounded px-2 py-1 text-xs flex items-center justify-between gap-1 transition-colors ${
                                 isCellDirty(p, "child_ids")
                                   ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
                                   : "border-slate-300 hover:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 text-slate-800"
@@ -1188,81 +1190,85 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           </div>
                         ) : (
                           /* View Mode: Badge/Tag nhỏ gọn, +X nếu > 2 con */
-                          <div className="max-w-xs">
-                            {childObjects.length === 0 ? (
-                              <span className="text-xs text-slate-400 italic">Chưa liên kết</span>
-                            ) : childObjects.length <= 2 ? (
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {childObjects.map((c) => (
+                          <div className="-mx-2">
+                            <div className="w-full px-2 py-1 border border-transparent rounded">
+                              {childObjects.length === 0 ? (
+                                <span className="text-xs text-slate-400 italic">Chưa liên kết</span>
+                              ) : childObjects.length <= 2 ? (
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {childObjects.map((c) => (
+                                    <span
+                                      key={c.id}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs truncate max-w-[130px]"
+                                      title={`${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`}
+                                    >
+                                      {c.full_name}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  {childObjects.slice(0, 2).map((c) => (
+                                    <span
+                                      key={c.id}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs truncate max-w-[110px]"
+                                      title={`${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`}
+                                    >
+                                      {c.full_name}
+                                    </span>
+                                  ))}
                                   <span
-                                    key={c.id}
-                                    className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs truncate max-w-[130px]"
-                                    title={`${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-brand/10 text-brand border border-brand/20 cursor-help"
+                                    title={childObjects
+                                      .map((c) => `${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`)
+                                      .join(", ")}
                                   >
-                                    {c.full_name}
+                                    +{childObjects.length - 2}
                                   </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5">
-                                {childObjects.slice(0, 2).map((c) => (
-                                  <span
-                                    key={c.id}
-                                    className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs truncate max-w-[110px]"
-                                    title={`${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`}
-                                  >
-                                    {c.full_name}
-                                  </span>
-                                ))}
-                                <span
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-brand/10 text-brand border border-brand/20 cursor-help"
-                                  title={childObjects
-                                    .map((c) => `${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`)
-                                    .join(", ")}
-                                >
-                                  +{childObjects.length - 2}
-                                </span>
-                              </div>
-                            )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
 
                       {/* Cột Tài khoản: View Mode vs Edit Mode */}
-                      <td className="px-3.5 py-3">
-                        {isEditMode ? (
-                          <div className="min-w-[130px] relative flex items-center">
-                            <span className="absolute left-2.5 text-xs text-slate-400 font-medium pointer-events-none select-none">
-                              @
-                            </span>
-                            <input
-                              type="text"
-                              className={`${editInputBase} pl-6 ${
+                      <td className="px-4 py-3">
+                        <div className="-mx-2">
+                          {isEditMode ? (
+                            <div
+                              className={`w-full px-2 py-1 border rounded text-xs font-medium inline-flex items-center transition-colors focus-within:border-[#4B6F8C] focus-within:ring-1 focus-within:ring-[#4B6F8C]/30 ${
                                 isCellDirty(p, "username")
-                                  ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
-                                  : ""
+                                  ? "bg-amber-50 border-amber-400 text-amber-950"
+                                  : "bg-white border-slate-300 text-slate-700"
                               }`}
-                              value={rowData.username}
-                              onChange={(e) => updateCell(p, "username", e.target.value)}
-                              placeholder="username..."
-                            />
-                          </div>
-                        ) : (
-                          <div className="text-slate-700 text-xs font-medium">
-                            {p.username ? `@${p.username}` : <span className="text-slate-300">—</span>}
-                          </div>
-                        )}
+                            >
+                              <span className="text-slate-400 select-none shrink-0">@</span>
+                              <input
+                                type="text"
+                                className="w-full min-w-0 bg-transparent text-xs font-medium text-inherit focus:outline-none"
+                                value={rowData.username}
+                                onChange={(e) => updateCell(p, "username", e.target.value)}
+                                placeholder="username..."
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-full px-2 py-1 border border-transparent rounded text-slate-700 text-xs font-medium truncate">
+                              {p.username ? `@${p.username}` : <span className="text-slate-300">—</span>}
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Cột Trạng thái: Badge bo tròn chuẩn SaaS */}
-                      <td className="px-3.5 py-3">
+                      <td className="px-4 py-3">
                         <button
                           type="button"
                           onClick={() => {
                             if (isEditMode) toggleRowStatus(p);
                           }}
                           disabled={!isEditMode}
-                          className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all shadow-2xs flex items-center gap-1.5 ${
+                          className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap ${
                             rowData.status === "active"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-slate-100 text-slate-600 border border-slate-200"
@@ -1275,7 +1281,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           title={isEditMode ? "Click để đổi trạng thái" : undefined}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                               rowData.status === "active" ? "bg-emerald-500" : "bg-slate-400"
                             }`}
                           />
@@ -1284,7 +1290,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                       </td>
 
                       {/* Cột Thao tác: Icon Sửa ✏️ & Xóa 🗑️ với gap an toàn */}
-                      <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
