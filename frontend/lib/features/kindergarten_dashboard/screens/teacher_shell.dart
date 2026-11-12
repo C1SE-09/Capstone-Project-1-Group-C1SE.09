@@ -29,6 +29,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_m
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_notifications_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 
 enum TeacherTab { overview, classList, history, account }
 
@@ -60,6 +61,7 @@ class TeacherShell extends StatefulWidget {
 
 class _TeacherShellState extends State<TeacherShell> {
   TeacherTab tab = TeacherTab.overview;
+  final _pages = <TeacherTab, Widget>{};
   late final HttpDashboardRepository repository =
       widget.repository ?? HttpDashboardRepository();
   late final HttpClassDataRepository classRepository =
@@ -93,6 +95,7 @@ class _TeacherShellState extends State<TeacherShell> {
         widget.initialAttendanceDate != oldWidget.initialAttendanceDate ||
         widget.notificationId != oldWidget.notificationId) {
       _activeClassId = widget.classId;
+      _pages.clear();
       _notificationOpened = false;
       _initData();
     }
@@ -445,15 +448,12 @@ class _TeacherShellState extends State<TeacherShell> {
     String className, {
     bool popCurrentRoute = false,
   }) {
-    if (popCurrentRoute) Navigator.of(context).pop();
     if (destination == GardenVoiceTeacherDestination.record) {
       openRecord(className);
       return;
     }
+    if (popCurrentRoute) Navigator.of(context).pop();
     setState(() {
-      if (destination != GardenVoiceTeacherDestination.classList) {
-        healthOnly = false;
-      }
       tab = switch (destination) {
         GardenVoiceTeacherDestination.home => TeacherTab.overview,
         GardenVoiceTeacherDestination.classList => TeacherTab.classList,
@@ -472,7 +472,8 @@ class _TeacherShellState extends State<TeacherShell> {
   Widget build(BuildContext context) => FutureBuilder<void>(
         future: _initFuture,
         builder: (context, initSnapshot) {
-          if (initSnapshot.connectionState != ConnectionState.done) {
+          if (initSnapshot.connectionState != ConnectionState.done &&
+              _pages.isEmpty) {
             return const Scaffold(
                 body: Center(child: CircularProgressIndicator()));
           }
@@ -491,7 +492,8 @@ class _TeacherShellState extends State<TeacherShell> {
           return FutureBuilder<List<Child>>(
             future: childrenFuture,
             builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
+              if (snapshot.connectionState != ConnectionState.done &&
+                  !snapshot.hasData) {
                 return const Scaffold(
                     body: Center(child: CircularProgressIndicator()));
               }
@@ -510,7 +512,8 @@ class _TeacherShellState extends State<TeacherShell> {
               return FutureBuilder<String>(
                 future: classNameFuture,
                 builder: (context, classSnapshot) {
-                  if (classSnapshot.connectionState != ConnectionState.done) {
+                  if (classSnapshot.connectionState != ConnectionState.done &&
+                      !classSnapshot.hasData) {
                     return const Scaffold(
                         body: Center(child: CircularProgressIndicator()));
                   }
@@ -607,34 +610,45 @@ class _TeacherShellState extends State<TeacherShell> {
                             openNotifications(className, children),
                       ),
                   };
+                  _pages[tab] = page;
                   return GardenVoiceScope(
                     child: Builder(
                       builder: (context) => Scaffold(
                         backgroundColor: context.k.canvas,
-                        body: SafeArea(
-                          bottom: false,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) => Align(
-                              alignment: Alignment.topCenter,
-                              child: SizedBox(
-                                width: constraints.maxWidth > 480
-                                    ? 480
-                                    : constraints.maxWidth,
-                                height: constraints.maxHeight,
-                                child: page,
+                        body: GardenVoiceNavigationFrame(
+                          activeTab: tab,
+                          autoHide: true,
+                          body: SafeArea(
+                            bottom: false,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) => Align(
+                                alignment: Alignment.topCenter,
+                                child: SizedBox(
+                                  width: constraints.maxWidth > 480
+                                      ? 480
+                                      : constraints.maxWidth,
+                                  height: constraints.maxHeight,
+                                  child: IndexedStack(
+                                    index: tab.index,
+                                    children: [
+                                      for (final value in TeacherTab.values)
+                                        TickerMode(
+                                            enabled: value == tab,
+                                            child: _pages[value] ??
+                                                const SizedBox.shrink())
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        bottomNavigationBar: _TeacherNavigation(
-                          tab: tab,
-                          onTab: (value) => setState(() {
-                            if (value != TeacherTab.classList) {
-                              healthOnly = false;
-                            }
-                            tab = value;
-                          }),
-                          onRecord: () => openRecord(className),
+                          navigation: _TeacherNavigation(
+                            tab: tab,
+                            onTab: (value) => setState(() {
+                              tab = value;
+                            }),
+                            onRecord: () => openRecord(className),
+                          ),
                         ),
                       ),
                     ),

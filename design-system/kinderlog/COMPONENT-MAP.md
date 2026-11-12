@@ -33,6 +33,13 @@ Không thêm dependency Code Connect hay framework design system chỉ để dù
 
 ## Garden Voice — component đã port cục bộ
 
+**Quyết định tích hợp develop 12/11/2026:** nhận Nunito toàn app (kể cả Login),
+giữ layout/hành vi Login và pill/navigation local đã được người dùng duyệt.
+Các mô tả BeVietnamPro/scope font bên dưới là lịch sử baseline; rules sẽ được
+cập nhật riêng. Renderer SVG nav dùng `SvgAssetLoader.colorMapper` cho API
+`flutter_svg` 2.0.10; không đổi dependency. Header thảo luận dùng Wrap để không
+tràn khi mở báo cáo trong sheet hẹp, giữ nguyên nghiệp vụ của upstream.
+
 Garden Voice dùng font Nunito và palette riêng. `GardenVoiceScope` trong
 `theme.dart` áp dụng token cục bộ cho màn đã port, nên không đổi đột ngột UI còn
 lại đang theo baseline A2.
@@ -49,12 +56,44 @@ lại đang theo baseline A2.
 | [GV / KPageHeader · 452:813](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=452-813) | `KAppBar` (`widgets.dart`) trong `GardenVoiceScope` | GV: nền `canvas`, bỏ đường kẻ đáy; Main (`onBack == null`) dùng title Nunito Bold `20/1.4` + subtitle Regular `14/1.4` (gap 2px); Back/Form (`onBack != null`) dùng nút back `44×44` (`assets/garden_voice/hub_back.svg`, giữ tooltip `'Quay lại'`) + title Nunito Bold `16/1.4` + subtitle Medium `12/1.4` (gap 1px). |
 | [GV / KSettingsRow · 452:836](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=452-836) | `KInfoRow` (`widgets.dart`) trong `GardenVoiceScope` | GV: `minHeight: 48`, padding `16×13`, gap `12px`, label/value Nunito Regular `14/1.4` (`inkSoft` / `ink`, hoặc `bad` khi `danger: true`). Ngoài GV giữ label 13px, padding `14×10` A2. |
 | [GV / KSearchField · 452:854](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=452-854) | `SearchField` (`widgets.dart`) trong `GardenVoiceScope` | GV (variant Mobile `452:855` / `452:858`): cao `48px`, radius `12px`, nền `surface`, viền `1px lineStrong` (`#B5D4CE`) / focus `1px brand` (`#087F70`), icon `assets/garden_voice/record_search.svg` (`16.25×16.25`, gap 10px, padding ngang 14px), chữ/placeholder Nunito Regular `14/1.4` (`ink` / `inkSoft`). |
-| [GV / Navigation teacher · 456:1725](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=456-1725) | `widgets/garden_voice_teacher_navigation.dart` | SVG active/inactive local, 5 action, shell 60 + bottom 16/SafeArea. Review 2026-11-11: live frame `453:801` dùng shell/edge/selected `#F1F7F6` / `#B5D4CE` / `#CBE9DE`; widget hiện resolve qua `surface` / `line` / `brandTint`, chưa khớp các màu này. |
-| [GV / Navigation parent · 456:1834](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=456-1834) | `widgets/garden_voice_parent_navigation.dart` | SVG active/inactive local, 4 action. |
+| [GV / Navigation teacher · 456:1725](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=456-1725) | `widgets/garden_voice_teacher_navigation.dart` → `GardenVoiceNavigation` | Batch A 12/11/2026: screen instances `618:2046/2203/2165/2354`; shell 362×60 tối đa, inset 6, gap 3, radius 30, selected 48/radius 24 không viền. Light dùng `navigationSurface` / `lineStrong` / `navigationSelected` = `#F1F7F6/#B5D4CE/#CBE9DE`; Micro vẫn là action. |
+| [GV / Navigation parent · 456:1834](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=456-1834) | `widgets/garden_voice_parent_navigation.dart` → `GardenVoiceNavigation` | Batch A theo screen instances `463:1701/464:1664/463:1828`: shell radius 24, selected viền 1 `navigationSelectedBorder` (`#A1CFC0`), rộng hơn inactive 2dp. Không lấy radius 30/no border của component Reports thay cho instance. Callback Báo cáo vẫn mở sheet trong ParentFlow. |
 | [GV / Class header · 564:1706](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=564-1706) | `widgets/garden_voice_class_header.dart` → `GardenVoiceClassHeader` | Dùng chung cho ClassList, Attendance và teacher Timetable: `school_v2.png`, tên lớp/cô, chuông và 4 class tabs. Callback do caller sở hữu; không vẽ badge đơn nghỉ khi không có count thật. |
 | [GV / Medication & emergency · 454:1384, 454:1487, 563:1649](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=454-1384) | `ParentRequestLayout`, `MedicationCard`, `MedicationBadge`, `MedicationAction`, `GardenVoiceTeacherNavigation` | `ParentRequestLayout` hỗ trợ subtitle và caller-owned `onBack` mà không đổi các caller cũ. `MedicationCard` có radius/color/border overrides; `MedicationBadge.showDot` chỉ bật cho trạng thái thuốc GV. API/response quyết định status. |
 
 ## Typography và token
+
+**Quyết định mới sau review Android (12/11/2026): tạm chỉ dùng Light.**
+`main.dart` không cung cấp darkTheme và cố định ThemeMode.light;
+`ThemeController.load()` không áp preference Dark/System cũ, `set()` chỉ nhận Light.
+`ThemeSelector` chỉ hiện Sáng. Các dòng kiểm kê Dark bên dưới là khả năng legacy/test,
+không phải Dark đã được duyệt hoặc còn bật trong app main. Chưa đổi palette Light
+đã duyệt. Theo dõi runtime/motion tại VISUAL-QA mục Android main.dart.
+
+Navigation Batch A giữ API enum/callback của hai wrapper; `gardenVoiceNavigationTheme`
+chỉ thay palette của navigation, không đổi `brandTint` hoặc theme toàn màn. Dark dùng
+palette tối hiện có và `ColorMapper` cho từng màu SVG (không tô cả icon một màu);
+`navigationPortrait` giữ fill đầu người, `navigationShadow` giữ shadow theo theme.
+Chưa có node dark mục tiêu, không tuyên bố dark khớp Figma. Toàn màn Garden Voice
+vẫn có nền sáng do scope cũ. Bảy SVG đã xuất lại đúng state: teacher home active,
+class active, account active/inactive; parent home active, account active/inactive.
+Xem bằng chứng và giới hạn tại [VISUAL-QA.md](VISUAL-QA.md), mục Batch A.
+
+Batch B (12/11/2026, sau khi người dùng duyệt Batch A): renderer navigation đặt
+một `AnimatedPositioned` chung sau các icon, 220ms/ease-out; đổi đích giữa chừng
+đi tiếp từ vị trí đang vẽ. Icon crossfade SVG, Micro phản hồi nhấn riêng. Thông số
+motion là yêu cầu người dùng, không phải số đo Figma. `GardenVoiceNavigationFrame`
+trong `widgets/garden_voice_navigation_scroll.dart` thử hide/show ở teacher History
+và parent Notifications; các tab khác vẫn dành chỗ như Batch A. Padding cuối list
+dùng `GardenVoiceNavigationFrame.bottomPaddingOf(context)` để chỉ cộng76dp khi
+overlay, không chừa dải trắng ngoài vùng cuộn. Hai shell giữ lazily visited pages
+qua `IndexedStack`; đổi lớp/trẻ reset subtree theo identity, không lẫn filter cũ.
+
+**Cập nhật sau kiểm tra Tổng quan trên Samsung:** hai root shell nay truyền
+`autoHide: true` cho tất cả tab chính (Teacher4tab, Parent3tab; Micro/Báo cáo PH
+vẫn là action). Mô tả chỉ bật History/Notifications ở trên là phạm vi pilot cũ,
+không còn là giới hạn hiện tại. Màn con có Scaffold/navigation riêng không tự
+được suy ra đã chuyển sang auto-hide trong fix này.
 
 Trang sửa bé (`screens/parent_child_edit_screen.dart`, 10/11/2026) mở từ bút chì
 trong sheet `454:2379`. Đã bổ sung frame [`632:1535`](https://www.figma.com/design/9RurF0HiJlYLVDV7ljp2bH/Redesign-Kindergarten-Management-Dashboard?node-id=632-1535)

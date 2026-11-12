@@ -187,6 +187,79 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Login keeps password compact with a centered, accessible reveal control',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      theme: kinderTheme(),
+      home: LoginScreen(
+        authRepository: _VisualAuthRepository(),
+        onLogin: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextField);
+    final usernameBox = find.ancestor(
+      of: fields.first,
+      matching: find.byType(Container),
+    ).first;
+    final passwordBox = find.ancestor(
+      of: fields.last,
+      matching: find.byType(Container),
+    ).first;
+    expect(tester.getSize(usernameBox).height, closeTo(58, .1));
+    expect(tester.getSize(passwordBox).height, closeTo(58, .1));
+
+    final reveal = find.byType(IconButton);
+    expect(tester.getSize(reveal).width, greaterThanOrEqualTo(48));
+    expect(tester.getSize(reveal).height, greaterThanOrEqualTo(48));
+    expect(tester.getCenter(reveal).dy,
+        closeTo(tester.getCenter(passwordBox).dy, .1));
+    await tester.enterText(fields.last, 'test-password');
+    await tester.ensureVisible(reveal);
+    await tester.tap(reveal);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(fields.last).obscureText, isFalse);
+    expect(tester.widget<TextField>(fields.last).controller!.text, 'test-password');
+    expect(tester.getSize(passwordBox).height, closeTo(58, .1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Login hints are subdued and exploration labels have no separate fill',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: kinderTheme(),
+      home: LoginScreen(
+        authRepository: _VisualAuthRepository(),
+        onLogin: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final palette = KPalette.loginWarmSage;
+    for (final field in tester.widgetList<TextField>(find.byType(TextField))) {
+      final hint = field.decoration!.hintStyle!;
+      expect(hint.fontWeight, FontWeight.w400);
+      expect(hint.color, palette.inkFaint);
+      expect(hint.color!.computeLuminance(),
+          greaterThan(field.style!.color!.computeLuminance()));
+      final contrast = (palette.surfaceSunken.computeLuminance() + .05) /
+          (hint.color!.computeLuminance() + .05);
+      expect(contrast, greaterThanOrEqualTo(4.5));
+    }
+    for (final label in ['Giáo viên', 'Phụ huynh']) {
+      final pill = tester.widget<Container>(find.ancestor(
+        of: find.text(label),
+        matching: find.byType(Container),
+      ).first);
+      expect((pill.decoration as BoxDecoration?)?.color,
+          anyOf(isNull, Colors.transparent));
+    }
+  });
+
   testWidgets('NoAssignmentScreen uses the Figma empty-state illustration and logout action',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);

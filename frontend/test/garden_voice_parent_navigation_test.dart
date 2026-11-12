@@ -29,21 +29,14 @@ void main() {
       ),
       const Size(362, 60),
     );
-    final activePill = find.byWidgetPredicate(
-      (widget) =>
-          widget is Container &&
-          widget.decoration is BoxDecoration &&
-          (widget.decoration! as BoxDecoration).shape == BoxShape.circle &&
-          (widget.decoration! as BoxDecoration).color ==
-              KPalette.gardenVoice.brandTint,
-    );
+    final activePill = find.byKey(const ValueKey('navigation-selected-indicator'));
     expect(activePill, findsOneWidget);
-    expect(tester.getSize(activePill), const Size(48, 48));
+    expect(tester.getSize(activePill), const Size(86.75, 48));
     final navRect = tester.getRect(
       find.byKey(const ValueKey('garden-voice-parent-navigation')),
     );
     final pillRect = tester.getRect(activePill);
-    expect(pillRect.left, greaterThan(navRect.left + 12));
+    expect(pillRect.left, navRect.left + 6);
     expect(pillRect.top, greaterThanOrEqualTo(navRect.top + 6));
     expect(pillRect.bottom, lessThanOrEqualTo(navRect.bottom - 6));
     for (final label in ['Tổng quan', 'Báo cáo', 'Mở thông báo', 'Tài khoản']) {

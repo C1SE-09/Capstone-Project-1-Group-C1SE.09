@@ -5,6 +5,7 @@
 // thông tin bé (sheet chi tiết), cài đặt, đăng xuất.
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -227,7 +228,8 @@ class _ParentAccountState extends State<ParentAccount> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      padding: EdgeInsets.fromLTRB(
+          20, 20, 20, 28 + GardenVoiceNavigationFrame.bottomPaddingOf(context)),
       children: [
         // ── Hero ───────────────────────────────────────────────
         // Nền dùng hằng brand đậm cố định (không theo theme): brand ở theme tối là
@@ -523,7 +525,8 @@ class _ParentAccountState extends State<ParentAccount> {
       color: k.canvas,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        padding: EdgeInsets.fromLTRB(20, 20, 20,
+            24 + GardenVoiceNavigationFrame.bottomPaddingOf(context)),
         children: [
           Row(
             children: [
