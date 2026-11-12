@@ -16,6 +16,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity
 
 import 'package:file_picker/file_picker.dart';
 import 'package:cross_file/cross_file.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,6 +26,7 @@ import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/record/session_clip_bar.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/audio_player_card.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/analyzed_text_card.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/edit_observation_screen.dart';
@@ -378,6 +380,7 @@ class _GardenVoiceRecordHeader extends StatelessWidget {
     this.backAsset = 'assets/garden_voice/record_back.svg',
     this.showProgress = false,
     this.progressStep = 0,
+    this.trailing,
   });
 
   final String title;
@@ -386,6 +389,7 @@ class _GardenVoiceRecordHeader extends StatelessWidget {
   final String backAsset;
   final bool showProgress;
   final int progressStep;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -426,6 +430,10 @@ class _GardenVoiceRecordHeader extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing!,
+            ],
           ],
         ),
         if (showProgress) ...[
@@ -539,6 +547,9 @@ class RecordFlowScreen extends StatefulWidget {
 class _RecordFlowScreenState extends State<RecordFlowScreen> {
   String step = 'record';
   PlatformFile? uploadedFile;
+  VoiceRecordingSession? activeSession;
+  String? editedMergedTranscript;
+  Uint8List? previewAudioBytes;
   VoiceRecord? voiceRecord;
   ExtractionData? extractionData;
   String? transcript;
@@ -554,6 +565,8 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
           'processing' => ProcessingScreen(
               mode: widget.mode,
               file: uploadedFile,
+              session: activeSession,
+              editedMergedTranscript: editedMergedTranscript,
               classId: widget.classId,
               child: widget.child,
               teacherRepository: teacherRepository,
@@ -574,7 +587,7 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
               extraction: extractionData,
               transcript: transcript,
               voiceRecord: voiceRecord,
-              recordedBytes: uploadedFile?.bytes,
+              recordedBytes: previewAudioBytes ?? uploadedFile?.bytes,
               repository: widget.repository,
               teacherRepository: teacherRepository,
               onBack: () => setState(() => step = 'record'),
@@ -591,12 +604,31 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
           _ => RecordingScreen(
               mode: widget.mode,
               child: widget.child,
+              classId: widget.classId,
               className: widget.className,
+              enableMultiClipSession: true,
+              teacherRepository: teacherRepository,
               audioRecorder: widget.audioRecorder,
               pathProvider: widget.pathProvider,
               onSubmit: (file) {
                 setState(() {
                   uploadedFile = file;
+                  activeSession = null;
+                  editedMergedTranscript = null;
+                  previewAudioBytes = file?.bytes;
+                  step = 'processing';
+                });
+              },
+              onSubmitSession: ({
+                required session,
+                editedMergedTranscript,
+                previewAudioBytes,
+              }) {
+                setState(() {
+                  activeSession = session;
+                  this.editedMergedTranscript = editedMergedTranscript;
+                  this.previewAudioBytes = previewAudioBytes;
+                  uploadedFile = null;
                   step = 'processing';
                 });
               },
@@ -613,16 +645,30 @@ class RecordingScreen extends StatefulWidget {
     required this.mode,
     required this.onSubmit,
     this.child,
+    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
     this.className = 'Mầm 1',
+    this.enableMultiClipSession = false,
+    this.teacherRepository,
     this.audioRecorder,
     this.pathProvider,
+    this.audioPlayerFactory,
+    this.onSubmitSession,
   });
   final RecordMode mode;
   final Child? child;
   final ValueChanged<PlatformFile?> onSubmit;
+  final String classId;
   final String className;
+  final bool enableMultiClipSession;
+  final TeacherRepository? teacherRepository;
   final AudioRecorder? audioRecorder;
   final Future<String> Function(String extension)? pathProvider;
+  final AudioPlayerFactory? audioPlayerFactory;
+  final void Function({
+    required VoiceRecordingSession session,
+    String? editedMergedTranscript,
+    Uint8List? previewAudioBytes,
+  })? onSubmitSession;
 
   @override
   State<RecordingScreen> createState() => _RecordingScreenState();
@@ -637,7 +683,42 @@ class _RecordingScreenState extends State<RecordingScreen>
   bool isBusy = false;
   String _currentExtension = 'm4a';
 
+  // Multi-clip session state (User Story #78)
+  VoiceRecordingSession? _session;
+  bool _isUploadingClip = false;
+  bool _isDiscardingSession = false;
+  Timer? _pollTimer;
+  final Set<String> _expandedClipIds = <String>{};
+  final Set<String> _deletingClipIds = <String>{};
+  final Set<String> _savingTranscriptClipIds = <String>{};
+  final Map<String, String> _editedClipTranscripts = <String, String>{};
+  final Map<String, Uint8List> _clipLocalBytes = <String, Uint8List>{};
+
+  // Single-active-clip audio player state
+  AudioPlayer? _clipPlayer;
+  StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<Duration>? _playerPosSub;
+  StreamSubscription<Duration?>? _playerDurSub;
+  String? _playingClipId;
+  String? _loadingAudioClipId;
+  Duration _clipPosition = Duration.zero;
+  Duration _clipDuration = Duration.zero;
+
   late final AudioRecorder _recorder = widget.audioRecorder ?? AudioRecorder();
+  late final TeacherRepository _repo =
+      widget.teacherRepository ?? TeacherRepository();
+
+  String get _teacherId =>
+      AuthRepository.currentUser?.teacherId ??
+      'bbbbbbbb-0000-0000-0000-000000000001';
+
+  String get _sessionScope =>
+      widget.mode == RecordMode.child && widget.child != null
+          ? 'single_child'
+          : 'whole_class';
+
+  String? get _targetChildId =>
+      _sessionScope == 'single_child' ? widget.child?.id : null;
 
   // Primary wave controller — drives the oscillation frequency.
   late final AnimationController wave = AnimationController(
@@ -647,12 +728,467 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this, duration: const Duration(milliseconds: 1100));
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.enableMultiClipSession) {
+      unawaited(_restoreActiveSession());
+    }
+  }
+
+  @override
   void dispose() {
     timer?.cancel();
+    _pollTimer?.cancel();
+    _playerStateSub?.cancel();
+    _playerPosSub?.cancel();
+    _playerDurSub?.cancel();
+    _clipPlayer?.dispose();
     wave.dispose();
     wave2.dispose();
     _recorder.dispose();
     super.dispose();
+  }
+
+  Future<void> _restoreActiveSession() async {
+    try {
+      final restored = await _repo.createOrResumeVoiceSession(
+        teacherId: _teacherId,
+        classId: widget.classId,
+        childId: _targetChildId,
+        scope: _sessionScope,
+      );
+      if (!mounted) return;
+      setState(() {
+        _session = restored;
+      });
+      _syncPollingTimer();
+    } catch (_) {
+      // Initial silent restore: if offline/unavailable, keep UI ready and
+      // lazily create session when the first clip is saved.
+    }
+  }
+
+  Future<VoiceRecordingSession> _ensureSession() async {
+    if (_session != null) return _session!;
+    final created = await _repo.createOrResumeVoiceSession(
+      teacherId: _teacherId,
+      classId: widget.classId,
+      childId: _targetChildId,
+      scope: _sessionScope,
+    );
+    if (mounted) {
+      setState(() => _session = created);
+    } else {
+      _session = created;
+    }
+    return created;
+  }
+
+  void _syncPollingTimer() {
+    final hasInFlight =
+        _session?.clips.any((c) => c.isPendingOrProcessing) ?? false;
+    if (!hasInFlight) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      return;
+    }
+    if (_pollTimer != null && _pollTimer!.isActive) return;
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => unawaited(_refreshSessionSilently()),
+    );
+  }
+
+  Future<void> _refreshSessionSilently() async {
+    final sessionId = _session?.sessionId;
+    if (sessionId == null || !mounted) {
+      _pollTimer?.cancel();
+      return;
+    }
+    try {
+      final refreshed = await _repo.getVoiceSession(
+        sessionId: sessionId,
+        teacherId: _teacherId,
+      );
+      if (!mounted) return;
+      setState(() => _session = refreshed);
+      _syncPollingTimer();
+    } catch (_) {
+      // Transient polling errors are retried on the next tick.
+    }
+  }
+
+  Future<Uint8List?> _extractFileBytes(PlatformFile file) async {
+    if (file.bytes != null && file.bytes!.isNotEmpty) {
+      return file.bytes;
+    }
+    if (file.readStream != null) {
+      final chunks = <int>[];
+      await for (final chunk in file.readStream!) {
+        chunks.addAll(chunk);
+      }
+      if (chunks.isNotEmpty) return Uint8List.fromList(chunks);
+    }
+    if (!kIsWeb && file.path != null && file.path!.isNotEmpty) {
+      return await XFile(file.path!).readAsBytes();
+    }
+    return null;
+  }
+
+  Future<void> _uploadClipToSession(PlatformFile file) async {
+    if (!mounted) return;
+    setState(() {
+      _isUploadingClip = true;
+      isBusy = false;
+      phase = 'ready';
+      seconds = 0;
+      selectedFile = null;
+    });
+
+    try {
+      final bytes = await _extractFileBytes(file);
+      final safePath = kIsWeb ? '' : (file.path ?? '');
+      final session = await _ensureSession();
+      final record = await _repo.uploadAudioToSession(
+        sessionId: session.sessionId,
+        filePath: safePath,
+        fileBytes: bytes,
+        fileName: file.name,
+        classId: widget.classId,
+        teacherId: _teacherId,
+        childId: _targetChildId,
+      );
+      if (bytes != null && bytes.isNotEmpty) {
+        _clipLocalBytes[record.id] = bytes;
+      }
+
+      VoiceRecordingSession updatedSession;
+      try {
+        updatedSession = await _repo.getVoiceSession(
+          sessionId: session.sessionId,
+          teacherId: _teacherId,
+        );
+      } catch (_) {
+        updatedSession = VoiceRecordingSession(
+          sessionId: session.sessionId,
+          scope: session.scope,
+          status: session.status,
+          teacherId: session.teacherId,
+          classId: session.classId,
+          childId: session.childId,
+          recordedAt: session.recordedAt,
+          clips: [
+            ...session.clips,
+            VoiceClip(
+              voiceRecordId: record.id,
+              status: record.status,
+              createdAt: DateTime.now(),
+            ),
+          ],
+          pendingCount: session.pendingCount + 1,
+          completedCount: session.completedCount,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _session = updatedSession;
+        _isUploadingClip = false;
+      });
+      _syncPollingTimer();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingClip = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(getFriendlyErrorMessage(e)),
+          backgroundColor: context.k.bad,
+        ),
+      );
+    }
+  }
+
+  Future<AudioPlayer> _ensureClipPlayer() async {
+    if (_clipPlayer != null) return _clipPlayer!;
+    final player = widget.audioPlayerFactory?.call() ?? AudioPlayer();
+    _clipPlayer = player;
+    _playerStateSub = player.playerStateStream.listen((state) {
+      if (!mounted) return;
+      if (state.processingState == ProcessingState.completed) {
+        unawaited(player.seek(Duration.zero));
+        unawaited(player.pause());
+        setState(() {
+          _playingClipId = null;
+          _clipPosition = Duration.zero;
+        });
+      }
+    });
+    _playerPosSub = player.positionStream.listen((pos) {
+      if (!mounted || _playingClipId == null) return;
+      setState(() => _clipPosition = pos);
+    });
+    _playerDurSub = player.durationStream.listen((dur) {
+      if (!mounted || _playingClipId == null) return;
+      setState(() => _clipDuration = dur ?? Duration.zero);
+    });
+    return player;
+  }
+
+  Future<void> _toggleClipPlay(VoiceClip clip) async {
+    final clipId = clip.voiceRecordId;
+    try {
+      final player = await _ensureClipPlayer();
+      if (_playingClipId == clipId) {
+        await player.pause();
+        if (mounted) setState(() => _playingClipId = null);
+        return;
+      }
+
+      final localBytes = _clipLocalBytes[clipId];
+      final audioUrl = clip.audioUrl?.trim() ?? '';
+      if ((localBytes == null || localBytes.isEmpty) && audioUrl.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Chưa có file âm thanh để phát lại.')),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _loadingAudioClipId = clipId;
+        _clipPosition = Duration.zero;
+        _clipDuration = Duration(
+          milliseconds: ((clip.audioDuration ?? 0) * 1000).round(),
+        );
+      });
+
+      await player.stop();
+      if (localBytes != null && localBytes.isNotEmpty) {
+        await player.setAudioSource(BytesAudioSource(localBytes));
+      } else {
+        await player.setUrl(audioUrl);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _loadingAudioClipId = null;
+        _playingClipId = clipId;
+      });
+      await player.play();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingAudioClipId = null;
+        if (_playingClipId == clipId) _playingClipId = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể phát đoạn ghi âm này.')),
+      );
+    }
+  }
+
+  Future<void> _deleteClip(VoiceClip clip) async {
+    final clipId = clip.voiceRecordId;
+    if (_playingClipId == clipId) {
+      try {
+        await _clipPlayer?.stop();
+      } catch (_) {}
+      _playingClipId = null;
+    }
+
+    setState(() => _deletingClipIds.add(clipId));
+    try {
+      await _repo.deleteVoiceClip(voiceId: clipId, teacherId: _teacherId);
+      _expandedClipIds.remove(clipId);
+      _editedClipTranscripts.remove(clipId);
+      _clipLocalBytes.remove(clipId);
+
+      final sessionId = _session?.sessionId;
+      if (sessionId != null) {
+        final refreshed = await _repo.getVoiceSession(
+          sessionId: sessionId,
+          teacherId: _teacherId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _deletingClipIds.remove(clipId);
+          _session = refreshed;
+        });
+        _syncPollingTimer();
+        return;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(getFriendlyErrorMessage(e)),
+            backgroundColor: context.k.bad,
+          ),
+        );
+      }
+    }
+    if (mounted) {
+      setState(() => _deletingClipIds.remove(clipId));
+    }
+  }
+
+  Future<void> _saveClipTranscript(VoiceClip clip, String editedText) async {
+    final clipId = clip.voiceRecordId;
+    setState(() {
+      _editedClipTranscripts[clipId] = editedText;
+      _savingTranscriptClipIds.add(clipId);
+    });
+    try {
+      await _repo.updateTranscript(
+        voiceId: clipId,
+        editedTranscript: editedText,
+        teacherId: _teacherId,
+      );
+      if (!mounted) return;
+      final current = _session;
+      if (current != null) {
+        final updatedClips = current.clips
+            .map((c) => c.voiceRecordId == clipId
+                ? c.copyWith(transcript: editedText)
+                : c)
+            .toList();
+        setState(() {
+          _savingTranscriptClipIds.remove(clipId);
+          _session = VoiceRecordingSession(
+            sessionId: current.sessionId,
+            scope: current.scope,
+            status: current.status,
+            teacherId: current.teacherId,
+            classId: current.classId,
+            childId: current.childId,
+            recordedAt: current.recordedAt,
+            mergedTranscript: current.mergedTranscript,
+            representativeVoiceRecordId: current.representativeVoiceRecordId,
+            clips: updatedClips,
+            pendingCount: current.pendingCount,
+            completedCount: current.completedCount,
+          );
+        });
+        return;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(getFriendlyErrorMessage(e)),
+            backgroundColor: context.k.bad,
+          ),
+        );
+      }
+    }
+    if (mounted) {
+      setState(() => _savingTranscriptClipIds.remove(clipId));
+    }
+  }
+
+  Future<void> _confirmAndDiscardSession() async {
+    final session = _session;
+    if (session == null || session.clips.isEmpty) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => GardenVoiceScope(
+        child: Builder(
+          builder: (context) {
+            final k = context.k;
+            return AlertDialog(
+              backgroundColor: k.surface,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                'Huỷ phiên ghi âm?',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: k.ink,
+                ),
+              ),
+              content: Text(
+                'Tất cả ${session.clips.length} đoạn ghi âm trong phiên hiện tại sẽ bị huỷ bỏ.',
+                style: TextStyle(fontSize: 14, color: k.inkSoft),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Giữ lại'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  style: FilledButton.styleFrom(backgroundColor: k.bad),
+                  child: const Text('Huỷ phiên'),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDiscardingSession = true);
+    try {
+      await _repo.discardVoiceSession(
+        sessionId: session.sessionId,
+        teacherId: _teacherId,
+      );
+      _pollTimer?.cancel();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isDiscardingSession = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(getFriendlyErrorMessage(e)),
+          backgroundColor: context.k.bad,
+        ),
+      );
+    }
+  }
+
+  void _submitSessionForAnalysis() {
+    final session = _session;
+    if (session == null || widget.onSubmitSession == null) return;
+    _pollTimer?.cancel();
+    try {
+      _clipPlayer?.stop();
+    } catch (_) {}
+
+    final mergedParts = <String>[];
+    Uint8List? firstPreviewBytes;
+    for (final clip in session.clips) {
+      if (!clip.isCompleted) continue;
+      firstPreviewBytes ??= _clipLocalBytes[clip.voiceRecordId];
+      final text =
+          (_editedClipTranscripts[clip.voiceRecordId] ?? clip.transcript ?? '')
+              .trim();
+      if (text.isNotEmpty) {
+        mergedParts.add(text);
+      }
+    }
+
+    widget.onSubmitSession!(
+      session: session,
+      editedMergedTranscript:
+          mergedParts.isNotEmpty ? mergedParts.join('\n') : null,
+      previewAudioBytes: firstPreviewBytes,
+    );
+  }
+
+  String _formatSessionDuration(List<VoiceClip> clips) {
+    final totalSec = clips
+        .fold<double>(0, (sum, c) => sum + (c.audioDuration ?? 0))
+        .round();
+    final m = totalSec ~/ 60;
+    final s = totalSec % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 
   Future<void> _pickFile() async {
@@ -681,6 +1217,10 @@ class _RecordingScreenState extends State<RecordingScreen>
               path: file.path,
             );
           } catch (_) {}
+        }
+        if (widget.enableMultiClipSession) {
+          await _uploadClipToSession(file);
+          return;
         }
         setState(() {
           selectedFile = file;
@@ -961,6 +1501,11 @@ class _RecordingScreenState extends State<RecordingScreen>
           path: kIsWeb ? null : path,
         );
 
+        if (widget.enableMultiClipSession) {
+          await _uploadClipToSession(platformFile);
+          return;
+        }
+
         if (mounted) {
           setState(() {
             selectedFile = platformFile;
@@ -994,6 +1539,322 @@ class _RecordingScreenState extends State<RecordingScreen>
   String get time =>
       '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
 
+  Widget _buildContextCard(
+    KPalette k, {
+    required Child? child,
+    required String classLabel,
+    required String? allergy,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 82),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FCFB),
+        border: Border.all(color: k.line),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF212E2B).withValues(alpha: .05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          if (child != null)
+            Avatar(name: child.name)
+          else
+            SvgPicture.asset('assets/garden_voice/class_group.svg'),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  child == null ? 'Cả lớp $classLabel' : child.name,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: k.ink,
+                  ),
+                ),
+                Text(
+                  child == null
+                      ? 'Ghi một lần, tạo báo cáo cho tất cả trẻ.'
+                      : '$classLabel${child.nickname == null ? '' : ' · ${child.nickname}'}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                    color: k.inkSoft,
+                  ),
+                ),
+                if (allergy != null && allergy.isNotEmpty)
+                  Text('Dị ứng: $allergy',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
+                        color: k.warn,
+                      )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMultiClipScaffold(
+    BuildContext context,
+    KPalette k, {
+    required String subtitle,
+    required Child? child,
+    required String classLabel,
+    required String? allergy,
+    required VoiceRecordingSession session,
+  }) {
+    final clips = session.clips;
+    final recording = phase == 'recording';
+    final inFlightCount = clips.where((c) => c.isPendingOrProcessing).length;
+    final failedCount = clips.where((c) => c.isFailed).length;
+    final completedCount = clips.where((c) => c.isCompleted).length;
+    final canAnalyze = !recording &&
+        !_isUploadingClip &&
+        !_isDiscardingSession &&
+        session.pendingCount == 0 &&
+        completedCount > 0;
+
+    final String analyzeLabel;
+    if (inFlightCount > 0) {
+      analyzeLabel = 'Đang nhận dạng ($inFlightCount)…';
+    } else if (failedCount > 0) {
+      analyzeLabel = 'Xoá đoạn lỗi để gửi';
+    } else {
+      analyzeLabel = 'Gửi phân tích ($completedCount)';
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                children: [
+                  _GardenVoiceRecordHeader(
+                    title: 'Ghi âm',
+                    subtitle: '$subtitle · Phiên hôm nay',
+                    onBack: () => Navigator.pop(context),
+                    showProgress: true,
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: k.brandTint,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        '${clips.length} bản ghi',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: k.brand,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildContextCard(
+                    k,
+                    child: child,
+                    classLabel: classLabel,
+                    allergy: allergy,
+                  ),
+                  const SizedBox(height: 12),
+                  _CompactSessionRecorderDock(
+                    recording: recording,
+                    isBusy: isBusy || _isUploadingClip,
+                    isUploading: _isUploadingClip,
+                    seconds: seconds,
+                    time: time,
+                    wave: wave,
+                    wave2: wave2,
+                    onToggleMic: toggle,
+                    onPickFile: _pickFile,
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'DANH SÁCH BẢN GHI TRONG NGÀY',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: k.ink,
+                          letterSpacing: .3,
+                        ),
+                      ),
+                      Text(
+                        'Tổng ${_formatSessionDuration(clips)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: k.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (failedCount > 0)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: k.badTint,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: k.bad.withValues(alpha: .4)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline_rounded,
+                              size: 18, color: k.badText),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Có $failedCount đoạn nhận dạng lỗi — chạm X để xoá trước khi gửi phân tích.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: k.badText,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  for (var i = 0; i < clips.length; i++)
+                    Builder(
+                      builder: (_) {
+                        final clip = clips[i];
+                        final clipId = clip.voiceRecordId;
+                        final isPlaying = _playingClipId == clipId;
+                        final progress = isPlaying &&
+                                _clipDuration.inMilliseconds > 0
+                            ? (_clipPosition.inMilliseconds /
+                                    _clipDuration.inMilliseconds)
+                                .clamp(0.0, 1.0)
+                            : 0.0;
+                        return SessionClipBar(
+                          key: ValueKey('session-clip-$clipId'),
+                          index: i,
+                          clip: clip,
+                          isPlaying: isPlaying,
+                          isLoadingAudio: _loadingAudioClipId == clipId,
+                          playProgress: progress,
+                          isExpanded: _expandedClipIds.contains(clipId),
+                          isDeleting: _deletingClipIds.contains(clipId),
+                          isSavingTranscript:
+                              _savingTranscriptClipIds.contains(clipId),
+                          editedTranscript: _editedClipTranscripts[clipId],
+                          onTogglePlay: () => _toggleClipPlay(clip),
+                          onDelete: () => _deleteClip(clip),
+                          onToggleExpand: () => setState(() {
+                            if (_expandedClipIds.contains(clipId)) {
+                              _expandedClipIds.remove(clipId);
+                            } else {
+                              _expandedClipIds.add(clipId);
+                            }
+                          }),
+                          onTranscriptChanged: (val) =>
+                              _editedClipTranscripts[clipId] = val,
+                          onSaveTranscript: (val) =>
+                              _saveClipTranscript(clip, val),
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: k.surfaceSunken,
+                      border: Border.all(color: k.line),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      'Phiên tự lưu suốt cả ngày. Chạm X để bỏ đoạn nhầm hoặc chạm mũi tên bên dưới X để xem & sửa câu đã nói.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: k.inkSoft,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+              decoration: BoxDecoration(
+                color: k.surface,
+                border: Border(top: BorderSide(color: k.line)),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 104,
+                    height: 48,
+                    child: TextButton(
+                      onPressed:
+                          _isDiscardingSession ? null : _confirmAndDiscardSession,
+                      style: TextButton.styleFrom(
+                        foregroundColor: k.inkSoft,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text('Huỷ phiên'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: FilledButton.icon(
+                        key: const ValueKey('btn-analyze-session'),
+                        onPressed:
+                            canAnalyze ? _submitSessionForAnalysis : null,
+                        icon: const Icon(Icons.send_rounded, size: 17),
+                        label: Text(analyzeLabel),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: k.brand,
+                          foregroundColor: k.surface,
+                          disabledBackgroundColor: k.line,
+                          disabledForegroundColor: k.inkFaint,
+                          shape: const StadiumBorder(),
+                          textStyle: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final recording = phase == 'recording';
@@ -1012,6 +1873,20 @@ class _RecordingScreenState extends State<RecordingScreen>
       child: Builder(
         builder: (context) {
           final k = context.k;
+          if (widget.enableMultiClipSession &&
+              _session != null &&
+              _session!.clips.isNotEmpty) {
+            return _buildMultiClipScaffold(
+              context,
+              k,
+              subtitle: subtitle,
+              child: child,
+              classLabel: classLabel,
+              allergy: allergy,
+              session: _session!,
+            );
+          }
+
           return Scaffold(
             body: SafeArea(
               child: ListView(
@@ -1024,72 +1899,32 @@ class _RecordingScreenState extends State<RecordingScreen>
                     showProgress: true,
                   ),
                   const SizedBox(height: 18),
-                  Container(
-                    constraints: const BoxConstraints(minHeight: 86),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FCFB),
-                      border: Border.all(color: k.line),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF212E2B).withValues(alpha: .05),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        if (child != null)
-                          Avatar(name: child.name)
-                        else
-                          SvgPicture.asset(
-                              'assets/garden_voice/class_group.svg'),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                child == null
-                                    ? 'Cả lớp $classLabel'
-                                    : child.name,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  height: 1.4,
-                                  fontWeight: FontWeight.w700,
-                                  color: k.ink,
-                                ),
-                              ),
-                              Text(
-                                child == null
-                                    ? 'Ghi một lần, tạo báo cáo cho tất cả trẻ.'
-                                    : '$classLabel${child.nickname == null ? '' : ' · ${child.nickname}'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  height: 1.4,
-                                  fontWeight: FontWeight.w500,
-                                  color: k.inkSoft,
-                                ),
-                              ),
-                              if (allergy != null && allergy.isNotEmpty)
-                                Text('Dị ứng: $allergy',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      height: 1.4,
-                                      fontWeight: FontWeight.w500,
-                                      color: k.warn,
-                                    )),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  _buildContextCard(
+                    k,
+                    child: child,
+                    classLabel: classLabel,
+                    allergy: allergy,
                   ),
                   const SizedBox(height: 12),
-                  if (hasFile)
+                  if (_isUploadingClip)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(color: k.brand),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Đang lưu đoạn ghi âm vào phiên…',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: k.inkSoft,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (hasFile)
                     _SelectedAudioFileCard(
                       file: selectedFile!,
                       formatBytes: _formatBytes,
@@ -1390,6 +2225,219 @@ class _GardenVoiceRecorderPanel extends StatelessWidget {
   }
 }
 
+class _CompactSessionRecorderDock extends StatelessWidget {
+  const _CompactSessionRecorderDock({
+    required this.recording,
+    required this.isBusy,
+    required this.isUploading,
+    required this.seconds,
+    required this.time,
+    required this.wave,
+    required this.wave2,
+    required this.onToggleMic,
+    required this.onPickFile,
+  });
+
+  final bool recording;
+  final bool isBusy;
+  final bool isUploading;
+  final int seconds;
+  final String time;
+  final AnimationController wave;
+  final AnimationController wave2;
+  final VoidCallback onToggleMic;
+  final VoidCallback onPickFile;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: recording ? const Color(0xFFFFF8F7) : k.reviewSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: recording ? k.bad.withValues(alpha: .5) : k.lineStrong,
+          width: 1.4,
+        ),
+      ),
+      child: recording
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    SvgPicture.asset('assets/garden_voice/record_status_dot.svg'),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Đang ghi đoạn mới…',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: k.badText,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: seconds >= 150 ? k.warn : k.ink,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: k.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: k.line),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([wave, wave2]),
+                          builder: (_, __) => SizedBox(
+                            height: 28,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: List.generate(22, (index) {
+                                final phaseOffset = index * .42;
+                                final amp = (math.sin(phaseOffset +
+                                            wave.value * math.pi * 2) +
+                                        1) /
+                                    2;
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 80),
+                                  width: 3,
+                                  height: 6 + 20 * amp,
+                                  decoration: BoxDecoration(
+                                    color: k.brand.withValues(alpha: .45 + .55 * amp),
+                                    borderRadius: BorderRadius.circular(99),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Tooltip(
+                        message: 'Dừng ghi âm',
+                        child: FilledButton.icon(
+                          onPressed: isBusy ? null : onToggleMic,
+                          icon: const Icon(Icons.stop_rounded, size: 16),
+                          label: const Text('Lưu đoạn'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: k.brand,
+                            foregroundColor: k.surface,
+                            shape: const StadiumBorder(),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
+                            textStyle: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Tooltip(
+                  message: 'Bắt đầu ghi âm',
+                  child: Material(
+                    color: k.brand,
+                    shape: const CircleBorder(),
+                    elevation: 2,
+                    child: InkWell(
+                      key: const ValueKey('session-mic-btn'),
+                      customBorder: const CircleBorder(),
+                      onTap: isBusy ? null : onToggleMic,
+                      child: SizedBox.square(
+                        dimension: 46,
+                        child: isUploading
+                            ? Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: k.surface,
+                                ),
+                              )
+                            : Icon(
+                                Icons.mic_none_rounded,
+                                color: k.surface,
+                                size: 24,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isUploading
+                            ? 'Đang tải bản ghi vào phiên…'
+                            : 'Ghi thêm bản mới',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: k.ink,
+                        ),
+                      ),
+                      Text(
+                        isUploading
+                            ? 'Vui lòng chờ trong giây lát'
+                            : 'Chạm mic để thêm vào phiên hôm nay',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: k.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: isBusy ? null : onPickFile,
+                  icon: const Icon(Icons.upload_rounded, size: 16),
+                  label: const Text('Tải file'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: k.brand,
+                    backgroundColor: k.surface,
+                    side: BorderSide(color: k.lineStrong),
+                    shape: const StadiumBorder(),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: const Size(0, 38),
+                    textStyle: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
 class _SelectedAudioFileCard extends StatelessWidget {
   const _SelectedAudioFileCard({required this.file, required this.formatBytes});
 
@@ -1438,6 +2486,8 @@ class ProcessingScreen extends StatefulWidget {
     required this.onBack,
     required this.onDone,
     this.file,
+    this.session,
+    this.editedMergedTranscript,
     this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
     this.child,
     this.teacherRepository,
@@ -1446,6 +2496,8 @@ class ProcessingScreen extends StatefulWidget {
   final VoidCallback onBack;
   final void Function(VoiceRecord? record, ExtractionData? extraction) onDone;
   final PlatformFile? file;
+  final VoiceRecordingSession? session;
+  final String? editedMergedTranscript;
   final String classId;
   final Child? child;
   final TeacherRepository? teacherRepository;
@@ -1464,7 +2516,9 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       widget.teacherRepository ?? TeacherRepository();
 
   List<String> get steps => [
-        'Đã nhận bản ghi âm',
+        widget.session != null
+            ? 'Đã ghép ${widget.session!.completedCount} bản ghi'
+            : 'Đã nhận bản ghi âm',
         'Đang chuyển giọng nói thành văn bản',
         'Đang phân tích & tổng hợp nội dung',
         widget.mode == RecordMode.classroom
@@ -1555,7 +2609,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
     });
 
     final file = widget.file;
-    if (file == null) {
+    final session = widget.session;
+    if (file == null && session == null) {
       setState(() {
         isProcessing = false;
         errorMessage =
@@ -1571,14 +2626,36 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
       VoiceRecord? currentRecord = uploadedRecord;
       String? transcript = completedTranscript;
-      if (currentRecord == null) {
+
+      if (session != null && (currentRecord == null || transcript == null)) {
+        setState(() => active = 1);
+        final mergeRes = await repository.mergeVoiceSession(
+          sessionId: session.sessionId,
+          teacherId: teacherId,
+          editedTranscript: widget.editedMergedTranscript,
+        );
+        final repId = mergeRes.representativeVoiceRecordId ??
+            (session.clips.isNotEmpty
+                ? session.clips.first.voiceRecordId
+                : null);
+        if (repId == null || repId.isEmpty) {
+          throw Exception('Không tìm thấy bản ghi đại diện để phân tích.');
+        }
+        transcript = mergeRes.mergedTranscript;
+        currentRecord = VoiceRecord(
+          id: repId,
+          status: 'completed',
+          editedTranscript: transcript,
+        );
+        uploadedRecord = currentRecord;
+      } else if (currentRecord == null) {
         // 1. Upload audio file to backend / MinIO
         setState(() => active = 0);
 
         String safeFilePath = '';
         if (!kIsWeb) {
           try {
-            safeFilePath = file.path ?? '';
+            safeFilePath = file!.path ?? '';
           } catch (_) {
             safeFilePath = '';
           }
@@ -1586,10 +2663,10 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
         Uint8List? fileBytes;
         try {
-          fileBytes = file.bytes;
+          fileBytes = file!.bytes;
         } catch (_) {}
 
-        if (fileBytes == null && file.readStream != null) {
+        if (fileBytes == null && file!.readStream != null) {
           try {
             final chunks = <int>[];
             await for (final chunk in file.readStream!) {
@@ -1602,7 +2679,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         currentRecord = await repository.uploadAudio(
           filePath: safeFilePath,
           fileBytes: fileBytes,
-          fileName: file.name,
+          fileName: file!.name,
           classId: widget.classId,
           teacherId: teacherId,
           childId: childId,
