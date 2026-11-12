@@ -1227,8 +1227,8 @@ export default function SchoolAdminSchedulesPage() {
 
   return (
     <SchoolAdminLayout
-      active="features"
-      pageTitle="Thời khóa biểu"
+      active="schedules"
+      pageTitle="Quản lý Thời khóa biểu"
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1237,28 +1237,28 @@ export default function SchoolAdminSchedulesPage() {
               mutateAll();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="kbtn kbtn-secondary"
+            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
             title="Làm mới"
           >
             ↻
           </button>
           <button
             onClick={() => handleOpenExport("all")}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Xuất toàn bộ thời khóa biểu tất cả các lớp ra file Excel (Tùy chọn thứ & khung giờ)"
           >
-            🏫 Xuất lịch toàn trường
+            🏫 Xuất toàn trường
           </button>
           <button
             onClick={() => handleOpenExport("current")}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Xuất thời khóa biểu của lớp đang chọn ra file Excel (Tùy chọn thứ & khung giờ)"
           >
-            📥 Xuất excel
+            📥 Xuất Excel
           </button>
           <button
             onClick={() => setImportOpen(true)}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Nhập thời khóa biểu từ file Excel / CSV"
             disabled={isEditingTable}
           >
@@ -1267,7 +1267,7 @@ export default function SchoolAdminSchedulesPage() {
           {!isEditingTable ? (
             <button
               onClick={startTableEditing}
-              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand"
+              className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
               title="Chỉnh sửa trực tiếp tất cả các hoạt động trên bảng"
               disabled={filteredSchedules.length === 0}
             >
@@ -1279,19 +1279,18 @@ export default function SchoolAdminSchedulesPage() {
               <button
                 onClick={cancelTableEditing}
                 disabled={savingTable}
-                className="kbtn kbtn-secondary text-sm"
+                className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
               >
                 ✕ Hủy bỏ
               </button>
               <button
                 onClick={handleSaveTableEdits}
                 disabled={savingTable}
-                className="kbtn text-sm font-bold text-white flex items-center gap-2"
-                style={{ background: "#16665a" }}
+                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
               >
                 {savingTable ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Đang lưu...</span>
                   </>
                 ) : (
@@ -1304,25 +1303,27 @@ export default function SchoolAdminSchedulesPage() {
             </>
           )}
           {!isEditingTable && (
-            <button onClick={() => openCreate(selectedDay)} className="kbtn kbtn-primary">
+            <button
+              onClick={() => openCreate(selectedDay)}
+              className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
+            >
               + Thêm hoạt động
             </button>
           )}
         </div>
       }
     >
-      <p className="text-sm text-ink-soft -mt-3 mb-4">
-        Lên lịch hoạt động cho từng lớp theo tuần. Hệ thống tự động phát hiện xung
-        đột phòng/khung giờ.
-      </p>
+      <div className="text-sm text-[#65727D] -mt-3 mb-4">
+        Lịch theo lớp và theo tuần · Hệ thống tự kiểm tra xung đột phòng và trùng giờ trên toàn trường.
+      </div>
 
-      {/* Cảnh báo xung đột TOÀN TRƯỜNG (Tone đỏ, đập vào mắt, bấm mở popup danh sách các lớp) */}
+      {/* Cảnh báo xung đột TOÀN TRƯỜNG (Figma Frame 09: #454:3952) */}
       {schoolConflictStats.totalConflicts > 0 && (
         <div
           onClick={() => setSchoolConflictsModalOpen(true)}
           role="button"
           tabIndex={0}
-          className="card p-3.5 mb-4 flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-md border select-none group"
+          className="bg-[#FDEAE5] border border-[#A93832]/30 rounded-[16px] p-4 mb-4 flex items-center justify-between gap-3 cursor-pointer transition hover:shadow-md select-none group"
           style={{
             background: "#FDF2F0",
             borderColor: "#F2D5CE",

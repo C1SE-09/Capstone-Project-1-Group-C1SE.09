@@ -651,8 +651,8 @@ export default function SchoolAdminTeachersPage() {
 
   return (
     <SchoolAdminLayout
-      active="features"
-      pageTitle="Quản lý giáo viên"
+      active="teachers"
+      pageTitle="Quản lý Giáo viên"
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -660,7 +660,7 @@ export default function SchoolAdminTeachersPage() {
               mutate();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="kbtn kbtn-secondary"
+            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
             title="Làm mới"
             disabled={isEditingTable}
           >
@@ -668,14 +668,14 @@ export default function SchoolAdminTeachersPage() {
           </button>
           <button
             onClick={handleExportExcel}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Xuất danh sách ra file Excel"
           >
             📥 Xuất Excel
           </button>
           <button
             onClick={() => setImportOpen(true)}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Nhập dữ liệu từ file Excel / CSV"
             disabled={isEditingTable}
           >
@@ -684,7 +684,7 @@ export default function SchoolAdminTeachersPage() {
           {!isEditingTable ? (
             <button
               onClick={startTableEditing}
-              className="kbtn kbtn-secondary text-sm flex items-center gap-1.5 hover:border-brand disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
               title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
               disabled={filtered.length === 0}
             >
@@ -696,19 +696,18 @@ export default function SchoolAdminTeachersPage() {
               <button
                 onClick={cancelTableEditing}
                 disabled={savingTable}
-                className="kbtn kbtn-secondary text-sm"
+                className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
               >
                 ✕ Hủy bỏ
               </button>
               <button
                 onClick={handleSaveTableEdits}
                 disabled={savingTable}
-                className="kbtn text-sm font-bold text-white flex items-center gap-2"
-                style={{ background: "#16665a" }}
+                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
               >
                 {savingTable ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Đang lưu ({dirtyRows.length})...</span>
                   </>
                 ) : (
@@ -726,14 +725,18 @@ export default function SchoolAdminTeachersPage() {
             </>
           )}
           {!isEditingTable && (
-            <button onClick={openCreate} className="kbtn kbtn-primary">
+            <button
+              onClick={openCreate}
+              className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
+            >
               + Thêm giáo viên
             </button>
           )}
         </div>
       }
     >
-      <div className="card p-3 mb-3 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+      {/* Search & Class Filter */}
+      <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-4 mb-4 shadow-soft flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <div className="flex-1">
           <SearchBar
             value={query}
@@ -782,7 +785,7 @@ export default function SchoolAdminTeachersPage() {
         </div>
       )}
 
-      <div className="card overflow-hidden">
+      <div className="bg-white rounded-[24px] border border-[#E5E8EB] overflow-hidden shadow-soft">
         {!teachers && !teachersError ? (
           <Spinner />
         ) : teachersError ? (
@@ -1150,6 +1153,10 @@ export default function SchoolAdminTeachersPage() {
               </table>
             </div>
         )}
+      </div>
+
+      <div className="text-xs text-[#65727D] mt-2 mb-4">
+        💡 Lưới nhập trực tiếp (Web Grid): chạm vào ô để sửa tại chỗ; thay đổi được lưu theo hàng. Phân công lớp thực hiện ngay tại cột Lớp phụ trách.
       </div>
 
       {/* Popover multi-select Lớp phụ trách (fixed để không bị overflow-hidden cắt) */}

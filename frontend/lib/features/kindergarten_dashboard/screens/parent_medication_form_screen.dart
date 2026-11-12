@@ -310,8 +310,8 @@ class _ParentMedicationFormScreenState
           side: BorderSide(color: context.k.line),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: TextStyle(
-              fontFamily: context.k.isGardenVoice ? 'Nunito' : 'BeVietnamPro',
+          textStyle: const TextStyle(
+              fontFamily: 'Nunito',
               fontSize: 13,
               fontWeight: FontWeight.w400)),
       child: Tooltip(

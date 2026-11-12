@@ -877,7 +877,6 @@ class _AttendanceRow extends StatelessWidget {
         : expectedTime.isNotEmpty
             ? 'Dự kiến đến ${_formatAttendanceTime(expectedTime)}'
             : null;
-    final allergy = student.allergy?.trim() ?? '';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 32, 0),
@@ -891,33 +890,16 @@ class _AttendanceRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        student.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15.5,
-                          height: 1.24,
-                          fontWeight: FontWeight.w800,
-                          color: context.k.ink,
-                        ),
-                      ),
-                    ),
-                    if (allergy.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Tooltip(
-                        message: 'Lưu ý sức khỏe: $allergy',
-                        child: Icon(
-                          Icons.monitor_heart_outlined,
-                          size: 14,
-                          color: context.k.warnDeep,
-                        ),
-                      ),
-                    ],
-                  ],
+                Text(
+                  student.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    height: 1.24,
+                    fontWeight: FontWeight.w800,
+                    color: context.k.ink,
+                  ),
                 ),
                 if (subtitle != null)
                   Text(

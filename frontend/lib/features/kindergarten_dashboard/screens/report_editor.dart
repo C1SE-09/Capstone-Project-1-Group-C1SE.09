@@ -13,6 +13,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/report_discussion_section.dart';
 
 class ReportEditorScreen extends StatefulWidget {
   const ReportEditorScreen({
@@ -52,6 +53,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
   String className = 'Chưa xác định';
   String schoolName = 'Chưa có thông tin trường';
   String teacherName = '';
+  String? _existingReportId;
 
   String get todayLong => widget.initialReport != null
       ? _todayLong(widget.initialReport!.reportDate)
@@ -92,6 +94,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
 
     if (widget.initialReport != null) {
       final rep = widget.initialReport!;
+      _existingReportId = rep.dailyReportId;
       if (rep.eating != null && rep.eating!.trim().isNotEmpty) {
         eating.text = rep.eating!.trim();
       }
@@ -139,6 +142,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       try {
         final todayReport = await repository.getTodayReport(widget.child.id, DateTime.now());
         if (todayReport != null) {
+          _existingReportId = todayReport.dailyReportId;
           note.text = todayReport.summaryText?.trim() ?? '';
           eating.text = todayReport.eating?.trim() ?? '';
           final rawSleep = todayReport.sleeping?.trim() ?? '';
@@ -352,6 +356,15 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                       maxLength: 500,
                     ),
                   ),
+                  if (_existingReportId != null) ...[
+                    const SizedBox(height: KSpace.x6),
+                    ReportDiscussionSection(
+                      reportId: _existingReportId!,
+                      childName: widget.child.name,
+                      teacherName: teacherName.isNotEmpty ? teacherName : 'Cô giáo',
+                      isTeacher: true,
+                    ),
+                  ],
                   const SizedBox(height: KSpace.x6),
                   if (!widget.readOnly) ...[
                     if (submitError != null)

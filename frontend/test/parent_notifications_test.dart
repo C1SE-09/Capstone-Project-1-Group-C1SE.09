@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
@@ -372,8 +370,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      tester.getSemantics(_filter('reports')).flagsCollection.isSelected,
-      ui.Tristate.isTrue,
+      tester.widget<Semantics>(_filter('reports')).properties.selected,
+      isTrue,
     );
     expect(find.text(_latestTitle), findsOneWidget);
     await tester.tap(find.byTooltip('Tổng quan'));

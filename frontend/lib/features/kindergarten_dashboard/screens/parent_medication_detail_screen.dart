@@ -111,10 +111,8 @@ class _ParentMedicationDetailScreenState
                                         color: context.k.line, width: 1.5),
                                     minimumSize: const Size(0, 44),
                                     shape: const StadiumBorder(),
-                                    textStyle: TextStyle(
-                                        fontFamily: context.k.isGardenVoice
-                                            ? 'Nunito'
-                                            : 'BeVietnamPro',
+                                    textStyle: const TextStyle(
+                                        fontFamily: 'Nunito',
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700)),
                                 child: const Text('Giữ lại'))),
@@ -130,10 +128,8 @@ class _ParentMedicationDetailScreenState
                                         horizontal: 16, vertical: 11),
                                     minimumSize: const Size(0, 44),
                                     shape: const StadiumBorder(),
-                                    textStyle: TextStyle(
-                                        fontFamily: context.k.isGardenVoice
-                                            ? 'Nunito'
-                                            : 'BeVietnamPro',
+                                    textStyle: const TextStyle(
+                                        fontFamily: 'Nunito',
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700)),
                                 child: const Text('Hủy cữ'))),

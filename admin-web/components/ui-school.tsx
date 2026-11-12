@@ -90,10 +90,10 @@ interface KpiCardProps {
 }
 
 const TONE_COLOR: Record<NonNullable<KpiCardProps["tone"]>, { bg: string; fg: string; ring: string }> = {
-  brand: { bg: "#E6EFEC", fg: "#16665a", ring: "#16665a" },
-  ok: { bg: "#E7F1EA", fg: "#3F8B5C", ring: "#3F8B5C" },
-  warn: { bg: "#F6EED9", fg: "#B0791B", ring: "#B0791B" },
-  bad: { bg: "#F6E6E1", fg: "#BB4A34", ring: "#BB4A34" },
+  brand: { bg: "#E6F3EB", fg: "#087F70", ring: "#087F70" },
+  ok: { bg: "#E5F5E7", fg: "#087F70", ring: "#087F70" },
+  warn: { bg: "#FFF0D9", fg: "#B0791B", ring: "#B0791B" },
+  bad: { bg: "#FDEAE5", fg: "#A93832", ring: "#A93832" },
   info: { bg: "#E7EEF3", fg: "#4B6F8C", ring: "#4B6F8C" },
 };
 
@@ -108,7 +108,7 @@ export function KpiCard({
 }: KpiCardProps) {
   const toneClass = TONE_COLOR[tone];
   return (
-    <div className="card p-4">
+    <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -188,11 +188,11 @@ export function Pill({
   className?: string;
 }) {
   const map = {
-    neutral: { bg: "#EFECE5", fg: "#605D57" },
-    brand: { bg: "#E6EFEC", fg: "#114F46" },
-    ok: { bg: "#E7F1EA", fg: "#3F8B5C" },
-    warn: { bg: "#F6EED9", fg: "#8A5E12" },
-    bad: { bg: "#F6E6E1", fg: "#BB4A34" },
+    neutral: { bg: "#F6F7F8", fg: "#65727D" },
+    brand: { bg: "#E6F3EB", fg: "#087F70" },
+    ok: { bg: "#E5F5E7", fg: "#087F70" },
+    warn: { bg: "#FFF0D9", fg: "#B0791B" },
+    bad: { bg: "#FDEAE5", fg: "#A93832" },
     info: { bg: "#E7EEF3", fg: "#4B6F8C" },
   };
   const c = map[tone];

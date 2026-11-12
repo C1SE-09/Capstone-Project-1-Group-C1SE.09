@@ -25,6 +25,8 @@ class DailyReport extends BaseEntity {
     this.health,
     this.activitiesText,
     this.mood,
+    this.responseCount = 0,
+    this.unreadResponseCount = 0,
   });
 
   final String dailyReportId;
@@ -41,6 +43,11 @@ class DailyReport extends BaseEntity {
   final String? health;
   final String? activitiesText;
   final String? mood;
+  final int responseCount;
+  final int unreadResponseCount;
+
+  bool get hasDiscussion => responseCount > 0;
+  bool get hasUnreadResponses => unreadResponseCount > 0;
 
   DailyReport copyWith({
     String? dailyReportId,
@@ -57,6 +64,8 @@ class DailyReport extends BaseEntity {
     String? health,
     String? activitiesText,
     String? mood,
+    int? responseCount,
+    int? unreadResponseCount,
   }) {
     return DailyReport(
       dailyReportId: dailyReportId ?? this.dailyReportId,
@@ -73,6 +82,8 @@ class DailyReport extends BaseEntity {
       health: health ?? this.health,
       activitiesText: activitiesText ?? this.activitiesText,
       mood: mood ?? this.mood,
+      responseCount: responseCount ?? this.responseCount,
+      unreadResponseCount: unreadResponseCount ?? this.unreadResponseCount,
     );
   }
 
@@ -97,7 +108,7 @@ class DailyReport extends BaseEntity {
     }
 
     return DailyReport(
-      dailyReportId: json['daily_report_id'] as String,
+      dailyReportId: (json['daily_report_id'] ?? json['id']) as String,
       teacherId: json['teacher_id'] as String?,
       childId: json['child_id'] as String?,
       voiceRecordId: json['voice_record_id'] as String?,
@@ -117,6 +128,9 @@ class DailyReport extends BaseEntity {
           findDesc('play') ??
           findDesc('learning'),
       mood: json['mood'] as String? ?? findDesc('behavior'),
+      responseCount: (json['response_count'] as num?)?.toInt() ?? 0,
+      unreadResponseCount:
+          (json['unread_response_count'] as num?)?.toInt() ?? 0,
     );
   }
 }

@@ -468,6 +468,15 @@ class _ChildActionsScreen extends StatelessWidget {
                           onEdit();
                         },
                       ),
+                      const SizedBox(height: 14),
+                      KButton(
+                        label: 'Xem trao đổi với phụ huynh',
+                        secondary: true,
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          onEdit();
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -850,11 +859,85 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 12),
-                                                _HistoryStatusPill(
-                                                  status: _rowStatus(
-                                                    groups[groupIndex]
-                                                        .value[index],
-                                                  ),
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    _HistoryStatusPill(
+                                                      status: _rowStatus(
+                                                        groups[groupIndex]
+                                                            .value[index],
+                                                      ),
+                                                    ),
+                                                    if (groups[groupIndex]
+                                                        .value[index]
+                                                        .report
+                                                        .hasDiscussion) ...[
+                                                      const SizedBox(height: 4),
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                        decoration: BoxDecoration(
+                                                          color: groups[groupIndex]
+                                                                  .value[index]
+                                                                  .report
+                                                                  .hasUnreadResponses
+                                                              ? k.badTint
+                                                              : k.surfaceSunken,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(6),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Icon(
+                                                              Icons
+                                                                  .chat_bubble_rounded,
+                                                              size: 10,
+                                                              color: groups[groupIndex]
+                                                                      .value[index]
+                                                                      .report
+                                                                      .hasUnreadResponses
+                                                                  ? k.bad
+                                                                  : k.inkSoft,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 3),
+                                                            Text(
+                                                              groups[groupIndex]
+                                                                      .value[index]
+                                                                      .report
+                                                                      .hasUnreadResponses
+                                                                  ? (groups[groupIndex].value[index].report.unreadResponseCount > 1
+                                                                      ? 'Tin mới (${groups[groupIndex].value[index].report.unreadResponseCount})'
+                                                                      : 'Tin mới')
+                                                                  : 'Trao đổi',
+                                                              style: TextStyle(
+                                                                fontSize: 10.5,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: groups[groupIndex]
+                                                                        .value[index]
+                                                                        .report
+                                                                        .hasUnreadResponses
+                                                                    ? k.bad
+                                                                    : k.inkSoft,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
                                                 ),
                                               ],
                                             ),

@@ -89,6 +89,7 @@ def to_dict(response: ReportResponse) -> dict[str, Any]:
         "author_name": _author_name(response),
         "author_avatar_url": _author_avatar(response),
         "content": response.content,
+        "image_url": response.image_url,
         "has_image": bool(response.image_url),
         "is_read": response.is_read,
         "is_resolved": response.is_resolved,

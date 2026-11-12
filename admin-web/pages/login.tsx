@@ -1,17 +1,13 @@
 /**
  * pages/login.tsx
  * ===============
- * Trang đăng nhập CHUNG cho cả Admin Web (dev team) và School Admin.
+ * Trang đăng nhập CHUNG cho Admin Web (Quản trị hệ thống) & School Admin (Quản trị trường).
+ * 100% chuẩn Figma Frame 01: "GV · Admin Web · 01 — Đăng nhập web" (#454:3161)
  *
  * Flow:
- *   1. User nhập username/email + password.
- *   2. Thử gọi /api/school-admin/login.
- *      - Nếu OK (role=admin trong bảng users) → set token school_admin → /school-admin
- *      - Nếu 403 (không phải admin) → fallback gọi /api/admin-auth/login.
- *   3. Nếu /api/admin-auth/login OK → set token admin_app → /
- *      (trang dashboard bug report của web admin).
- *
- * UI: y hệt Flutter LoginScreen (KColors palette + BeVietnamPro font).
+ *   1. User nhập username hoặc email + password.
+ *   2. Nếu là email (@) → gọi /api/admin-auth/login → / (Dashboard Bug Reports).
+ *   3. Nếu là username (hoặc fallback) → gọi /api/school-admin/login → /school-admin.
  */
 
 import { useRouter } from "next/router";
@@ -45,7 +41,7 @@ export default function LoginPage() {
       const isEmail = trimmedId.includes("@");
 
       if (isEmail) {
-        // Ưu tiên 1: Đăng nhập Web Admin (Dev Team / Bug Reports) nếu nhập định dạng email
+        // Ưu tiên 1: Đăng nhập Web Admin (Dev Team / Bug Reports)
         try {
           const res = await adminAppLoginRequest({
             email: trimmedId.toLowerCase(),
@@ -56,7 +52,7 @@ export default function LoginPage() {
           router.replace("/");
           return;
         } catch (adminErr) {
-          // Thử tiếp School Admin (phòng trường hợp admin trường dùng email đăng nhập)
+          // Fallback thử School Admin
           try {
             const res = await schoolAdminLoginRequest({
               username: trimmedId,
@@ -80,7 +76,7 @@ export default function LoginPage() {
           }
         }
       } else {
-        // Ưu tiên 2: Đăng nhập School Admin (Quản trị trường) nếu nhập username
+        // Ưu tiên 2: Đăng nhập School Admin (Quản trị trường)
         try {
           const res = await schoolAdminLoginRequest({
             username: trimmedId,
@@ -100,7 +96,7 @@ export default function LoginPage() {
           router.replace("/school-admin");
           return;
         } catch (schoolErr) {
-          // Fallback thử tiếp Web Admin (nếu username cũng là alias hoặc admin app)
+          // Fallback thử Web Admin
           try {
             const res = await adminAppLoginRequest({
               email: trimmedId.toLowerCase(),
@@ -115,7 +111,7 @@ export default function LoginPage() {
           }
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
           setError("Tên đăng nhập hoặc mật khẩu không chính xác.");
@@ -133,110 +129,122 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
-      <div className="w-full max-w-md">
-        {/* Logo (giống Flutter app: rounded teal + school icon) */}
-        <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center mb-3 text-white"
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              background:
-                "linear-gradient(135deg, #16665a 0%, rgba(22,102,90,0.8) 100%)",
-              boxShadow: "0 4px 12px rgba(22,102,90,0.3)",
-            }}
-          >
-            <svg
-              width="30"
-              height="30"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 3C7 3 4 6.5 4 9.5C4 11.4 5.1 12.9 6.7 13.8C5.6 14.6 5 15.7 5 16.8C5 18.7 6.8 20 9.5 20H14.5C17.2 20 19 18.7 19 16.8C19 15.7 18.4 14.6 17.3 13.8C18.9 12.9 20 11.4 20 9.5C20 6.5 17 3 12 3Z"
-                fill="white"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">
+    <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center p-6 md:p-12 font-sans selection:bg-[#E6F3EB]">
+      <div className="w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+        
+        {/* ─── Cột trái: Thương hiệu & Minh họa vườn (Figma Frame #463:1885) ─── */}
+        <div className="lg:col-span-6 flex flex-col gap-6">
+          <div className="text-[#06695E] font-extrabold text-4xl lg:text-5xl tracking-tight leading-tight">
             KinderLog
-          </h1>
-          <p className="text-sm mt-1 text-ink-soft">
-            Hệ thống sổ liên lạc & báo cáo mầm non
+          </div>
+          <div className="text-[#102737] font-extrabold text-2xl lg:text-3xl leading-snug">
+            Mỗi ngày một chút lớn khôn
+          </div>
+          
+          <div className="w-full max-w-[460px] h-[175px] rounded-[24px] overflow-hidden shadow-soft border border-[#E5E8EB]">
+            <img
+              src="/images/teacher_garden.png"
+              alt="Khu vườn KinderLog"
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <p className="text-[#65727D] text-base leading-relaxed max-w-[460px]">
+            Cùng nhà trường kết nối giáo viên, phụ huynh và những ngày đến lớp của bé một cách trọn vẹn và an tâm nhất.
           </p>
+
+          <div className="flex items-center gap-6 pt-2 text-xs font-semibold text-[#8C9BA5]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#087F70]" />
+              Quản trị trường học
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#4B6F8C]" />
+              Quản trị hệ thống
+            </div>
+          </div>
         </div>
 
-        {/* Form card */}
-        <div className="card p-8 shadow-soft">
-          <h2 className="text-lg font-bold text-ink mb-1">Đăng nhập</h2>
-          <p className="text-xs text-ink-soft mb-6">
-            Nhập thông tin tài khoản của bạn để tiếp tục
-          </p>
+        {/* ─── Cột phải: Form Đăng nhập (Figma Frame #463:1890) ─── */}
+        <div className="lg:col-span-6 flex justify-center lg:justify-end">
+          <div className="w-full max-w-[440px] bg-white rounded-[28px] border border-[#E5E8EB] p-8 lg:p-10 shadow-pop">
+            <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
+              Cổng quản trị web
+            </h1>
+            <p className="text-sm text-[#65727D] mt-1 mb-8">
+              Đăng nhập để quản lý trường và vận hành hệ thống KinderLog
+            </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="klabel">
-                Tên đăng nhập, Gmail hoặc Số điện thoại
-              </label>
-              <input
-                type="text"
-                required
-                autoComplete="username"
-                autoFocus
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="admin.truong@gmail.com"
-                className="kinput"
-              />
-            </div>
-
-            <div>
-              <label className="klabel">Mật khẩu</label>
-              <div className="relative">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#102737] mb-2">
+                  Tên đăng nhập hoặc Email
+                </label>
                 <input
-                  type={showPwd ? "text" : "password"}
+                  type="text"
                   required
-                  minLength={6}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="kinput pr-24"
+                  autoFocus
+                  autoComplete="username"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="admin@kinderlog.edu.vn hoặc user"
+                  className="w-full h-12 px-4 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] placeholder:text-[#8C9BA5] focus:outline-none focus:border-[#087F70] focus:ring-2 focus:ring-[#087F70]/10 transition"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-soft hover:text-ink font-medium"
-                >
-                  {showPwd ? "Ẩn" : "Hiện"}
-                </button>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#102737] mb-2">
+                  Mật khẩu
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    required
+                    minLength={6}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full h-12 pl-4 pr-12 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] placeholder:text-[#8C9BA5] focus:outline-none focus:border-[#087F70] focus:ring-2 focus:ring-[#087F70]/10 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(!showPwd)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#65727D] hover:text-[#087F70]"
+                  >
+                    {showPwd ? "Ẩn" : "Hiện"}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-[#FDEAE5] border border-[#A93832]/30 text-[#A93832] p-3 rounded-[12px] text-xs font-medium flex items-start gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 mt-0.5">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-sm rounded-[24px] shadow-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                ) : (
+                  "Đăng nhập cổng quản trị"
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 pt-6 border-t border-[#E5E8EB] text-center text-xs font-medium text-[#65727D]">
+              Email dành cho quản trị hệ thống. Tên đăng nhập dành cho quản trị trường.
             </div>
-
-            {error && (
-              <div className="bg-bad-tint border border-bad/30 text-bad px-3.5 py-2.5 rounded-control text-sm flex items-start gap-2">
-                <span className="mt-0.5">⚠️</span>
-                <span>{error}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="kbtn kbtn-primary w-full justify-center"
-              style={{ height: 48, fontSize: 15, letterSpacing: 0.5 }}
-            >
-              {loading ? "Đang đăng nhập..." : "ĐĂNG NHẬP"}
-            </button>
-          </form>
+          </div>
         </div>
 
-        <div className="text-center text-xs text-ink-faint mt-6">
-          © 2026 KinderLog · Admin Web
-        </div>
       </div>
     </div>
   );

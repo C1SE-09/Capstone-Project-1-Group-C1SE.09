@@ -32,6 +32,9 @@ class ReportResponseOut(BaseModel):
     author_name: str = Field(..., description="Tên hiển thị người viết")
     author_avatar_url: str | None = Field(None, description="Ảnh đại diện người viết")
     content: str = Field(..., description="Nội dung phản hồi")
+    image_url: str | None = Field(
+        None, description="Đường dẫn nội bộ đọc ảnh đính kèm có xác thực"
+    )
     has_image: bool = Field(
         False,
         description=(

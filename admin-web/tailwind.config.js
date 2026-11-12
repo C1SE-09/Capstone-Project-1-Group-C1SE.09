@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 // =================================================================
-// KinderLog Design System — bám sát 100% KColors trong Flutter app
-// (frontend/lib/features/kindergarten_dashboard/theme.dart)
+// KinderLog Design System — 100% bám sát Figma Garden Voice
+// (Figma File 9RurF0HiJlYLVDV7ljp2bH / Section 568:1945 & 568:1946)
 // =================================================================
 module.exports = {
   content: [
@@ -11,50 +11,54 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // ─── Brand (Kindergarten teal) ────────────────────────────
+        // ─── Brand (Garden Voice Teal #087F70 / #06695E) ─────────
         brand: {
-          DEFAULT: "#16665A",
-          50: "#E6EFEC",
-          100: "#D1E0D9",
-          200: "#A3C2B3",
-          300: "#75A48D",
-          400: "#16665A", // brand (primary)
-          500: "#16665A",
-          600: "#114F46", // brandStrong
-          700: "#0E3D37",
-          800: "#0A2B27",
-          900: "#06191D",
+          DEFAULT: "#087F70",
+          50: "#E6F3EB",
+          100: "#D1E9DE",
+          200: "#A3D4BD",
+          300: "#5CB89D",
+          400: "#087F70", // Primary Button
+          500: "#087F70",
+          600: "#06695E", // Dark Brand text
+          700: "#05564D",
+          800: "#04423C",
+          900: "#022925",
+          light: "#E6F3EB",
+          tint: "#E6F3EB",
         },
 
-        // ─── Canvas / Surface (warm beige) ────────────────────────
-        canvas: "#F6F4EF",
+        // ─── Canvas / Surface ─────────────────────────────────────
+        canvas: "#FFFFFF",
         surface: "#FFFFFF",
-        sunken: "#EFECE5",
+        sunken: "#F6F7F8",
 
-        // ─── Ink (text) ───────────────────────────────────────────
+        // ─── Ink (Figma Navy #102737 & Gray #65727D) ──────────────
         ink: {
-          DEFAULT: "#2A2926",
-          soft: "#605D57",
-          faint: "#757169",
+          DEFAULT: "#102737",
+          title: "#102737",
+          muted: "#65727D",
+          soft: "#65727D",
+          faint: "#8C9BA5",
         },
 
-        // ─── Lines / borders ──────────────────────────────────────
-        line: "#E7E3DA",
-        lineStrong: "#D9D4C9",
+        // ─── Lines / borders (Figma 1px #E5E8EB) ──────────────────
+        line: "#E5E8EB",
+        lineStrong: "#D3D8DC",
 
         // ─── Status palette ───────────────────────────────────────
         ok: {
-          DEFAULT: "#3F8B5C",
-          tint: "#E7F1EA",
+          DEFAULT: "#087F70",
+          tint: "#E5F5E7",
         },
         warn: {
           DEFAULT: "#B0791B",
           deep: "#8A5E12",
-          tint: "#F6EED9",
+          tint: "#FFF0D9",
         },
         bad: {
-          DEFAULT: "#BB4A34",
-          tint: "#F6E6E1",
+          DEFAULT: "#A93832",
+          tint: "#FDEAE5",
         },
         info: {
           DEFAULT: "#4B6F8C",
@@ -63,24 +67,26 @@ module.exports = {
       },
       fontFamily: {
         sans: [
+          "var(--font-nunito)",
+          "Nunito",
           "-apple-system",
           "BlinkMacSystemFont",
           '"Segoe UI"',
           "Roboto",
-          '"Helvetica Neue"',
-          "Arial",
-          '"BeVietnamPro"',
           "sans-serif",
         ],
       },
       borderRadius: {
-        control: "8px",
-        card: "12px",
+        control: "10px",
+        card: "24px",
+        cardLg: "28px",
+        button: "24px",
+        pill: "9999px",
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(20, 24, 28, 0.04), 0 2px 8px rgba(20, 24, 28, 0.04)",
-        card: "0 1px 2px rgba(20, 24, 28, 0.06)",
-        pop: "0 6px 24px rgba(20, 24, 28, 0.10)",
+        soft: "0 1px 3px rgba(16, 39, 55, 0.05)",
+        card: "0 1px 2px rgba(16, 39, 55, 0.04)",
+        pop: "0 10px 30px rgba(16, 39, 55, 0.08)",
       },
     },
   },

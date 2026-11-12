@@ -29,6 +29,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assign
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_navigation.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_overview.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/report_discussion_section.dart';
 
 class NoChildAssignedException implements Exception {
   final String message;
@@ -814,6 +815,15 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
                         ),
                       ),
                     ),
+                  if (report != null && report.dailyReportId.isNotEmpty) ...[
+                    const SizedBox(height: KSpace.x4),
+                    const Divider(height: 24),
+                    ReportDiscussionSection(
+                      reportId: report.dailyReportId,
+                      childName: widget.childName,
+                      teacherName: widget.teacherName,
+                    ),
+                  ],
                 ],
               ),
             ),
