@@ -63,6 +63,157 @@ class VoiceRecord {
 }
 
 // ---------------------------------------------------------------------------
+// Entities: Multi-Clip Voice Recording Session (User Story #78)
+// ---------------------------------------------------------------------------
+
+class VoiceClip {
+  const VoiceClip({
+    required this.voiceRecordId,
+    required this.status,
+    this.audioUrl,
+    this.audioDuration,
+    this.fileSizeBytes,
+    this.transcript,
+    this.errorMessage,
+    this.isRepresentative = false,
+    this.createdAt,
+  });
+
+  final String voiceRecordId;
+  final String status;
+  final String? audioUrl;
+  final double? audioDuration;
+  final int? fileSizeBytes;
+  final String? transcript;
+  final String? errorMessage;
+  final bool isRepresentative;
+  final DateTime? createdAt;
+
+  bool get isPendingOrProcessing =>
+      status == 'pending' || status == 'processing';
+  bool get isCompleted => status == 'completed';
+  bool get isFailed => status == 'failed';
+
+  VoiceClip copyWith({
+    String? status,
+    String? audioUrl,
+    double? audioDuration,
+    int? fileSizeBytes,
+    String? transcript,
+    String? errorMessage,
+    bool? isRepresentative,
+    DateTime? createdAt,
+  }) {
+    return VoiceClip(
+      voiceRecordId: voiceRecordId,
+      status: status ?? this.status,
+      audioUrl: audioUrl ?? this.audioUrl,
+      audioDuration: audioDuration ?? this.audioDuration,
+      fileSizeBytes: fileSizeBytes ?? this.fileSizeBytes,
+      transcript: transcript ?? this.transcript,
+      errorMessage: errorMessage ?? this.errorMessage,
+      isRepresentative: isRepresentative ?? this.isRepresentative,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  factory VoiceClip.fromJson(Map<String, dynamic> json) {
+    final createdRaw = json['created_at'] as String?;
+    return VoiceClip(
+      voiceRecordId: (json['voice_record_id'] ?? json['id'] ?? '') as String,
+      status: (json['status'] as String?) ?? 'pending',
+      audioUrl: json['audio_url'] as String?,
+      audioDuration: (json['audio_duration'] as num?)?.toDouble(),
+      fileSizeBytes: (json['file_size_bytes'] as num?)?.toInt(),
+      transcript: json['transcript'] as String?,
+      errorMessage: json['error_message'] as String?,
+      isRepresentative: json['is_representative'] as bool? ?? false,
+      createdAt: createdRaw != null ? DateTime.tryParse(createdRaw) : null,
+    );
+  }
+}
+
+class VoiceRecordingSession {
+  const VoiceRecordingSession({
+    required this.sessionId,
+    required this.scope,
+    required this.status,
+    this.teacherId,
+    this.classId,
+    this.childId,
+    this.recordedAt,
+    this.mergedTranscript,
+    this.representativeVoiceRecordId,
+    this.clips = const [],
+    this.pendingCount = 0,
+    this.completedCount = 0,
+  });
+
+  final String sessionId;
+  final String scope;
+  final String status;
+  final String? teacherId;
+  final String? classId;
+  final String? childId;
+  final String? recordedAt;
+  final String? mergedTranscript;
+  final String? representativeVoiceRecordId;
+  final List<VoiceClip> clips;
+  final int pendingCount;
+  final int completedCount;
+
+  factory VoiceRecordingSession.fromJson(Map<String, dynamic> json) {
+    final rawClips = json['clips'] as List<dynamic>? ?? const [];
+    final clips = rawClips
+        .whereType<Map<String, dynamic>>()
+        .map(VoiceClip.fromJson)
+        .toList();
+    return VoiceRecordingSession(
+      sessionId: json['session_id'] as String,
+      teacherId: json['teacher_id'] as String?,
+      classId: json['class_id'] as String?,
+      childId: json['child_id'] as String?,
+      scope: (json['scope'] as String?) ?? 'whole_class',
+      status: (json['status'] as String?) ?? 'active',
+      recordedAt: json['recorded_at'] as String?,
+      mergedTranscript: json['merged_transcript'] as String?,
+      representativeVoiceRecordId:
+          json['representative_voice_record_id'] as String?,
+      clips: clips,
+      pendingCount: (json['pending_count'] as num?)?.toInt() ?? 0,
+      completedCount: (json['completed_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class MergeVoiceSessionResult {
+  const MergeVoiceSessionResult({
+    required this.sessionId,
+    required this.mergedTranscript,
+    this.clipCount = 0,
+    this.skippedClips = 0,
+    this.representativeVoiceRecordId,
+  });
+
+  final String sessionId;
+  final String mergedTranscript;
+  final int clipCount;
+  final int skippedClips;
+  final String? representativeVoiceRecordId;
+
+  factory MergeVoiceSessionResult.fromJson(Map<String, dynamic> json) {
+    return MergeVoiceSessionResult(
+      sessionId: json['session_id'] as String,
+      mergedTranscript: (json['merged_transcript'] as String?) ?? '',
+      clipCount: (json['clip_count'] as num?)?.toInt() ?? 0,
+      skippedClips: (json['skipped_clips'] as num?)?.toInt() ?? 0,
+      representativeVoiceRecordId:
+          json['representative_voice_record_id'] as String?,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Entity: ExtractionData
 // ---------------------------------------------------------------------------
 
@@ -296,6 +447,56 @@ abstract class TeacherRepositoryBase {
 
   /// Xóa các bản nháp báo cáo từ DB khi giáo viên bỏ duyệt.
   Future<void> deleteDraftReports(List<String> reportIds);
+
+  // ------------------------------------------------------------------
+  // Multi-clip voice session (User Story #78)
+  // ------------------------------------------------------------------
+
+  /// Tạo mới hoặc khôi phục phiên ghi âm ACTIVE trong ngày cho (teacher, lớp).
+  Future<VoiceRecordingSession> createOrResumeVoiceSession({
+    required String teacherId,
+    required String classId,
+    String? childId,
+    String scope = 'whole_class',
+    bool forceNew = false,
+  });
+
+  /// Lấy chi tiết phiên ghi âm kèm danh sách clip và trạng thái STT mới nhất.
+  Future<VoiceRecordingSession> getVoiceSession({
+    required String sessionId,
+    required String teacherId,
+  });
+
+  /// Upload 1 đoạn audio mới và gắn vào phiên ghi âm [sessionId].
+  Future<VoiceRecord> uploadAudioToSession({
+    required String sessionId,
+    required String filePath,
+    required String classId,
+    required String teacherId,
+    String? childId,
+    Uint8List? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
+  });
+
+  /// Xoá 1 bản ghi âm trong phiên (DB + MinIO).
+  Future<void> deleteVoiceClip({
+    required String voiceId,
+    required String teacherId,
+  });
+
+  /// Ghép transcript các bản ghi đã STT xong trong phiên.
+  Future<MergeVoiceSessionResult> mergeVoiceSession({
+    required String sessionId,
+    required String teacherId,
+    String? editedTranscript,
+  });
+
+  /// Huỷ bỏ phiên ghi âm đang mở.
+  Future<void> discardVoiceSession({
+    required String sessionId,
+    required String teacherId,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -328,8 +529,50 @@ class TeacherRepository implements TeacherRepositoryBase {
     Uint8List? fileBytes,
     String? fileName,
     void Function(int sent, int total)? onProgress,
+  }) =>
+      _uploadAudioInternal(
+        filePath: filePath,
+        classId: classId,
+        teacherId: teacherId,
+        childId: childId,
+        fileBytes: fileBytes,
+        fileName: fileName,
+        onProgress: onProgress,
+      );
+
+  @override
+  Future<VoiceRecord> uploadAudioToSession({
+    required String sessionId,
+    required String filePath,
+    required String classId,
+    required String teacherId,
+    String? childId,
+    Uint8List? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
+  }) =>
+      _uploadAudioInternal(
+        sessionId: sessionId,
+        filePath: filePath,
+        classId: classId,
+        teacherId: teacherId,
+        childId: childId,
+        fileBytes: fileBytes,
+        fileName: fileName,
+        onProgress: onProgress,
+      );
+
+  Future<VoiceRecord> _uploadAudioInternal({
+    String? sessionId,
+    required String filePath,
+    required String classId,
+    required String teacherId,
+    String? childId,
+    Uint8List? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
   }) async {
-    try {
+    return _runDioRequest(() async {
       if (filePath.trim().isEmpty && (fileBytes == null || fileBytes.isEmpty)) {
         throw const TeacherRepositoryException(
           'File ghi âm trống hoặc không hợp lệ.',
@@ -362,6 +605,8 @@ class TeacherRepository implements TeacherRepositoryBase {
         'class_id': classId,
         'teacher_id': teacherId,
         if ((childId ?? '').trim().isNotEmpty) 'child_id': childId!.trim(),
+        if ((sessionId ?? '').trim().isNotEmpty)
+          'session_id': sessionId!.trim(),
       });
 
       final response = await _dio.post<Map<String, dynamic>>(
@@ -382,15 +627,7 @@ class TeacherRepository implements TeacherRepositoryBase {
       }
 
       return VoiceRecord.fromJson(body);
-    } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
-      final detail = _extractDetail(e.response?.data) ??
-          e.message ??
-          'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.';
-      throw TeacherRepositoryException(detail, statusCode: statusCode);
-    } catch (e) {
-      throw const TeacherRepositoryException('Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.');
-    }
+    });
   }
 
   Future<Uint8List> _readAudioBytes(String filePath) async {
@@ -792,9 +1029,133 @@ class TeacherRepository implements TeacherRepositoryBase {
     }
   }
 
+  @override
+  Future<VoiceRecordingSession> createOrResumeVoiceSession({
+    required String teacherId,
+    required String classId,
+    String? childId,
+    String scope = 'whole_class',
+    bool forceNew = false,
+  }) async {
+    return _runDioRequest(() async {
+      final body = <String, dynamic>{
+        'teacher_id': teacherId,
+        'class_id': classId,
+        'scope': scope,
+        'force_new': forceNew,
+        if ((childId ?? '').trim().isNotEmpty) 'child_id': childId!.trim(),
+      };
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/voice/sessions',
+        data: body,
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const TeacherRepositoryException(
+          'Không nhận được thông tin phiên ghi âm từ máy chủ.',
+        );
+      }
+      return VoiceRecordingSession.fromJson(data);
+    });
+  }
+
+  @override
+  Future<VoiceRecordingSession> getVoiceSession({
+    required String sessionId,
+    required String teacherId,
+  }) async {
+    return _runDioRequest(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/teacher/voice/sessions/$sessionId',
+        queryParameters: {'teacher_id': teacherId},
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const TeacherRepositoryException(
+          'Không tải được chi tiết phiên ghi âm.',
+        );
+      }
+      return VoiceRecordingSession.fromJson(data);
+    });
+  }
+
+  @override
+  Future<void> deleteVoiceClip({
+    required String voiceId,
+    required String teacherId,
+  }) async {
+    await _runDioRequest(() async {
+      await _dio.delete<Map<String, dynamic>>(
+        '/api/teacher/voice/$voiceId',
+        queryParameters: {'teacher_id': teacherId},
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+    });
+  }
+
+  @override
+  Future<MergeVoiceSessionResult> mergeVoiceSession({
+    required String sessionId,
+    required String teacherId,
+    String? editedTranscript,
+  }) async {
+    return _runDioRequest(() async {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/teacher/voice/sessions/$sessionId/merge',
+        data: {
+          'teacher_id': teacherId,
+          if (editedTranscript != null && editedTranscript.trim().isNotEmpty)
+            'edited_transcript': editedTranscript.trim(),
+        },
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const TeacherRepositoryException(
+          'Không ghép được nội dung phiên ghi âm.',
+        );
+      }
+      return MergeVoiceSessionResult.fromJson(data);
+    });
+  }
+
+  @override
+  Future<void> discardVoiceSession({
+    required String sessionId,
+    required String teacherId,
+  }) async {
+    await _runDioRequest(() async {
+      await _dio.delete<Map<String, dynamic>>(
+        '/api/teacher/voice/sessions/$sessionId',
+        queryParameters: {'teacher_id': teacherId},
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+    });
+  }
+
   // ------------------------------------------------------------------
   // Helpers
   // ------------------------------------------------------------------
+
+  Future<T> _runDioRequest<T>(Future<T> Function() action) async {
+    try {
+      return await action();
+    } on TeacherRepositoryException {
+      rethrow;
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final detail = _extractDetail(e.response?.data) ??
+          e.message ??
+          'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.';
+      throw TeacherRepositoryException(detail, statusCode: statusCode);
+    } catch (_) {
+      throw const TeacherRepositoryException(
+        'Đã xảy ra sự cố ngoài ý muốn. Thầy cô vui lòng thử lại sau ít phút.',
+      );
+    }
+  }
 
   static String? _extractDetail(dynamic data) {
     if (data is Map<String, dynamic>) {
