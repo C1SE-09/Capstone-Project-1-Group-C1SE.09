@@ -53,11 +53,6 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
     'noon': 'Buổi trưa',
     'afternoon': 'Buổi chiều'
   };
-  static const _sessionNames = {
-    'morning': 'Sáng',
-    'noon': 'Trưa',
-    'afternoon': 'Chiều'
-  };
   @override
   void initState() {
     super.initState();
@@ -262,12 +257,9 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
-              Text(
-                  'Xác nhận 1 chạm khi đã cho bé uống. Kiểm tra đúng bé, đúng thuốc, đúng liều trước khi xác nhận.',
-                  style: TextStyle(
-                      fontSize: 12, height: 1.4, color: context.k.inkSoft)),
+              _duplicateDoseNotice(context),
               const SizedBox(height: 12),
-              Wrap(spacing: 7, runSpacing: 7, children: [
+              Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final entry in _labels.entries)
                   ChoiceChip(
                       label: Text(entry.value),
@@ -278,16 +270,29 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                       shadowColor: Colors.transparent,
                       elevation: 0,
                       pressElevation: 0,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.standard,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       labelPadding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      padding: EdgeInsets.zero,
+                          horizontal: 8, vertical: 2),
                       showCheckmark: false,
-                      side: BorderSide.none,
+                      side: BorderSide(
+                        color: _filter == entry.key
+                            ? context.k.brand
+                            : context.k.line,
+                        width: 1.2,
+                      ),
                       shape: const StadiumBorder(),
-                      visualDensity: VisualDensity.compact,
                       labelStyle: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          fontWeight: _filter == entry.key
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          fontVariations: [
+                            FontVariation(
+                                'wght', _filter == entry.key ? 700 : 600),
+                          ],
                           color: _filter == entry.key
                               ? Theme.of(context).colorScheme.onPrimary
                               : context.k.inkSoft),
@@ -314,12 +319,6 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                     _card(item, data.date),
                     const SizedBox(height: 13),
                   ],
-                  if (data.allItems
-                      .any((item) => item.session == entry.key && item.isGiven))
-                    _lockNote(
-                        entry.key,
-                        data.allItems.firstWhere((item) =>
-                            item.session == entry.key && item.isGiven)),
                 ],
               const SizedBox(height: 13),
               FilledButton(
@@ -400,8 +399,13 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.childName,
-                          style: const TextStyle(
-                              fontSize: 13.5, fontWeight: FontWeight.w700)),
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              fontVariations: const [
+                                FontVariation('wght', 800),
+                              ],
+                              color: context.k.ink)),
                       Text('${item.medicationName} · ${item.dosage}',
                           style: TextStyle(
                               fontSize: 12, color: context.k.inkSoft)),
@@ -453,20 +457,34 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
     );
   }
 
-  Widget _lockNote(String session, MedicationItem given) {
-    final stamp = given.givenAt == null
-        ? null
-        : DateFormat('HH:mm')
-            .format(given.givenAt!.toUtc().add(const Duration(hours: 7)));
+  Widget _duplicateDoseNotice(BuildContext context) {
     return Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 13),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-            color: context.k.warnTint, borderRadius: BorderRadius.circular(14)),
-        child: Text(
-            'Lớp có 2 cô: cô còn lại mở cùng màn hình sẽ thấy trạng thái này và nút xác nhận bị khóa. Nếu cố xác nhận lại, backend trả lỗi 409: "Cảnh báo trùng liều: Bé đã được ${given.givenByName ?? 'một cô'} cho uống thuốc buổi ${_sessionNames[session]}${stamp == null ? '' : ' lúc $stamp'} rồi!" — chống uống trùng liều.',
-            style: TextStyle(fontSize: 11.5, color: context.k.ink)));
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: context.k.warnTint,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.k.warn.withValues(alpha: .28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 18, color: context.k.warn),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Lưu ý thuốc trùng liều. Những bé đã được tích xác nhận nghĩa là bé đã được giáo viên khác cho uống thuốc. Thầy cô vui lòng kiểm tra kỹ trạng thái trước khi cho bé uống thêm để tránh trùng thuốc.',
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+                color: context.k.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _card(MedicationItem item, String date) {
@@ -488,8 +506,13 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   Text(item.childName,
-                      style: const TextStyle(
-                          fontSize: 13.5, fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          fontVariations: const [
+                            FontVariation('wght', 800),
+                          ],
+                          color: context.k.ink)),
                   if (item.childNickname?.isNotEmpty == true)
                     Text(item.childNickname!,
                         style:

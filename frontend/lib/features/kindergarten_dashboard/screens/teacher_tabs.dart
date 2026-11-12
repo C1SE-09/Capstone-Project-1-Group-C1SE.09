@@ -533,6 +533,7 @@ class _ChildRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w800,
+                      fontVariations: const [FontVariation('wght', 800)],
                       height: 1.4,
                       color: k.ink,
                     ),
