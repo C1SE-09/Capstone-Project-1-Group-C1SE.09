@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         scaffoldBackgroundColor: palette.surface,
         textTheme: baseTheme.textTheme.apply(
-          fontFamily: 'BeVietnamPro',
+          fontFamily: 'Nunito',
           bodyColor: palette.ink,
           displayColor: palette.ink,
         ),
@@ -447,7 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'Quên mật khẩu?',
                                 style: TextStyle(
                                   color: k.brand,
-                                  fontFamily: 'BeVietnamPro',
+                                  fontFamily: 'Nunito',
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -516,7 +516,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 side: BorderSide(color: k.brandStrong),
                               ),
                               textStyle: const TextStyle(
-                                fontFamily: 'BeVietnamPro',
+                                fontFamily: 'Nunito',
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -534,67 +534,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     'Đăng nhập',
                                     style: TextStyle(
                                       color: k.canvas,
-                                      fontFamily: 'BeVietnamPro',
+                                      fontFamily: 'Nunito',
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Ứng dụng dành cho:',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: k.inkSoft,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: IntrinsicHeight(
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Expanded(
-                                      child: Container(
-                                        color: k.brand,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 14,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const _LoginRolePill(
-                                          label: 'Giáo viên',
-                                          isPrimary: false,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Container(
-                                        color: const Color(0xFFEAEEF1),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 14,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const _LoginRolePill(
-                                          label: 'Phụ huynh',
-                                          isPrimary: true,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
                         ),
                         const SizedBox(height: 20),
                         Text(
@@ -614,41 +559,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _LoginRolePill extends StatelessWidget {
-  const _LoginRolePill({
-    required this.label,
-    this.isPrimary = false,
-  });
-
-  final String label;
-  final bool isPrimary;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 44),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: isPrimary ? k.brand : k.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: isPrimary ? Border.all(color: k.brandStrong) : null,
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: isPrimary ? k.canvas : k.ink,
-          fontSize: 12.5,
-          fontWeight: isPrimary ? FontWeight.w700 : FontWeight.w600,
-        ),
       ),
     );
   }

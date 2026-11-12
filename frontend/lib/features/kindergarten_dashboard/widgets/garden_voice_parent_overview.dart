@@ -80,16 +80,64 @@ class GardenVoiceParentOverview extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      'Báo cáo hôm nay',
-                      style: TextStyle(
-                        fontSize: 19,
-                        height: 1.35,
-                        fontWeight: FontWeight.w700,
-                        color: k.ink,
-                      ),
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          'Báo cáo hôm nay',
+                          style: TextStyle(
+                            fontSize: 19,
+                            height: 1.35,
+                            fontWeight: FontWeight.w700,
+                            color: k.ink,
+                          ),
+                        ),
+                        if (report != null && report!.hasDiscussion)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: report!.hasUnreadResponses
+                                  ? k.badTint
+                                  : k.accentTint,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.chat_bubble_rounded,
+                                  size: 13,
+                                  color: report!.hasUnreadResponses
+                                      ? k.bad
+                                      : k.accent,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  report!.hasUnreadResponses
+                                      ? (report!.unreadResponseCount > 1
+                                          ? '${report!.unreadResponseCount} tin mới'
+                                          : 'Có tin mới')
+                                      : 'Có trao đổi',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: report!.hasUnreadResponses
+                                        ? k.bad
+                                        : k.accent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     report == null
                         ? kDateLabel(DateTime.now())
@@ -397,6 +445,41 @@ class _DailyReportSummary extends StatelessWidget {
                 label: 'Hoạt động',
                 detail: report!.activitiesText ?? 'Chưa cập nhật',
               ),
+              if (report!.hasDiscussion) ...[
+                Divider(height: 1, color: k.line),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 16,
+                        color: report!.hasUnreadResponses ? k.bad : k.brand,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          report!.hasUnreadResponses
+                              ? 'Có phản hồi mới (${report!.unreadResponseCount})'
+                              : 'Đã có trao đổi với giáo viên',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: report!.hasUnreadResponses
+                                ? k.bad
+                                : k.inkSoft,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: k.inkSoft,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

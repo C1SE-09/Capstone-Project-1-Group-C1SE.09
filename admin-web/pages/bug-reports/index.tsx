@@ -1,15 +1,15 @@
 /**
  * pages/bug-reports/index.tsx
  * ===========================
- * Danh sách bug reports (Web Admin / dev team) — restyle theo theme KinderLog.
+ * Danh sách bug reports (Web Admin / Dev Team).
+ * 100% chuẩn Figma Frame 03: "GV · Admin Web · 03 — Báo lỗi: Danh sách" (#454:3328)
  */
 
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/router";
-import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
-import { Badge, Card, EmptyState, Spinner } from "@/components/ui";
+import { EmptyState, Spinner } from "@/components/ui";
 import { Pill, SearchBar, SearchableSelect, SelectOption } from "@/components/ui-school";
 import { apiFetch, clearToken, getToken } from "@/lib/api";
 import {
@@ -102,24 +102,19 @@ export default function BugReportsListPage() {
     }
   }, [router]);
 
-  const query: Record<string, any> = {
-    page,
-    page_size: 20,
-    order_by: "created_at_desc",
-  };
-  if (filterStatus) query.status = filterStatus;
-  if (filterSeverity) query.severity = filterSeverity;
-  if (filterCategory) query.category = filterCategory;
-  if (filterRole) query.user_role = filterRole;
-  if (search.trim()) query.search = search.trim();
+  const queryParams = new URLSearchParams();
+  queryParams.set("page", page.toString());
+  queryParams.set("page_size", "15");
+  if (filterStatus) queryParams.set("status", filterStatus);
+  if (filterSeverity) queryParams.set("severity", filterSeverity);
+  if (filterCategory) queryParams.set("category", filterCategory);
+  if (filterRole) queryParams.set("role", filterRole);
+  if (search.trim()) queryParams.set("search", search.trim());
 
   const { data, error } = useSWR<ListResponse>(
-    tokenReady ? ["/api/bug-reports", query] : null,
-    ([url, q]) =>
-      apiFetch<ListResponse>(url, {
-        query: q as Record<string, string | number | null | undefined>,
-        account: "adminApp",
-      }),
+    tokenReady ? `/api/bug-reports?${queryParams.toString()}` : null,
+    (url) => apiFetch<ListResponse>(url, { account: "adminApp" }),
+    { keepPreviousData: true },
   );
 
   const resetFilters = () => {
@@ -133,36 +128,31 @@ export default function BugReportsListPage() {
 
   return (
     <AdminLayout currentPage="bug-reports">
-      <div className="space-y-4">
-        {/* Title */}
-        <div className="flex items-end justify-between flex-wrap gap-2">
-          <div>
-            <h1 className="text-2xl font-bold text-ink tracking-tight">
-              Quản lý Bug Report
-            </h1>
-            <p className="text-sm text-ink-soft mt-1">
-              Xem và xử lý bug reports từ giáo viên / phụ huynh
-            </p>
-          </div>
-          {data && (
-            <div className="text-sm text-ink-soft">
-              Tổng:{" "}
-              <span className="font-bold text-ink">{data.total}</span> reports
-            </div>
-          )}
+      <div className="space-y-6">
+        {/* Header (Figma 454:3346 & 3347) */}
+        <div>
+          <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
+            Báo lỗi — Danh sách
+          </h1>
+          <p className="text-sm text-[#65727D] mt-1">
+            Báo lỗi từ người dùng ứng dụng. Lọc theo trạng thái, mức độ, loại lỗi và người gửi.
+          </p>
         </div>
 
-        {/* Filters */}
-        <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* ─── Filter Bar Card (Figma 454:3348) ─── */}
+        <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft space-y-4">
+          <div className="w-full">
             <SearchBar
               value={search}
               onChange={(v) => {
                 setSearch(v);
                 setPage(1);
               }}
-              placeholder="🔍 Tìm theo tiêu đề..."
+              placeholder="Tìm theo tiêu đề hoặc nội dung lỗi..."
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <SearchableSelect
               options={statusOptions}
               value={filterStatus}
@@ -174,6 +164,7 @@ export default function BugReportsListPage() {
               searchPlaceholder="Tìm trạng thái..."
               allowClear={true}
             />
+
             <SearchableSelect
               options={severityOptions}
               value={filterSeverity}
@@ -185,6 +176,7 @@ export default function BugReportsListPage() {
               searchPlaceholder="Tìm mức độ..."
               allowClear={true}
             />
+
             <SearchableSelect
               options={categoryOptions}
               value={filterCategory}
@@ -193,9 +185,10 @@ export default function BugReportsListPage() {
                 setPage(1);
               }}
               placeholder="Tất cả loại lỗi"
-              searchPlaceholder="Tìm loại lỗi..."
+              searchPlaceholder="Tìm loại..."
               allowClear={true}
             />
+
             <SearchableSelect
               options={roleOptions}
               value={filterRole}
@@ -208,27 +201,30 @@ export default function BugReportsListPage() {
               allowClear={true}
             />
           </div>
-          <div className="mt-2 flex justify-end">
-            <button
-              onClick={resetFilters}
-              className="text-xs text-ink-soft hover:text-ink underline"
-            >
-              Xóa bộ lọc
-            </button>
-          </div>
-        </Card>
 
-        {/* List */}
-        <Card>
+          {(filterStatus || filterSeverity || filterCategory || filterRole || search) && (
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={resetFilters}
+                className="text-xs font-bold text-[#A93832] hover:underline"
+              >
+                Đặt lại bộ lọc
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Table Card (Figma 454:3365) ─── */}
+        <div className="bg-white rounded-[24px] border border-[#E5E8EB] overflow-hidden shadow-soft">
           {error ? (
-            <div className="p-8 text-center text-bad space-y-2">
-              <p className="font-semibold">Lỗi tải dữ liệu. Hãy thử lại sau.</p>
+            <div className="p-8 text-center text-[#A93832] space-y-3">
+              <p className="font-bold text-sm">Không thể tải danh sách báo lỗi.</p>
               <button
                 onClick={() => {
                   clearToken("adminApp");
                   router.replace("/login");
                 }}
-                className="kbtn kbtn-danger"
+                className="px-5 py-2 bg-[#A93832] text-white rounded-full font-bold text-xs"
               >
                 Đăng nhập lại
               </button>
@@ -238,28 +234,25 @@ export default function BugReportsListPage() {
           ) : data.items.length === 0 ? (
             <EmptyState
               icon="🎉"
-              title="Không có bug report nào"
-              description="Hiện không có report nào khớp với bộ lọc."
+              title="Không có báo lỗi nào"
+              description="Hiện không có bản ghi nào khớp với điều kiện lọc."
             />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead
-                  className="text-xs uppercase tracking-wider"
-                  style={{ background: "#EFECE5", color: "#605D57" }}
-                >
+                <thead className="bg-[#F6F7F8] border-b border-[#E5E8EB] text-xs font-bold text-[#65727D] uppercase tracking-wider">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold">Tiêu đề</th>
-                    <th className="px-4 py-3 text-left font-semibold">Người gửi</th>
-                    <th className="px-4 py-3 text-left font-semibold">Loại</th>
-                    <th className="px-4 py-3 text-left font-semibold">Mức độ</th>
-                    <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
-                    <th className="px-4 py-3 text-left font-semibold">Ảnh</th>
-                    <th className="px-4 py-3 text-left font-semibold">Ngày gửi</th>
+                    <th className="px-5 py-3.5 text-left">Tiêu đề &amp; Mô tả</th>
+                    <th className="px-5 py-3.5 text-left">Người gửi</th>
+                    <th className="px-5 py-3.5 text-left">Phân loại</th>
+                    <th className="px-5 py-3.5 text-left">Mức độ</th>
+                    <th className="px-5 py-3.5 text-left">Trạng thái</th>
+                    <th className="px-5 py-3.5 text-center">Ảnh</th>
+                    <th className="px-5 py-3.5 text-right">Ngày gửi</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {data.items.map((r, idx) => {
+                <tbody className="divide-y divide-[#E5E8EB]">
+                  {data.items.map((r) => {
                     const statusColor = STATUS_COLORS[r.status] || {
                       bg: "bg-gray-100",
                       text: "text-gray-700",
@@ -273,29 +266,29 @@ export default function BugReportsListPage() {
                     return (
                       <tr
                         key={r.bug_report_id}
-                        className={`hover:bg-sunken cursor-pointer ${
-                          idx > 0 ? "border-t border-line" : ""
-                        }`}
+                        className="hover:bg-[#F6F7F8] cursor-pointer transition"
                         onClick={() => router.push(`/bug-reports/${r.bug_report_id}`)}
                       >
-                        <td className="px-4 py-3 max-w-xs">
-                          <div className="font-semibold text-ink line-clamp-1">
+                        <td className="px-5 py-4 max-w-sm">
+                          <div className="font-bold text-[#102737] line-clamp-1">
                             {r.title}
                           </div>
-                          <div className="text-xs text-ink-soft line-clamp-1 mt-0.5">
+                          <div className="text-xs text-[#65727D] line-clamp-1 mt-0.5">
                             {r.description}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="text-ink">{r.user?.username || "—"}</div>
-                          <div className="text-xs text-ink-soft">
+                        <td className="px-5 py-4">
+                          <div className="font-semibold text-[#102737]">
+                            {r.teacher?.full_name || r.user?.username || "—"}
+                          </div>
+                          <div className="text-[11px] text-[#65727D]">
                             {ROLE_LABELS[r.user?.role] || r.user?.role}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-ink-soft">
+                        <td className="px-5 py-4 text-xs font-medium text-[#65727D]">
                           {CATEGORY_LABELS[r.category] || r.category}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-4">
                           <Pill
                             tone={
                               sevColor.bg.includes("red")
@@ -310,7 +303,7 @@ export default function BugReportsListPage() {
                             {sevColor.label}
                           </Pill>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-4">
                           <Pill
                             tone={
                               statusColor.bg.includes("green")
@@ -319,19 +312,23 @@ export default function BugReportsListPage() {
                                   ? "warn"
                                   : statusColor.bg.includes("blue")
                                     ? "info"
-                                    : statusColor.bg.includes("purple")
-                                      ? "brand"
-                                      : "neutral"
+                                    : "neutral"
                             }
                           >
                             {statusColor.label}
                           </Pill>
                         </td>
-                        <td className="px-4 py-3 text-ink-soft">
-                          {r.attachment_count > 0 ? `📎 ${r.attachment_count}` : "—"}
+                        <td className="px-5 py-4 text-center text-xs text-[#65727D]">
+                          {r.attachment_count > 0 ? (
+                            <span className="inline-flex items-center gap-1 font-bold text-[#087F70]">
+                              📎 {r.attachment_count}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-ink-soft whitespace-nowrap">
-                          <div title={formatDate(r.created_at)}>
+                        <td className="px-5 py-4 text-right text-xs text-[#65727D] whitespace-nowrap">
+                          <div title={formatDate(r.created_at)} className="font-medium">
                             {relativeTime(r.created_at)}
                           </div>
                         </td>
@@ -342,33 +339,38 @@ export default function BugReportsListPage() {
               </table>
             </div>
           )}
-        </Card>
+        </div>
 
-        {/* Pagination */}
-        {data && data.total_pages > 1 && (
-          <div className="flex items-center justify-between text-sm">
-            <div className="text-ink-soft">
-              Trang <span className="font-bold text-ink">{data.page}</span> /{" "}
-              {data.total_pages}
-            </div>
-            <div className="flex gap-2">
-              <button
-                disabled={!data.has_prev}
-                onClick={() => setPage(page - 1)}
-                className="kbtn kbtn-secondary disabled:opacity-40"
-              >
-                ← Trước
-              </button>
-              <button
-                disabled={!data.has_next}
-                onClick={() => setPage(page + 1)}
-                className="kbtn kbtn-secondary disabled:opacity-40"
-              >
-                Sau →
-              </button>
-            </div>
+        {/* ─── Footer Meta Note (Figma 454:3423) ─── */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <div className="text-xs text-[#65727D]">
+            💡 Chạm vào một báo lỗi để mở chi tiết, xem ảnh đính kèm và đổi trạng thái xử lý.
           </div>
-        )}
+
+          {data && data.total_pages > 1 && (
+            <div className="flex items-center gap-3 text-xs font-bold text-[#65727D]">
+              <span>
+                Trang <span className="text-[#102737]">{data.page}</span> / {data.total_pages}
+              </span>
+              <div className="flex gap-1.5">
+                <button
+                  disabled={!data.has_prev}
+                  onClick={() => setPage(page - 1)}
+                  className="px-3 py-1.5 rounded-[12px] border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] disabled:opacity-40 transition"
+                >
+                  ← Trước
+                </button>
+                <button
+                  disabled={!data.has_next}
+                  onClick={() => setPage(page + 1)}
+                  className="px-3 py-1.5 rounded-[12px] border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] disabled:opacity-40 transition"
+                >
+                  Sau →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

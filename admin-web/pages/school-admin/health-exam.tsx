@@ -772,7 +772,7 @@ export default function HealthExamPage() {
 
   return (
     <SchoolAdminLayout
-      active="features"
+      active="health-exam"
       pageTitle="Sổ sức khoẻ học sinh"
       pageAction={
         <div className="flex flex-wrap items-center gap-2">

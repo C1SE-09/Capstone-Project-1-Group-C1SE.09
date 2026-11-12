@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_class_header.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +25,10 @@ class LeaveRequestReviewScreen extends StatefulWidget {
     super.key,
     required this.classId,
     this.className,
+    this.teacherName,
+    this.notificationCount,
+    this.onSelectClass,
+    this.onOpenNotifications,
     this.repository,
     this.initialRequest,
     this.onNavigationSelected,
@@ -35,6 +40,10 @@ class LeaveRequestReviewScreen extends StatefulWidget {
 
   final String classId;
   final String? className;
+  final String? teacherName;
+  final int? notificationCount;
+  final VoidCallback? onSelectClass;
+  final VoidCallback? onOpenNotifications;
   final HttpLeaveRequestRepository? repository;
   final LeaveRequestEntity? initialRequest;
   final ValueChanged<GardenVoiceTeacherDestination>? onNavigationSelected;
@@ -373,28 +382,29 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         bottom: false,
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.className ?? 'Lớp học',
-                        style: TextStyle(
-                            fontSize: 24,
-                            height: 1.35,
-                            fontWeight: FontWeight.w700,
-                            color: k.ink)),
-                    Text('Đơn xin nghỉ và báo đi trễ',
-                        style: TextStyle(fontSize: 13, color: k.inkSoft)),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-              child: _buildClassTabs(k),
+            GardenVoiceClassHeader(
+              className: widget.className ?? 'Lớp học',
+              subtitle: widget.teacherName ?? '',
+              selectedTab: GardenVoiceClassTab.leaveRequests,
+              notificationCount: widget.notificationCount,
+              pendingLeaveCount: _pendingCount,
+              onSelectClass: widget.onSelectClass,
+              onOpenNotifications: widget.onOpenNotifications,
+              onTabSelected: (tab) {
+                switch (tab) {
+                  case GardenVoiceClassTab.roster:
+                    Navigator.of(context).maybePop();
+                    widget.onOpenClassList?.call();
+                  case GardenVoiceClassTab.attendance:
+                    Navigator.of(context).maybePop();
+                    widget.onOpenAttendance?.call();
+                  case GardenVoiceClassTab.leaveRequests:
+                    break;
+                  case GardenVoiceClassTab.timetable:
+                    Navigator.of(context).maybePop();
+                    widget.onOpenTimetable?.call();
+                }
+              },
             ),
             Expanded(child: _buildBody(k)),
           ],
@@ -408,66 +418,6 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
             widget.onNavigationSelected!(destination);
           }
         },
-      ),
-    );
-  }
-
-  Widget _buildClassTabs(KPalette k) {
-    final largeText = MediaQuery.textScalerOf(context).scale(12) > 16;
-    return Container(
-      height: largeText ? 58 : 42,
-      padding: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-        color: k.surface,
-        border: Border.all(color: k.lineStrong),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final (label, callback, selected) in [
-              ('Danh sách', widget.onOpenClassList, false),
-              ('Điểm danh', widget.onOpenAttendance ?? () {}, false),
-              ('Đơn nghỉ', null, true),
-              ('Lịch học', widget.onOpenTimetable, false),
-            ])
-              SizedBox(
-                width: largeText ? 116 : 84.5,
-                child: Semantics(
-                  button: callback != null,
-                  selected: selected,
-                  child: Material(
-                    color: selected ? k.brandTint : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      onTap: callback == null
-                          ? null
-                          : () {
-                              Navigator.of(context).maybePop();
-                              callback();
-                            },
-                      borderRadius: BorderRadius.circular(16),
-                      child: SizedBox(
-                        height: largeText ? 56 : 40,
-                        child: Center(
-                          child: Text(label,
-                              softWrap: false,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: selected
-                                      ? FontWeight.w700
-                                      : FontWeight.w400,
-                                  color: selected ? k.brand : k.inkSoft)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }

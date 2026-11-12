@@ -50,7 +50,7 @@ class ParentNavigationBar extends StatelessWidget {
                           foregroundColor:
                               selectedIndex == index ? k.brand : k.ink,
                           textStyle: TextStyle(
-                            fontFamily: 'BeVietnamPro',
+                            fontFamily: 'Nunito',
                             fontSize: 12,
                             fontWeight: selectedIndex == index
                                 ? FontWeight.w600

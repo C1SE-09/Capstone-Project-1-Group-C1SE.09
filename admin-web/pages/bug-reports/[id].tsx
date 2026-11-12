@@ -1,7 +1,7 @@
 /**
  * pages/bug-reports/[id].tsx
  * ==========================
- * Chi tiết bug report — restyle theo theme KinderLog.
+ * Chi tiết bug report — 100% chuẩn Figma Frame 04: "GV · Admin Web · 04 — Báo lỗi: Chi tiết" (#454:3464)
  */
 
 import { useEffect, useState } from "react";
@@ -9,7 +9,7 @@ import useSWR from "swr";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
-import { Badge, Card, Spinner } from "@/components/ui";
+import { Spinner } from "@/components/ui";
 import { Pill } from "@/components/ui-school";
 import { apiFetch, ApiError, getToken } from "@/lib/api";
 import ImageViewerModal from "@/components/ImageViewerModal";
@@ -97,9 +97,7 @@ export default function BugReportDetailPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
 
-  // State cho Modal xem ảnh phóng to trực tiếp
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!getToken("adminApp")) {
@@ -109,7 +107,7 @@ export default function BugReportDetailPage() {
     }
   }, [router]);
 
-  const { data: report, error, mutate } = useSWR<DetailResponse>(
+  const { data: report, mutate } = useSWR<DetailResponse>(
     tokenReady && id ? `/api/bug-reports/${id}` : null,
     (url: string) => apiFetch<DetailResponse>(url, { account: "adminApp" }),
   );
@@ -122,79 +120,49 @@ export default function BugReportDetailPage() {
     }
   }, [report]);
 
-  const handleSave = async () => {
-    if (!report) return;
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || typeof id !== "string") return;
+
+    setSaving(true);
     setSaveError(null);
     setSaveOk(false);
-    setSaving(true);
 
     try {
-      const body: Record<string, string> = {};
-      if (newStatus !== report.status) body.status = newStatus;
-      if (newCategory !== report.category) body.category = newCategory;
-      if (newSeverity !== report.severity) body.severity = newSeverity;
-      const trimmed = comment.trim();
-      if (trimmed) body.comment = trimmed;
+      await apiFetch<DetailResponse>(`/api/bug-reports/${id}`, {
+        account: "adminApp",
+        method: "PATCH",
+        body: JSON.stringify({
+          status: newStatus !== report?.status ? newStatus : undefined,
+          category: newCategory !== report?.category ? newCategory : undefined,
+          severity: newSeverity !== report?.severity ? newSeverity : undefined,
+          comment: comment.trim() || undefined,
+        }),
+      });
 
-      const updated = await apiFetch<DetailResponse>(
-        `/api/bug-reports/${report.bug_report_id}`,
-        { method: "PATCH", body, account: "adminApp" },
-      );
       setComment("");
       setSaveOk(true);
-      await mutate(updated, { revalidate: true });
-      setNewStatus(updated.status);
-      setNewCategory(updated.category);
-      setNewSeverity(updated.severity);
+      await mutate();
       setTimeout(() => setSaveOk(false), 3000);
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setSaveError(err.detail);
+        setSaveError(err.detail || "Cập nhật thất bại");
       } else {
-        setSaveError("Có lỗi xảy ra. Vui lòng thử lại.");
+        setSaveError("Lỗi kết nối");
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const hasChange =
-    !!report &&
-    (newStatus !== report.status ||
-      newCategory !== report.category ||
-      newSeverity !== report.severity ||
-      comment.trim().length > 0);
+  const imageAttachments = (report?.attachments || []).filter((a) =>
+    isImageAttachment(a)
+  );
+  const otherAttachments = (report?.attachments || []).filter(
+    (a) => !isImageAttachment(a)
+  );
 
-  const imageAttachments = (report?.attachments || []).filter(isImageAttachment);
-  const otherAttachments = (report?.attachments || []).filter((att) => !isImageAttachment(att));
-
-  const handleOpenImage = (attachmentId: string) => {
-    const idx = imageAttachments.findIndex((img) => img.attachment_id === attachmentId);
-    setActiveImageIndex(idx >= 0 ? idx : 0);
-    setViewerOpen(true);
-  };
-
-  if (!tokenReady) return <Spinner />;
-
-  if (error) {
-    return (
-      <AdminLayout currentPage="bug-reports">
-        <div className="text-center py-16">
-          <div className="text-5xl mb-3">😢</div>
-          <div className="text-ink font-bold">Không tìm thấy bug report</div>
-          <Link
-            href="/bug-reports"
-            className="text-sm mt-2 inline-block hover:underline"
-            style={{ color: "#16665a" }}
-          >
-            ← Quay lại danh sách
-          </Link>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!report) {
+  if (!tokenReady || !report) {
     return (
       <AdminLayout currentPage="bug-reports">
         <Spinner />
@@ -204,20 +172,20 @@ export default function BugReportDetailPage() {
 
   return (
     <AdminLayout currentPage="bug-reports">
-      <div className="space-y-4 max-w-5xl">
+      <div className="space-y-6 max-w-5xl">
         {/* Breadcrumb */}
-        <div className="text-sm text-ink-soft">
-          <Link href="/bug-reports" className="hover:underline" style={{ color: "#16665a" }}>
-            Quản lý Bug Report
+        <div className="flex items-center gap-2 text-xs font-bold text-[#65727D]">
+          <Link href="/bug-reports" className="hover:text-[#087F70] transition">
+            ← Danh sách báo lỗi
           </Link>
-          <span className="mx-1.5">/</span>
-          <span className="text-ink">Chi tiết</span>
+          <span>/</span>
+          <span className="text-[#102737]">Chi tiết #{report.bug_report_id.slice(0, 8)}</span>
         </div>
 
-        {/* Header */}
-        <Card className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
+        {/* ─── Header Card (Figma 454:3484) ─── */}
+        <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-7 shadow-soft">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <Pill tone={statusPillTone(report.status)}>
                   {STATUS_COLORS[report.status]?.label || report.status}
@@ -225,376 +193,257 @@ export default function BugReportDetailPage() {
                 <Pill tone={sevPillTone(report.severity)}>
                   {SEVERITY_COLORS[report.severity]?.label || report.severity}
                 </Pill>
-                <span className="text-xs text-ink-soft">
+                <span className="text-xs font-bold text-[#65727D] bg-[#F6F7F8] px-2.5 py-1 rounded-full">
                   {CATEGORY_LABELS[report.category] || report.category}
                 </span>
               </div>
-              <h1 className="text-xl font-bold text-ink">{report.title}</h1>
-              <div className="text-sm text-ink-soft mt-1.5">
-                #{report.bug_report_id.slice(0, 8)} · tạo lúc{" "}
-                {formatDate(report.created_at)}
+              <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
+                {report.title}
+              </h1>
+              <div className="text-xs text-[#65727D] mt-1.5 font-medium">
+                Gửi lúc {formatDate(report.created_at)} bởi{" "}
+                <span className="text-[#102737] font-bold">
+                  {report.teacher?.full_name || report.user?.username}
+                </span>{" "}
+                ({ROLE_LABELS[report.user?.role] || report.user?.role})
               </div>
             </div>
           </div>
 
-          <div className="mt-5 pt-5 border-t border-line">
-            <h3 className="text-xs font-bold text-ink-faint uppercase tracking-wider mb-2">
-              Mô tả chi tiết
+          <div className="mt-6 pt-6 border-t border-[#E5E8EB]">
+            <h3 className="text-xs font-bold text-[#8C9BA5] uppercase tracking-wider mb-2">
+              Mô tả chi tiết sự cố
             </h3>
-            <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">
+            <p className="text-sm text-[#102737] whitespace-pre-wrap leading-relaxed bg-[#F6F7F8] p-4 rounded-[16px] border border-[#E5E8EB]/60">
               {report.description}
             </p>
           </div>
-        </Card>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Left */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Reporter & Assignee */}
-            <Card className="p-5">
-              <h3 className="text-sm font-bold text-ink mb-3">
-                Thông tin liên quan
-              </h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-xs text-ink-faint mb-0.5">Người gửi</div>
-                  <div className="font-semibold text-ink">
-                    {report.user?.username || "—"}
-                  </div>
-                  <div className="text-xs text-ink-soft">
-                    {ROLE_LABELS[report.user?.role] || report.user?.role}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-ink-faint mb-0.5">Người xử lý</div>
-                  <div className="font-semibold text-ink">
-                    {report.teacher?.full_name || (
-                      <span className="text-ink-faint italic">Chưa gán</span>
-                    )}
-                  </div>
-                  {report.teacher?.email && (
-                    <div className="text-xs text-ink-soft">
-                      {report.teacher.email}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-
-            {/* Device */}
-            {(report.app_version || report.os_version || report.device_model) && (
-              <Card className="p-5">
-                <h3 className="text-sm font-bold text-ink mb-3">
-                  Thiết bị & Môi trường
+        {/* ─── Grid 2 cột: Ảnh & Thiết bị vs Cập nhật ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Cột trái (7 cols): Ảnh đính kèm & Thiết bị */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Ảnh đính kèm (Figma 454:3504) */}
+            <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-extrabold text-base text-[#102737] flex items-center gap-2">
+                  <span>Ảnh đính kèm</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#E6F3EB] text-[#087F70] font-bold">
+                    {imageAttachments.length}
+                  </span>
                 </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {report.app_version && (
-                    <div>
-                      <div className="text-xs text-ink-faint">App version</div>
-                      <div className="font-semibold">
-                        {report.app_version}
-                        {report.build_number && ` (build ${report.build_number})`}
-                      </div>
-                    </div>
-                  )}
-                  {report.os_version && (
-                    <div>
-                      <div className="text-xs text-ink-faint">OS</div>
-                      <div className="font-semibold">{report.os_version}</div>
-                    </div>
-                  )}
-                  {report.device_model && (
-                    <div>
-                      <div className="text-xs text-ink-faint">Device</div>
-                      <div className="font-semibold">{report.device_model}</div>
-                    </div>
-                  )}
-                  {report.network_type && (
-                    <div>
-                      <div className="text-xs text-ink-faint">Network</div>
-                      <div className="font-semibold">{report.network_type}</div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            )}
-
-            {/* Attachments */}
-            {report.attachments && report.attachments.length > 0 && (
-              <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-                    <span>File đính kèm</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-sunken text-ink-soft">
-                      {report.attachments.length}
-                    </span>
-                  </h3>
-                  {imageAttachments.length > 0 && (
-                    <span className="text-xs text-ink-soft">
-                      Nhấn vào hình để xem trực tiếp
-                    </span>
-                  )}
-                </div>
-
-                {/* Phần 1: Hình ảnh đính kèm (Screenshots) */}
                 {imageAttachments.length > 0 && (
-                  <div className="mb-4">
-                    <div className="text-xs font-semibold text-ink-faint uppercase tracking-wider mb-2">
-                      Hình ảnh chụp màn hình ({imageAttachments.length})
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {imageAttachments.map((att) => {
-                        const imgUrl = resolveAttachmentUrl(att.file_url);
-                        return (
-                          <div
-                            key={att.attachment_id}
-                            onClick={() => handleOpenImage(att.attachment_id)}
-                            className="group relative border border-line rounded-xl overflow-hidden bg-white hover:border-teal-700/50 hover:shadow-md transition-all cursor-pointer flex flex-col"
-                            title="Nhấn để xem hình ảnh trực tiếp"
-                          >
-                            {/* Khung thumbnail hình ảnh */}
-                            <div className="relative aspect-video w-full bg-sunken overflow-hidden flex items-center justify-center">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={imgUrl}
-                                alt={att.file_name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                onError={(e) => {
-                                  // Khi không load được thumbnail
-                                  const target = e.target as HTMLElement;
-                                  target.style.display = "none";
-                                  const fallback = target.parentElement?.querySelector(".img-fallback");
-                                  if (fallback) (fallback as HTMLElement).style.display = "flex";
-                                }}
-                              />
-                              <div className="img-fallback hidden flex-col items-center justify-center text-ink-faint p-2 text-center text-xs">
-                                <span className="text-xl mb-1">🖼️</span>
-                                <span className="text-[10px]">Ảnh lỗi</span>
-                              </div>
-
-                              {/* Hover overlay hint */}
-                              <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-medium text-xs">
-                                <span>🔍</span>
-                                <span>Xem ảnh</span>
-                              </div>
-                            </div>
-
-                            {/* Thông tin tên file và dung lượng */}
-                            <div className="p-2.5 flex-1 flex flex-col justify-between">
-                              <div className="text-xs font-semibold text-ink truncate group-hover:text-teal-800 transition-colors">
-                                {att.file_name}
-                              </div>
-                              <div className="text-[11px] text-ink-faint mt-1 flex items-center justify-between">
-                                <span>{formatFileSize(att.file_size)}</span>
-                                <span className="text-teal-700 font-semibold group-hover:underline">
-                                  Phóng to ↗
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <span className="text-xs text-[#65727D]">
+                    Nhấn vào ảnh để phóng to
+                  </span>
                 )}
+              </div>
 
-                {/* Phần 2: Tài liệu & file khác (nếu có) */}
-                {otherAttachments.length > 0 && (
-                  <div>
-                    {imageAttachments.length > 0 && (
-                      <div className="text-xs font-semibold text-ink-faint uppercase tracking-wider mb-2">
-                        Tệp tin khác ({otherAttachments.length})
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      {otherAttachments.map((att) => {
-                        const safeUrl = resolveAttachmentUrl(att.file_url) || sanitizeUrl(att.file_url);
-                        return (
-                          <a
-                            key={att.attachment_id}
-                            href={safeUrl}
-                            download={att.file_name}
-                            className="flex items-center gap-3 p-2.5 border border-line rounded-control hover:bg-sunken transition-colors"
-                          >
-                            <span className="text-2xl">📄</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-ink truncate">
-                                {att.file_name}
-                              </div>
-                              <div className="text-xs text-ink-faint">
-                                {att.mime_type}
-                                {att.file_size && ` · ${formatFileSize(att.file_size)}`}
-                              </div>
-                            </div>
-                            <span className="text-xs font-semibold" style={{ color: "#16665a" }}>
-                              Tải về ⬇
-                            </span>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </Card>
-            )}
-
-            {/* History */}
-            <Card className="p-5">
-              <h3 className="text-sm font-bold text-ink mb-3">
-                Lịch sử thay đổi ({report.history?.length || 0})
-              </h3>
-              {report.history && report.history.length > 0 ? (
-                <ol className="space-y-3">
-                  {report.history.map((h) => {
-                    const oldC = h.old_status ? STATUS_COLORS[h.old_status] : null;
-                    const newC = h.new_status ? STATUS_COLORS[h.new_status] : null;
+              {imageAttachments.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {imageAttachments.map((att, idx) => {
+                    const imgUrl = resolveAttachmentUrl(att.file_url);
                     return (
-                      <li
-                        key={h.history_id}
-                        className="border-l-2 pl-3 py-1"
-                        style={{ borderColor: "#a3c2b3" }}
+                      <div
+                        key={att.attachment_id}
+                        onClick={() => setActiveImageIndex(idx)}
+                        className="group relative aspect-video bg-[#F6F7F8] rounded-[16px] overflow-hidden border border-[#E5E8EB] cursor-pointer hover:border-[#087F70] transition"
                       >
-                        <div className="text-xs text-ink-faint">
-                          {formatDate(h.created_at)}
+                        <img
+                          src={imgUrl}
+                          alt={att.file_name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition">
+                          🔍 Xem ảnh
                         </div>
-                        <div className="text-sm text-ink mt-0.5">
-                          {h.old_status && h.new_status ? (
-                            <>
-                              <Pill tone={statusPillTone(h.old_status)}>
-                                {oldC?.label || h.old_status}
-                              </Pill>{" "}
-                              →{" "}
-                              <Pill tone={statusPillTone(h.new_status)}>
-                                {newC?.label || h.new_status}
-                              </Pill>
-                            </>
-                          ) : h.new_status ? (
-                            <>
-                              Đã tạo với trạng thái{" "}
-                              <Pill tone={statusPillTone(h.new_status)}>
-                                {newC?.label || h.new_status}
-                              </Pill>
-                            </>
-                          ) : (
-                            "Cập nhật"
-                          )}
-                        </div>
-                        {h.comment && (
-                          <div className="text-xs text-ink-soft mt-1 italic">
-                            💬 {h.comment}
-                          </div>
-                        )}
-                        {h.changed_by && (
-                          <div className="text-xs text-ink-faint mt-0.5">
-                            bởi {h.changed_by.username}
-                          </div>
-                        )}
-                      </li>
+                      </div>
                     );
                   })}
-                </ol>
+                </div>
               ) : (
-                <div className="text-sm text-ink-soft italic">
-                  Chưa có lịch sử thay đổi.
+                <div className="py-6 text-center text-xs text-[#8C9BA5]">
+                  Không có ảnh chụp màn hình đính kèm.
                 </div>
               )}
-            </Card>
+
+              {otherAttachments.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-[#E5E8EB] space-y-2">
+                  <div className="text-xs font-bold text-[#8C9BA5] uppercase">File khác</div>
+                  {otherAttachments.map((att) => (
+                    <a
+                      key={att.attachment_id}
+                      href={sanitizeUrl(resolveAttachmentUrl(att.file_url))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-[12px] bg-[#F6F7F8] hover:bg-[#E6F3EB] text-xs font-semibold text-[#102737] transition"
+                    >
+                      <span>📎 {att.file_name}</span>
+                      <span className="text-[#65727D]">{formatFileSize(att.file_size)}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Môi trường & Thiết bị */}
+            <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
+              <h3 className="font-extrabold text-base text-[#102737] mb-4">
+                Môi trường thiết bị
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
+                  <div className="text-[#8C9BA5] font-bold">App Version</div>
+                  <div className="font-extrabold text-[#102737] text-sm mt-0.5">
+                    {report.app_version || "1.0.0"} {report.build_number ? `(${report.build_number})` : ""}
+                  </div>
+                </div>
+                <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
+                  <div className="text-[#8C9BA5] font-bold">Hệ điều hành</div>
+                  <div className="font-extrabold text-[#102737] text-sm mt-0.5">
+                    {report.os_version || "Không xác định"}
+                  </div>
+                </div>
+                <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
+                  <div className="text-[#8C9BA5] font-bold">Thiết bị</div>
+                  <div className="font-extrabold text-[#102737] text-sm mt-0.5">
+                    {report.device_model || "Mobile Client"}
+                  </div>
+                </div>
+                <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
+                  <div className="text-[#8C9BA5] font-bold">Kết nối mạng</div>
+                  <div className="font-extrabold text-[#102737] text-sm mt-0.5">
+                    {report.network_type || "WiFi / 4G"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Right */}
-          <div className="space-y-4">
-            <Card className="p-5 sticky top-6">
-              <h3 className="text-sm font-bold text-ink mb-3">
-                Cập nhật trạng thái
+          {/* Cột phải (5 cols): Xử lý & Cập nhật trạng thái */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Form Cập nhật */}
+            <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
+              <h3 className="font-extrabold text-base text-[#102737] mb-4">
+                Cập nhật xử lý
               </h3>
 
-              <label className="klabel">Trạng thái mới</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                className="kinput"
-              >
-                {Object.entries(STATUS_COLORS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
-
-              <label className="klabel mt-3 block">Loại lỗi</label>
-              <select
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="kinput"
-              >
-                {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-
-              <label className="klabel mt-3 block">Mức độ nghiêm trọng</label>
-              <select
-                value={newSeverity}
-                onChange={(e) => setNewSeverity(e.target.value)}
-                className="kinput"
-              >
-                {Object.entries(SEVERITY_COLORS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
-
-              <label className="klabel mt-3 block">Ghi chú (optional)</label>
-              <textarea
-                rows={3}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Nhập ghi chú về thay đổi này..."
-                className="kinput"
-                style={{ resize: "none" }}
-              />
-
-              <button
-                onClick={handleSave}
-                disabled={saving || !hasChange}
-                className="kbtn kbtn-primary w-full justify-center mt-3"
-              >
-                {saving ? "Đang lưu..." : "Lưu thay đổi"}
-              </button>
-
-              {saveOk && (
-                <div className="mt-2 px-2.5 py-1.5 rounded-control text-xs" style={{ background: "#E7F1EA", color: "#3F8B5C" }}>
-                  ✅ Đã lưu thành công
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#65727D] mb-1.5 uppercase">
+                    Trạng thái xử lý
+                  </label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full h-11 px-3 rounded-[12px] border border-[#E5E8EB] text-sm font-semibold text-[#102737] focus:outline-none focus:border-[#087F70]"
+                  >
+                    {Object.entries(STATUS_COLORS).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
-              {saveError && (
-                <div className="mt-2 px-2.5 py-1.5 rounded-control text-xs" style={{ background: "#F6E6E1", color: "#BB4A34" }}>
-                  ⚠️ {saveError}
-                </div>
-              )}
 
-              <div className="mt-4 pt-4 border-t border-line text-xs text-ink-soft space-y-1">
-                <div>Tạo: {formatDate(report.created_at)}</div>
-                <div>Cập nhật: {formatDate(report.updated_at)}</div>
-                {report.resolved_at && <div>Resolved: {formatDate(report.resolved_at)}</div>}
-                {report.closed_at && <div>Closed: {formatDate(report.closed_at)}</div>}
+                <div>
+                  <label className="block text-xs font-bold text-[#65727D] mb-1.5 uppercase">
+                    Mức độ nghiêm trọng
+                  </label>
+                  <select
+                    value={newSeverity}
+                    onChange={(e) => setNewSeverity(e.target.value)}
+                    className="w-full h-11 px-3 rounded-[12px] border border-[#E5E8EB] text-sm font-semibold text-[#102737] focus:outline-none focus:border-[#087F70]"
+                  >
+                    {Object.entries(SEVERITY_COLORS).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#65727D] mb-1.5 uppercase">
+                    Ghi chú xử lý
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Nhập ghi chú xử lý (sửa lỗi, lý do đóng, ...)"
+                    className="w-full p-3 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] focus:outline-none focus:border-[#087F70]"
+                  />
+                </div>
+
+                {saveError && (
+                  <div className="p-3 bg-[#FDEAE5] text-[#A93832] rounded-[12px] text-xs font-medium">
+                    {saveError}
+                  </div>
+                )}
+                {saveOk && (
+                  <div className="p-3 bg-[#E5F5E7] text-[#087F70] rounded-[12px] text-xs font-bold">
+                    ✓ Cập nhật báo lỗi thành công!
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full h-11 bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs rounded-full flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-50"
+                >
+                  {saving ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </form>
+            </div>
+
+            {/* Lịch sử xử lý */}
+            <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
+              <h3 className="font-extrabold text-base text-[#102737] mb-3">
+                Lịch sử thay đổi
+              </h3>
+              <div className="space-y-3">
+                {report.history && report.history.length > 0 ? (
+                  report.history.map((h) => (
+                    <div key={h.history_id} className="text-xs p-3 bg-[#F6F7F8] rounded-[14px]">
+                      <div className="font-bold text-[#102737]">
+                        {h.changed_by?.username || "Admin"} · {formatDate(h.created_at)}
+                      </div>
+                      <div className="text-[#65727D] mt-1">
+                        Trạng thái: <span className="font-bold">{h.old_status}</span> →{" "}
+                        <span className="font-bold text-[#087F70]">{h.new_status}</span>
+                      </div>
+                      {h.comment && (
+                        <div className="mt-1 text-[#102737] italic">&ldquo;{h.comment}&rdquo;</div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-[#8C9BA5]">Chưa có lịch sử thay đổi.</div>
+                )}
               </div>
-            </Card>
-          </div>
-        </div>
-      </div>
+            </div>
 
-      {/* Lightbox Modal xem ảnh trực tiếp trên màn hình hiện tại */}
-      <ImageViewerModal
-        isOpen={viewerOpen}
-        onClose={() => setViewerOpen(false)}
-        images={imageAttachments}
-        currentIndex={activeImageIndex}
-        onSelectIndex={setActiveImageIndex}
-      />
+          </div>
+
+        </div>
+
+        {/* Modal xem ảnh */}
+        {activeImageIndex !== null && (
+          <ImageViewerModal
+            isOpen={activeImageIndex !== null}
+            images={imageAttachments}
+            currentIndex={activeImageIndex}
+            onSelectIndex={setActiveImageIndex}
+            onClose={() => setActiveImageIndex(null)}
+          />
+        )}
+      </div>
     </AdminLayout>
   );
-}
+}

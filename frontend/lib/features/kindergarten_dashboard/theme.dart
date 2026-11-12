@@ -528,7 +528,7 @@ ThemeData _buildTheme(
     {required ColorScheme scheme, required KPalette palette}) {
   return ThemeData(
     useMaterial3: true,
-    fontFamily: 'BeVietnamPro',
+    fontFamily: 'Nunito',
     colorScheme: scheme,
     scaffoldBackgroundColor: palette.canvas,
     extensions: [palette],
@@ -584,7 +584,7 @@ ThemeData _buildTheme(
       backgroundColor: palette.ink,
       behavior: SnackBarBehavior.floating,
       contentTextStyle:
-          TextStyle(color: palette.surface, fontFamily: 'BeVietnamPro'),
+          TextStyle(color: palette.surface, fontFamily: 'Nunito'),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(8)),
       ),

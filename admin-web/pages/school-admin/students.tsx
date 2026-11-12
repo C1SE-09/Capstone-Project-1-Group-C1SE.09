@@ -1280,8 +1280,8 @@ export default function SchoolAdminStudentsPage() {
 
   return (
     <SchoolAdminLayout
-      active="features"
-      pageTitle="Quản lý học sinh"
+      active="students"
+      pageTitle="Quản lý Học sinh"
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1289,14 +1289,14 @@ export default function SchoolAdminStudentsPage() {
               mutate();
               setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
-            className="kbtn kbtn-secondary"
+            className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
             title="Làm mới"
           >
             ↻
           </button>
           <button
             onClick={handleExportExcel}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title={
               selectedClassId
                 ? `Xuất danh sách học sinh của lớp đang lọc ra file Excel`
@@ -1307,7 +1307,7 @@ export default function SchoolAdminStudentsPage() {
           </button>
           <button
             onClick={() => setImportOpen(true)}
-            className="kbtn kbtn-secondary text-sm flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
             title="Nhập dữ liệu từ file Excel / CSV"
           >
             📤 Nhập file
@@ -1324,10 +1324,10 @@ export default function SchoolAdminStudentsPage() {
               setIsEditMode(!isEditMode);
               setOpenParentDropdownId(null);
             }}
-            className={`kbtn text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-4 py-2 rounded-full border border-[#E5E8EB] text-xs font-bold flex items-center gap-1.5 transition ${
               isEditMode
-                ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-400/30"
-                : "kbtn-secondary hover:border-brand"
+                ? "bg-[#FFF0D9] text-[#B0791B] border-[#B0791B]"
+                : "bg-white text-[#087F70] hover:bg-[#E6F3EB]"
             }`}
             title="Bật/tắt chế độ chỉnh sửa trực tiếp trên bảng"
           >
@@ -1341,7 +1341,7 @@ export default function SchoolAdminStudentsPage() {
               <button
                 onClick={cancelAllEdits}
                 disabled={savingTable}
-                className="kbtn kbtn-secondary text-xs hover:border-bad hover:text-bad transition-colors"
+                className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
                 title="Hủy bỏ mọi thay đổi chưa lưu"
               >
                 ✕ Hủy thay đổi
@@ -1349,8 +1349,7 @@ export default function SchoolAdminStudentsPage() {
               <button
                 onClick={handleSaveAllEdits}
                 disabled={savingTable}
-                className="kbtn text-xs font-bold text-white flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg shadow-md hover:shadow-lg transition-all"
-                style={{ background: "#16665a" }}
+                className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
                 title="Lưu tất cả thay đổi trên mọi dòng"
               >
                 {savingTable ? (
@@ -1373,13 +1372,16 @@ export default function SchoolAdminStudentsPage() {
             </>
           )}
 
-          <button onClick={openCreate} className="kbtn kbtn-primary">
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
+          >
             + Thêm học sinh
           </button>
         </div>
       }
     >
-      <div className="card p-3 mb-3 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+      <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-4 mb-4 shadow-soft flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <div className="flex-1">
           <SearchBar
             value={query}
@@ -1424,7 +1426,7 @@ export default function SchoolAdminStudentsPage() {
         </div>
       )}
 
-      <div className="card overflow-hidden">
+      <div className="bg-white rounded-[24px] border border-[#E5E8EB] overflow-hidden shadow-soft">
         {!children && !childrenError ? (
           <Spinner />
         ) : childrenError ? (
@@ -1920,8 +1922,9 @@ export default function SchoolAdminStudentsPage() {
         )}
       </div>
 
-      <div className="text-xs text-ink-faint mt-2">
-        Tổng: <span className="font-bold text-ink">{filtered.length}</span> học sinh
+      <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-[#65727D] mt-2 mb-4 gap-2">
+        <div>💡 Hồ sơ học sinh kết nối tự động với sổ liên lạc và điểm danh hàng ngày của giáo viên.</div>
+        <div>Tổng: <span className="font-bold text-[#102737]">{filtered.length}</span> học sinh</div>
       </div>
 
       <Drawer

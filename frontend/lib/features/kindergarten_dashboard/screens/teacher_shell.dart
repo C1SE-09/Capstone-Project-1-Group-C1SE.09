@@ -386,6 +386,8 @@ class _TeacherShellState extends State<TeacherShell> {
         builder: (_) => LeaveRequestReviewScreen(
               classId: _activeClassId ?? '',
               className: className,
+              teacherName: _teacherName,
+              onOpenNotifications: () => openNotifications(className, children),
               repository: leaveRequestRepository,
               onNavigationSelected: (destination) => _selectTeacherDestination(
                   destination, className,

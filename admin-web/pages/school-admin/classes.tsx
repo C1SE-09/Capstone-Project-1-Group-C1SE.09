@@ -254,7 +254,7 @@ export default function SchoolAdminClassesPage() {
 
   return (
     <SchoolAdminLayout
-      active="features"
+      active="classes"
       pageTitle="Quản lý lớp học"
       pageAction={
         <div className="flex flex-wrap items-center gap-2">

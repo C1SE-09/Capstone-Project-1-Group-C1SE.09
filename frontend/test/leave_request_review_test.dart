@@ -216,7 +216,7 @@ void main() {
 
     // Kiểm tra UI hiển thị
     expect(find.text('Lớp Mầm 1'), findsOneWidget);
-    expect(find.text('Đơn xin nghỉ và báo đi trễ'), findsOneWidget);
+    expect(find.text('Đơn nghỉ'), findsOneWidget);
     expect(find.textContaining('Chờ duyệt'), findsOneWidget);
     expect(find.text('Đã xử lý'), findsOneWidget);
     expect(find.text('Nguyễn Minh An'), findsOneWidget);

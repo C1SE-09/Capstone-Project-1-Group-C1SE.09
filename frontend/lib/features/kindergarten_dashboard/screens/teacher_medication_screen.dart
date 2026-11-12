@@ -341,10 +341,8 @@ class _TeacherMedicationScreenState extends State<TeacherMedicationScreen> {
                           horizontal: 16, vertical: 11),
                       minimumSize: const Size(0, 48),
                       shape: const StadiumBorder(),
-                      textStyle: TextStyle(
-                          fontFamily: context.k.isGardenVoice
-                              ? 'Nunito'
-                              : 'BeVietnamPro',
+                      textStyle: const TextStyle(
+                          fontFamily: 'Nunito',
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -626,8 +624,7 @@ class _ConfirmMedicationButton extends StatelessWidget {
                               'Đang xác nhận…',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontFamily:
-                                    k.isGardenVoice ? 'Nunito' : 'BeVietnamPro',
+                                fontFamily: 'Nunito',
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 height: 1.25,
@@ -660,8 +657,7 @@ class _ConfirmMedicationButton extends StatelessWidget {
                               'Xác nhận đã cho uống thuốc',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontFamily:
-                                    k.isGardenVoice ? 'Nunito' : 'BeVietnamPro',
+                                fontFamily: 'Nunito',
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 height: 1.25,

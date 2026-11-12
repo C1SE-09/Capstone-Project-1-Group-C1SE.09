@@ -170,9 +170,8 @@ class MedicationAction extends StatelessWidget {
               minimumSize: const Size(0, 48),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               shape: const StadiumBorder(),
-              textStyle: TextStyle(
-                  fontFamily:
-                      context.k.isGardenVoice ? 'Nunito' : 'BeVietnamPro',
+              textStyle: const TextStyle(
+                  fontFamily: 'Nunito',
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700)),
           child: busy

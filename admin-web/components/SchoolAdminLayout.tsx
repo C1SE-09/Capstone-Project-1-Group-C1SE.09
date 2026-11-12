@@ -1,12 +1,11 @@
 /**
  * components/SchoolAdminLayout.tsx
  * ================================
- * Layout cho School Admin Web — y hệt AdminDashboardScreen bên Flutter:
- *   - Sidebar trái (desktop) với logo + menu chính.
- *   - Topbar trên cùng với school name + user menu.
- *   - Vùng content cuộn độc lập.
- *
- * Tabs: Tổng quan / Chức năng / Tài khoản (mapping sang route).
+ * Layout cho School Admin Web — 100% chuẩn Figma Garden Voice (Frame 05 - 10):
+ *   - Sidebar trái 236px với logo, tên trường và 8 mục menu chức năng.
+ *   - Menu active: nền #E6F3EB, chữ #087F70, bo góc 10px.
+ *   - Ảnh minh họa khu vườn ở chân sidebar (180x68, bo góc 16px).
+ *   - Topbar hiển thị tên trường, niên khóa 2026–2027 và user menu.
  */
 
 import Link from "next/link";
@@ -15,17 +14,13 @@ import { ReactNode, useEffect, useState } from "react";
 import {
   clearToken,
   getStoredSchoolAdmin,
-  setToken,
   getToken,
 } from "@/lib/api";
 
 interface Props {
   children: ReactNode;
-  /** Tab hiện tại để highlight menu. */
-  active: "overview" | "features" | "account" | string;
-  /** Tiêu đề trang (hiển thị ở topbar). */
+  active: "overview" | "teachers" | "students" | "parents" | "schedules" | "classes" | "health-exam" | "account" | "features" | string;
   pageTitle?: string;
-  /** Nội dung phụ ở header (vd: nút "Thêm"). */
   pageAction?: ReactNode;
 }
 
@@ -37,54 +32,65 @@ interface NavLinkSpec {
 }
 
 const PRIMARY_NAV: NavLinkSpec[] = [
-  { id: "overview", label: "Tổng quan", icon: "grid_view", href: "/school-admin" },
-  {
-    id: "features",
-    label: "Chức năng",
-    icon: "tune",
-    href: "/school-admin/features",
-  },
-  {
-    id: "account",
-    label: "Tài khoản",
-    icon: "person",
-    href: "/school-admin/account",
-  },
+  { id: "overview", label: "Tổng quan trường", icon: "dashboard", href: "/school-admin" },
+  { id: "teachers", label: "Quản lý Giáo viên", icon: "school", href: "/school-admin/teachers" },
+  { id: "students", label: "Quản lý Học sinh", icon: "child", href: "/school-admin/students" },
+  { id: "parents", label: "Quản lý Phụ huynh", icon: "family", href: "/school-admin/parents" },
+  { id: "schedules", label: "Thời khóa biểu", icon: "calendar", href: "/school-admin/schedules" },
+  { id: "classes", label: "Quản lý Lớp học", icon: "class", href: "/school-admin/classes" },
+  { id: "health-exam", label: "Khám sức khỏe", icon: "health", href: "/school-admin/health-exam" },
+  { id: "account", label: "Tài khoản trường", icon: "person", href: "/school-admin/account" },
 ];
 
-// SVG icon (inline để khỏi cần icon library)
-function Icon({ name, className = "ic" }: { name: string; className?: string }) {
-  const size = 20;
+function NavIcon({ name }: { name: string }) {
+  const size = 18;
   switch (name) {
-    case "grid_view":
+    case "dashboard":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-          <path d="M3 11h8V3H3v8zm0 10h8v-8H3v8zm10 0h8v-8h-8v8zm0-18v8h8V3h-8z" />
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
         </svg>
       );
-    case "tune":
+    case "school":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-          <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9z" />
+        </svg>
+      );
+    case "child":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2a4 4 0 100 8 4 4 0 000-8zm-5 11c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
+        </svg>
+      );
+    case "family":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" />
+        </svg>
+      );
+    case "class":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+        </svg>
+      );
+    case "health":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z" />
         </svg>
       );
     case "person":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-        </svg>
-      );
-    case "logout":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-          <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-        </svg>
-      );
-    case "spinner":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`${className} animate-spin`}>
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-          <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" />
         </svg>
       );
     default:
@@ -129,194 +135,154 @@ export default function SchoolAdminLayout({
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <Icon name="spinner" className="text-brand-400" />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#087F70]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-canvas">
-      {/* ─────────── Sidebar ─────────── */}
-      <aside className="hidden lg:flex w-64 bg-white border-r border-line flex-col">
+    <div className="min-h-screen flex bg-[#FFFFFF] text-[#102737] font-sans">
+      {/* ─────────── Sidebar (Chuẩn Figma 236px) ─────────── */}
+      <aside className="hidden lg:flex w-[236px] min-h-screen bg-white border-r border-[#E5E8EB] flex-col shrink-0 sticky top-0 h-screen">
         {/* Brand header */}
-        <div className="px-5 py-5 border-b border-line">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex items-center justify-center text-white"
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 8,
-                background:
-                  "linear-gradient(135deg, #16665a 0%, rgba(22,102,90,0.8) 100%)",
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                <path d="M12 3C7 3 4 6.5 4 9.5C4 11.4 5.1 12.9 6.7 13.8C5.6 14.6 5 15.7 5 16.8C5 18.7 6.8 20 9.5 20H14.5C17.2 20 19 18.7 19 16.8C19 15.7 18.4 14.6 17.3 13.8C18.9 12.9 20 11.4 20 9.5C20 6.5 17 3 12 3Z" />
-              </svg>
+        <div className="p-[20px_14px_16px] border-b border-[#E5E8EB]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#087F70] flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
+              K
             </div>
-            <div>
-              <div className="font-bold text-ink text-sm tracking-tight">
+            <div className="overflow-hidden">
+              <div className="font-extrabold text-[#06695E] text-base leading-tight tracking-tight">
                 KinderLog
               </div>
-              <div className="text-xs text-ink-soft">Admin trường</div>
+              <div className="text-[11px] font-medium text-[#65727D] truncate" title={info?.school_name || "Quản trị trường"}>
+                {info?.school_name || "Quản trị trường"}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Primary nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 p-[14px_10px] space-y-1 overflow-y-auto">
           {PRIMARY_NAV.map((item) => {
             const isActive = item.id === active;
             return (
               <Link
                 key={item.id}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-control text-sm font-medium transition ${
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-sm font-semibold transition ${
                   isActive
-                    ? "bg-brand-50 text-brand-600"
-                    : "text-ink-soft hover:bg-sunken"
+                    ? "bg-[#E6F3EB] text-[#087F70]"
+                    : "text-[#65727D] hover:bg-[#F6F7F8] hover:text-[#102737]"
                 }`}
-                style={isActive ? { background: "#E6EFEC", color: "#114F46" } : {}}
               >
-                <span style={{ color: isActive ? "#16665a" : "#605D57" }}>
-                  <Icon name={item.icon} />
-                </span>
-                {item.label}
+                <NavIcon name={item.icon} />
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
+
+          <div className="pt-4 pb-1 px-3 text-[11px] font-bold text-[#8C9BA5] uppercase tracking-wider">
+            Phân hệ khác
+          </div>
+
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-sm font-semibold text-[#65727D] hover:bg-[#F6F7F8] hover:text-[#087F70] transition"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 1.59C12.96 4.51 12.49 4.41 12 4.41s-.96.1-1.41.18L5 5l1.41 4.41C5.66 7.55 5.05 8.22 4.6 9H2v2h2.09c-.05.33-.09.66-.09 1v1H2v2h2v1c0 .34.04.67.09 1H2v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-3.09c.05-.33.09-.66.09-1v-1h3v-2h-3v-1c0-.34-.04-.67-.09-1H20V8zm-6 7h-4v-2h4v2zm0-4h-4v-2h4v2z" />
+            </svg>
+            Quản trị Bug Report
+          </Link>
         </nav>
 
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-line text-xs text-ink-faint">
-          <div>v1.0.0 · School Admin Web</div>
+        {/* Garden Voice Illustration ở chân Sidebar (Figma 180x68) */}
+        <div className="p-3 mt-auto border-t border-[#E5E8EB]/60">
+          <img
+            src="/images/teacher_garden.png"
+            alt="Khu vườn KinderLog"
+            className="w-[180px] h-[68px] object-cover rounded-[16px] mx-auto shadow-sm"
+          />
+          <div className="mt-2 text-center text-[11px] font-medium text-[#8C9BA5]">
+            Trường Mầm non · 2026–2027
+          </div>
         </div>
       </aside>
 
       {/* ─────────── Main column ─────────── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#FFFFFF]">
         {/* Topbar */}
-        <header
-          className="bg-white border-b border-line flex items-center"
-          style={{ height: 64, padding: "0 20px" }}
-        >
-          {/* Mobile brand */}
-          <div className="lg:hidden flex items-center gap-2 mr-3">
-            <div
-              className="flex items-center justify-center text-white"
-              style={{ width: 32, height: 32, borderRadius: 8, background: "#16665a" }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M12 3C7 3 4 6.5 4 9.5C4 11.4 5.1 12.9 6.7 13.8C5.6 14.6 5 15.7 5 16.8C5 18.7 6.8 20 9.5 20H14.5C17.2 20 19 18.7 19 16.8C19 15.7 18.4 14.6 17.3 13.8C18.9 12.9 20 11.4 20 9.5C20 6.5 17 3 12 3Z" />
-              </svg>
+        <header className="h-16 bg-white border-b border-[#E5E8EB] px-8 flex items-center justify-between sticky top-0 z-40">
+          <div>
+            <div className="font-bold text-base text-[#102737] leading-tight">
+              {pageTitle || "Cổng Quản Trị Nhà Trường"}
             </div>
-            <span className="font-bold text-ink">KinderLog</span>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-semibold text-ink-faint uppercase tracking-wider">
-              Trường
-            </div>
-            <div className="text-sm font-bold text-ink truncate">
-              {info?.school_name || "Trường Mầm Non"}
+            <div className="text-xs text-[#65727D]">
+              {info?.school_name || "Trường Mầm non"} · Năm học 2026–2027
             </div>
           </div>
 
-          {pageAction && <div className="hidden md:flex mr-3">{pageAction}</div>}
+          <div className="flex items-center gap-3">
+            {pageAction && <div>{pageAction}</div>}
 
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-control hover:bg-sunken"
-            >
-              <div
-                className="flex items-center justify-center font-bold text-sm text-white"
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 999,
-                  background: "#16665a",
-                }}
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] hover:bg-[#F6F7F8] transition"
               >
-                {info?.full_name?.charAt(0).toUpperCase() || "A"}
-              </div>
-              <div className="text-left hidden sm:block">
-                <div className="text-sm font-semibold text-ink leading-tight">
-                  {info?.full_name}
+                <div className="w-8 h-8 rounded-full bg-[#087F70] text-white font-bold flex items-center justify-center text-xs">
+                  {info?.full_name?.charAt(0).toUpperCase() || "T"}
                 </div>
-                <div className="text-xs text-ink-soft leading-tight">
-                  @{info?.username}
-                </div>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#757169">
-                <path d="M7 10l5 5 5-5z" />
-              </svg>
-            </button>
-
-            {showMenu && (
-              <div
-                className="absolute right-0 mt-2 w-64 bg-white rounded-card shadow-pop border border-line z-50"
-                style={{ top: "100%" }}
-              >
-                <div className="px-4 py-3 border-b border-line">
-                  <div className="font-semibold text-sm text-ink">
+                <div className="text-left hidden sm:block">
+                  <div className="text-sm font-bold text-[#102737] leading-tight">
                     {info?.full_name}
                   </div>
-                  <div className="text-xs text-ink-soft truncate">
+                  <div className="text-[11px] text-[#65727D] leading-tight">
                     @{info?.username}
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    router.push("/school-admin/account");
-                  }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-ink hover:bg-sunken flex items-center gap-2"
-                >
-                  <Icon name="person" /> Tài khoản của tôi
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-sm text-bad hover:bg-bad-tint flex items-center gap-2 rounded-b-card"
-                >
-                  <Icon name="logout" /> Đăng xuất
-                </button>
-              </div>
-            )}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#65727D">
+                  <path d="M7 10l5 5 5-5z" />
+                </svg>
+              </button>
+
+              {showMenu && (
+                <div className="absolute right-0 top-12 w-64 bg-white rounded-[16px] shadow-pop border border-[#E5E8EB] p-2 z-50 animate-in fade-in slide-in-from-top-1">
+                  <div className="px-3 py-2 border-b border-[#E5E8EB]">
+                    <div className="font-bold text-sm text-[#102737]">
+                      {info?.full_name}
+                    </div>
+                    <div className="text-xs text-[#65727D]">
+                      @{info?.username}
+                    </div>
+                  </div>
+                  <Link
+                    href="/school-admin/account"
+                    className="w-full mt-1 flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#102737] hover:bg-[#F6F7F8] rounded-[10px] transition"
+                  >
+                    <NavIcon name="person" />
+                    Cài đặt tài khoản
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full mt-1 flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#A93832] hover:bg-[#FDEAE5] rounded-[10px] transition"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </svg>
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
-        {/* Page title strip */}
-        {pageTitle && (
-          <div className="bg-white px-6 py-4 border-b border-line">
-            <h1 className="text-xl font-bold text-ink">{pageTitle}</h1>
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="flex-1 overflow-auto">
-          <div className="max-w-7xl mx-auto p-4 lg:p-6">{children}</div>
-        </div>
-
-        {/* Mobile bottom nav (y hệt Flutter NavigationBar) */}
-        <nav className="lg:hidden bg-white border-t border-line flex justify-around py-2">
-          {PRIMARY_NAV.map((item) => {
-            const isActive = item.id === active;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="flex flex-col items-center gap-1 py-1.5 px-4"
-                style={{ color: isActive ? "#16665a" : "#605D57" }}
-              >
-                <Icon name={item.icon} />
-                <span className="text-[11px] font-semibold">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Content body */}
+        <main className="flex-1 p-8 overflow-y-auto max-w-[1400px] w-full mx-auto">
+          {children}
+        </main>
       </div>
     </div>
   );

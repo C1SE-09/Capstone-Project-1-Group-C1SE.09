@@ -81,7 +81,7 @@ dependencies:
   photo_view: ^0.15.0
   # Format ngày giờ (resolved_at, closed_at, created_at)
   intl: ^0.20.2
-  flutter_svg: ^2.3.2
+  flutter_svg: '>=2.0.10 <2.3.0'
   # MediaType parser cho dio multipart upload (transitive nhưng thêm cho chắc)
   http_parser: ^4.0.2
   # Lấy trạng thái mạng (wifi/cellular/offline) cho bug report
