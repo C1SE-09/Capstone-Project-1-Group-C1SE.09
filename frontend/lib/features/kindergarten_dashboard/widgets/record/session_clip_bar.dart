@@ -200,24 +200,34 @@ class _SessionClipBarState extends State<SessionClipBar> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          'Đoạn ${widget.index + 1}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: k.ink,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Đoạn ${widget.index + 1}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: k.ink,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '· $timeLabel',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: k.inkFaint,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '· $timeLabel',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: k.inkFaint,
-                          ),
-                        ),
-                        const Spacer(),
+                        const SizedBox(width: 6),
                         _ClipStatusBadge(clip: clip),
                       ],
                     ),
@@ -397,15 +407,18 @@ class _SessionClipBarState extends State<SessionClipBar> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Nội dung đã nói',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: k.inkSoft,
+                      Expanded(
+                        child: Text(
+                          'Nội dung đã nói',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: k.inkSoft,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       if (_dirty)
                         TextButton(
                           onPressed: widget.isSavingTranscript

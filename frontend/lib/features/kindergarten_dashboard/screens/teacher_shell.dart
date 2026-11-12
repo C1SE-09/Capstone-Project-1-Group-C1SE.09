@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
@@ -73,6 +75,7 @@ class _TeacherShellState extends State<TeacherShell> {
   late Future<void> _initFuture;
   String? _activeClassId;
   String? _teacherName;
+  int? _pendingLeaveCount;
   bool _hasNoClass = false;
   bool _notificationOpened = false;
 
@@ -133,9 +136,29 @@ class _TeacherShellState extends State<TeacherShell> {
       }
       childrenFuture = _loadChildren();
       classNameFuture = _loadClassName();
-      await Future.wait([childrenFuture, classNameFuture]);
+      await Future.wait<dynamic>([
+        childrenFuture,
+        classNameFuture,
+        _refreshPendingLeaveCount(),
+      ]);
     });
     _openInitialAttendance();
+  }
+
+  Future<void> _refreshPendingLeaveCount() async {
+    final classId = _activeClassId;
+    if (classId == null || classId.isEmpty) return;
+    try {
+      final result = await leaveRequestRepository.getLeaveRequests(
+        classId: classId,
+        tab: 'pending',
+        limit: 1,
+      );
+      if (!mounted || _activeClassId != classId) return;
+      setState(() => _pendingLeaveCount = result.pendingCount);
+    } catch (_) {
+      // Giữ giá trị hiện tại nếu mạng lỗi hoặc đang chạy mock cục bộ.
+    }
   }
 
   Future<void> _resolveClassId() async {
@@ -288,6 +311,7 @@ class _TeacherShellState extends State<TeacherShell> {
           classId: _activeClassId ?? '',
           className: className,
           teacherName: _teacherName,
+          pendingLeaveCount: _pendingLeaveCount,
           isReadOnly: true,
           onNavigationSelected: (destination) => _selectTeacherDestination(
             destination,
@@ -311,7 +335,7 @@ class _TeacherShellState extends State<TeacherShell> {
         ),
       ),
     ));
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _initData());
   }
 
   Future<void> openAttendance(String className, List<Child> children,
@@ -329,6 +353,7 @@ class _TeacherShellState extends State<TeacherShell> {
           date: dateStr,
           roster: children,
           teacherName: _teacherName,
+          pendingLeaveCount: _pendingLeaveCount,
           onNavigationSelected: (destination) => _selectTeacherDestination(
               destination, className,
               popCurrentRoute: true),
@@ -379,6 +404,7 @@ class _TeacherShellState extends State<TeacherShell> {
               onOpenAttendance: () => openAttendance(className, children),
               onOpenTimetable: () => openTimetable(className, children),
             )));
+    if (mounted) setState(() => _initData());
   }
 
   Future<void> openLeaveRequests(String className, List<Child> children) async {
@@ -530,8 +556,10 @@ class _TeacherShellState extends State<TeacherShell> {
                         classId: currentClassId,
                         className: className,
                         teacherName: _teacherName,
+                        pendingLeaveCount: _pendingLeaveCount,
                         schoolName: 'Chưa có thông tin trường',
                         onRefresh: () async {
+                          unawaited(_refreshPendingLeaveCount());
                           try {
                             final c = await _loadChildren();
                             if (mounted) {
