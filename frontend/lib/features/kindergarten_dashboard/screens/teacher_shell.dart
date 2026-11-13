@@ -307,9 +307,10 @@ class _TeacherShellState extends State<TeacherShell> {
     ));
   }
 
-  Future<void> openTimetable(String className, [List<Child>? children]) async {
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => GardenVoiceScope(
+  Future<void> openTimetable(String className,
+      [List<Child>? children, bool replace = false]) async {
+    final route = PageRouteBuilder<void>(
+      pageBuilder: (_, __, ___) => GardenVoiceScope(
         child: TimetableScreen(
           classId: _activeClassId ?? '',
           className: className,
@@ -321,35 +322,39 @@ class _TeacherShellState extends State<TeacherShell> {
             className,
             popCurrentRoute: true,
           ),
-          onOpenClassList: () => _selectTeacherDestination(
-            GardenVoiceTeacherDestination.classList,
-            className,
-            popCurrentRoute: true,
-          ),
+          onOpenClassList: () =>
+              Navigator.of(context).popUntil((r) => r.isFirst),
           onOpenAttendance: children == null
               ? null
-              : () => openAttendance(className, children),
+              : () => openAttendance(className, children, replace: true),
           onOpenLeaveRequests: children == null
               ? null
-              : () => openLeaveRequests(className, children),
+              : () => openLeaveRequests(className, children, replace: true),
           onOpenNotifications: children == null
               ? null
               : () => openNotifications(className, children),
         ),
       ),
-    ));
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    );
+    if (replace) {
+      await Navigator.of(context).pushReplacement(route);
+    } else {
+      await Navigator.of(context).push(route);
+    }
     if (mounted) setState(() => _initData());
   }
 
   Future<void> openAttendance(String className, List<Child> children,
-      {String? date}) async {
+      {String? date, bool replace = false}) async {
     final now = DateTime.now();
     final dateStr = date ??
         '${now.year.toString().padLeft(4, '0')}-'
             '${now.month.toString().padLeft(2, '0')}-'
             '${now.day.toString().padLeft(2, '0')}';
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => GardenVoiceScope(
+    final route = PageRouteBuilder<void>(
+      pageBuilder: (_, __, ___) => GardenVoiceScope(
         child: AttendanceScreen(
           classId: _activeClassId ?? '',
           className: className,
@@ -360,18 +365,23 @@ class _TeacherShellState extends State<TeacherShell> {
           onNavigationSelected: (destination) => _selectTeacherDestination(
               destination, className,
               popCurrentRoute: true),
-          onOpenClassList: () => _selectTeacherDestination(
-              GardenVoiceTeacherDestination.classList, className,
-              popCurrentRoute: true),
-          onOpenLeaveRequests: () => openLeaveRequests(className, children),
+          onOpenClassList: () =>
+              Navigator.of(context).popUntil((r) => r.isFirst),
+          onOpenLeaveRequests: () =>
+              openLeaveRequests(className, children, replace: true),
           onOpenNotifications: () => openNotifications(className, children),
-          onOpenTimetable: () {
-            Navigator.of(context).pop();
-            openTimetable(className, children);
-          },
+          onOpenTimetable: () =>
+              openTimetable(className, children, true),
         ),
       ),
-    ));
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    );
+    if (replace) {
+      await Navigator.of(context).pushReplacement(route);
+    } else {
+      await Navigator.of(context).push(route);
+    }
     if (mounted) setState(() => _initData());
   }
 
@@ -410,36 +420,39 @@ class _TeacherShellState extends State<TeacherShell> {
     if (mounted) setState(() => _initData());
   }
 
-  Future<void> openLeaveRequests(String className, List<Child> children) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => LeaveRequestReviewScreen(
-              classId: _activeClassId ?? '',
-              className: className,
-              teacherName: _teacherName,
-              onOpenNotifications: () => openNotifications(className, children),
-              repository: leaveRequestRepository,
-              onNavigationSelected: (destination) => _selectTeacherDestination(
-                  destination, className,
-                  popCurrentRoute: true),
-              onOpenClassList: () => _selectTeacherDestination(
-                  GardenVoiceTeacherDestination.classList, className,
-                  popCurrentRoute: true),
-              onOpenAttendance: () {
-                Navigator.of(context).pop();
-                openAttendance(className, children);
-              },
-              onOpenAttendanceForDate: (date) {
-                Navigator.of(context).pop();
-                final dateStr = '${date.year.toString().padLeft(4, '0')}-'
-                    '${date.month.toString().padLeft(2, '0')}-'
-                    '${date.day.toString().padLeft(2, '0')}';
-                openAttendance(className, children, date: dateStr);
-              },
-              onOpenTimetable: () {
-                Navigator.of(context).pop();
-                openTimetable(className, children);
-              },
-            )));
+  Future<void> openLeaveRequests(String className, List<Child> children,
+      {bool replace = false}) async {
+    final route = PageRouteBuilder<void>(
+      pageBuilder: (_, __, ___) => LeaveRequestReviewScreen(
+        classId: _activeClassId ?? '',
+        className: className,
+        teacherName: _teacherName,
+        onOpenNotifications: () => openNotifications(className, children),
+        repository: leaveRequestRepository,
+        onNavigationSelected: (destination) => _selectTeacherDestination(
+            destination, className,
+            popCurrentRoute: true),
+        onOpenClassList: () =>
+            Navigator.of(context).popUntil((r) => r.isFirst),
+        onOpenAttendance: () =>
+            openAttendance(className, children, replace: true),
+        onOpenAttendanceForDate: (date) {
+          final dateStr = '${date.year.toString().padLeft(4, '0')}-'
+              '${date.month.toString().padLeft(2, '0')}-'
+              '${date.day.toString().padLeft(2, '0')}';
+          openAttendance(className, children, date: dateStr, replace: true);
+        },
+        onOpenTimetable: () =>
+            openTimetable(className, children, true),
+      ),
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    );
+    if (replace) {
+      await Navigator.of(context).pushReplacement(route);
+    } else {
+      await Navigator.of(context).push(route);
+    }
     if (mounted) setState(() => _initData());
   }
 
@@ -452,7 +465,9 @@ class _TeacherShellState extends State<TeacherShell> {
       openRecord(className);
       return;
     }
-    if (popCurrentRoute) Navigator.of(context).pop();
+    if (popCurrentRoute) {
+      Navigator.of(context).popUntil((r) => r.isFirst);
+    }
     setState(() {
       tab = switch (destination) {
         GardenVoiceTeacherDestination.home => TeacherTab.overview,

@@ -368,7 +368,7 @@ class _TeacherNotificationsScreenState
         minimumSize: const Size(44, 44),
       ),
       child: const Text('Đánh dấu đã đọc',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400)),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
     );
     return ParentRequestLayout(
         bottomNavigationBar: GardenVoiceTeacherNavigation(
@@ -457,7 +457,7 @@ class _TeacherNotificationsScreenState
                                       fontSize: 14,
                                       fontWeight: _filter == filter
                                           ? FontWeight.w700
-                                          : FontWeight.w400,
+                                          : FontWeight.w600,
                                       color: _filter == filter
                                           ? k.surface
                                           : k.inkSoft)),
@@ -605,7 +605,7 @@ class _RequestNotice extends StatelessWidget {
                               style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w700,
                                   color: badgeForeground),
                             ),
                           ),
@@ -619,7 +619,7 @@ class _RequestNotice extends StatelessWidget {
                                       .add(const Duration(hours: 7))),
                                   style: TextStyle(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
                                       color: k.inkSoft),
                                 ),
                               if (unread) ...[
@@ -645,7 +645,7 @@ class _RequestNotice extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 12,
                               height: 1.4,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               color: k.inkSoft)),
                     ],
                   ),

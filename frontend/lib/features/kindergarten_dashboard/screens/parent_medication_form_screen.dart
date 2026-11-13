@@ -318,7 +318,7 @@ class _ParentMedicationFormScreenState
           textStyle: const TextStyle(
               fontFamily: 'Nunito',
               fontSize: 13,
-              fontWeight: FontWeight.w400)),
+              fontWeight: FontWeight.w700)),
       child: Tooltip(
           message: end ? 'Đến ngày' : 'Từ ngày',
           child:

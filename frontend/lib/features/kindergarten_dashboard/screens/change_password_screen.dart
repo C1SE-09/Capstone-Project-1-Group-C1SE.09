@@ -145,7 +145,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 color: k.badText,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -439,7 +439,7 @@ class __ChangePasswordFormSheetState
                 style: const TextStyle(
                   fontSize: 12,
                   color: KColors.bad,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),

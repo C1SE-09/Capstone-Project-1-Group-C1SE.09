@@ -53,8 +53,8 @@ class ParentNavigationBar extends StatelessWidget {
                             fontFamily: 'Nunito',
                             fontSize: 12,
                             fontWeight: selectedIndex == index
-                                ? FontWeight.w600
-                                : FontWeight.w500,
+                                ? FontWeight.w800
+                                : FontWeight.w700,
                           ),
                         ),
                         child: index == 0

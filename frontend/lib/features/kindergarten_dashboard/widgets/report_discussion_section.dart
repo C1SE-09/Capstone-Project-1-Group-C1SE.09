@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_report_response_repository.dart';
 import 'package:adark_frontend/domain/entities/report/report_response.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -19,6 +21,7 @@ class ReportDiscussionSection extends StatefulWidget {
     this.onPickImage,
     this.initialResponses,
     this.isTeacher = false,
+    this.onDiscussionUpdated,
   });
 
   final String reportId;
@@ -28,6 +31,7 @@ class ReportDiscussionSection extends StatefulWidget {
   final ImagePickerCallback? onPickImage;
   final List<ReportResponse>? initialResponses;
   final bool isTeacher;
+  final VoidCallback? onDiscussionUpdated;
 
   @override
   State<ReportDiscussionSection> createState() => _ReportDiscussionSectionState();
@@ -39,11 +43,13 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
 
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _inputFocusNode = FocusNode();
 
   List<ReportResponse> _responses = [];
   bool _isLoading = true;
   bool _isSending = false;
   String? _errorMessage;
+  Timer? _pollTimer;
 
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
@@ -51,16 +57,69 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
   @override
   void initState() {
     super.initState();
+    _inputFocusNode.addListener(() {
+      if (_inputFocusNode.hasFocus) {
+        _scrollToBottom();
+      }
+    });
     if (widget.initialResponses != null) {
       _responses = List.from(widget.initialResponses!);
       _isLoading = false;
     } else {
       _fetchResponses();
     }
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _syncResponsesSilently();
+    });
+  }
+
+  Future<void> _syncResponsesSilently() async {
+    if (!mounted || _isSending) return;
+    try {
+      final list = await _repo.getResponses(widget.reportId);
+      if (!mounted) return;
+      if (list.length != _responses.length ||
+          !_areListsEqual(list, _responses)) {
+        final wasNearBottom = _isNearBottom();
+        setState(() {
+          _responses = list;
+        });
+        widget.onDiscussionUpdated?.call();
+        if (wasNearBottom) {
+          _scrollToBottom();
+        }
+      }
+    } catch (_) {}
+  }
+
+  bool _isNearBottom() {
+    if (!_scrollController.hasClients) return true;
+    final max = _scrollController.position.maxScrollExtent;
+    final current = _scrollController.position.pixels;
+    return (max - current) < 120;
+  }
+
+  bool _areListsEqual(List<ReportResponse> a, List<ReportResponse> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].responseId != b[i].responseId ||
+          a[i].isResolved != b[i].isResolved ||
+          a[i].isRead != b[i].isRead) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
+    _inputFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -80,6 +139,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
         _responses = list;
         _isLoading = false;
       });
+      widget.onDiscussionUpdated?.call();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -238,6 +298,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
         _selectedImageName = null;
         _isSending = false;
       });
+      widget.onDiscussionUpdated?.call();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -415,7 +476,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             style: TextStyle(
               fontSize: 12.5,
               color: context.k.bad,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
@@ -430,21 +491,44 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
     );
   }
 
+  bool _isMe(ReportResponse msg) {
+    final myUserId = AuthRepository.currentUser?.userId;
+    if (myUserId != null &&
+        myUserId.isNotEmpty &&
+        msg.authorUserId != null &&
+        msg.authorUserId!.isNotEmpty) {
+      return msg.authorUserId == myUserId;
+    }
+    // Fallback khi không có userId để so sánh (e.g. trong widget test):
+    if (widget.isTeacher) {
+      return msg.isFromTeacher;
+    } else {
+      return msg.isFromParent;
+    }
+  }
+
   Widget _buildMessagesList() {
     return Column(
       children: [
         for (final msg in _responses) ...[
-          if (msg.isFromParent)
-            _buildParentMessageItem(msg)
+          if (_isMe(msg))
+            _buildSentMessageItem(msg)
           else
-            _buildTeacherMessageItem(msg),
+            _buildReceivedMessageItem(msg),
           const SizedBox(height: 14),
         ],
       ],
     );
   }
 
-  Widget _buildParentMessageItem(ReportResponse msg) {
+  Widget _buildSentMessageItem(ReportResponse msg) {
+    final avatarLetter = msg.authorName.trim().isNotEmpty
+        ? msg.authorName.trim().characters.first.toUpperCase()
+        : 'M';
+    final readText = widget.isTeacher
+        ? (msg.isRead ? 'Đã gửi · Phụ huynh đã đọc' : 'Đã gửi')
+        : (msg.isRead ? 'Đã gửi · Cô đã đọc' : 'Đã gửi');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -472,7 +556,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
               radius: 14,
               backgroundColor: context.k.brandTint,
               child: Text(
-                'M',
+                avatarLetter,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -491,8 +575,8 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(16),
               bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-              topRight: Radius.circular(4),
+              bottomRight: Radius.circular(4),
+              topRight: Radius.circular(16),
             ),
             border: Border.all(color: context.k.line),
             boxShadow: const [
@@ -535,7 +619,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ),
             const SizedBox(width: 4),
             Text(
-              msg.isRead ? 'Đã gửi · Cô đã đọc' : 'Đã gửi',
+              readText,
               style: TextStyle(
                 fontSize: 11,
                 color: context.k.inkSoft,
@@ -543,46 +627,15 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ),
           ],
         ),
-        if (widget.isTeacher && !msg.isResolved) ...[
-          const SizedBox(height: 6),
-          InkWell(
-            onTap: () async {
-              try {
-                final updated =
-                    await _repo.resolveResponse(msg.responseId, resolved: true);
-                if (mounted) {
-                  setState(() {
-                    final idx = _responses
-                        .indexWhere((r) => r.responseId == msg.responseId);
-                    if (idx != -1) _responses[idx] = updated;
-                  });
-                }
-              } catch (_) {}
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_outline_rounded,
-                      size: 14, color: context.k.brand),
-                  const SizedBox(width: 4),
-                  Text('Đánh dấu đã xử lý',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: context.k.brand,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
 
-  Widget _buildTeacherMessageItem(ReportResponse msg) {
+  Widget _buildReceivedMessageItem(ReportResponse msg) {
+    final avatarLetter = msg.authorName.trim().isNotEmpty
+        ? msg.authorName.trim().characters.first.toUpperCase()
+        : '?';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -591,7 +644,16 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             CircleAvatar(
               radius: 14,
               backgroundColor: context.k.surfaceSunken,
-              child: Icon(Icons.school_rounded, size: 14, color: context.k.brand),
+              child: msg.isFromTeacher
+                  ? Icon(Icons.school_rounded, size: 14, color: context.k.brand)
+                  : Text(
+                      avatarLetter,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: context.k.brand,
+                      ),
+                    ),
             ),
             const SizedBox(width: 8),
             Text(
@@ -602,22 +664,24 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                 color: context.k.ink,
               ),
             ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: context.k.brandTint,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                'GVCN',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: context.k.brand,
+            if (msg.isFromTeacher) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: context.k.brandTint,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'GVCN',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.brand,
+                  ),
                 ),
               ),
-            ),
+            ],
             const SizedBox(width: 6),
             Text(
               _formatTime(msg.createdAt),
@@ -633,7 +697,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
           constraints: const BoxConstraints(maxWidth: 320),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
-            color: context.k.brandTint,
+            color: msg.isFromTeacher ? context.k.brandTint : context.k.surfaceSunken,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(4),
               bottomLeft: Radius.circular(16),
@@ -683,6 +747,42 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ],
           ),
         ),
+        if (widget.isTeacher && !msg.isResolved) ...[
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: () async {
+              try {
+                final updated =
+                    await _repo.resolveResponse(msg.responseId, resolved: true);
+                if (mounted) {
+                  setState(() {
+                    final idx = _responses
+                        .indexWhere((r) => r.responseId == msg.responseId);
+                    if (idx != -1) _responses[idx] = updated;
+                  });
+                  widget.onDiscussionUpdated?.call();
+                }
+              } catch (_) {}
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline_rounded,
+                      size: 14, color: context.k.brand),
+                  const SizedBox(width: 4),
+                  Text('Đánh dấu đã xử lý',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: context.k.brand,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -744,80 +844,99 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
   }
 
   Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      decoration: BoxDecoration(
-        color: context.k.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: context.k.line),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: 'Đính kèm ảnh',
-            onPressed: _isSending ? null : _showImageSourcePicker,
-            icon: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: context.k.surfaceSunken,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.camera_alt_outlined,
-                size: 19,
-                color: context.k.inkSoft,
-              ),
+    return ListenableBuilder(
+      listenable: _inputFocusNode,
+      builder: (context, _) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _inputFocusNode.requestFocus(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          decoration: BoxDecoration(
+            color: context.k.surface,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: _inputFocusNode.hasFocus
+                  ? context.k.brand
+                  : context.k.line,
+              width: _inputFocusNode.hasFocus ? 1.5 : 1.0,
             ),
           ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              enabled: !_isSending,
-              minLines: 1,
-              maxLines: 4,
-              style: TextStyle(fontSize: 13, color: context.k.ink),
-              decoration: InputDecoration(
-                hintText: widget.isTeacher
-                    ? 'Nhắn phản hồi cho phụ huynh về báo cáo này...'
-                    : 'Nhắn cho cô giáo về báo cáo này...',
-                hintStyle: TextStyle(fontSize: 12.5, color: context.k.inkFaint),
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Đính kèm ảnh',
+                onPressed: _isSending ? null : _showImageSourcePicker,
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: context.k.surfaceSunken,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    size: 19,
+                    color: context.k.inkSoft,
+                  ),
+                ),
               ),
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _handleSend(),
-            ),
-          ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: ElevatedButton(
-              onPressed: _isSending ? null : _handleSend,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.k.brand,
-                foregroundColor: Colors.white,
-                shape: const CircleBorder(),
-                padding: EdgeInsets.zero,
-                elevation: 0,
+              const SizedBox(width: 4),
+              Expanded(
+                child: TextField(
+                  controller: _textController,
+                  focusNode: _inputFocusNode,
+                  enabled: !_isSending,
+                  minLines: 1,
+                  maxLines: 4,
+                  style: TextStyle(fontSize: 13, color: context.k.ink),
+                  decoration: InputDecoration(
+                    hintText: widget.isTeacher
+                        ? 'Nhắn phản hồi cho phụ huynh về báo cáo này...'
+                        : 'Nhắn cho cô giáo về báo cáo này...',
+                    hintStyle:
+                        TextStyle(fontSize: 12.5, color: context.k.inkFaint),
+                    isDense: true,
+                    filled: false,
+                    fillColor: Colors.transparent,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _handleSend(),
+                ),
               ),
-              child: _isSending
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.send_rounded, size: 18),
-            ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: _isSending ? null : _handleSend,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.k.brand,
+                    foregroundColor: Colors.white,
+                    shape: const CircleBorder(),
+                    padding: EdgeInsets.zero,
+                    elevation: 0,
+                  ),
+                  child: _isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.send_rounded, size: 18),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

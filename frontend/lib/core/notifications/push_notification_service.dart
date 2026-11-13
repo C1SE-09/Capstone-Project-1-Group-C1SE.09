@@ -124,7 +124,7 @@ class PushNotificationService {
         content: Text(
           title,
           style: TextStyle(
-            fontWeight: isEmergency ? FontWeight.bold : FontWeight.normal,
+            fontWeight: isEmergency ? FontWeight.w900 : FontWeight.w700,
           ),
         ),
         action: SnackBarAction(

@@ -466,7 +466,8 @@ class KPalette extends ThemeExtension<KPalette> {
 
 /// Reads the active palette from the widget tree: `context.k.brand`.
 extension KThemeContext on BuildContext {
-  KPalette get k => Theme.of(this).extension<KPalette>() ?? KPalette.light;
+  KPalette get k =>
+      Theme.of(this).extension<KPalette>() ?? KPalette.gardenVoice;
 }
 
 // Chỉ thanh điều hướng theo theme tối; không đổi palette của các màn GV khác.
@@ -508,6 +509,41 @@ class GardenVoiceScope extends StatelessWidget {
               displayColor: palette.ink,
             )
             .copyWith(
+              headlineLarge: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w800,
+                color: palette.ink,
+              ),
+              headlineMedium: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w800,
+                color: palette.ink,
+              ),
+              titleLarge: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+                color: palette.ink,
+              ),
+              titleMedium: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+                color: palette.ink,
+              ),
+              bodyLarge: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w600,
+                color: palette.ink,
+              ),
+              bodyMedium: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w600,
+                color: palette.inkSoft,
+              ),
+              bodySmall: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w600,
+                color: palette.inkFaint,
+              ),
               labelLarge: const TextStyle(
                 fontFamily: 'Nunito',
                 fontWeight: FontWeight.w700,
@@ -535,7 +571,10 @@ class GardenVoiceScope extends StatelessWidget {
             ElevatedButtonThemeData(style: _scopeButtonShape(palette)),
       ),
       child: DefaultTextStyle.merge(
-        style: const TextStyle(fontFamily: 'Nunito'),
+        style: const TextStyle(
+          fontFamily: 'Nunito',
+          fontWeight: FontWeight.w600,
+        ),
         child: child,
       ),
     );
@@ -557,25 +596,27 @@ ButtonStyle _scopeButtonShape(KPalette palette) => ButtonStyle(
       ),
     );
 
-ThemeData kinderTheme() {
+ThemeData kinderTheme({KPalette palette = KPalette.gardenVoice}) {
   final scheme = ColorScheme.fromSeed(
-    seedColor: KColors.brand,
-    primary: KColors.brand,
-    surface: KColors.surface,
-    error: KColors.bad,
+    seedColor: palette.brand,
+    primary: palette.brand,
+    onPrimary: palette.surface,
+    surface: palette.surface,
+    error: palette.bad,
+    onError: palette.surface,
   );
-  return _buildTheme(scheme: scheme, palette: KPalette.light);
+  return _buildTheme(scheme: scheme, palette: palette);
 }
 
-ThemeData kinderThemeDark() {
+ThemeData kinderThemeDark({KPalette palette = KPalette.dark}) {
   final scheme = ColorScheme.fromSeed(
-    seedColor: KColors.brandDark,
+    seedColor: palette.brand,
     brightness: Brightness.dark,
-    primary: KColors.brandDark,
-    surface: KColors.surfaceDark,
-    error: KColors.badDark,
+    primary: palette.brand,
+    surface: palette.surface,
+    error: palette.bad,
   );
-  return _buildTheme(scheme: scheme, palette: KPalette.dark);
+  return _buildTheme(scheme: scheme, palette: palette);
 }
 
 ThemeData _buildTheme(
@@ -588,17 +629,22 @@ ThemeData _buildTheme(
     extensions: [palette],
     textTheme: TextTheme(
       headlineLarge: TextStyle(
-          height: 1.25, fontWeight: FontWeight.w700, color: palette.ink),
+          height: 1.25, fontWeight: FontWeight.w800, color: palette.ink),
       headlineMedium: TextStyle(
-          height: 1.3, fontWeight: FontWeight.w700, color: palette.ink),
+          height: 1.3, fontWeight: FontWeight.w800, color: palette.ink),
       titleLarge: TextStyle(
-          height: 1.35, fontWeight: FontWeight.w600, color: palette.ink),
+          height: 1.35, fontWeight: FontWeight.w700, color: palette.ink),
       titleMedium: TextStyle(
-          height: 1.4, fontWeight: FontWeight.w600, color: palette.ink),
-      bodyLarge: TextStyle(height: 1.5, color: palette.ink),
-      bodyMedium: TextStyle(height: 1.5, color: palette.inkSoft),
-      bodySmall: TextStyle(height: 1.45, color: palette.inkFaint),
-      labelLarge: const TextStyle(fontWeight: FontWeight.w600),
+          height: 1.4, fontWeight: FontWeight.w700, color: palette.ink),
+      bodyLarge: TextStyle(
+          height: 1.5, fontWeight: FontWeight.w600, color: palette.ink),
+      bodyMedium: TextStyle(
+          height: 1.5, fontWeight: FontWeight.w600, color: palette.inkSoft),
+      bodySmall: TextStyle(
+          height: 1.45, fontWeight: FontWeight.w600, color: palette.inkFaint),
+      labelLarge: const TextStyle(fontWeight: FontWeight.w700),
+      labelMedium: const TextStyle(fontWeight: FontWeight.w700),
+      labelSmall: const TextStyle(fontWeight: FontWeight.w600),
     ),
     cardTheme: CardThemeData(
       margin: EdgeInsets.zero,
@@ -606,32 +652,71 @@ ThemeData _buildTheme(
       color: palette.surface,
       shape: RoundedRectangleBorder(
         side: BorderSide(color: palette.line),
-        borderRadius: const BorderRadius.all(Radius.circular(KRadii.card)),
+        borderRadius: BorderRadius.all(
+          Radius.circular(palette.isGardenVoice ? 24 : KRadii.card),
+        ),
       ),
     ),
     dividerTheme: DividerThemeData(color: palette.line, thickness: 1, space: 1),
-    // House button language: rounded-rect at KRadii.control (chips stay stadium pills).
-    filledButtonTheme: FilledButtonThemeData(style: _buttonShape()),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: _buttonShape()),
-    textButtonTheme: TextButtonThemeData(style: _buttonShape()),
-    elevatedButtonTheme: ElevatedButtonThemeData(style: _buttonShape()),
+    // House button language: Garden Voice uses 48dp height & 24dp pill.
+    filledButtonTheme: FilledButtonThemeData(
+      style: palette.isGardenVoice ? _scopeButtonShape(palette) : _buttonShape(),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: palette.isGardenVoice ? _scopeButtonShape(palette) : _buttonShape(),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: palette.isGardenVoice ? _scopeButtonShape(palette) : _buttonShape(),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: palette.isGardenVoice ? _scopeButtonShape(palette) : _buttonShape(),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: palette.surface,
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      hintStyle: TextStyle(color: palette.inkFaint, height: 1.2),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      hintStyle: TextStyle(
+        color: palette.inkSoft,
+        fontSize: 14,
+        fontFamily: 'Nunito',
+        height: 1.3,
+      ),
+      labelStyle: TextStyle(
+        color: palette.ink,
+        fontSize: 14,
+        fontFamily: 'Nunito',
+        fontWeight: FontWeight.w600,
+      ),
       border: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(KRadii.control)),
+        borderRadius: BorderRadius.all(
+          Radius.circular(palette.isGardenVoice ? 14 : KRadii.control),
+        ),
         borderSide: BorderSide(color: palette.lineStrong),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(KRadii.control)),
-        borderSide: BorderSide(color: palette.lineStrong),
+        borderRadius: BorderRadius.all(
+          Radius.circular(palette.isGardenVoice ? 14 : KRadii.control),
+        ),
+        borderSide: BorderSide(color: palette.line),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(KRadii.control)),
-        borderSide: BorderSide(color: palette.brand, width: 1.5),
+        borderRadius: BorderRadius.all(
+          Radius.circular(palette.isGardenVoice ? 14 : KRadii.control),
+        ),
+        borderSide: BorderSide(color: palette.brand, width: 1.8),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.all(
+          Radius.circular(palette.isGardenVoice ? 14 : KRadii.control),
+        ),
+        borderSide: BorderSide(color: palette.bad, width: 1.2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.all(
+          Radius.circular(palette.isGardenVoice ? 14 : KRadii.control),
+        ),
+        borderSide: BorderSide(color: palette.bad, width: 1.8),
       ),
     ),
     snackBarTheme: SnackBarThemeData(

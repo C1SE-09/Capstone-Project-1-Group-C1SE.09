@@ -313,7 +313,7 @@ void main() {
     expect(submittedSession?.sessionId, 'session-1');
     expect(
       submittedMergedText,
-      'Sáng nay bé Gia Bảo và Ngọc Ánh ăn hết suất.',
+      'Sáng nay bé Gia Bảo và Ngọc Ánh ăn hết suất',
     );
     expect(tester.takeException(), isNull);
   });
@@ -451,7 +451,7 @@ void main() {
     expect(repo.analyzeCalls, 1);
     expect(
       repo.lastEditedMergedTranscript,
-      'Sáng nay lớp ăn sáng ngoan.\nChiều nay bé học vẽ rất chăm chú.',
+      'Sáng nay lớp ăn sáng ngoan Chiều nay bé học vẽ rất chăm chú',
     );
     expect(find.byType(ReviewScreen), findsOneWidget);
     expect(tester.takeException(), isNull);

@@ -25,7 +25,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        theme: kinderTheme(),
+        theme: kinderTheme(palette: KPalette.light),
         home: Builder(
           builder: (context) {
             outerPalette = context.k;
@@ -77,7 +77,7 @@ void main() {
       (tester) async {
     late ThemeData gardenTheme;
     await tester.pumpWidget(MaterialApp(
-      theme: kinderTheme(),
+      theme: kinderTheme(palette: KPalette.light),
       home: Column(
         children: [
           const KButton(label: 'Baseline'),
@@ -124,7 +124,7 @@ void main() {
       'GV status badge tones use Figma background, dot, and text colors',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
-      theme: kinderTheme(),
+      theme: kinderTheme(palette: KPalette.light),
       home: const Column(
         children: [
           StatusBadge(ReportStatus.submitted),
@@ -207,7 +207,7 @@ void main() {
       'Batch 0 shared components adopt Garden Voice specs only inside GardenVoiceScope',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
-      theme: kinderTheme(),
+      theme: kinderTheme(palette: KPalette.light),
       home: Scaffold(
         body: SingleChildScrollView(
           child: Column(
@@ -276,7 +276,7 @@ void main() {
     final gvInactiveChipText =
         tester.widget<Text>(find.text('GV Chip Inactive'));
     expect(gvInactiveChipText.style?.fontSize, 14);
-    expect(gvInactiveChipText.style?.fontWeight, FontWeight.w400);
+    expect(gvInactiveChipText.style?.fontWeight, FontWeight.w600);
     expect(gvInactiveChipText.style?.color, KPalette.gardenVoice.inkSoft);
 
     // 3. SearchField: GV height 48px, radius 12px, border #B5D4CE
@@ -315,7 +315,7 @@ void main() {
     final gvAvatarL = tester.widget<Text>(
         find.descendant(of: avatars.at(3), matching: find.byType(Text)));
     expect(gvAvatarS.style?.fontSize, 12);
-    expect(gvAvatarS.style?.fontWeight, FontWeight.w500);
+    expect(gvAvatarS.style?.fontWeight, FontWeight.w600);
     expect(gvAvatarM.style?.fontSize, 14);
     expect(gvAvatarM.style?.fontWeight, FontWeight.w700);
     expect(gvAvatarL.style?.fontSize, 16);

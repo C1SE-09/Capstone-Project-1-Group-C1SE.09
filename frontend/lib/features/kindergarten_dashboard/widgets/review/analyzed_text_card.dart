@@ -72,7 +72,7 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
                             TextStyle(
                                 fontSize: 12,
                                 height: 1.4,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w700,
                                 color: context.k.brandStrong),
                           );
                   final titleWidth = (TextPainter(
@@ -129,7 +129,7 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
                                   style: TextStyle(
                                       fontSize: 12,
                                       height: 1.4,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w700,
                                       color: context.k.brandStrong),
                                 ),
                               ),

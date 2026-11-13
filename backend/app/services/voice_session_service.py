@@ -61,12 +61,8 @@ logger = logging.getLogger(__name__)
 # Constants
 # ===========================================================================
 
-# Dấu phân cách giữa các bản ghi khi gộp transcript.
-#
-# Chỉ dùng "\n" (newline) vì `extract_multi_person` tách segment bằng
-# regex `[.!?\n]+` → newline tạo ranh giới segment sạch, không cần thêm
-# ký tự đặc biệt (ký tự lạ có nguy cơ bị model gán nhầm nhãn).
-TRANSCRIPT_SEPARATOR = "\n"
+# Dấu phân cách giữa các bản ghi khi gộp transcript: 1 dấu cách, không xuống hàng.
+TRANSCRIPT_SEPARATOR = " "
 
 # Số ký tự tối đa cho transcript gộp.
 #
@@ -270,6 +266,8 @@ def merge_transcripts(session: VoiceRecordingSession) -> str:
             continue
 
         text = (clip.edited_transcript or clip.raw_transcript or "").strip()
+        # Loại bỏ dấu chấm ở cuối đoạn nếu có
+        text = text.rstrip(".").strip()
         if not text:
             continue
 

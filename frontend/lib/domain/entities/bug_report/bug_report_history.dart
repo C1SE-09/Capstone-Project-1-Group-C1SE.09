@@ -59,15 +59,6 @@ class BugReportHistory extends BaseEntity {
   final String? comment;
   final DateTime createdAt;
 
-  /// True nếu entry này chỉ ghi nhận "report vừa được tạo".
-  bool get isCreated => oldStatus == null && newStatus == BugStatus.open;
-
-  /// True nếu entry chỉ đổi teacher mà không đổi status.
-  bool get isReassignmentOnly =>
-      oldStatus == newStatus &&
-      oldTeacherId != newTeacherId &&
-      comment != null;
-
   factory BugReportHistory.fromJson(Map<String, dynamic> json) {
     final changedByRaw = json['changed_by'];
     return BugReportHistory(

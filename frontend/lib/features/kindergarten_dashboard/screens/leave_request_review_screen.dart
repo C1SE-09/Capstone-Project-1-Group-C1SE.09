@@ -837,7 +837,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                 style: TextStyle(
                     fontSize: 12,
                     color: selected ? k.warnDeep : k.ok,
-                    fontWeight: FontWeight.w500)),
+                    fontWeight: FontWeight.w700)),
           ),
         ),
       );
@@ -956,7 +956,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       child: Text(requestStatusLabel(item.status),
           style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
               color: switch (item.status) {
                 LeaveStatus.pending => k.warnDeep,
                 LeaveStatus.approved => k.ok,

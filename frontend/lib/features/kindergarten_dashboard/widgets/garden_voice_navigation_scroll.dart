@@ -49,7 +49,8 @@ class _GardenVoiceNavigationFrameState
         event.metrics.axis != Axis.vertical) {
       return false;
     }
-    if (event.context != null && !TickerMode.valuesOf(event.context!).enabled) {
+    // ignore: deprecated_member_use
+    if (event.context != null && !TickerMode.of(event.context!)) {
       return false;
     }
     if (MediaQuery.disableAnimationsOf(context) ||
@@ -94,8 +95,10 @@ class _GardenVoiceNavigationFrameState
               overlay: widget.autoHide,
               child: NotificationListener<ScrollMetricsNotification>(
                 onNotification: (event) {
+                  // ignore: deprecated_member_use
                   if (event.depth == 0 &&
-                      TickerMode.valuesOf(event.context).enabled &&
+                      // ignore: deprecated_member_use
+                      TickerMode.of(event.context) &&
                       event.metrics.axis == Axis.vertical &&
                       event.metrics.maxScrollExtent <=
                           event.metrics.minScrollExtent) {

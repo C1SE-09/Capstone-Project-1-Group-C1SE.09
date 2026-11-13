@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
@@ -145,10 +144,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
           _existingReportId = todayReport.dailyReportId;
           note.text = todayReport.summaryText?.trim() ?? '';
           eating.text = todayReport.eating?.trim() ?? '';
-          final rawSleep = todayReport.sleeping?.trim() ?? '';
-          final digits = RegExp(r'\d+').firstMatch(rawSleep)?.group(0) ?? '';
-          sleepDuration.text = digits;
-          sleep.text = rawSleep;
+          sleep.text = todayReport.sleeping?.trim() ?? '';
           health.text = todayReport.health?.trim() ?? '';
           mood.text = todayReport.mood?.trim() ?? '';
           activity.text = todayReport.activitiesText?.trim() ?? '';
@@ -159,7 +155,6 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
   }
 
   late final eating = TextEditingController(text: '');
-  late final sleepDuration = TextEditingController(text: '');
   late final sleep = TextEditingController(text: '');
   late final health = TextEditingController(text: '');
   late final mood = TextEditingController(text: '');
@@ -168,7 +163,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
 
   @override
   void dispose() {
-    for (final controller in [eating, sleepDuration, sleep, health, mood, activity, note]) {
+    for (final controller in [eating, sleep, health, mood, activity, note]) {
       controller.dispose();
     }
     super.dispose();
@@ -205,38 +200,6 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
             final k = context.k;
             final compact = MediaQuery.sizeOf(context).width < 360 ||
                 MediaQuery.textScalerOf(context).scale(1) > 1.2;
-            Widget durationField() => SizedBox(
-                  width: 96,
-                  height: 40,
-                  child: TextField(
-                    controller: sleepDuration,
-                    readOnly: widget.readOnly,
-                    textAlignVertical: TextAlignVertical.center,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    style: TextStyle(color: k.ink, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: '—',
-                      filled: true,
-                      fillColor: k.surface,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: k.lineStrong),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: k.lineStrong),
-                      ),
-                    ),
-                  ),
-                );
             return Scaffold(
               backgroundColor: k.canvas,
               appBar: KAppBar(
@@ -281,42 +244,8 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                       height: 22,
                     ),
                     label: 'Giấc ngủ',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _TextArea(controller: sleep, readOnly: widget.readOnly),
-                        const SizedBox(height: 8),
-                        if (compact)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Thời lượng (phút)',
-                                style: TextStyle(
-                                  color: k.inkSoft,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              durationField(),
-                            ],
-                          )
-                        else
-                          Row(
-                            children: [
-                            Text(
-                              'Thời lượng (phút)',
-                              style: TextStyle(
-                                color: k.inkSoft,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            durationField(),
-                          ],
-                        ),
-                      ],
-                    ),
+                    child: _TextArea(
+                        controller: sleep, readOnly: widget.readOnly),
                   ),
                   const SizedBox(height: KSpace.x8),
                   _FieldBlock(
@@ -535,7 +464,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                     Text('Báo cáo ngày $reportDateText', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
                   ],
                 ),

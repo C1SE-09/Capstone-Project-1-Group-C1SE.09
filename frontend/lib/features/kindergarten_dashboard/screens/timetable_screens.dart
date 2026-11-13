@@ -538,7 +538,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.4,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w700,
                             color: day == selected
                                 ? context.k.surface
                                 : context.k.inkSoft,
@@ -673,7 +673,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               style: TextStyle(
                 fontSize: gardenVoice ? 14 : 11,
                 height: gardenVoice ? 1.35 : null,
-                fontWeight: gardenVoice ? FontWeight.w400 : FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 letterSpacing: gardenVoice ? 0 : 0.4,
                 color: context.k.inkSoft,
               ),
@@ -717,7 +717,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               style: TextStyle(
                 fontSize: gardenVoice ? 14 : 11,
                 height: gardenVoice ? 1.35 : null,
-                fontWeight: gardenVoice ? FontWeight.w400 : FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 letterSpacing: gardenVoice ? 0 : 0.4,
                 color: context.k.inkSoft,
               ),
@@ -1141,7 +1141,7 @@ class _ViewToggle extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? context.k.brand : context.k.inkSoft),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: selected ? context.k.brand : context.k.inkSoft),
         ),
       ),
     );
@@ -1197,7 +1197,7 @@ class _DayStrip extends StatelessWidget {
                         _dayShort[d],
                         style: TextStyle(
                           fontSize: gardenVoice ? 12 : 11,
-                          fontWeight: gardenVoice ? FontWeight.w500 : FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: d == selected
                               ? context.k.surface
                               : context.k.inkSoft,
@@ -1335,7 +1335,7 @@ class _ScheduleRow extends StatelessWidget {
                 name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, height: 1.3),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, height: 1.3),
               ),
             ),
             if (conflict) ...[
@@ -1466,7 +1466,7 @@ class _ScheduleRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               height: 1.35,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: context.k.inkSoft,
             ),
           ),
@@ -1630,7 +1630,7 @@ class _ParentScheduleCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               height: 1.4,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w700,
                               color: context.k.inkSoft,
                             ),
                           ),
@@ -1644,7 +1644,7 @@ class _ParentScheduleCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.4,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w700,
                             color: context.k.inkSoft,
                           ),
                         ),
@@ -1803,7 +1803,7 @@ class _ScheduleStatusPill extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             height: 1.4,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
             color: context.k.ink,
           ),
         ),

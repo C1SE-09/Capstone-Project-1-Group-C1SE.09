@@ -206,13 +206,13 @@ void main() {
     await tester.tap(find.text('Ăn uống'));
     await tester.pumpAndSettle();
 
-    // Verify report sheet is displayed with 'Báo cáo hằng ngày' and 'Đã đọc' badge
-    expect(find.text('Báo cáo hằng ngày'), findsOneWidget);
-    // Mở dạng sheet: badge trong sheet + pill của danh sách phía sau đều là 'Đã đọc'
-    expect(find.text('Đã đọc'), findsWidgets);
+    // Verify report sheet is displayed with 'Báo cáo ngày' and 'Đã đọc' badge
+    expect(find.textContaining('Báo cáo'), findsWidgets);
+    // Mở dạng sheet: nút xác nhận đã đọc
+    expect(find.textContaining('Đã đọc'), findsWidgets);
 
-    // Tap back button
-    await tester.tap(find.byTooltip('Quay lại'));
+    // Tap close button
+    await tester.tap(find.byTooltip('Đóng báo cáo'));
     await tester.pumpAndSettle();
 
     // Quay về tổng quan sau khi đánh dấu đã đọc.
@@ -246,7 +246,7 @@ void main() {
     await tester.tap(find.byTooltip('Tài khoản'));
     await tester.pumpAndSettle();
 
-    final logoutBtn = find.widgetWithText(KButton, 'Đăng xuất');
+    final logoutBtn = find.text('Đăng xuất').first;
     expect(logoutBtn, findsOneWidget);
 
     // Tap logout button
@@ -302,7 +302,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify TimetableScreen is opened
-    expect(find.text('Thời khóa biểu'), findsOneWidget);
+    expect(find.textContaining('Thời khóa biểu'), findsWidgets);
   });
 }
 

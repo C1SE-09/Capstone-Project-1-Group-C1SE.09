@@ -4,6 +4,8 @@ import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dar
 import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
+    show kWeekdayLabel;
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -85,16 +87,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
   }
 
   String _dateLabel(DateTime date) {
-    const weekdays = [
-      'Thứ 2',
-      'Thứ 3',
-      'Thứ 4',
-      'Thứ 5',
-      'Thứ 6',
-      'Thứ 7',
-      'Chủ nhật'
-    ];
-    return '${dashboard.classInfo.name} · ${weekdays[date.weekday - 1]}, '
+    return '${dashboard.classInfo.name} · ${kWeekdayLabel(date)}, '
         '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
   }
 
@@ -163,7 +156,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                               _dateLabel(date),
                               style: TextStyle(
                                 fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                                 color: k.inkSoft,
                               ),
                             ),
@@ -237,7 +230,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                 ),
                 const Divider(height: 21),
                 Text(
-                  'Cần chú ý hôm nay',
+                  'Cần chú ý',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,

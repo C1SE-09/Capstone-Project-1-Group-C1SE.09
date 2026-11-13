@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
+    show kWeekdayLabel;
 
 enum ParentRequestDestination { history, home }
 
@@ -19,18 +21,7 @@ String requestStatusLabel(LeaveStatus status) => switch (status) {
 
 String requestDate(DateTime value) => DateFormat('dd/MM/yyyy').format(value);
 
-String _requestWeekday(DateTime value) {
-  const weekdays = [
-    'Thứ 2',
-    'Thứ 3',
-    'Thứ 4',
-    'Thứ 5',
-    'Thứ 6',
-    'Thứ 7',
-    'Chủ nhật'
-  ];
-  return weekdays[value.weekday - 1];
-}
+String _requestWeekday(DateTime value) => kWeekdayLabel(value);
 
 String _requestDateWithWeekday(DateTime value) =>
     '${_requestWeekday(value)}, ${requestDate(value)}';
@@ -113,9 +104,7 @@ class ParentRequestLayout extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     fontSize: gardenVoice ? 12 : 11.5,
-                                    fontWeight: gardenVoice
-                                        ? FontWeight.w500
-                                        : FontWeight.w400,
+                                    fontWeight: FontWeight.w600,
                                     color: context.k.inkSoft)),
                         ],
                       ),
@@ -194,7 +183,7 @@ class ParentRequestStatus extends StatelessWidget {
           style: TextStyle(
               color: ink,
               fontSize: gardenVoice ? 12 : 10,
-              fontWeight: gardenVoice ? FontWeight.w500 : FontWeight.w600)),
+              fontWeight: FontWeight.w700)),
     );
   }
 }
@@ -454,7 +443,7 @@ class ParentRequestPill extends StatelessWidget {
               child: Text(label,
                   style: TextStyle(
                       fontSize: brandTone ? 12 : 14,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                       color: selected
                           ? (brandTone ? context.k.brand : context.k.surface)
                           : context.k.inkSoft))),

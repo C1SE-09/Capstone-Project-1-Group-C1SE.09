@@ -320,7 +320,7 @@ class _ParentRequestFormFields extends StatelessWidget {
                     style: TextStyle(
                         fontSize: strong ? 20 : 14,
                         fontWeight:
-                            strong ? FontWeight.w700 : FontWeight.w400))),
+                            strong ? FontWeight.w700 : FontWeight.w600))),
             const SizedBox(width: 8),
             Flexible(
                 flex: 2,

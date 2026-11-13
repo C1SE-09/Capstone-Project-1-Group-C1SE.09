@@ -33,10 +33,11 @@ ui.Child uiChildFromDomainWithReport({
     reportStatus,
     hasSeverity: hasSeverity,
   );
-  final timeLabel = updatedAt == null
+  final local = updatedAt?.toLocal();
+  final timeLabel = (local == null || (local.hour == 0 && local.minute == 0))
       ? ''
-      : '${updatedAt.hour.toString().padLeft(2, '0')}:'
-          '${updatedAt.minute.toString().padLeft(2, '0')}';
+      : '${local.hour.toString().padLeft(2, '0')}:'
+          '${local.minute.toString().padLeft(2, '0')}';
 
   return uiChildFromDomain(
     child: child,

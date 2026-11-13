@@ -150,7 +150,7 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
                             'Bé ${widget.child.fullName}${widget.className.isEmpty ? '' : ' · ${widget.className}'}',
                             style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w700,
                                 color: context.k.brand)))),
                 const SizedBox(height: 12),
                 SingleChildScrollView(

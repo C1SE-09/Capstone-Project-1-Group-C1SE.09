@@ -110,7 +110,12 @@ class _Schedule extends HttpScheduleRepository {
 void main() {
   setUpAll(() async {
     final fonts = FontLoader('Nunito')
-      ..addFont(rootBundle.load('assets/fonts/Nunito-VariableFont_wght.ttf'));
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Regular.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Medium.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-SemiBold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Bold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-ExtraBold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Black.ttf'));
     await fonts.load();
   });
 
@@ -168,7 +173,7 @@ void main() {
           .height,
       closeTo(54, 1),
     );
-    expect(find.text('Cần chú ý hôm nay'), findsOneWidget);
+    expect(find.text('Cần chú ý'), findsOneWidget);
     expect(find.text('Dị ứng đậu phộng'), findsOneWidget);
     expect(find.text('Đã đến trễ lúc 08:30'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
@@ -186,7 +191,7 @@ void main() {
       closeTo(246, 1),
     );
     expect(
-      tester.getTopLeft(find.text('Cần chú ý hôm nay')).dy,
+      tester.getTopLeft(find.text('Cần chú ý')).dy,
       closeTo(542, 1),
     );
 

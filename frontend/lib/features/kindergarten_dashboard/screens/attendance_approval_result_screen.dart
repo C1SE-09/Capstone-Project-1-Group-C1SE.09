@@ -115,7 +115,7 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     height: 1.4,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                     color: k.inkSoft,
                                   ),
                                 ),
@@ -186,7 +186,7 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     height: 1.4,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                     color: k.inkSoft,
                                   ),
                                 ),
@@ -219,7 +219,7 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.4,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: k.inkSoft,
                       ),
                     ),

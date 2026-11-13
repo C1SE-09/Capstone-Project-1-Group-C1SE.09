@@ -340,7 +340,7 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
                             s.name,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
                               color: isSelected ? context.k.brand : context.k.ink,
                             ),
                           ),
@@ -471,7 +471,7 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
                             '${slot.startTime} – ${slot.endTime}',
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                               color: isSelected ? context.k.brand : context.k.inkSoft,
                             ),
                           ),

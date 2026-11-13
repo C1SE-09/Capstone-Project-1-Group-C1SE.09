@@ -64,7 +64,12 @@ class _ParentRepository extends HttpDashboardRepository {
 void main() {
   setUpAll(() async {
     final font = FontLoader('Nunito')
-      ..addFont(rootBundle.load('assets/fonts/Nunito-VariableFont_wght.ttf'));
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Regular.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Medium.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-SemiBold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Bold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-ExtraBold.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Nunito-Black.ttf'));
     await font.load();
   });
 

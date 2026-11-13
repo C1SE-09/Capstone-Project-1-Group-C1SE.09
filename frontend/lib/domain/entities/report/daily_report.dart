@@ -19,6 +19,8 @@ class DailyReport extends BaseEntity {
     this.voiceRecordId,
     this.summaryText,
     this.publishedAt,
+    this.sentAt,
+    this.createdAt,
     this.activities = const [],
     this.eating,
     this.sleeping,
@@ -37,6 +39,8 @@ class DailyReport extends BaseEntity {
   final String? summaryText;
   final ReportStatus status;
   final DateTime? publishedAt;
+  final DateTime? sentAt;
+  final DateTime? createdAt;
   final List<Map<String, dynamic>> activities;
   final String? eating;
   final String? sleeping;
@@ -48,6 +52,7 @@ class DailyReport extends BaseEntity {
 
   bool get hasDiscussion => responseCount > 0;
   bool get hasUnreadResponses => unreadResponseCount > 0;
+  DateTime? get reportedAt => sentAt ?? publishedAt ?? createdAt;
 
   DailyReport copyWith({
     String? dailyReportId,
@@ -58,6 +63,8 @@ class DailyReport extends BaseEntity {
     String? summaryText,
     ReportStatus? status,
     DateTime? publishedAt,
+    DateTime? sentAt,
+    DateTime? createdAt,
     List<Map<String, dynamic>>? activities,
     String? eating,
     String? sleeping,
@@ -76,6 +83,8 @@ class DailyReport extends BaseEntity {
       summaryText: summaryText ?? this.summaryText,
       status: status ?? this.status,
       publishedAt: publishedAt ?? this.publishedAt,
+      sentAt: sentAt ?? this.sentAt,
+      createdAt: createdAt ?? this.createdAt,
       activities: activities ?? this.activities,
       eating: eating ?? this.eating,
       sleeping: sleeping ?? this.sleeping,
@@ -119,6 +128,12 @@ class DailyReport extends BaseEntity {
       status: ReportStatus.fromJson(json['status'] as String?),
       publishedAt: json['published_at'] != null
           ? DateTime.tryParse(json['published_at'] as String)
+          : null,
+      sentAt: json['sent_at'] != null
+          ? DateTime.tryParse(json['sent_at'] as String)
+          : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'] as String)
           : null,
       activities: activitiesList,
       eating: json['eating'] as String? ?? findDesc('meal'),
