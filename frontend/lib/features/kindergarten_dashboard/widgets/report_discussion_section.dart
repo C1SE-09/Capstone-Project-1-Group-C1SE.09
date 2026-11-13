@@ -22,6 +22,10 @@ class ReportDiscussionSection extends StatefulWidget {
     this.initialResponses,
     this.isTeacher = false,
     this.onDiscussionUpdated,
+    this.header,
+    this.padding,
+    this.bottomBarPadding,
+    this.bottomBarBackgroundColor,
   });
 
   final String reportId;
@@ -32,6 +36,10 @@ class ReportDiscussionSection extends StatefulWidget {
   final List<ReportResponse>? initialResponses;
   final bool isTeacher;
   final VoidCallback? onDiscussionUpdated;
+  final Widget? header;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? bottomBarPadding;
+  final Color? bottomBarBackgroundColor;
 
   @override
   State<ReportDiscussionSection> createState() => _ReportDiscussionSectionState();
@@ -326,6 +334,71 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.header != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: widget.padding ?? EdgeInsets.zero,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  widget.header!,
+                  const SizedBox(height: KSpace.x4),
+                  const Divider(height: 24),
+                  _buildSectionHeader(),
+                  const SizedBox(height: 12),
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    )
+                  else if (_errorMessage != null)
+                    _buildErrorState()
+                  else if (_responses.isEmpty)
+                    _buildEmptyState()
+                  else
+                    _buildMessagesList(),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: widget.bottomBarBackgroundColor ?? context.k.surface,
+              border: Border(
+                top: BorderSide(
+                  color: context.k.line.withValues(alpha: 0.6),
+                  width: 0.8,
+                ),
+              ),
+            ),
+            padding: widget.bottomBarPadding ??
+                const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_selectedImageBytes != null) _buildSelectedImagePreview(),
+                  _buildBottomBar(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -789,7 +862,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
 
   Widget _buildSelectedImagePreview() {
     return Container(
-      margin: const EdgeInsets.only(top: 8),
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: context.k.surfaceSunken,

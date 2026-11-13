@@ -530,5 +530,50 @@ void main() {
       expect(textField.decoration?.filled, isFalse);
       expect(textField.decoration?.fillColor, Colors.transparent);
     });
+
+    testWidgets('renders pinned bottom chat bar and scrolls header with messages when header is provided',
+        (tester) async {
+      final mockRepo = MockReportResponseRepository(initialList: [
+        ReportResponse(
+          responseId: 'res-h1',
+          dailyReportId: 'rep-header',
+          authorRole: 'parent',
+          authorName: 'Mẹ An',
+          content: 'Cảm ơn cô nhiều ạ!',
+          createdAt: DateTime(2026, 11, 12, 17, 0),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: kinderTheme(),
+          home: Scaffold(
+            body: ReportDiscussionSection(
+              reportId: 'rep-header',
+              childName: 'An',
+              teacherName: 'Cô Mai',
+              repository: mockRepo,
+              header: Container(
+                key: const ValueKey('custom-report-header'),
+                padding: const EdgeInsets.all(16),
+                child: const Text('Báo cáo chi tiết của bé An'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify header is rendered inside scrollable view
+      expect(find.byKey(const ValueKey('custom-report-header')), findsOneWidget);
+      expect(find.text('Báo cáo chi tiết của bé An'), findsOneWidget);
+
+      // Verify messages list
+      expect(find.text('Cảm ơn cô nhiều ạ!'), findsOneWidget);
+
+      // Verify pinned chat bar at the bottom
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+    });
   });
 }

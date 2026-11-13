@@ -200,6 +200,143 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
             final k = context.k;
             final compact = MediaQuery.sizeOf(context).width < 360 ||
                 MediaQuery.textScalerOf(context).scale(1) > 1.2;
+
+            final formContent = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.readOnly)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: k.surfaceSunken,
+                      borderRadius: BorderRadius.circular(KRadii.control),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle_outline,
+                            size: 18, color: k.ok),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Báo cáo đã gửi, không thể sửa.',
+                          style: TextStyle(fontSize: 13, color: k.inkSoft),
+                        ),
+                      ],
+                    ),
+                  ),
+                _FieldBlock(
+                  icon: const _MealFieldIcon(),
+                  label: 'Ăn uống',
+                  child: _TextArea(
+                      controller: eating, readOnly: widget.readOnly),
+                ),
+                const SizedBox(height: KSpace.x8 + KSpace.x1),
+                _FieldBlock(
+                  icon: SvgPicture.asset(
+                    'assets/garden_voice/review_moon.svg',
+                    width: 22,
+                    height: 22,
+                  ),
+                  label: 'Giấc ngủ',
+                  child: _TextArea(
+                      controller: sleep, readOnly: widget.readOnly),
+                ),
+                const SizedBox(height: KSpace.x8),
+                _FieldBlock(
+                  icon: SvgPicture.asset(
+                    'assets/garden_voice/parent_notification_health.svg',
+                    width: 22,
+                    height: 22,
+                  ),
+                  label: 'Sức khỏe',
+                  child: _TextArea(
+                      controller: health, readOnly: widget.readOnly),
+                ),
+                const SizedBox(height: KSpace.x4),
+                _FieldBlock(
+                  label: 'Tâm trạng',
+                  child: _TextArea(
+                      controller: mood, readOnly: widget.readOnly),
+                ),
+                const SizedBox(height: KSpace.x5),
+                _FieldBlock(
+                  icon: SvgPicture.asset(
+                    'assets/garden_voice/review_artist_palette.svg',
+                    width: 22,
+                    height: 22,
+                  ),
+                  label: 'Hoạt động',
+                  child: _TextArea(
+                      controller: activity, readOnly: widget.readOnly),
+                ),
+                const SizedBox(height: 12),
+                _FieldBlock(
+                  label: 'Ghi chú của cô',
+                  child: _TextArea(
+                    controller: note,
+                    readOnly: widget.readOnly,
+                    maxLines: 3,
+                    maxLength: 500,
+                  ),
+                ),
+                if (!widget.readOnly) ...[
+                  const SizedBox(height: KSpace.x6),
+                  if (submitError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: KSpace.x2),
+                      child: Text(
+                        submitError!,
+                        style: TextStyle(color: k.bad),
+                      ),
+                    ),
+                  if (compact) ...[
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: KButton(
+                        label: 'Lưu nháp',
+                        secondary: true,
+                        onPressed: submitting ? null : _saveDraft,
+                      ),
+                    ),
+                    const SizedBox(height: KSpace.x2),
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: KButton(
+                        label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                        onPressed: submitting ? null : _confirmSend,
+                      ),
+                    ),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: KButton(
+                              label: 'Lưu nháp',
+                              secondary: true,
+                              onPressed: submitting ? null : _saveDraft,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: KSpace.x2),
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: KButton(
+                              label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                              onPressed: submitting ? null : _confirmSend,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ],
+            );
+
             return Scaffold(
               backgroundColor: k.canvas,
               appBar: KAppBar(
@@ -207,150 +344,22 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                 subtitle: '${widget.child.name} · $_headerDate',
                 onBack: () => Navigator.pop(context),
               ),
-              body: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-                children: [
-                  if (widget.readOnly)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: k.surfaceSunken,
-                        borderRadius: BorderRadius.circular(KRadii.control),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle_outline,
-                              size: 18, color: k.ok),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Báo cáo đã gửi, không thể sửa.',
-                            style: TextStyle(fontSize: 13, color: k.inkSoft),
-                          ),
-                        ],
-                      ),
-                    ),
-                  _FieldBlock(
-                    icon: const _MealFieldIcon(),
-                    label: 'Ăn uống',
-                    child: _TextArea(
-                        controller: eating, readOnly: widget.readOnly),
-                  ),
-                  const SizedBox(height: KSpace.x8 + KSpace.x1),
-                  _FieldBlock(
-                    icon: SvgPicture.asset(
-                      'assets/garden_voice/review_moon.svg',
-                      width: 22,
-                      height: 22,
-                    ),
-                    label: 'Giấc ngủ',
-                    child: _TextArea(
-                        controller: sleep, readOnly: widget.readOnly),
-                  ),
-                  const SizedBox(height: KSpace.x8),
-                  _FieldBlock(
-                    icon: SvgPicture.asset(
-                      'assets/garden_voice/parent_notification_health.svg',
-                      width: 22,
-                      height: 22,
-                    ),
-                    label: 'Sức khỏe',
-                    child: _TextArea(
-                        controller: health, readOnly: widget.readOnly),
-                  ),
-                  const SizedBox(height: KSpace.x4),
-                  _FieldBlock(
-                    label: 'Tâm trạng',
-                    child: _TextArea(
-                        controller: mood, readOnly: widget.readOnly),
-                  ),
-                  const SizedBox(height: KSpace.x5),
-                  _FieldBlock(
-                    icon: SvgPicture.asset(
-                      'assets/garden_voice/review_artist_palette.svg',
-                      width: 22,
-                      height: 22,
-                    ),
-                    label: 'Hoạt động',
-                    child: _TextArea(
-                        controller: activity, readOnly: widget.readOnly),
-                  ),
-                  const SizedBox(height: 12),
-                  _FieldBlock(
-                    label: 'Ghi chú của cô',
-                    child: _TextArea(
-                      controller: note,
-                      readOnly: widget.readOnly,
-                      maxLines: 3,
-                      maxLength: 500,
-                    ),
-                  ),
-                  if (_existingReportId != null) ...[
-                    const SizedBox(height: KSpace.x6),
-                    ReportDiscussionSection(
+              body: _existingReportId != null
+                  ? ReportDiscussionSection(
                       reportId: _existingReportId!,
                       childName: widget.child.name,
-                      teacherName: teacherName.isNotEmpty ? teacherName : 'Cô giáo',
+                      teacherName:
+                          teacherName.isNotEmpty ? teacherName : 'Cô giáo',
                       isTeacher: true,
+                      header: formContent,
+                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+                      bottomBarPadding:
+                          const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+                      children: [formContent],
                     ),
-                  ],
-                  const SizedBox(height: KSpace.x6),
-                  if (!widget.readOnly) ...[
-                    if (submitError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: KSpace.x2),
-                        child: Text(
-                          submitError!,
-                          style: TextStyle(color: k.bad),
-                        ),
-                      ),
-                    if (compact) ...[
-                      SizedBox(
-                        height: 48,
-                        width: double.infinity,
-                        child: KButton(
-                          label: 'Lưu nháp',
-                          secondary: true,
-                          onPressed: submitting ? null : _saveDraft,
-                        ),
-                      ),
-                      const SizedBox(height: KSpace.x2),
-                      SizedBox(
-                        height: 48,
-                        width: double.infinity,
-                        child: KButton(
-                          label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
-                          onPressed: submitting ? null : _confirmSend,
-                        ),
-                      ),
-                    ] else
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 48,
-                              child: KButton(
-                                label: 'Lưu nháp',
-                                secondary: true,
-                                onPressed: submitting ? null : _saveDraft,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: KSpace.x2),
-                          Expanded(
-                            child: SizedBox(
-                              height: 48,
-                              child: KButton(
-                                label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
-                                onPressed: submitting ? null : _confirmSend,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ],
-              ),
             );
           },
         ),
