@@ -553,6 +553,41 @@ def test_attachment_path_is_internal_not_public_url(env, monkeypatch):
     assert captured["child_id"] == env.child.child_id
 
 
+def test_teacher_reply_with_image(env, monkeypatch):
+    """Giáo viên gửi phản hồi kèm ảnh qua /reply-with-image hoặc /with-image."""
+    captured = {}
+
+    def fake_save(*, child_id, user_id, data, content_type):
+        captured["child_id"] = child_id
+        captured["user_id"] = user_id
+        return f"/api/report-responses/attachments/{child_id}/{uuid.uuid4()}"
+
+    monkeypatch.setattr(routes.attachments, "save_attachment", fake_save)
+
+    as_user(env, env.teacher_user)
+    resp = env.client.post(
+        f"/api/report-responses/reports/{env.report.daily_report_id}/reply-with-image",
+        data={"content": "Cô gửi ảnh hoạt động hôm nay của bé"},
+        files={"file": ("photo.png", b"\x89PNG\r\n\x1a\n" + b"0" * 32, "image/png")},
+    )
+    assert resp.status_code == 201
+    body = resp.json()["response"]
+    assert body["has_image"] is True
+    assert body["author_role"] == "teacher"
+    assert captured["child_id"] == env.child.child_id
+
+    # Giáo viên cũng có thể gửi qua /with-image
+    resp2 = env.client.post(
+        f"/api/report-responses/reports/{env.report.daily_report_id}/with-image",
+        data={"content": "Ảnh góc học tập"},
+        files={"file": ("photo2.png", b"\x89PNG\r\n\x1a\n" + b"0" * 32, "image/png")},
+    )
+    assert resp2.status_code == 201
+    body2 = resp2.json()["response"]
+    assert body2["has_image"] is True
+    assert body2["author_role"] == "teacher"
+
+
 def test_attachment_read_requires_permission(env, monkeypatch):
     """Đọc ảnh của bé khác → 403."""
     monkeypatch.setattr(

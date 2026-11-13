@@ -968,6 +968,17 @@ class _AttachmentThumbnailWidgetState extends State<AttachmentThumbnailWidget> {
     _fetch();
   }
 
+  @override
+  void didUpdateWidget(covariant AttachmentThumbnailWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _loading = true;
+      _hasError = false;
+      _bytes = null;
+      _fetch();
+    }
+  }
+
   Future<void> _fetch() async {
     try {
       final bytes = await widget.repository.getAttachmentBytes(widget.url);

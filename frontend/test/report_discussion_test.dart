@@ -398,6 +398,75 @@ void main() {
       // Lightbox is closed
       expect(find.byType(InteractiveViewer), findsNothing);
     });
+
+    testWidgets('teacher mode sends response with image and renders thumbnail', (tester) async {
+      final fakeBytes = Uint8List.fromList(const [
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0,
+        0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 10, 73,
+        68, 65, 84, 120, 156, 99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0,
+        0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+      ]);
+
+      final repo = MockReportResponseRepository(
+        sendCallback: (reportId, content, imageBytes) async {
+          return ReportResponse(
+            responseId: 'res-teacher-img',
+            dailyReportId: reportId,
+            authorRole: 'teacher',
+            authorName: 'Cô Mai',
+            content: content,
+            hasImage: imageBytes != null,
+            imageUrl: imageBytes != null ? '/api/report-responses/attachments/c1/img-1' : null,
+            isRead: false,
+            isResolved: false,
+            createdAt: DateTime.now(),
+          );
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: kinderTheme(),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ReportDiscussionSection(
+                reportId: 'rep-1',
+                childName: 'Bảo Châu',
+                teacherName: 'Cô Mai',
+                isTeacher: true,
+                repository: repo,
+                onPickImage: (source) async => fakeBytes,
+                initialResponses: const [],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Pick image
+      await tester.tap(find.byIcon(Icons.camera_alt_outlined));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chọn ảnh từ thư viện'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Đã sẵn sàng gửi kèm tin nhắn'), findsOneWidget);
+
+      // Enter text and send
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Nhắn phản hồi cho phụ huynh về báo cáo này...'),
+        'Ảnh hoạt động của bé',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+
+      // Verify response is added with image thumbnail
+      expect(find.text('Ảnh hoạt động của bé'), findsOneWidget);
+      expect(find.byType(AttachmentThumbnailWidget), findsOneWidget);
+    });
   });
 
   group('DailyReport Discussion Indicator Fields', () {
