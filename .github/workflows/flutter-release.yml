@@ -92,3 +92,13 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prune older releases (keep latest 5)
+        uses: dev-drprasad/delete-older-releases@v0.3.4
+        continue-on-error: true
+        with:
+          keep_latest: 5
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
