@@ -723,144 +723,164 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
         health != null ||
         note != null;
 
+    final hasReportId = report != null && report.dailyReportId.isNotEmpty;
+
+    final reportContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Image.asset(
+            'assets/garden_voice/teacher_garden.png',
+            width: double.infinity,
+            height: 106,
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(height: KSpace.x3),
+        if (eating != null)
+          _ReportField(
+              iconAsset: 'assets/garden_voice/review_bowl.svg',
+              label: 'Ăn uống',
+              value: eating),
+        if (sleeping != null)
+          _ReportField(
+              iconAsset: 'assets/garden_voice/review_moon.svg',
+              label: 'Giấc ngủ',
+              value: sleeping),
+        if (activities != null)
+          _ReportField(
+              iconAsset: 'assets/garden_voice/review_artist_palette.svg',
+              label: 'Hoạt động',
+              value: activities),
+        if (mood != null)
+          _ReportField(
+              icon: Icons.sentiment_satisfied_outlined,
+              label: 'Tâm trạng',
+              value: mood),
+        if (health != null)
+          _ReportField(
+              icon: Icons.health_and_safety_outlined,
+              label: 'Sức khỏe',
+              value: health),
+        if (note != null)
+          _ReportField(
+              icon: Icons.edit_note,
+              label: 'Lời nhắn của ${widget.teacherName}',
+              value: note,
+              highlighted: true),
+        if (!hasAnyData)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'Chưa có thông tin ghi nhận cho ngày này.',
+                style: TextStyle(
+                    color: context.k.inkFaint, fontSize: 13),
+              ),
+            ),
+          ),
+        const SizedBox(height: KSpace.x3),
+        KButton(
+          label: 'Đã đọc báo cáo ✓',
+          secondary: true,
+          onPressed: () => Navigator.pop(context),
+        ),
+      ],
+    );
+
+    if (hasReportId) {
+      return SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.85,
+        child: Column(
+          children: [
+            _buildHeaderRow(context, date),
+            Expanded(
+              child: ReportDiscussionSection(
+                reportId: report.dailyReportId,
+                childName: widget.childName,
+                teacherName: widget.teacherName,
+                header: reportContent,
+                padding: const EdgeInsets.only(top: KSpace.x3),
+                bottomBarPadding: const EdgeInsets.only(top: 8),
+                onDiscussionUpdated: () {
+                  if (!mounted) return;
+                  if (_currentReport != null &&
+                      _currentReport!.hasUnreadResponses) {
+                    final updated =
+                        _currentReport!.copyWith(unreadResponseCount: 0);
+                    setState(() => _currentReport = updated);
+                    widget.onReportRead?.call(updated);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ConstrainedBox(
       constraints:
           BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Báo cáo ngày',
-                  style: TextStyle(
-                    fontSize: 16,
-                    height: 1.4,
-                    fontWeight: FontWeight.w700,
-                    color: context.k.ink,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Đóng báo cáo',
-                onPressed: () => Navigator.pop(context),
-                padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints.tightFor(width: 44, height: 44),
-                icon: SvgPicture.asset(
-                  'assets/garden_voice/parent_report_close.svg',
-                  width: 44,
-                  height: 44,
-                ),
-              ),
-              if (date != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: context.k.brandTint,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    date,
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.4,
-                      fontWeight: FontWeight.w700,
-                      color: context.k.brand,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          _buildHeaderRow(context, date),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(top: KSpace.x3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Image.asset(
-                      'assets/garden_voice/teacher_garden.png',
-                      width: double.infinity,
-                      height: 106,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(height: KSpace.x3),
-                  if (eating != null)
-                    _ReportField(
-                        iconAsset: 'assets/garden_voice/review_bowl.svg',
-                        label: 'Ăn uống',
-                        value: eating),
-                  if (sleeping != null)
-                    _ReportField(
-                        iconAsset: 'assets/garden_voice/review_moon.svg',
-                        label: 'Giấc ngủ',
-                        value: sleeping),
-                  if (activities != null)
-                    _ReportField(
-                        iconAsset:
-                            'assets/garden_voice/review_artist_palette.svg',
-                        label: 'Hoạt động',
-                        value: activities),
-                  if (mood != null)
-                    _ReportField(
-                        icon: Icons.sentiment_satisfied_outlined,
-                        label: 'Tâm trạng',
-                        value: mood),
-                  if (health != null)
-                    _ReportField(
-                        icon: Icons.health_and_safety_outlined,
-                        label: 'Sức khỏe',
-                        value: health),
-                  if (note != null)
-                    _ReportField(
-                        icon: Icons.edit_note,
-                        label: 'Lời nhắn của ${widget.teacherName}',
-                        value: note,
-                        highlighted: true),
-                  if (!hasAnyData)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Text(
-                          'Chưa có thông tin ghi nhận cho ngày này.',
-                          style: TextStyle(
-                              color: context.k.inkFaint, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  if (report != null && report.dailyReportId.isNotEmpty) ...[
-                    const SizedBox(height: KSpace.x4),
-                    const Divider(height: 24),
-                    ReportDiscussionSection(
-                      reportId: report.dailyReportId,
-                      childName: widget.childName,
-                      teacherName: widget.teacherName,
-                      onDiscussionUpdated: () {
-                        if (!mounted) return;
-                        if (_currentReport != null && _currentReport!.hasUnreadResponses) {
-                          final updated = _currentReport!.copyWith(unreadResponseCount: 0);
-                          setState(() => _currentReport = updated);
-                          widget.onReportRead?.call(updated);
-                        }
-                      },
-                    ),
-                  ],
-                ],
-              ),
+              child: reportContent,
             ),
-          ),
-          const SizedBox(height: KSpace.x3),
-          KButton(
-            label: 'Đã đọc báo cáo ✓',
-            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeaderRow(BuildContext context, String? date) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Báo cáo ngày',
+            style: TextStyle(
+              fontSize: 16,
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+              color: context.k.ink,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Đóng báo cáo',
+          onPressed: () => Navigator.pop(context),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          icon: SvgPicture.asset(
+            'assets/garden_voice/parent_report_close.svg',
+            width: 44,
+            height: 44,
+          ),
+        ),
+        if (date != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+            decoration: BoxDecoration(
+              color: context.k.brandTint,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              date,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+                color: context.k.brand,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

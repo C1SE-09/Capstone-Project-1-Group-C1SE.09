@@ -1,0 +1,94 @@
+name: Flutter Release APK
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/flutter-release.yml"
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Tên phiên bản tùy chọn (ví dụ: 1.0.0). Nếu bỏ trống sẽ tự động lấy 1.0.<run_number>"
+        required: false
+        default: ""
+
+concurrency:
+  group: flutter-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build & Publish Release APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Set up Flutter environment
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: "stable"
+          cache: true
+
+      - name: Compute Build Version
+        id: versioning
+        run: |
+          RUN_NUM="${{ github.run_number }}"
+          INPUT_VER="${{ inputs.version_name }}"
+          if [ -n "$INPUT_VER" ]; then
+            VERSION_NAME="$INPUT_VER"
+          else
+            VERSION_NAME="1.0.${RUN_NUM}"
+          fi
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${RUN_NUM}" >> $GITHUB_ENV
+          echo "Computed version: ${VERSION_NAME} (build #${RUN_NUM})"
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: flutter pub get
+
+      - name: Build Release APK
+        working-directory: ./frontend
+        run: |
+          flutter build apk --release \
+            --build-name="${{ env.VERSION_NAME }}" \
+            --build-number="${{ env.BUILD_NUMBER }}"
+
+      - name: Prepare Release Artifact
+        run: |
+          mkdir -p release-output
+          cp frontend/build/app/outputs/flutter-apk/app-release.apk release-output/KinderLog-v${{ env.VERSION_NAME }}.apk
+          echo "APK prepared: release-output/KinderLog-v${{ env.VERSION_NAME }}.apk"
+
+      - name: Upload APK to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: KinderLog-v${{ env.VERSION_NAME }}
+          path: release-output/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          name: "KinderLog v${{ env.VERSION_NAME }}"
+          tag_name: "v${{ env.VERSION_NAME }}"
+          files: release-output/*.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

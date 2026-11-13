@@ -215,11 +215,10 @@ def create_report_response(
     "/reports/{report_id}/with-image",
     response_model=ReportResponseCreateResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Phụ huynh gửi phản hồi kèm ảnh đính kèm",
+    summary="Gửi phản hồi kèm ảnh đính kèm (phụ huynh hoặc giáo viên)",
     description=(
-        "Giống endpoint trên nhưng nhận multipart/form-data để kèm tối đa "
-        "1 ảnh (JPEG/PNG/WebP, tối đa 5 MiB). Ảnh lưu trong kho private; "
-        "client đọc qua endpoint /attachments/... có kiểm tra quyền."
+        "Nhận multipart/form-data để kèm tối đa 1 ảnh (JPEG/PNG/WebP, tối đa 5 MiB). "
+        "Ảnh lưu trong kho private; client đọc qua endpoint /attachments/... có kiểm tra quyền."
     ),
 )
 def create_report_response_with_image(
@@ -230,7 +229,19 @@ def create_report_response_with_image(
     current_user: User = Depends(get_current_user),
 ):
     report = ensure_report_responsed(db, report_id)
-    _ensure_parent_can_post(db, report, current_user)
+    role = role_of(current_user)
+    if role == "parent":
+        _ensure_parent_can_post(db, report, current_user)
+        author_role = ResponseAuthorRole.PARENT.value
+    elif role in {"teacher", "admin"}:
+        _ensure_can_read_report(db, report, current_user)
+        author_role = (
+            ResponseAuthorRole.TEACHER.value
+            if role == "teacher"
+            else ResponseAuthorRole.ADMIN.value
+        )
+    else:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền gửi phản hồi")
 
     if report.child_id is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy báo cáo")
@@ -250,10 +261,13 @@ def create_report_response_with_image(
         author=current_user,
         content=content,
         image_url=image_url,
-        author_role=ResponseAuthorRole.PARENT.value,
+        author_role=author_role,
     )
 
-    _safe_dispatch(notify_teacher_report_response, str(response.response_id))
+    if author_role == ResponseAuthorRole.PARENT.value:
+        _safe_dispatch(notify_teacher_report_response, str(response.response_id))
+    else:
+        _safe_dispatch(notify_parent_report_response_reply, str(response.response_id))
 
     return ReportResponseCreateResponse(
         response=ReportResponseOut(**to_dict(response)),
@@ -317,6 +331,32 @@ def reply_report_response(
         response=ReportResponseOut(**to_dict(response)),
         total=len(list_responses(db, report_id)),
         unread_count=count_unread_from_parent(db, report_id),
+    )
+
+
+@router.post(
+    "/reports/{report_id}/reply-with-image",
+    response_model=ReportResponseCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Giáo viên trả lời phản hồi kèm ảnh đính kèm",
+    description=(
+        "Giáo viên (hoặc admin) gửi 1 tin nhắn trả lời kèm ảnh đính kèm "
+        "(multipart/form-data, tối đa 5 MiB). Ảnh lưu trong kho private."
+    ),
+)
+def reply_report_response_with_image(
+    report_id: uuid.UUID,
+    content: str = Form(..., description="Nội dung phản hồi"),
+    file: UploadFile | None = File(None, description="Ảnh đính kèm (tuỳ chọn)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return create_report_response_with_image(
+        report_id=report_id,
+        content=content,
+        file=file,
+        db=db,
+        current_user=current_user,
     )
 
 
@@ -502,7 +542,20 @@ def get_report_response_attachment(
         child = db.query(Child).filter(Child.child_id == child_id).first()
         if child is None:
             raise HTTPException(status_code=404, detail="Không tìm thấy hồ sơ bé")
-        if not (teacher and child.class_id and teacher.class_id == child.class_id):
+        teacher_allowed = (
+            teacher is not None
+            and (
+                (child.class_id and teacher.class_id == child.class_id)
+                or db.query(DailyReport)
+                .filter(
+                    DailyReport.child_id == child_id,
+                    DailyReport.teacher_id == teacher.teacher_id,
+                )
+                .first()
+                is not None
+            )
+        )
+        if not teacher_allowed:
             raise HTTPException(
                 status_code=403, detail="Bạn không có quyền với hồ sơ bé này"
             )

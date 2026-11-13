@@ -86,12 +86,7 @@ class HttpReportResponseRepository {
   }) async {
     try {
       Response response;
-      if (isTeacher) {
-        response = await _dio.post(
-          '/api/report-responses/reports/$reportId/reply',
-          data: {'content': content},
-        );
-      } else if (imageBytes != null && imageBytes.isNotEmpty) {
+      if (imageBytes != null && imageBytes.isNotEmpty) {
         final ext = (fileName != null && fileName.contains('.'))
             ? fileName.split('.').last.toLowerCase()
             : 'jpg';
@@ -108,9 +103,17 @@ class HttpReportResponseRepository {
             contentType: mimeType,
           ),
         });
+        final endpoint = isTeacher
+            ? '/api/report-responses/reports/$reportId/reply-with-image'
+            : '/api/report-responses/reports/$reportId/with-image';
         response = await _dio.post(
-          '/api/report-responses/reports/$reportId/with-image',
+          endpoint,
           data: formData,
+        );
+      } else if (isTeacher) {
+        response = await _dio.post(
+          '/api/report-responses/reports/$reportId/reply',
+          data: {'content': content},
         );
       } else {
         response = await _dio.post(
