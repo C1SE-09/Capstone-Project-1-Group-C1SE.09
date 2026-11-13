@@ -564,7 +564,7 @@ def test_teacher_reply_with_image(env, monkeypatch):
 
     monkeypatch.setattr(routes.attachments, "save_attachment", fake_save)
 
-    as_user(env, env.teacher_user)
+    as_user(env, env.teacher)
     resp = env.client.post(
         f"/api/report-responses/reports/{env.report.daily_report_id}/reply-with-image",
         data={"content": "Cô gửi ảnh hoạt động hôm nay của bé"},
