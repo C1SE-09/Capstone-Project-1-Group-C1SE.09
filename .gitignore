@@ -55,3 +55,8 @@ package.json
 package-lock.json
 playwright.yml
 .playwright-cli/
+
+# Build artifacts & local editor state
+frontend/android/build/
+frontend/android/.gradle/
+.postman/

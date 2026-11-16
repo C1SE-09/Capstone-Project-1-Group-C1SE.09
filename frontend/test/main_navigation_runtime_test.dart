@@ -19,10 +19,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUpAll(() async {
-    await (FontLoader('Nunito')
-          ..addFont(
-              rootBundle.load('assets/fonts/Nunito-VariableFont_wght.ttf')))
-        .load();
+    final nunito = FontLoader('Nunito');
+    for (final weight in [
+      'Regular',
+      'Medium',
+      'SemiBold',
+      'Bold',
+      'ExtraBold',
+      'Black',
+    ]) {
+      nunito.addFont(rootBundle.load('assets/fonts/Nunito-$weight.ttf'));
+    }
+    await nunito.load();
     final fonts = FontLoader('BeVietnamPro');
     for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
       fonts.addFont(rootBundle.load('assets/fonts/BeVietnamPro-$weight.ttf'));

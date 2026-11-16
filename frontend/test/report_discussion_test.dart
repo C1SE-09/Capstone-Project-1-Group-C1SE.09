@@ -575,5 +575,119 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
       expect(find.byIcon(Icons.send_rounded), findsOneWidget);
     });
+
+    testWidgets('ReportDiscussionBubble renders floating button and unread badge',
+        (tester) async {
+      final mockRepo = MockReportResponseRepository(initialList: [
+        ReportResponse(
+          responseId: 'r-u1',
+          dailyReportId: 'rep-bubble-1',
+          authorRole: 'teacher',
+          authorName: 'Cô Mai',
+          content: 'Tin nhắn 1',
+          isRead: false,
+          createdAt: DateTime(2026, 11, 16, 10, 0),
+        ),
+        ReportResponse(
+          responseId: 'r-u2',
+          dailyReportId: 'rep-bubble-1',
+          authorRole: 'teacher',
+          authorName: 'Cô Mai',
+          content: 'Tin nhắn 2',
+          isRead: false,
+          createdAt: DateTime(2026, 11, 16, 10, 1),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: kinderTheme(),
+          home: Scaffold(
+            body: ReportDiscussionBubble(
+              reportId: 'rep-bubble-1',
+              childName: 'Bảo Châu',
+              teacherName: 'Cô Mai',
+              unreadCount: 2,
+              repository: mockRepo,
+              child: const Center(child: Text('Nội dung báo cáo chi tiết')),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Main content is rendered
+      expect(find.text('Nội dung báo cáo chi tiết'), findsOneWidget);
+
+      // Floating button & badge are rendered
+      expect(find.byKey(const ValueKey('report-discussion-bubble-btn')),
+          findsOneWidget);
+      expect(find.byIcon(Icons.chat_bubble_rounded), findsOneWidget);
+      expect(find.byKey(const ValueKey('report-discussion-unread-badge')),
+          findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+
+      // Overlay is not open initially
+      expect(find.byKey(const ValueKey('report-discussion-overlay')),
+          findsNothing);
+    });
+
+    testWidgets('ReportDiscussionBubble opens Messenger overlay on tap and closes on minimize',
+        (tester) async {
+      final mockRepo = MockReportResponseRepository(initialList: [
+        ReportResponse(
+          responseId: 'r-msg',
+          dailyReportId: 'rep-bubble-2',
+          authorRole: 'teacher',
+          authorName: 'Cô Mai',
+          content: 'Bé hôm nay ăn rất ngoan ạ.',
+          createdAt: DateTime(2026, 11, 16, 11, 30),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: kinderTheme(),
+          home: Scaffold(
+            body: ReportDiscussionBubble(
+              reportId: 'rep-bubble-2',
+              childName: 'Bảo Châu',
+              teacherName: 'Cô Nguyễn Thị Mai',
+              unreadCount: 1,
+              repository: mockRepo,
+              child: const Center(child: Text('Nội dung báo cáo chi tiết')),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap floating bubble button to open overlay
+      await tester
+          .tap(find.byKey(const ValueKey('report-discussion-bubble-btn')));
+      await tester.pumpAndSettle();
+
+      // Overlay is now visible
+      expect(
+          find.byKey(const ValueKey('report-discussion-overlay')), findsOneWidget);
+      expect(find.text('Trao đổi với giáo viên'), findsOneWidget);
+      expect(find.text('Cô Nguyễn Thị Mai'), findsOneWidget);
+      expect(find.text('Bé hôm nay ăn rất ngoan ạ.'), findsOneWidget);
+
+      // Chat input bar is visible in overlay
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+
+      // Tap minimize button to close overlay
+      await tester.tap(
+          find.byKey(const ValueKey('report-discussion-close-overlay-btn')));
+      await tester.pumpAndSettle();
+
+      // Overlay is closed, floating bubble button is back
+      expect(
+          find.byKey(const ValueKey('report-discussion-overlay')), findsNothing);
+      expect(find.byKey(const ValueKey('report-discussion-bubble-btn')),
+          findsOneWidget);
+    });
   });
 }

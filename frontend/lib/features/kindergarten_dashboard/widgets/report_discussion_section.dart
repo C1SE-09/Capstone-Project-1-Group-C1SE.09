@@ -26,6 +26,7 @@ class ReportDiscussionSection extends StatefulWidget {
     this.padding,
     this.bottomBarPadding,
     this.bottomBarBackgroundColor,
+    this.isOverlay = false,
   });
 
   final String reportId;
@@ -40,6 +41,7 @@ class ReportDiscussionSection extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? bottomBarPadding;
   final Color? bottomBarBackgroundColor;
+  final bool isOverlay;
 
   @override
   State<ReportDiscussionSection> createState() => _ReportDiscussionSectionState();
@@ -384,6 +386,67 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             ),
             padding: widget.bottomBarPadding ??
                 const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_selectedImageBytes != null) _buildSelectedImagePreview(),
+                  _buildBottomBar(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (widget.isOverlay) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: widget.padding ??
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    )
+                  else if (_errorMessage != null)
+                    _buildErrorState()
+                  else if (_responses.isEmpty)
+                    _buildEmptyState()
+                  else
+                    _buildMessagesList(),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: widget.bottomBarBackgroundColor ?? context.k.surface,
+              border: Border(
+                top: BorderSide(
+                  color: context.k.line.withValues(alpha: 0.6),
+                  width: 0.8,
+                ),
+              ),
+            ),
+            padding: widget.bottomBarPadding ??
+                const EdgeInsets.fromLTRB(14, 8, 14, 8),
             child: SafeArea(
               top: false,
               child: Column(
@@ -1228,4 +1291,300 @@ class _ImageLightboxDialog extends StatelessWidget {
     );
   }
 }
+
+/// Nút bong bóng chat nổi (Floating Chat Bubble) và khung chat Messenger
+/// overlay cho trao đổi giữa phụ huynh và giáo viên dưới báo cáo.
+class ReportDiscussionBubble extends StatefulWidget {
+  const ReportDiscussionBubble({
+    super.key,
+    required this.reportId,
+    required this.childName,
+    required this.teacherName,
+    this.isTeacher = false,
+    this.repository,
+    this.onPickImage,
+    this.initialResponses,
+    this.onDiscussionUpdated,
+    this.unreadCount = 0,
+    required this.child,
+  });
+
+  final String reportId;
+  final String childName;
+  final String teacherName;
+  final bool isTeacher;
+  final HttpReportResponseRepository? repository;
+  final ImagePickerCallback? onPickImage;
+  final List<ReportResponse>? initialResponses;
+  final VoidCallback? onDiscussionUpdated;
+  final int unreadCount;
+  final Widget child;
+
+  @override
+  State<ReportDiscussionBubble> createState() => _ReportDiscussionBubbleState();
+}
+
+class _ReportDiscussionBubbleState extends State<ReportDiscussionBubble> {
+  bool _isOpen = false;
+  late int _unreadCount = widget.unreadCount;
+  late final HttpReportResponseRepository _repo =
+      widget.repository ?? HttpReportResponseRepository();
+  Timer? _syncTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _unreadCount = widget.unreadCount;
+    _syncUnreadCount();
+    _syncTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _syncUnreadCount();
+    });
+  }
+
+  @override
+  void didUpdateWidget(ReportDiscussionBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.unreadCount != oldWidget.unreadCount) {
+      _unreadCount = widget.unreadCount;
+    }
+  }
+
+  @override
+  void dispose() {
+    _syncTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _syncUnreadCount() async {
+    if (!mounted || _isOpen) return;
+    try {
+      final list = await _repo.getResponses(widget.reportId, markRead: false);
+      if (!mounted) return;
+      final unread = list.where((r) {
+        if (r.isRead) return false;
+        return widget.isTeacher ? r.isFromParent : r.isFromTeacher;
+      }).length;
+      if (unread != _unreadCount) {
+        setState(() => _unreadCount = unread);
+      }
+    } catch (_) {}
+  }
+
+  void _openChat() {
+    setState(() {
+      _isOpen = true;
+      _unreadCount = 0;
+    });
+    widget.onDiscussionUpdated?.call();
+  }
+
+  void _closeChat() {
+    setState(() => _isOpen = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_isOpen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isOpen) {
+          _closeChat();
+        }
+      },
+      child: Stack(
+        children: [
+          widget.child,
+          if (!_isOpen)
+            Positioned(
+              right: 18,
+              bottom: 18,
+              child: _buildFloatingButton(context),
+            ),
+          if (_isOpen)
+            Positioned.fill(
+              child: _buildChatOverlay(context),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingButton(BuildContext context) {
+    return Tooltip(
+      message: widget.isTeacher
+          ? 'Nhắn tin với phụ huynh'
+          : 'Nhắn tin với cô giáo',
+      child: GestureDetector(
+        key: const ValueKey('report-discussion-bubble-btn'),
+        onTap: _openChat,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: context.k.brand,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: context.k.brand.withValues(alpha: 0.38),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              const Icon(
+                Icons.chat_bubble_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    key: const ValueKey('report-discussion-unread-badge'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    constraints:
+                        const BoxConstraints(minWidth: 18, minHeight: 18),
+                    decoration: BoxDecoration(
+                      color: context.k.bad,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white, width: 1.8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _unreadCount > 9 ? '9+' : '$_unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatOverlay(BuildContext context) {
+    return Container(
+      key: const ValueKey('report-discussion-overlay'),
+      decoration: BoxDecoration(
+        color: context.k.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          children: [
+            _buildOverlayHeader(context),
+            Expanded(
+              child: ReportDiscussionSection(
+                reportId: widget.reportId,
+                childName: widget.childName,
+                teacherName: widget.teacherName,
+                isTeacher: widget.isTeacher,
+                repository: widget.repository,
+                onPickImage: widget.onPickImage,
+                initialResponses: widget.initialResponses,
+                onDiscussionUpdated: widget.onDiscussionUpdated,
+                isOverlay: true,
+                bottomBarPadding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverlayHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.k.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: context.k.line.withValues(alpha: 0.7),
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 17,
+            backgroundColor: context.k.brandTint,
+            child: Icon(
+              widget.isTeacher ? Icons.person_rounded : Icons.school_rounded,
+              size: 19,
+              color: context.k.brand,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.isTeacher
+                      ? 'Trao đổi với phụ huynh'
+                      : 'Trao đổi với giáo viên',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.k.ink,
+                  ),
+                ),
+                Text(
+                  widget.isTeacher ? 'Bé ${widget.childName}' : widget.teacherName,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.k.inkSoft,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('report-discussion-close-overlay-btn'),
+            tooltip: 'Thu nhỏ khung chat',
+            onPressed: _closeChat,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+            style: IconButton.styleFrom(
+              backgroundColor: context.k.surfaceSunken,
+              shape: const CircleBorder(),
+            ),
+            icon: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 24,
+              color: context.k.ink,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
