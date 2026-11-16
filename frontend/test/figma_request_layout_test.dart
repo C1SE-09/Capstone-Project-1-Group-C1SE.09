@@ -2726,19 +2726,9 @@ void main() {
       await tester.pumpAndSettle();
       await captureUi(tester, 'login-empty-${width.toInt()}');
 
-      for (final label in ['Giáo viên', 'Phụ huynh']) {
-        final text = find.text(label);
-        final pill = find
-            .ancestor(of: text, matching: find.byType(Container))
-            .first;
-        final bounds = tester.getRect(pill);
-        final textBounds = tester.getRect(text);
-        expect(textBounds.top, greaterThanOrEqualTo(bounds.top));
-        expect(textBounds.bottom, lessThanOrEqualTo(bounds.bottom));
-        final paragraph = tester.renderObject<RenderParagraph>(text);
-        expect(paragraph.getMaxIntrinsicHeight(paragraph.size.width),
-            lessThanOrEqualTo(paragraph.size.height));
-      }
+      expect(find.text('Khám phá KinderLog'), findsNothing);
+      expect(find.text('Giáo viên'), findsNothing);
+      expect(find.text('Phụ huynh'), findsNothing);
 
       tester.view.viewInsets = const FakeViewPadding(bottom: 300);
       await tester.enterText(fields.last, 'test-password');
