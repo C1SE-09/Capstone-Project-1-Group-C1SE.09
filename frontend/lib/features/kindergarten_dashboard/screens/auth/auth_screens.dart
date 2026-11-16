@@ -4,11 +4,7 @@ import 'package:adark_frontend/core/notifications/push_notification_service.dart
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
-import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/domain/entities/class/class_report_overview.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/class_info_adapter.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/screens/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -598,104 +594,3 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class ClassSelectScreen extends StatefulWidget {
-  const ClassSelectScreen({super.key, required this.onPick, this.repository});
-  final ValueChanged<String> onPick;
-  final HttpDashboardRepository? repository;
-  @override
-  State<ClassSelectScreen> createState() => _ClassSelectScreenState();
-}
-
-class _ClassSelectScreenState extends State<ClassSelectScreen> {
-  late final HttpDashboardRepository repository = widget.repository ?? HttpDashboardRepository();
-  late Future<List<ClassReportOverview>> classesFuture;
-  @override
-  void initState() {
-    super.initState();
-    classesFuture = repository.getTeacherClasses();
-  }
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 42, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Chọn lớp', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Chọn lớp bạn muốn ghi nhận hôm nay.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.k.inkSoft),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: FutureBuilder<List<ClassReportOverview>>(
-                future: classesFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('Không tải được danh sách lớp.'),
-                          TextButton(
-                            onPressed: () => setState(() => classesFuture = repository.getTeacherClasses()),
-                            child: const Text('Thử lại'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  final classes = (snapshot.data ?? []).map((item) => uiClassInfoFromOverview(item)).toList();
-                  if (classes.isEmpty) return const Center(child: Text('Chưa có lớp được phân công.'));
-                  return ListView(
-                    children: classes
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: KCard(
-                              onTap: () => widget.onPick(item.id),
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: context.k.brandTint,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(Icons.groups_outlined, color: context.k.brand),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Lớp ${item.name}',
-                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16)),
-                                        Text(item.school,
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkSoft)),
-                                        Text('${item.count} trẻ · ${item.role}',
-                                            style: Theme.of(context).textTheme.bodySmall),
-                                      ],
-                                    ),
-                                  ),
-                                  Icon(Icons.chevron_right, color: context.k.inkFaint),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      );
-}
