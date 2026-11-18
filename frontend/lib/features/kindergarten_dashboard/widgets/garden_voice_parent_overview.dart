@@ -19,7 +19,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
     required this.onOpenNotifications,
     required this.onOpenTimetable,
     required this.onOpenRequests,
-    required this.onOpenMedication,
+    this.onOpenMedication,
   });
 
   final Parent parent;
@@ -30,7 +30,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
   final VoidCallback onOpenNotifications;
   final VoidCallback onOpenTimetable;
   final VoidCallback onOpenRequests;
-  final VoidCallback onOpenMedication;
+  final VoidCallback? onOpenMedication;
 
   @override
   Widget build(BuildContext context) {
@@ -146,12 +146,6 @@ class GardenVoiceParentOverview extends StatelessWidget {
                       background: k.badTint.withValues(alpha: .7),
                       label: 'Xin nghỉ · Trễ',
                       onTap: onOpenRequests,
-                    ),
-                    _ParentShortcut(
-                      icon: 'assets/garden_voice/parent_pill.svg',
-                      background: k.accentTint,
-                      label: 'Dặn thuốc',
-                      onTap: onOpenMedication,
                     ),
                   ];
                   if (stacked) {

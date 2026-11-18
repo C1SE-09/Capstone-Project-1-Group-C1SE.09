@@ -4,7 +4,7 @@ import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_cards.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 
 /// Chỉ mở sau response đã xác minh ID và trạng thái cancelled; không bịa giờ hủy.

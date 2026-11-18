@@ -1,6 +1,6 @@
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
+import 'package:adark_frontend/data/repositories/http_health_incident_repository.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_notifications_screen.dart';
@@ -13,15 +13,14 @@ import 'parent_request_repository_test.dart'
     show RequestTransport, jsonBody, requestJson;
 import 'parent_requests_test.dart' show app;
 
-HttpMedicationRepository medicationRepository(RequestTransport leaveTransport) {
+HttpHealthIncidentRepository healthIncidentRepository(RequestTransport leaveTransport) {
   final transport = RequestTransport((options) {
-    if (options.path == '/api/medication-requests' ||
-        options.path == '/api/teacher/health-incidents') {
+    if (options.path == '/api/teacher/health-incidents') {
       return jsonBody([]);
     }
     return leaveTransport.respond(options);
   });
-  return HttpMedicationRepository(
+  return HttpHealthIncidentRepository(
       dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
         ..httpClientAdapter = transport);
 }
@@ -84,7 +83,7 @@ void main() {
     await tester.pumpWidget(app(TeacherNotificationsScreen(
         classId: 'class-1',
         repository: repository,
-        medicationRepository: medicationRepository(transport),
+        healthIncidentRepository: healthIncidentRepository(transport),
         attendanceRepository: attendanceRepository(transport),
         dashboardRepository: dashboardRepository(transport))));
     await tester.pumpAndSettle();
@@ -151,7 +150,7 @@ void main() {
         TeacherNotificationsScreen(
             classId: 'class-1',
             repository: repository,
-            medicationRepository: medicationRepository(transport),
+            healthIncidentRepository: healthIncidentRepository(transport),
             attendanceRepository: attendanceRepository(transport),
             dashboardRepository: dashboardRepository(transport)),
         textScale: 2,
@@ -181,7 +180,7 @@ void main() {
     await tester.pumpWidget(app(TeacherNotificationsScreen(
         classId: 'class-1',
         repository: repository,
-        medicationRepository: medicationRepository(transport),
+        healthIncidentRepository: healthIncidentRepository(transport),
         attendanceRepository: attendanceRepository(transport),
         dashboardRepository: dashboardRepository(transport))));
     await tester.pumpAndSettle();
@@ -287,7 +286,7 @@ void main() {
     await tester.pumpWidget(app(TeacherNotificationsScreen(
         classId: 'class-1',
         repository: repository,
-        medicationRepository: medicationRepository(transport),
+        healthIncidentRepository: healthIncidentRepository(transport),
         attendanceRepository: attendanceRepository(transport),
         dashboardRepository: dashboardRepository(transport))));
     await tester.pumpAndSettle();
@@ -299,7 +298,7 @@ void main() {
         key: const ValueKey('new-session'),
         classId: 'class-1',
         repository: repository,
-        medicationRepository: medicationRepository(transport),
+        healthIncidentRepository: healthIncidentRepository(transport),
         attendanceRepository: attendanceRepository(transport),
         dashboardRepository: dashboardRepository(transport))));
     await tester.pumpAndSettle();
@@ -339,7 +338,7 @@ void main() {
         classId: 'class-1',
         className: 'Mầm 1',
         repository: repository,
-        medicationRepository: medicationRepository(transport),
+        healthIncidentRepository: healthIncidentRepository(transport),
         attendanceRepository: attendanceRepository(transport),
         dashboardRepository: dashboardRepository(transport))));
     await tester.pumpAndSettle();
@@ -365,10 +364,6 @@ void main() {
     await tester.tap(find.text('Đánh dấu đã đọc'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('unread-older')), findsNothing);
-    await tester.tap(find.text('Thuốc'));
-    await tester.pumpAndSettle();
-    expect(find.text('Chưa có thông báo thuốc.'), findsOneWidget);
-    expect(find.text('Đơn xin nghỉ mới — Bé An'), findsNothing);
     await tester.tap(find.text('Sự cố'));
     await tester.pumpAndSettle();
     expect(find.text('Chưa có thông báo sự cố.'), findsOneWidget);
@@ -393,7 +388,7 @@ void main() {
         TeacherNotificationsScreen(
             classId: 'class-1',
             repository: repository,
-            medicationRepository: medicationRepository(transport),
+            healthIncidentRepository: healthIncidentRepository(transport),
             attendanceRepository: attendanceRepository(transport),
             dashboardRepository: dashboardRepository(transport)),
         textScale: 2,
@@ -415,21 +410,6 @@ void main() {
           'items': [],
         }));
     final sourceTransport = RequestTransport((options) {
-      if (options.path == '/api/medication-requests') {
-        expect(options.queryParameters['class_id'], 'class-1');
-        return jsonBody([
-          {
-            'id': 'dose-1',
-            'child_id': 'child-1',
-            'class_id': 'class-1',
-            'child_name': 'Bé An',
-            'medicine_name': 'Siro ho',
-            'dosage': '5ml',
-            'status': 'pending',
-            'created_at': '2026-11-09T08:00:00+07:00',
-          }
-        ]);
-      }
       expect(options.path, '/api/teacher/health-incidents');
       expect(options.queryParameters['class_id'], 'class-1');
       return jsonBody([
@@ -451,7 +431,7 @@ void main() {
     final leaveRepository = HttpLeaveRequestRepository(
         dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
           ..httpClientAdapter = leaveTransport);
-    final medicationRepository = HttpMedicationRepository(
+    final incidentRepository = HttpHealthIncidentRepository(
         dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
           ..httpClientAdapter = sourceTransport);
     final attendanceRepository = HttpAttendanceRepository(
@@ -502,27 +482,24 @@ void main() {
     await tester.pumpWidget(app(TeacherNotificationsScreen(
         classId: 'class-1',
         repository: leaveRepository,
-        medicationRepository: medicationRepository,
+        healthIncidentRepository: incidentRepository,
         attendanceRepository: attendanceRepository,
         dashboardRepository: dashboardRepository)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Đơn thuốc mới — Bé An'), findsOneWidget);
-    expect(find.textContaining('Siro ho · 5ml'), findsOneWidget);
     expect(find.text('Sự cố sức khỏe — Bé Bình'), findsOneWidget);
     expect(find.text('Điểm danh cập nhật — Bé Chi'), findsOneWidget);
     expect(find.textContaining('Đến trễ · ETA 08:30'), findsOneWidget);
     expect(find.text('Báo cáo ngày đã gửi 4/5'), findsOneWidget);
     expect(find.text('Còn Gia Hân chưa có báo cáo'), findsOneWidget);
-    await tester.tap(find.text('Thuốc'));
+    await tester.tap(find.text('Sự cố'));
     await tester.pumpAndSettle();
-    expect(find.text('Đơn thuốc mới — Bé An'), findsOneWidget);
-    expect(find.text('Sự cố sức khỏe — Bé Bình'), findsNothing);
+    expect(find.text('Sự cố sức khỏe — Bé Bình'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-      'inbox vẫn tải đơn nghỉ và điểm danh khi API sự cố/thuốc phụ trợ lỗi (405/503)',
+      'inbox vẫn tải đơn nghỉ và điểm danh khi API sự cố phụ trợ lỗi (405/503)',
       (tester) async {
     final leaveTransport = RequestTransport((options) => jsonBody({
           'pending_count': 1,
@@ -545,7 +522,7 @@ void main() {
       repository: HttpLeaveRequestRepository(
           dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
             ..httpClientAdapter = leaveTransport),
-      medicationRepository: HttpMedicationRepository(
+      healthIncidentRepository: HttpHealthIncidentRepository(
           dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
             ..httpClientAdapter = failingMedTransport),
       attendanceRepository: attendanceRepository(leaveTransport),

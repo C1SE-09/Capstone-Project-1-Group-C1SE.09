@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
+import 'package:adark_frontend/data/repositories/http_health_incident_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart' as domain;
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
 import 'package:dio/dio.dart';
@@ -11,11 +11,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'parent_medication_repository_test.dart' show medicationRepository;
-import 'parent_medication_test.dart' show tapVisible;
 import 'parent_request_repository_test.dart' show RequestTransport, jsonBody;
-import 'parent_requests_test.dart' show app;
-import 'teacher_medication_flow_test.dart' show todayJson;
+import 'parent_requests_test.dart' show app, tapVisible;
+
+HttpHealthIncidentRepository incidentRepository(RequestTransport transport) =>
+    HttpHealthIncidentRepository(
+        dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
+          ..httpClientAdapter = transport);
 
 const pupil = Child(
     id: 'child-1',
@@ -65,7 +67,7 @@ void main() {
         body: TeacherEmergencySheet(
             children: const [pupil],
             initialChildId: 'child-1',
-            repository: medicationRepository(transport)))));
+            repository: incidentRepository(transport)))));
     await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(find.text('Đã lưu biên bản sự cố')).dy,
@@ -98,7 +100,7 @@ void main() {
     final transport = RequestTransport((_) => jsonBody(incidentJson(), 201));
     await tester.pumpWidget(app(Scaffold(
         body: TeacherEmergencySheet(
-            children: const [], repository: medicationRepository(transport)))));
+            children: const [], repository: incidentRepository(transport)))));
     await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
     expect(transport.requests, isEmpty);
     expect(find.textContaining('chọn'), findsWidgets);
@@ -128,7 +130,7 @@ void main() {
         body: TeacherEmergencySheet(
           children: const [pupil],
           initialChildId: 'child-1',
-          repository: medicationRepository(transport),
+          repository: incidentRepository(transport),
         ),
       ),
     )));
@@ -164,7 +166,7 @@ void main() {
         body: TeacherEmergencySheet(
           children: const [pupil],
           initialChildId: 'child-1',
-          repository: medicationRepository(transport),
+          repository: incidentRepository(transport),
         ),
       ),
     )));
@@ -191,7 +193,7 @@ void main() {
         body: TeacherEmergencySheet(
           children: const [pupil],
           initialChildId: 'child-1',
-          repository: medicationRepository(transport),
+          repository: incidentRepository(transport),
         ),
       ),
     )));
@@ -214,7 +216,7 @@ void main() {
           body: TeacherEmergencySheet(
               children: const [pupil],
               initialChildId: 'child-1',
-              repository: medicationRepository(transport)))));
+              repository: incidentRepository(transport)))));
       await tester.enterText(find.byType(TextField).first, invalid);
       await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
       expect(transport.requests.where((r) => r.method == 'POST'), isEmpty);
@@ -245,7 +247,7 @@ void main() {
         body: TeacherEmergencySheet(
             children: const [pupil],
             initialChildId: 'child-1',
-            repository: medicationRepository(transport)))));
+            repository: incidentRepository(transport)))));
     final button = find.text('Gửi cảnh báo khẩn');
     await tester.ensureVisible(button);
     await tester.pumpAndSettle();
@@ -274,7 +276,7 @@ void main() {
         body: TeacherEmergencySheet(
             children: const [pupil],
             initialChildId: 'child-1',
-            repository: medicationRepository(transport)))));
+            repository: incidentRepository(transport)))));
     await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
     await tester.pumpWidget(app(const SizedBox()));
     pending.complete(jsonBody(incidentJson(), 201));
@@ -298,7 +300,7 @@ void main() {
               key: ValueKey(status),
               children: const [pupil],
               initialChildId: 'child-1',
-              repository: medicationRepository(transport)))));
+              repository: incidentRepository(transport)))));
       await tester.enterText(find.byType(TextField).last, 'Mô tả đang soạn');
       await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
       await tester.pumpAndSettle();
@@ -323,7 +325,7 @@ void main() {
         body: TeacherEmergencySheet(
             children: const [pupil],
             initialChildId: 'child-1',
-            repository: medicationRepository(transport)))));
+            repository: incidentRepository(transport)))));
     await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
     await tester.pumpAndSettle();
     expect(find.text('Đã lưu biên bản sự cố'), findsOneWidget);
@@ -346,7 +348,7 @@ void main() {
         body: TeacherEmergencySheet(
             children: const [pupil],
             initialChildId: 'child-1',
-            repository: medicationRepository(transport)))));
+            repository: incidentRepository(transport)))));
     await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
     await tester.pumpAndSettle();
     expect(find.text('Chưa có số điện thoại hợp lệ'), findsOneWidget);
@@ -370,7 +372,7 @@ void main() {
         body: TeacherEmergencySheet(
             children: const [pupil],
             initialChildId: 'child-1',
-            repository: medicationRepository(transport)))));
+            repository: incidentRepository(transport)))));
     await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
     await tester.pumpAndSettle();
 
@@ -392,7 +394,7 @@ void main() {
             body: TeacherEmergencySheet(
                 children: const [pupil],
                 initialChildId: 'child-1',
-                repository: medicationRepository(transport))),
+                repository: incidentRepository(transport))),
         dark: true,
         textScale: 2));
     await tapVisible(tester, find.text('Gửi cảnh báo khẩn'));
@@ -400,25 +402,5 @@ void main() {
     await tester.ensureVisible(find.text('Hoàn tất'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets(
-      'medication footer loads entire actual class roster including children without medication',
-      (tester) async {
-    final transport = RequestTransport((_) => jsonBody(todayJson()));
-    await tester.pumpWidget(app(TeacherMedicationScreen(
-        repository: medicationRepository(transport),
-        dashboardRepository: RosterFixture())));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView), const Offset(0, -500));
-    await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Báo cáo sự cố khẩn cấp'));
-    await tester.pumpAndSettle();
-    expect(
-        tester
-            .widget<TeacherEmergencySheet>(find.byType(TeacherEmergencySheet))
-            .children
-            .map((c) => c.id),
-        ['child-1', 'child-without-medication']);
   });
 }

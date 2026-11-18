@@ -25,8 +25,6 @@ expected = {
     '/api/teacher/health-incidents': {'post'},
     '/api/teacher/health-incidents/emergency-contacts/{child_id}': {'get'},
     '/api/teacher/health-incidents/{incident_id}': {'patch'},
-    '/api/teacher/medications/today': {'get'},
-    '/api/medication-requests': {'get', 'post'},
     '/api/leave-requests': {'post'},
     '/api/leave-requests/parent': {'post'},
 }

@@ -2,12 +2,10 @@ import 'package:adark_frontend/data/repositories/http_class_data_repository.dart
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
-import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
@@ -83,21 +81,6 @@ class _AttendanceRepository extends HttpAttendanceRepository {
       const {};
 }
 
-class _MedicationRepository extends HttpMedicationRepository {
-  @override
-  Future<MedicationsTodayData> getTodayMedications({String? date}) async =>
-      const MedicationsTodayData(
-        date: '2026-11-05',
-        classId: 'class-2',
-        totalRequests: 0,
-        completedCount: 0,
-        pendingCount: 0,
-        morning: [],
-        noon: [],
-        afternoon: [],
-      );
-}
-
 void main() {
   testWidgets('CTA tổng quan Garden Voice mở hub ghi nhận trước khi chọn lớp',
       (tester) async {
@@ -108,7 +91,6 @@ void main() {
       repository: _DashboardRepository(),
       classRepository: _ClassRepository(),
       attendanceRepository: _AttendanceRepository(),
-      medicationRepository: _MedicationRepository(),
     )));
     await tester.pumpAndSettle();
 
@@ -133,7 +115,6 @@ void main() {
       repository: _DashboardRepository(),
       classRepository: _ClassRepository(),
       attendanceRepository: _AttendanceRepository(),
-      medicationRepository: _MedicationRepository(),
     )));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bắt đầu báo cáo'));
@@ -157,7 +138,6 @@ void main() {
       classRepository: _ClassRepository(),
       leaveRequestRepository: leaveRequests,
       attendanceRepository: _AttendanceRepository(),
-      medicationRepository: _MedicationRepository(),
     )));
     await tester.pumpAndSettle();
     expect(find.text('Ghi lại một ngày\ncủa bé'), findsOneWidget);
@@ -181,7 +161,6 @@ void main() {
       repository: repository,
       classRepository: _ClassRepository(),
       attendanceRepository: _AttendanceRepository(),
-      medicationRepository: _MedicationRepository(),
     )));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Lớp'));
@@ -225,7 +204,6 @@ void main() {
         classRepository: classRepository,
         initialAttendanceDate: '2026-10-20',
         attendanceRepository: _AttendanceRepository(),
-        medicationRepository: _MedicationRepository(),
       )));
       await tester.pumpAndSettle();
       expect(find.byType(AttendanceScreen), findsNothing);
@@ -256,7 +234,6 @@ void main() {
       repository: _DashboardRepository(),
       classRepository: _ClassRepository(),
       attendanceRepository: _AttendanceRepository(),
-      medicationRepository: _MedicationRepository(),
       initialAttendanceDate: '2026-10-20',
     )));
     await tester.pumpAndSettle();
@@ -269,7 +246,7 @@ void main() {
     expect(screen.roster.single.id, 'child-2');
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byTooltip('Quay lại'));
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byType(AttendanceScreen), findsNothing);
   });
@@ -285,7 +262,6 @@ void main() {
       classRepository: _ClassRepository(),
       leaveRequestRepository: _LeaveRequestRepository(pendingCount: 2),
       attendanceRepository: _AttendanceRepository(),
-      medicationRepository: _MedicationRepository(),
     )));
     await tester.pumpAndSettle();
 

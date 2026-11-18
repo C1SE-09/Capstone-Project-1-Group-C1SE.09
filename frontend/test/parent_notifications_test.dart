@@ -1,14 +1,11 @@
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
-import 'package:adark_frontend/domain/entities/health/medication_request.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
     show FilterChipButton;
@@ -88,17 +85,6 @@ class _InboxRepository extends HttpDashboardRepository {
     if (failRead) throw StateError('Không kết nối được API');
     openedReports.add(reportId);
     return latest.copyWith(status: ReportStatus.read);
-  }
-}
-
-class _MedicationRepository extends HttpMedicationRepository {
-  int loads = 0;
-
-  @override
-  Future<List<MedicationDose>> getMedicationRequests(
-      {required String childId, String? batchId}) async {
-    loads++;
-    return [];
   }
 }
 
@@ -191,28 +177,6 @@ void main() {
     await tester.tap(find.byTooltip('Thông báo'));
     await tester.pumpAndSettle();
     expect(_filter('all'), findsOneWidget);
-  });
-
-  testWidgets('tổng quan mở dặn thuốc cho đúng bé', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final medication = _MedicationRepository();
-    await tester.pumpWidget(MaterialApp(
-      theme: kinderTheme(),
-      home: ParentFlow(
-        repository: _InboxRepository(),
-        medicationRepository: medication,
-      ),
-    ));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Dặn thuốc'), 300);
-    await Scrollable.ensureVisible(tester.element(find.text('Dặn thuốc')),
-        alignment: .5);
-    await tester.pumpAndSettle();
-    expect(find.text('Dặn thuốc').hitTestable(), findsOneWidget);
-    await tester.tap(find.text('Dặn thuốc'));
-    await tester.pumpAndSettle();
-    expect(find.byType(ParentMedicationScreen), findsOneWidget);
-    expect(medication.loads, 1);
   });
 
   testWidgets('pill gọn theo Figma, không cắt Đơn nghỉ ở màn 390',

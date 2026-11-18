@@ -60,6 +60,7 @@ Widget app(Widget screen, {double textScale = 1, bool dark = false}) =>
 
 Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
   await tester.tap(finder);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));

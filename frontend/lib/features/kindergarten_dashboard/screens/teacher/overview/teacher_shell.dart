@@ -5,7 +5,6 @@ import 'package:adark_frontend/core/notifications/push_notification_service.dart
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
@@ -25,7 +24,6 @@ import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_s
 
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_notifications_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
@@ -42,7 +40,6 @@ class TeacherShell extends StatefulWidget {
       this.classRepository,
       this.leaveRequestRepository,
       this.attendanceRepository,
-      this.medicationRepository,
       this.initialAttendanceDate,
       this.notificationId});
   final VoidCallback onLogout;
@@ -51,7 +48,6 @@ class TeacherShell extends StatefulWidget {
   final HttpClassDataRepository? classRepository;
   final HttpLeaveRequestRepository? leaveRequestRepository;
   final HttpAttendanceRepository? attendanceRepository;
-  final HttpMedicationRepository? medicationRepository;
   final String? initialAttendanceDate;
   final String? notificationId;
 
@@ -70,8 +66,6 @@ class _TeacherShellState extends State<TeacherShell> {
       widget.leaveRequestRepository ?? HttpLeaveRequestRepository();
   late final HttpAttendanceRepository attendanceRepository =
       widget.attendanceRepository ?? HttpAttendanceRepository();
-  late final HttpMedicationRepository medicationRepository =
-      widget.medicationRepository ?? HttpMedicationRepository();
   late Future<String> classNameFuture;
   late Future<List<Child>> childrenFuture;
   late Future<void> _initFuture;
@@ -390,30 +384,12 @@ class _TeacherShellState extends State<TeacherShell> {
     if (mounted) setState(() => _initData());
   }
 
-  Future<void> openMedications(String className) async {
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => GardenVoiceScope(
-        child: TeacherMedicationScreen(
-          repository: medicationRepository,
-          dashboardRepository: repository,
-          onNavigationSelected: (destination) => _selectTeacherDestination(
-            destination,
-            className,
-            popCurrentRoute: true,
-          ),
-        ),
-      ),
-    ));
-    if (mounted) setState(() => _initData());
-  }
-
   Future<void> openNotifications(String className, List<Child> children) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => TeacherNotificationsScreen(
               classId: _activeClassId ?? '',
               className: className,
               repository: leaveRequestRepository,
-              medicationRepository: medicationRepository,
               attendanceRepository: attendanceRepository,
               dashboardRepository: repository,
               onNavigationSelected: (destination) => _selectTeacherDestination(
@@ -554,13 +530,11 @@ class _TeacherShellState extends State<TeacherShell> {
                         classId: currentClassId,
                         repository: repository,
                         attendanceRepository: attendanceRepository,
-                        medicationRepository: medicationRepository,
                         onStartReport: () => openRecord(className),
                         onOpenTimetable: () =>
                             openTimetable(className, children),
                         onOpenAttendance: () =>
                             openAttendance(className, children),
-                        onOpenMedications: () => openMedications(className),
                         onEmergencyAlert: () => openEmergencySheet(children),
                         onOpenNotifications: () =>
                             openNotifications(className, children),

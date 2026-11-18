@@ -7,12 +7,10 @@ import 'package:flutter/material.dart';
 
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_screen.dart';
 
 /// Đếm code point để khớp `len()` của Python, không dùng UTF-16 length.
 int healthCharCount(String value) => value.runes.length;
@@ -24,7 +22,6 @@ Future<void> showParentHealthProfile(
   required String className,
   required HttpDashboardRepository repository,
   ValueChanged<Child>? onSaved,
-  HttpMedicationRepository? medicationRepository,
 }) {
   return Navigator.of(context).push(
     MaterialPageRoute<void>(
@@ -33,7 +30,6 @@ Future<void> showParentHealthProfile(
           child: child,
           className: className,
           repository: repository,
-          medicationRepository: medicationRepository,
           onSaved: onSaved,
         ),
       ),
@@ -48,14 +44,12 @@ class ParentHealthProfileScreen extends StatefulWidget {
     required this.className,
     required this.repository,
     this.onSaved,
-    this.medicationRepository,
   });
 
   final Child child;
   final String className;
   final HttpDashboardRepository repository;
   final ValueChanged<Child>? onSaved;
-  final HttpMedicationRepository? medicationRepository;
 
   @override
   State<ParentHealthProfileScreen> createState() =>
@@ -302,20 +296,6 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
         appBar: KAppBar(
           title: 'Thông tin sức khỏe',
           onBack: () => Navigator.maybePop(context),
-          trailing: IconButton(
-            tooltip: 'Dặn dò uống thuốc',
-            icon: const Icon(Icons.medication_outlined),
-            onPressed: _dirty || _saving
-                ? null
-                : () => Navigator.of(context).push<void>(MaterialPageRoute(
-                    builder: (_) => GardenVoiceScope(
-                          child: ParentMedicationScreen(
-                            child: _child,
-                            className: widget.className,
-                            repository: widget.medicationRepository,
-                          ),
-                        ))),
-          ),
         ),
         body: SafeArea(child: _buildBody(context)),
         bottomNavigationBar: _loading || _loadError

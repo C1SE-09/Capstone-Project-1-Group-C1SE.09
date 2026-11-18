@@ -2,14 +2,12 @@
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
-import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
@@ -67,7 +65,6 @@ class _NavigationReviewAppState extends State<NavigationReviewApp> {
                   repository: _dashboard,
                   classRepository: _ReviewClass(),
                   attendanceRepository: _ReviewAttendance(),
-                  medicationRepository: _ReviewMedication(),
                   onLogout: () {},
                 ),
         ),
@@ -160,10 +157,4 @@ class _ReviewAttendance extends HttpAttendanceRepository {
   Future<Map<String, AttendanceChildRecord>> getClassAttendanceDetails(
           String classId, DateTime date) async =>
       {};
-}
-
-class _ReviewMedication extends HttpMedicationRepository {
-  @override
-  Future<MedicationsTodayData> getTodayMedications({String? date}) async =>
-      throw StateError('Preview không cung cấp dữ liệu thuốc');
 }

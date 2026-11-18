@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
@@ -20,7 +19,6 @@ import 'package:adark_frontend/domain/entities/report/report_status.dart'
 
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_account.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_notifications.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -51,12 +49,10 @@ class ParentFlow extends StatefulWidget {
     this.initialReportId,
     this.initialAttendanceDate,
     this.notificationId,
-    this.medicationRepository,
     this.scheduleRepository,
   });
   final HttpDashboardRepository? repository;
   final HttpLeaveRequestRepository? leaveRequestRepository;
-  final HttpMedicationRepository? medicationRepository;
   final ScheduleRepository? scheduleRepository;
   final VoidCallback? onLogout;
 
@@ -315,17 +311,6 @@ class _ParentFlowState extends State<ParentFlow> {
             )));
   }
 
-  void _openMedication(_ParentData data) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => GardenVoiceScope(
-              child: ParentMedicationScreen(
-                child: data.overview.child,
-                className: data.overview.className,
-                repository: widget.medicationRepository,
-              ),
-            )));
-  }
-
   void _openTimetable(_ParentData data) {
     final overview = data.overview;
     showModalBottomSheet<void>(
@@ -490,14 +475,12 @@ class _ParentFlowState extends State<ParentFlow> {
                           setState(() => _notificationsOpen = true),
                       onOpenTimetable: () => _openTimetable(data),
                       onOpenRequests: () => _openRequests(data),
-                      onOpenMedication: () => _openMedication(data),
                     )
                   : ParentAccount(
                       parent: data.parent,
                       overview: data.overview,
                       reports: data.reports,
                       repository: repository,
-                      medicationRepository: widget.medicationRepository,
                       onOpenReport: (report) => _openReport(data, report),
                       onPhoneUpdated: _onPhoneUpdated,
                       onHealthUpdated: _onHealthUpdated,

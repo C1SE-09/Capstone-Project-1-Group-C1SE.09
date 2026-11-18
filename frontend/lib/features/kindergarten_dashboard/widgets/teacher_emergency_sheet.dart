@@ -2,14 +2,14 @@
 import 'dart:async';
 
 import 'package:adark_frontend/core/utils/phone_utils.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
+import 'package:adark_frontend/data/repositories/http_health_incident_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_cards.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
     show Avatar, KButton;
@@ -22,11 +22,11 @@ class TeacherEmergencySheet extends StatefulWidget {
       this.repository});
   final List<Child> children;
   final String? initialChildId;
-  final HttpMedicationRepository? repository;
+  final HttpHealthIncidentRepository? repository;
   static Future<void> show(BuildContext context,
           {required List<Child> children,
           String? initialChildId,
-          HttpMedicationRepository? repository}) =>
+          HttpHealthIncidentRepository? repository}) =>
       showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
@@ -43,8 +43,8 @@ class TeacherEmergencySheet extends StatefulWidget {
 }
 
 class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
-  late HttpMedicationRepository _repo =
-      widget.repository ?? HttpMedicationRepository();
+  late HttpHealthIncidentRepository _repo =
+      widget.repository ?? HttpHealthIncidentRepository();
   final _temperature = TextEditingController(),
       _notes = TextEditingController();
   String? _childId, _error, _contactsError;
@@ -75,7 +75,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
         !widget.children.any((c) => c.id == _childId)) {
       _version++;
       _contactsVersion++;
-      _repo = widget.repository ?? HttpMedicationRepository();
+      _repo = widget.repository ?? HttpHealthIncidentRepository();
       _busy = false;
       _result = null;
       _childId = null;

@@ -1,7 +1,6 @@
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
-import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
@@ -16,7 +15,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
     required this.teacher,
     required this.dashboard,
     required this.attendance,
-    required this.medications,
+    this.medications,
     this.notificationCount,
     this.onStartReport,
     this.onOpenNotifications,
@@ -30,7 +29,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
   final Teacher teacher;
   final ClassDashboardSummary dashboard;
   final Map<String, AttendanceChildRecord> attendance;
-  final MedicationsTodayData? medications;
+  final dynamic medications;
   final int? notificationCount;
   final VoidCallback? onStartReport;
   final VoidCallback? onOpenNotifications;
@@ -94,9 +93,6 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateTime.now();
-    final medicationDetail = medications == null
-        ? 'Mở danh sách thuốc'
-        : '${medications!.pendingCount} việc cần xử lý';
     final careItems = _careItems;
 
     return GardenVoiceScope(
@@ -179,45 +175,12 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                   onTap: onStartReport,
                 ),
                 const SizedBox(height: 8),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final stacked = constraints.maxWidth < 356 ||
-                        MediaQuery.textScalerOf(context).scale(14) > 18;
-                    final emergency = _QuickAction(
-                      icon: 'assets/garden_voice/triangle_alert.svg',
-                      iconBackground: k.badTint,
-                      title: 'Báo sự cố',
-                      detail: 'Gửi phụ huynh',
-                      onTap: onEmergencyAlert,
-                    );
-                    final medication = _QuickAction(
-                      icon: 'assets/garden_voice/pill.svg',
-                      iconBackground: k.accentTint,
-                      title: 'Thuốc hôm nay',
-                      detail: medicationDetail,
-                      onTap: onOpenMedications,
-                    );
-                    if (stacked) {
-                      return Column(
-                        children: [
-                          emergency,
-                          const Divider(height: 16),
-                          medication,
-                        ],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(child: emergency),
-                        VerticalDivider(
-                            color: k.line,
-                            width: 18,
-                            indent: 11,
-                            endIndent: 11),
-                        Expanded(child: medication),
-                      ],
-                    );
-                  },
+                _QuickAction(
+                  icon: 'assets/garden_voice/triangle_alert.svg',
+                  iconBackground: k.badTint,
+                  title: 'Báo sự cố',
+                  detail: 'Gửi phụ huynh',
+                  onTap: onEmergencyAlert,
                 ),
                 const Divider(height: 16),
                 _AttendanceSummary(

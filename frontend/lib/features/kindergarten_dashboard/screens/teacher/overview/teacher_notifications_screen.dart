@@ -1,9 +1,8 @@
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
+import 'package:adark_frontend/data/repositories/http_health_incident_repository.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/domain/entities/health/medication_request.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart'
     as ui;
@@ -16,13 +15,18 @@ import 'package:intl/intl.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
 
+DateTime _dateInVietnam(DateTime value) {
+  final vn = value.toUtc().add(const Duration(hours: 7));
+  return DateTime.utc(vn.year, vn.month, vn.day);
+}
+
 class TeacherNotificationsScreen extends StatefulWidget {
   const TeacherNotificationsScreen({
     super.key,
     required this.classId,
     this.className,
     this.repository,
-    this.medicationRepository,
+    this.healthIncidentRepository,
     this.attendanceRepository,
     this.dashboardRepository,
     this.onNavigationSelected,
@@ -32,7 +36,7 @@ class TeacherNotificationsScreen extends StatefulWidget {
   final String classId;
   final String? className;
   final HttpLeaveRequestRepository? repository;
-  final HttpMedicationRepository? medicationRepository;
+  final HttpHealthIncidentRepository? healthIncidentRepository;
   final HttpAttendanceRepository? attendanceRepository;
   final HttpDashboardRepository? dashboardRepository;
   final ValueChanged<GardenVoiceTeacherDestination>? onNavigationSelected;
@@ -47,12 +51,11 @@ class TeacherNotificationsScreen extends StatefulWidget {
 class _TeacherNotificationsScreenState
     extends State<TeacherNotificationsScreen> {
   late HttpLeaveRequestRepository _repository;
-  late HttpMedicationRepository _medicationRepository;
+  late HttpHealthIncidentRepository _incidentRepository;
   late HttpAttendanceRepository _attendanceRepository;
   late HttpDashboardRepository _dashboardRepository;
   final _read = <String>{};
   List<LeaveRequestEntity> _items = [];
-  List<MedicationDose> _medications = [];
   List<Map<String, dynamic>> _incidents = [];
   Map<String, AttendanceChildRecord> _attendance = {};
   ClassDashboardSummary? _reports;
@@ -65,8 +68,8 @@ class _TeacherNotificationsScreenState
   void initState() {
     super.initState();
     _repository = widget.repository ?? HttpLeaveRequestRepository();
-    _medicationRepository =
-        widget.medicationRepository ?? HttpMedicationRepository();
+    _incidentRepository =
+        widget.healthIncidentRepository ?? HttpHealthIncidentRepository();
     _attendanceRepository =
         widget.attendanceRepository ?? HttpAttendanceRepository();
     _dashboardRepository =
@@ -79,19 +82,18 @@ class _TeacherNotificationsScreenState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.classId != widget.classId ||
         oldWidget.repository != widget.repository ||
-        oldWidget.medicationRepository != widget.medicationRepository ||
+        oldWidget.healthIncidentRepository != widget.healthIncidentRepository ||
         oldWidget.attendanceRepository != widget.attendanceRepository ||
         oldWidget.dashboardRepository != widget.dashboardRepository) {
       _repository = widget.repository ?? HttpLeaveRequestRepository();
-      _medicationRepository =
-          widget.medicationRepository ?? HttpMedicationRepository();
+      _incidentRepository =
+          widget.healthIncidentRepository ?? HttpHealthIncidentRepository();
       _attendanceRepository =
           widget.attendanceRepository ?? HttpAttendanceRepository();
       _dashboardRepository =
           widget.dashboardRepository ?? HttpDashboardRepository();
       _read.clear();
       _items = [];
-      _medications = [];
       _incidents = [];
       _attendance = {};
       _reports = null;
@@ -101,31 +103,10 @@ class _TeacherNotificationsScreenState
 
   bool _unread(_InboxNotice item) => item.unread && !_read.contains(item.key);
 
-  Future<List<MedicationDose>> _loadMedicationsSafe() async {
-    try {
-      return await _medicationRepository.getClassMedicationRequests(
-          classId: widget.classId);
-    } on MedicationRequestException catch (e) {
-      if (e.code == 'invalid_response' && e.message.contains('lớp')) {
-        throw const LeaveRequestException(
-            'Không thể xác minh thông báo của lớp.');
-      }
-      return const [];
-    } catch (_) {
-      return const [];
-    }
-  }
-
   Future<List<Map<String, dynamic>>> _loadIncidentsSafe() async {
     try {
-      return await _medicationRepository.getHealthIncidents(
+      return await _incidentRepository.getHealthIncidents(
           classId: widget.classId);
-    } on MedicationRequestException catch (e) {
-      if (e.code == 'invalid_response' && e.message.contains('lớp')) {
-        throw const LeaveRequestException(
-            'Không thể xác minh thông báo của lớp.');
-      }
-      return const [];
     } catch (_) {
       return const [];
     }
@@ -134,7 +115,7 @@ class _TeacherNotificationsScreenState
   Future<ClassDashboardSummary?> _loadDashboardSafe() async {
     try {
       return await _dashboardRepository.getClassDashboard(
-          widget.classId, medicationDateInVietnam(DateTime.now()));
+          widget.classId, _dateInVietnam(DateTime.now()));
     } catch (_) {
       return null;
     }
@@ -159,20 +140,16 @@ class _TeacherNotificationsScreenState
             tab: 'reviewed',
             offset: more ? _reviewedOffset : 0),
       ]);
-      final medicationsFuture = more
-          ? Future.value(_medications)
-          : _loadMedicationsSafe();
       final incidentsFuture =
           more ? Future.value(_incidents) : _loadIncidentsSafe();
       final attendanceFuture = more
           ? Future.value(_attendance)
           : _attendanceRepository.getClassAttendanceDetails(
-              widget.classId, medicationDateInVietnam(DateTime.now()));
+              widget.classId, _dateInVietnam(DateTime.now()));
       final dashboardFuture =
           more ? Future.value(_reports) : _loadDashboardSafe();
 
       final pages = await leaveFuture;
-      final medications = await medicationsFuture;
       final incidents = await incidentsFuture;
       final attendance = await attendanceFuture;
       final reports = await dashboardFuture;
@@ -180,7 +157,6 @@ class _TeacherNotificationsScreenState
       if (!mounted || version != _version) return;
       final fetched = pages.expand((page) => page.items).toList();
       if (fetched.any((item) => item.classId != widget.classId) ||
-          medications.any((item) => item.classId != widget.classId) ||
           incidents.any((item) => item['class_id'] != widget.classId) ||
           (reports != null && reports.classInfo.classId != widget.classId)) {
         throw const LeaveRequestException(
@@ -201,7 +177,6 @@ class _TeacherNotificationsScreenState
             item.requestId: item
         }.values.toList()
           ..sort((a, b) => _eventTime(b).compareTo(_eventTime(a)));
-        _medications = medications;
         _incidents = incidents;
         _attendance = attendance;
         _reports = reports;
@@ -210,9 +185,7 @@ class _TeacherNotificationsScreenState
       if (mounted && version == _version) {
         setState(() => _error = e is LeaveRequestException
             ? e.message
-            : e is MedicationRequestException
-                ? e.message
-                : 'Không thể tải thông báo. Vui lòng thử lại.');
+            : 'Không thể tải thông báo. Vui lòng thử lại.');
       }
     } finally {
       if (mounted && version == _version) setState(() => _loading = false);
@@ -274,16 +247,6 @@ class _TeacherNotificationsScreenState
                   : 'Nghỉ ${DateFormat('dd/MM').format(item.fromDate)}${item.totalDays > 1 ? ' · ${item.totalDays} ngày' : ''} · ${item.reason}',
               request: item);
         }),
-      if (_filter == 'Tất cả' || _filter == 'Thuốc')
-        ..._medications.where((item) => item.status != 'cancelled').map(
-            (item) => _InboxNotice(
-                key: 'medication:${item.id}:${item.status}',
-                category: 'THUỐC',
-                time: item.createdAt,
-                title: 'Đơn thuốc mới — ${item.childName ?? 'Học sinh'}',
-                detail: '${item.name ?? 'Thuốc'} · ${item.dosage}',
-                isToday: item.requestDate != null &&
-                    DateUtils.isSameDay(item.requestDate!, DateTime.now()))),
       if (_filter == 'Tất cả' || _filter == 'Sự cố')
         ..._incidents.map((item) => _InboxNotice(
             key: 'incident:${item['incident_id']}',
@@ -426,7 +389,6 @@ class _TeacherNotificationsScreenState
                       for (final filter in [
                         'Tất cả',
                         'Đơn nghỉ',
-                        'Thuốc',
                         'Sự cố'
                       ])
                         TextButton(
@@ -503,7 +465,6 @@ class _TeacherNotificationsScreenState
                     padding: const EdgeInsets.symmetric(vertical: 32),
                     child: Text(
                       switch (_filter) {
-                        'Thuốc' => 'Chưa có thông báo thuốc.',
                         'Sự cố' => 'Chưa có thông báo sự cố.',
                         _ => 'Chưa có thông báo.'
                       },
