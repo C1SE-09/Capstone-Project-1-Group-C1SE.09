@@ -74,7 +74,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedDate = DateTime.tryParse(widget.date) ?? DateTime.now();
+    final parsed = DateTime.tryParse(widget.date) ?? DateTime.now();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final parsedDay = DateTime(parsed.year, parsed.month, parsed.day);
+    _selectedDate = parsedDay.isAfter(today) ? today : parsed;
     if (widget.initialDetails != null && widget.initialDetails!.isNotEmpty) {
       _details = Map.of(widget.initialDetails!);
     }
@@ -276,12 +280,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _changeDate(int days) async {
     if (_saving || _loading) return;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = _selectedDate.add(Duration(days: days));
+    final targetDay = DateTime(target.year, target.month, target.day);
+    if (targetDay.isAfter(today)) return;
+
     if (_dirty) {
       if (!await _confirmDiscard() || !mounted) return;
       setState(() => _draft = Map.of(_saved));
     }
 
-    final target = _selectedDate.add(Duration(days: days));
     setState(() => _loading = true);
     try {
       final details = await _repository.getClassAttendanceDetails(
@@ -725,10 +734,11 @@ class _AttendanceDateLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final parsed = date;
-    final today = DateTime.now();
-    final isToday = parsed.year == today.year &&
-        parsed.month == today.month &&
-        parsed.day == today.day;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final parsedDay = DateTime(parsed.year, parsed.month, parsed.day);
+    final isToday = parsedDay.isAtSameMomentAs(today);
+    final canGoNext = parsedDay.isBefore(today);
     final weekdays = const [
       'Thứ Hai',
       'Thứ Ba',
@@ -776,14 +786,17 @@ class _AttendanceDateLabel extends StatelessWidget {
           ),
           IconButton(
             tooltip: 'Ngày sau',
-            onPressed: onNext,
+            onPressed: canGoNext ? onNext : null,
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-            icon: SvgPicture.asset(
-              'assets/garden_voice/attendance_chevron_right.svg',
-              width: 23,
-              height: 23,
+            icon: Opacity(
+              opacity: canGoNext ? 1.0 : 0.25,
+              child: SvgPicture.asset(
+                'assets/garden_voice/attendance_chevron_right.svg',
+                width: 23,
+                height: 23,
+              ),
             ),
           ),
         ],
