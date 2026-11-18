@@ -3,12 +3,10 @@ import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_vo
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
-import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
 
@@ -30,7 +28,6 @@ class OverviewScreen extends StatefulWidget {
     this.onSelectClass,
     this.onOpenTimetable,
     this.onOpenAttendance,
-    this.onOpenMedications,
     this.onEmergencyAlert,
     this.onOpenNotifications,
     this.onStartReport,
@@ -39,7 +36,6 @@ class OverviewScreen extends StatefulWidget {
     this.repository,
     this.scheduleRepository,
     this.attendanceRepository,
-    this.medicationRepository,
   });
   final ValueChanged<String>? onOpenReport;
   final VoidCallback? onHistory;
@@ -47,7 +43,6 @@ class OverviewScreen extends StatefulWidget {
   final VoidCallback? onSelectClass;
   final VoidCallback? onOpenTimetable;
   final VoidCallback? onOpenAttendance;
-  final VoidCallback? onOpenMedications;
   final VoidCallback? onEmergencyAlert;
   final VoidCallback? onOpenNotifications;
   final VoidCallback? onStartReport;
@@ -56,7 +51,6 @@ class OverviewScreen extends StatefulWidget {
   final HttpDashboardRepository? repository;
   final ScheduleRepository? scheduleRepository;
   final HttpAttendanceRepository? attendanceRepository;
-  final HttpMedicationRepository? medicationRepository;
   @override
   State<OverviewScreen> createState() => _OverviewScreenState();
 }
@@ -66,8 +60,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
       widget.repository ?? HttpDashboardRepository();
   late final HttpAttendanceRepository attendanceRepository =
       widget.attendanceRepository ?? HttpAttendanceRepository();
-  late final HttpMedicationRepository medicationRepository =
-      widget.medicationRepository ?? HttpMedicationRepository();
   late Future<_OverviewData> future;
   @override
   void initState() {
@@ -82,22 +74,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
       repository.getCurrentTeacher(),
       repository.getClassDashboard(widget.classId, today),
       attendanceRepository.getClassAttendanceDetails(widget.classId, today),
-      _loadMedications(),
     ]);
     return _OverviewData(
       values[0] as Teacher,
       values[1] as ClassDashboardSummary,
       values[2] as Map<String, AttendanceChildRecord>,
-      values[3] as MedicationsTodayData?,
     );
-  }
-
-  Future<MedicationsTodayData?> _loadMedications() async {
-    try {
-      return await medicationRepository.getTodayMedications();
-    } catch (_) {
-      return null;
-    }
   }
 
   // Renders overview loading, error and data states.
@@ -122,12 +104,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
               teacher: data.teacher,
               dashboard: data.dashboard,
               attendance: data.attendance,
-              medications: data.medications,
               notificationCount: widget.notificationCount,
               onStartReport: widget.onStartReport,
               onOpenNotifications: widget.onOpenNotifications,
               onOpenAttendance: widget.onOpenAttendance,
-              onOpenMedications: widget.onOpenMedications,
               onEmergencyAlert: widget.onEmergencyAlert,
               onHealth: widget.onHealth,
               onRefresh: () async {
@@ -145,13 +125,11 @@ class _OverviewData {
     this.teacher,
     this.dashboard,
     this.attendance,
-    this.medications,
   );
 
   final Teacher teacher;
   final ClassDashboardSummary dashboard;
   final Map<String, AttendanceChildRecord> attendance;
-  final MedicationsTodayData? medications;
 }
 
 class ClassListScreen extends StatefulWidget {

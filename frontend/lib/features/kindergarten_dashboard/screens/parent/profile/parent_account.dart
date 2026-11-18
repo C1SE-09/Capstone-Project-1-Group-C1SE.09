@@ -14,7 +14,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
@@ -86,7 +85,6 @@ class ParentAccount extends StatefulWidget {
     this.onParentUpdated,
     this.onChildUpdated,
     this.repository,
-    this.medicationRepository,
     this.onLogout,
     this.onHealthUpdated,
     this.onOpenNotifications,
@@ -101,7 +99,6 @@ class ParentAccount extends StatefulWidget {
       onParentUpdated;
   final ValueChanged<Child>? onChildUpdated;
   final HttpDashboardRepository? repository;
-  final HttpMedicationRepository? medicationRepository;
   final VoidCallback? onLogout;
   final ValueChanged<Child>? onHealthUpdated;
   final VoidCallback? onOpenNotifications;
@@ -188,7 +185,6 @@ class _ParentAccountState extends State<ParentAccount> {
           overview: widget.overview,
           parentId: widget.parent.parentId,
           repository: widget.repository,
-          medicationRepository: widget.medicationRepository,
           onChildUpdated: widget.onChildUpdated,
           onHealthUpdated: widget.onHealthUpdated,
         ),
@@ -212,7 +208,6 @@ class _ParentAccountState extends State<ParentAccount> {
       child: widget.overview.child,
       className: widget.overview.className,
       repository: widget.repository ?? HttpDashboardRepository(),
-      medicationRepository: widget.medicationRepository,
       onSaved: widget.onHealthUpdated,
     );
   }
@@ -960,7 +955,6 @@ class _ParentChildInfoSheet extends StatefulWidget {
     required this.overview,
     required this.parentId,
     required this.repository,
-    required this.medicationRepository,
     required this.onChildUpdated,
     required this.onHealthUpdated,
   });
@@ -968,7 +962,6 @@ class _ParentChildInfoSheet extends StatefulWidget {
   final ChildOverview overview;
   final String parentId;
   final HttpDashboardRepository? repository;
-  final HttpMedicationRepository? medicationRepository;
   final ValueChanged<Child>? onChildUpdated;
   final ValueChanged<Child>? onHealthUpdated;
 
@@ -1152,7 +1145,6 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                       className: overview.className,
                       repository:
                           widget.repository ?? HttpDashboardRepository(),
-                      medicationRepository: widget.medicationRepository,
                       onSaved: (updated) {
                         if (!mounted) return;
                         setState(() => _child = updated);

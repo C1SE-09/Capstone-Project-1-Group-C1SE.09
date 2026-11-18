@@ -1,12 +1,10 @@
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
-import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart'
     show AttendanceStatus;
@@ -86,21 +84,6 @@ class _Attendance extends HttpAttendanceRepository {
       };
 }
 
-class _Medication extends HttpMedicationRepository {
-  @override
-  Future<MedicationsTodayData> getTodayMedications({String? date}) async =>
-      const MedicationsTodayData(
-        date: '2026-11-05',
-        classId: 'class-1',
-        totalRequests: 2,
-        completedCount: 0,
-        pendingCount: 2,
-        morning: [],
-        noon: [],
-        afternoon: [],
-      );
-}
-
 class _Schedule extends HttpScheduleRepository {
   @override
   Future<List<ClassSchedule>> getClassSchedule(String classId) async =>
@@ -124,7 +107,6 @@ void main() {
     var reportOpened = false;
     var notificationsOpened = false;
     var attendanceOpened = false;
-    var medicationOpened = false;
     var emergencyOpened = false;
 
     tester.view.physicalSize = const Size(390, 844);
@@ -139,13 +121,11 @@ void main() {
             classId: 'class-1',
             repository: _Dashboard(),
             attendanceRepository: _Attendance(),
-            medicationRepository: _Medication(),
             scheduleRepository: _Schedule(),
             notificationCount: 2,
             onStartReport: () => reportOpened = true,
             onOpenNotifications: () => notificationsOpened = true,
             onOpenAttendance: () => attendanceOpened = true,
-            onOpenMedications: () => medicationOpened = true,
             onEmergencyAlert: () => emergencyOpened = true,
           ),
         ),
@@ -158,8 +138,6 @@ void main() {
     expect(find.text('Ghi lại một ngày\ncủa bé'), findsOneWidget);
     expect(find.text('Bắt đầu báo cáo'), findsOneWidget);
     expect(find.text('Báo sự cố'), findsOneWidget);
-    expect(find.text('Thuốc hôm nay'), findsOneWidget);
-    expect(find.text('2 việc cần xử lý'), findsOneWidget);
     expect(find.text('Điểm danh hôm nay'), findsOneWidget);
     expect(find.text('5/5 bé đã đến'), findsOneWidget);
     expect(find.text('1 đến trễ'), findsOneWidget);
@@ -198,13 +176,11 @@ void main() {
     await tester.tap(find.text('Bắt đầu báo cáo'));
     await tester.tap(find.byTooltip('Thông báo'));
     await tester.tap(find.text('Báo sự cố'));
-    await tester.tap(find.text('Thuốc hôm nay'));
     await tester.tap(find.text('Điểm danh hôm nay'));
 
     expect(reportOpened, isTrue);
     expect(notificationsOpened, isTrue);
     expect(emergencyOpened, isTrue);
-    expect(medicationOpened, isTrue);
     expect(attendanceOpened, isTrue);
     expect(tester.takeException(), isNull);
   });
@@ -228,7 +204,6 @@ void main() {
             classId: 'class-1',
             repository: _Dashboard(),
             attendanceRepository: _Attendance(),
-            medicationRepository: _Medication(),
             scheduleRepository: _Schedule(),
           ),
         ),

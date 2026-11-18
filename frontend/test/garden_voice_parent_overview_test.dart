@@ -27,7 +27,6 @@ void main() {
     var notificationsOpened = false;
     var timetableOpened = false;
     var requestsOpened = false;
-    var medicationOpened = false;
     final report = DailyReport(
       dailyReportId: 'report-1',
       childId: 'child-1',
@@ -66,7 +65,6 @@ void main() {
             onOpenNotifications: () => notificationsOpened = true,
             onOpenTimetable: () => timetableOpened = true,
             onOpenRequests: () => requestsOpened = true,
-            onOpenMedication: () => medicationOpened = true,
           ),
         ),
       ),
@@ -82,7 +80,6 @@ void main() {
     expect(find.text('Hoạt động'), findsOneWidget);
     expect(find.text('Lịch học'), findsOneWidget);
     expect(find.text('Xin nghỉ · Trễ'), findsOneWidget);
-    expect(find.text('Dặn thuốc'), findsOneWidget);
     expect(find.textContaining('Lời nhắn của'), findsOneWidget);
     expect(find.textContaining('Đã đến lớp'), findsNothing);
     expect(find.text('2'), findsOneWidget);
@@ -99,13 +96,11 @@ void main() {
     await tester.tap(find.text('Ăn uống'));
     await tester.tap(find.text('Lịch học'));
     await tester.tap(find.text('Xin nghỉ · Trễ'));
-    await tester.tap(find.text('Dặn thuốc'));
 
     expect(reportOpened, isTrue);
     expect(notificationsOpened, isTrue);
     expect(timetableOpened, isTrue);
     expect(requestsOpened, isTrue);
-    expect(medicationOpened, isTrue);
     expect(tester.takeException(), isNull);
   });
 
@@ -149,7 +144,6 @@ void main() {
             onOpenNotifications: () {},
             onOpenTimetable: () {},
             onOpenRequests: () {},
-            onOpenMedication: () {},
           ),
         ),
       ),
@@ -188,7 +182,6 @@ void main() {
             onOpenNotifications: () {},
             onOpenTimetable: () {},
             onOpenRequests: () {},
-            onOpenMedication: () {},
           ),
         ),
       ),
@@ -197,11 +190,8 @@ void main() {
 
     final schedulePos = tester.getTopLeft(find.text('Lịch học'));
     final leavePos = tester.getTopLeft(find.text('Xin nghỉ · Trễ'));
-    final medPos = tester.getTopLeft(find.text('Dặn thuốc'));
     expect(schedulePos.dy, closeTo(leavePos.dy, 2));
-    expect(leavePos.dy, closeTo(medPos.dy, 2));
     expect(schedulePos.dx, lessThan(leavePos.dx));
-    expect(leavePos.dx, lessThan(medPos.dx));
     expect(tester.takeException(), isNull);
   });
 
@@ -238,7 +228,6 @@ void main() {
             onOpenNotifications: () {},
             onOpenTimetable: () {},
             onOpenRequests: () {},
-            onOpenMedication: () {},
           ),
         ),
       ),
@@ -276,7 +265,6 @@ void main() {
             onOpenNotifications: () {},
             onOpenTimetable: () {},
             onOpenRequests: () {},
-            onOpenMedication: () {},
           ),
         ),
       ),

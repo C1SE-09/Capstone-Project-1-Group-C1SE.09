@@ -65,29 +65,16 @@ class GardenVoiceClassHeader extends StatelessWidget {
                       InkWell(
                         onTap: onSelectClass,
                         borderRadius: BorderRadius.circular(8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                className,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.24,
-                                  color: k.ink,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            SvgPicture.asset(
-                              'assets/garden_voice/chevron_down.svg',
-                              width: 20,
-                              height: 20,
-                            ),
-                          ],
+                        child: Text(
+                          className,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            height: 1.24,
+                            color: k.ink,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),

@@ -12,8 +12,7 @@ import 'package:dio/dio.dart';
 
 import 'parent_request_repository_test.dart'
     show RequestTransport, jsonBody, requestJson;
-import 'parent_requests_test.dart' show app, child;
-import 'parent_medication_test.dart' show tapVisible;
+import 'parent_requests_test.dart' show app, child, tapVisible;
 
 HttpLeaveRequestRepository repo(RequestTransport transport) =>
     HttpLeaveRequestRepository(

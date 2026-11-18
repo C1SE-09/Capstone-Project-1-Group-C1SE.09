@@ -10,13 +10,8 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_sc
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_health_profile_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_detail_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_form_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_medication_submitted_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
@@ -36,7 +31,7 @@ import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
-import 'package:adark_frontend/data/repositories/http_medication_repository.dart';
+import 'package:adark_frontend/data/repositories/http_health_incident_repository.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart'
     show ExtractionData, TeacherRepository, VoiceRecord;
@@ -46,8 +41,6 @@ import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
-import 'package:adark_frontend/domain/entities/health/medication_schedule.dart';
-import 'package:adark_frontend/domain/entities/health/medication_request.dart';
 import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
@@ -74,8 +67,7 @@ import 'package:adark_frontend/core/notifications/emergency_siren_service.dart';
 
 import 'parent_request_repository_test.dart'
     show RequestTransport, jsonBody, requestJson;
-import 'parent_requests_test.dart' show app, child;
-import 'parent_medication_test.dart' show tapVisible;
+import 'parent_requests_test.dart' show app, child, tapVisible;
 import 'upload_file_test.dart' show FailingTeacherRepo;
 
 void _noop() {}
@@ -440,21 +432,6 @@ class _Attendance extends HttpAttendanceRepository {
       };
 }
 
-class _Medication extends HttpMedicationRepository {
-  @override
-  Future<MedicationsTodayData> getTodayMedications({String? date}) async =>
-      const MedicationsTodayData(
-        date: '2026-11-05',
-        classId: 'class-1',
-        totalRequests: 2,
-        completedCount: 0,
-        pendingCount: 2,
-        morning: [],
-        noon: [],
-        afternoon: [],
-      );
-}
-
 class _CaptureRecorder extends AudioRecorder {
   @override
   Future<bool> hasPermission() async => true;
@@ -668,130 +645,13 @@ ClassSchedule _timetableFixture(
       ),
     );
 
-MedicationDose _batch4Dose({
-  required String id,
-  required String batchId,
-  required String status,
-  required String timeSlot,
-  String name = 'Paracetamol 250mg',
-  String dosage = '5ml/lần',
-  DateTime? requestDate,
-  String? givenByName,
-  DateTime? givenAt,
-}) =>
-    MedicationDose(
-      id: id,
-      batchId: batchId,
-      childId: 'child-1',
-      childName: 'Nguyễn Minh An',
-      classId: 'class-1',
-      name: name,
-      dosage: dosage,
-      status: status,
-      category: 'prescription',
-      notes: 'Uống khi sốt trên 38.5°',
-      requestDate: requestDate ?? DateTime(2026, 11, 11),
-      startDate: requestDate ?? DateTime(2026, 11, 11),
-      endDate: requestDate ?? DateTime(2026, 11, 11),
-      timeSlot: timeSlot,
-      creatorName: 'Mẹ Minh An',
-      createdAt: DateTime(2026, 11, 11, 7, 2),
-      givenByName: givenByName,
-      givenAt: givenAt,
-    );
-
-MedicationsTodayData _batch4TeacherToday({bool confirmed = false}) {
-  final first = MedicationItem(
-    requestId: 'dose-1',
-    childId: 'child-1',
-    childName: 'Nguyễn Minh An',
-    childNickname: 'An',
-    medicationName: 'Thuốc ho Prospan',
-    dosage: '5ml',
-    session: 'morning',
-    isGiven: confirmed,
-    givenAt: confirmed ? DateTime(2026, 11, 11, 8, 32) : null,
-    givenByName: confirmed ? 'Cô Nguyễn Thị Mai' : null,
-    timeSlot: '08:30',
-    requestDate: DateTime(2026, 11, 11),
-  );
-  final second = MedicationItem(
-    requestId: 'dose-2',
-    childId: 'child-2',
-    childName: 'Phạm Thu Hà',
-    medicationName: 'Men tiêu hóa Biolactovin',
-    dosage: '1 gói',
-    instructions: 'Uống sau ăn trưa',
-    session: 'noon',
-    timeSlot: '11:00',
-    requestDate: DateTime(2026, 11, 11),
-  );
-  final third = MedicationItem(
-    requestId: 'dose-3',
-    childId: 'child-3',
-    childName: 'Trần Bảo Ngọc',
-    medicationName: 'Vitamin D3',
-    dosage: 'Chờ xác minh',
-    session: 'afternoon',
-    timeSlot: '14:30',
-    requestDate: DateTime(2026, 11, 11),
-  );
-  return MedicationsTodayData(
-    date: '2026-11-11',
-    classId: 'class-1',
-    className: 'Lớp Mầm 1',
-    totalRequests: 3,
-    completedCount: confirmed ? 1 : 0,
-    pendingCount: confirmed ? 2 : 3,
-    morning: [first],
-    noon: [second],
-    afternoon: [third],
-  );
-}
-
-class _Batch4MedicationRepository extends HttpMedicationRepository {
-  _Batch4MedicationRepository({
-    required this.history,
-    required this.today,
-    this.confirmedToday,
-    this.contacts = const [],
-  });
-
-  final List<MedicationDose> history;
-  final MedicationsTodayData today;
-  final MedicationsTodayData? confirmedToday;
+class _Batch4EmergencyRepository extends HttpHealthIncidentRepository {
+  _Batch4EmergencyRepository({this.contacts = const []});
   final List<Map<String, dynamic>> contacts;
   bool confirmed = false;
 
   @override
-  Future<List<MedicationDose>> getMedicationRequests({
-    required String childId,
-    String? batchId,
-  }) async =>
-      history
-          .where((dose) =>
-              dose.childId == childId &&
-              (batchId == null || dose.batchId == batchId))
-          .toList();
-
-  @override
-  Future<MedicationsTodayData> getTodayMedications({String? date}) async =>
-      confirmed ? confirmedToday ?? today : today;
-
-  @override
-  Future<Map<String, dynamic>> confirmMedication({
-    required String requestId,
-    required String session,
-    String? date,
-    String? notes,
-  }) async {
-    confirmed = true;
-    return {'request_id': requestId, 'is_given': true};
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> getEmergencyContacts(
-          String childId) async =>
+  Future<List<Map<String, dynamic>>> getEmergencyContacts(String childId) async =>
       contacts;
 
   @override
@@ -801,19 +661,21 @@ class _Batch4MedicationRepository extends HttpMedicationRepository {
     String? description,
     double? temperature,
     String? actionTaken,
-  }) async =>
-      {
-        'incident_id': 'incident-1',
-        'child_id': childId,
-        'child_name': 'Bảo Châu',
-        'incident_type': incidentType,
-        'incident_type_label': 'Sốt cao',
-        'description': description ?? 'Cần phối hợp với gia đình.',
-        'temperature': temperature,
-        'reported_at': '2026-11-11T03:24:00Z',
-        'reported_by_name': 'Cô Nguyễn Thị Mai',
-        'emergency_contacts': contacts,
-      };
+  }) async {
+    confirmed = true;
+    return {
+      'incident_id': 'incident-1',
+      'child_id': childId,
+      'child_name': 'Bảo Châu',
+      'incident_type': incidentType,
+      'incident_type_label': 'Sốt cao',
+      'description': description ?? 'Cần phối hợp với gia đình.',
+      'temperature': temperature,
+      'reported_at': '2026-11-11T03:24:00Z',
+      'reported_by_name': 'Cô Nguyễn Thị Mai',
+      'emergency_contacts': contacts,
+    };
+  }
 }
 
 Future<void> _pumpParentCapture(
@@ -957,14 +819,12 @@ void main() {
           repository: _Dashboard(),
           classRepository: _Class(),
           attendanceRepository: _Attendance(),
-          medicationRepository: _Medication(),
         ))));
     await tester.pumpAndSettle();
     expect(find.byType(LinearProgressIndicator), findsNothing);
     expect(find.text('Ghi lại một ngày\ncủa bé'), findsOneWidget);
     expect(find.text('Bắt đầu báo cáo'), findsOneWidget);
     expect(find.text('5/5 bé đã đến'), findsOneWidget);
-    expect(find.text('2 việc cần xử lý'), findsOneWidget);
     expect(find.textContaining('3 mới'), findsNothing);
     expect(find.text('Báo sự cố'), findsOneWidget);
     expect(find.byKey(const ValueKey('garden-voice-teacher-navigation')),
@@ -2058,23 +1918,9 @@ void main() {
     final repository = HttpLeaveRequestRepository(
         dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
           ..httpClientAdapter = transport);
-    final medicationRepository = HttpMedicationRepository(
+    final incidentRepository = HttpHealthIncidentRepository(
         dio: Dio(BaseOptions(baseUrl: 'https://school.test'))
           ..httpClientAdapter = RequestTransport((request) {
-            if (request.path == '/api/medication-requests') {
-              return jsonBody([
-                {
-                  'id': 'dose-1',
-                  'child_id': 'child-1',
-                  'class_id': 'class-1',
-                  'child_name': 'Bé Bình',
-                  'medicine_name': 'Siro ho',
-                  'dosage': '5ml',
-                  'status': 'pending',
-                  'created_at': '2026-11-09T08:00:00+07:00',
-                }
-              ]);
-            }
             if (request.path == '/api/teacher/health-incidents') {
               return jsonBody([
                 {
@@ -2147,7 +1993,7 @@ void main() {
           classId: 'class-1',
           className: 'Lớp Mầm A',
           repository: repository,
-          medicationRepository: medicationRepository,
+          healthIncidentRepository: incidentRepository,
           attendanceRepository: attendanceRepository,
           dashboardRepository: dashboardRepository),
       'teacher-review': LeaveRequestReviewScreen(
@@ -2397,184 +2243,6 @@ void main() {
     }
   });
 
-  testWidgets('Batch 4 captures parent medication frames M1 to M3',
-      (tester) async {
-    final today = medicationDateInVietnam(DateTime.now());
-    final history = [
-      _batch4Dose(
-        id: 'given-1',
-        batchId: 'batch-1',
-        status: 'given',
-        timeSlot: '08:30',
-        requestDate: today,
-        givenByName: 'Cô Thị Mai',
-        givenAt: DateTime.utc(2026, 11, 4, 1, 32),
-      ),
-      _batch4Dose(
-        id: 'pending-1',
-        batchId: 'batch-1',
-        status: 'pending',
-        timeSlot: '11:30',
-        requestDate: today.add(const Duration(days: 2)),
-      ),
-      _batch4Dose(
-        id: 'done-1',
-        batchId: 'batch-2',
-        status: 'given',
-        timeSlot: '08:30',
-        name: 'Vitamin D3',
-        dosage: 'Chờ xác minh liều dùng',
-        requestDate: DateTime(2026, 10, 27),
-        givenByName: 'Cô Nguyễn Thị Mai',
-        givenAt: DateTime.utc(2026, 10, 27, 1, 32),
-      ),
-      _batch4Dose(
-        id: 'done-2',
-        batchId: 'batch-2',
-        status: 'given',
-        timeSlot: '11:30',
-        name: 'Vitamin D3',
-        dosage: 'Chờ xác minh liều dùng',
-        requestDate: DateTime(2026, 10, 31),
-        givenByName: 'Cô Nguyễn Thị Mai',
-        givenAt: DateTime.utc(2026, 10, 31, 4, 30),
-      ),
-    ];
-    final repo = _Batch4MedicationRepository(
-      history: history,
-      today: _batch4TeacherToday(),
-    );
-    await _pumpBatch4Capture(
-      tester,
-      ParentMedicationScreen(
-        child: child,
-        className: 'Mầm 1',
-        repository: repo,
-      ),
-      'parent-medication-m1-gv',
-    );
-    expect(find.text('Dặn dò uống thuốc'), findsOneWidget);
-    expect(find.text('08:30'), findsOneWidget);
-
-    await _pumpBatch4Capture(
-      tester,
-      ParentMedicationFormScreen(
-        child: child,
-        className: 'Mầm 1',
-        repository: repo,
-      ),
-      'parent-medication-m2-gv',
-    );
-    expect(find.text('Khung giờ uống (chọn nhiều)'), findsOneWidget);
-    expect(
-        tester.widget<Scaffold>(find.byType(Scaffold).last).bottomNavigationBar,
-        isNotNull);
-
-    await _pumpBatch4Capture(
-      tester,
-      ParentMedicationSubmittedScreen(
-        result: MedicationBatchCreateResult(
-          'batch-new',
-          [
-            _batch4Dose(
-              id: 'new-1',
-              batchId: 'batch-new',
-              status: 'pending',
-              timeSlot: '08:30',
-              requestDate: DateTime(2026, 11, 4),
-            ),
-            _batch4Dose(
-              id: 'new-2',
-              batchId: 'batch-new',
-              status: 'pending',
-              timeSlot: '11:30',
-              requestDate: DateTime(2026, 11, 6),
-            ),
-          ],
-        ),
-      ),
-      'parent-medication-m3-gv',
-    );
-    expect(find.text('Đã tạo đơn dặn thuốc'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Batch 4 captures parent medication detail and cancel M4/M5',
-      (tester) async {
-    final repo = _Batch4MedicationRepository(
-      history: [
-        _batch4Dose(
-          id: 'given-1',
-          batchId: 'batch-1',
-          status: 'given',
-          timeSlot: '08:30',
-          requestDate: DateTime(2026, 11, 11),
-          givenByName: 'Cô Nguyễn Thị Mai',
-          givenAt: DateTime.utc(2026, 11, 11, 1, 32),
-        ),
-        _batch4Dose(
-          id: 'pending-1',
-          batchId: 'batch-1',
-          status: 'pending',
-          timeSlot: '11:30',
-          requestDate: DateTime(2026, 11, 11),
-        ),
-      ],
-      today: _batch4TeacherToday(),
-    );
-    await _pumpBatch4Capture(
-      tester,
-      ParentMedicationDetailScreen(
-        child: child,
-        className: 'Mầm 1',
-        batchId: 'batch-1',
-        repository: repo,
-      ),
-      'parent-medication-m4-gv',
-    );
-    expect(
-        find.textContaining('Cô Nguyễn Thị Mai đã cho uống'), findsOneWidget);
-    final cancelButtons = find.widgetWithText(FilledButton, 'Hủy cữ này');
-    expect(
-        tester.widgetList<FilledButton>(cancelButtons).first.onPressed, isNull);
-
-    await tapVisible(tester, cancelButtons.last);
-    await tester.pumpAndSettle();
-    await captureUi(tester, 'parent-medication-m5-gv');
-    expect(find.text('Giữ lại'), findsOneWidget);
-    expect(find.text('Hủy cữ'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Batch 4 captures teacher medication M6/M7 after server reload',
-      (tester) async {
-    final repo = _Batch4MedicationRepository(
-      history: const [],
-      today: _batch4TeacherToday(),
-      confirmedToday: _batch4TeacherToday(confirmed: true),
-    );
-    await _pumpBatch4Capture(
-      tester,
-      TeacherMedicationScreen(
-        repository: repo,
-        initialDate: '2026-11-11',
-      ),
-      'teacher-medication-m6-gv',
-    );
-    expect(find.text('Nguyễn Minh An'), findsOneWidget);
-    expect(find.byKey(const ValueKey('medication-status-dot')), findsWidgets);
-    expect(find.byKey(const ValueKey('garden-voice-teacher-navigation')),
-        findsOneWidget);
-
-    await tapVisible(tester, find.text('Xác nhận đã cho uống thuốc').first);
-    await tester.pumpAndSettle();
-    await captureUi(tester, 'teacher-medication-m7-gv');
-    expect(find.text('Xác nhận đã khóa để tránh trùng liều'), findsOneWidget);
-    expect(find.textContaining('Chưa có xác nhận giao'), findsOneWidget);
-    expect(repo.confirmed, isTrue);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('Batch 4 captures teacher emergency M8/M9 from API contacts',
       (tester) async {
     const contacts = [
@@ -2584,11 +2252,7 @@ void main() {
         'phone': '0909123456',
       },
     ];
-    final repo = _Batch4MedicationRepository(
-      history: const [],
-      today: _batch4TeacherToday(),
-      contacts: contacts,
-    );
+    final repo = _Batch4EmergencyRepository(contacts: contacts);
     const student = ui.Child(
       id: 'child-1',
       name: 'Nguyễn Minh An',
@@ -2674,7 +2338,6 @@ void main() {
                     repository: _Dashboard(),
                     classRepository: _Class(),
                     attendanceRepository: _Attendance(),
-                    medicationRepository: _Medication(),
                     onLogout: () {},
                   ),
             dark: dark,

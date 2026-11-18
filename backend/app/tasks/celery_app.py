@@ -28,7 +28,6 @@ celery_app = Celery(
         "app.tasks.notifications",
         "app.tasks.bug_report_notifications",
         "app.tasks.attendance_notifications",
-        "app.tasks.medication_notifications",
         "app.tasks.incident_notifications",
         "app.tasks.redispatch_stuck_audio",
         "app.tasks.report_response_notifications",
@@ -67,24 +66,6 @@ celery_app.conf.update(
             "task": "remind_unmarked_attendance",
             "schedule": crontab(hour=0, minute=40, day_of_week="1-5"),
         },
-        # Nhắc uống thuốc buổi sáng lúc 09:00 VN (02:00 UTC) Thứ 2 - Thứ 6
-        "remind-medication-morning": {
-            "task": "remind_pending_medications",
-            "schedule": crontab(hour=2, minute=0, day_of_week="1-5"),
-            "args": ["morning"],
-        },
-        # Nhắc uống thuốc buổi trưa lúc 11:30 VN (04:30 UTC) Thứ 2 - Thứ 6
-        "remind-medication-noon": {
-            "task": "remind_pending_medications",
-            "schedule": crontab(hour=4, minute=30, day_of_week="1-5"),
-            "args": ["noon"],
-        },
-        # Nhắc uống thuốc buổi chiều lúc 14:30 VN (07:30 UTC) Thứ 2 - Thứ 6
-        "remind-medication-afternoon": {
-            "task": "remind_pending_medications",
-            "schedule": crontab(hour=7, minute=30, day_of_week="1-5"),
-            "args": ["afternoon"],
-        },
         # Quét bản ghi âm bị kẹt (worker audio/RunPod tắt lúc upload) và đẩy lại.
         # Chạy mỗi 2 phút: đủ nhanh để cô không phải chờ, và không spam queue.
         "redispatch-stuck-voice-records": {
@@ -107,8 +88,6 @@ celery_app.conf.update(
         "send_leave_request_notifications": {"queue": "notifications"},
         "bug_report_notify_admin": {"queue": "notifications"},
         "bug_report_notify_user": {"queue": "notifications"},
-        "send_medication_confirmed_notification": {"queue": "notifications"},
-        "remind_pending_medications": {"queue": "notifications"},
         "send_health_incident_alert_task": {"queue": "notifications"},
         # Task quét bản ghi kẹt: chạy trên worker notifications (nhẹ, không cần GPU).
         "redispatch_stuck_voice_records": {"queue": "notifications"},

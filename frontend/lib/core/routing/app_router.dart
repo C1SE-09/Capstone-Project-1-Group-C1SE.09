@@ -8,7 +8,6 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_pa
 import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_medication_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -72,12 +71,6 @@ final GoRouter appRouter = GoRouter(
           className: state.uri.queryParameters['className'] ?? 'Lớp học',
           isReadOnly: state.uri.queryParameters['isReadOnly'] == 'true',
         ),
-      ),
-    ),
-    GoRoute(
-      path: '/teacher/medications',
-      builder: (context, state) => const GardenVoiceScope(
-        child: TeacherMedicationScreen(),
       ),
     ),
     GoRoute(

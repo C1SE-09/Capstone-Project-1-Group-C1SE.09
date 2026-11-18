@@ -378,6 +378,36 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets(
+        'không cho phép xem ngày tương lai: nút Ngày sau bị vô hiệu hóa khi ở ngày hôm nay',
+        (tester) async {
+      final repository = _DateAttendanceRepository();
+      final now = DateTime.now();
+      final todayStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      await tester.pumpWidget(MaterialApp(
+        home: GardenVoiceScope(
+          child: AttendanceScreen(
+            classId: 'class-1',
+            className: 'Lớp Mầm 1',
+            date: todayStr,
+            roster: [testChild1],
+            repository: repository,
+            initialRecords: const {'c1': AttendanceStatus.arrived},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final nextButton = tester.widget<IconButton>(find.byWidgetPredicate(
+          (w) => w is IconButton && w.tooltip == 'Ngày sau'));
+      expect(nextButton.onPressed, isNull);
+      await tester.tap(find.byTooltip('Ngày sau'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(repository.requestedDates, isEmpty);
+      expect(find.textContaining('Hôm nay'), findsOneWidget);
+    });
+
     testWidgets('Displays Late ETA badge when expectedArrivalTime is present',
         (tester) async {
       await tester.pumpWidget(
