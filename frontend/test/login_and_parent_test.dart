@@ -133,10 +133,10 @@ void main() {
       FontWeight.w600,
     );
     expect(find.text('Quên mật khẩu?'), findsOneWidget);
-    expect(find.text('Khám phá KinderLog'), findsOneWidget);
-    expect(find.text('Giáo viên'), findsOneWidget);
-    expect(find.text('Phụ huynh'), findsOneWidget);
-    expect(Theme.of(tester.element(find.text('Khám phá KinderLog')))
+    expect(find.text('Khám phá KinderLog'), findsNothing);
+    expect(find.text('Giáo viên'), findsNothing);
+    expect(find.text('Phụ huynh'), findsNothing);
+    expect(Theme.of(tester.element(find.text('Chào mừng trở lại!')))
         .textTheme.bodyMedium?.fontFamily, 'Nunito');
     expect(find.text('Ứng dụng dành cho:'), findsNothing);
     expect(find.text('Chưa có tài khoản? '), findsNothing);

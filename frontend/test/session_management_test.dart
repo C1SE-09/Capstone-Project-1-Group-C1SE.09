@@ -80,7 +80,7 @@ void main() {
     });
 
     test('có phiên thì vào thẳng đúng màn theo vai trò', () {
-      expect(initialRouteFor(sessionWithRole('teacher')), '/class-select');
+      expect(initialRouteFor(sessionWithRole('teacher')), '/teacher');
       expect(initialRouteFor(sessionWithRole('parent')), '/parent');
       expect(initialRouteFor(sessionWithRole('admin')), '/login');
       expect(initialRouteFor(sessionWithRole('vai-tro-la')), '/login');

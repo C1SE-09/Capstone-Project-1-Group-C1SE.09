@@ -21,7 +21,7 @@ final GlobalKey<NavigatorState> _rootNavigatorKey =
 /// màn theo vai trò, không thì về đăng nhập.
 String initialRouteFor(AppSession? session) {
   if (session == null) return '/login';
-  if (session.role == 'teacher') return '/class-select';
+  if (session.role == 'teacher') return '/teacher';
   if (session.role == 'parent') return '/parent';
   return '/login';
 }
@@ -50,14 +50,6 @@ final GoRouter appRouter = GoRouter(
         onBackToLogin: () => appRouter.go('/login'),
       ),
     ),
-    GoRoute(
-        path: '/class-select',
-        builder: (context, state) => Scaffold(
-            body: SafeArea(
-                child: ClassSelectScreen(
-                    onPick: (classId) => appRouter.go(Uri(
-                        path: '/teacher',
-                        queryParameters: {'classId': classId}).toString()))))),
     GoRoute(
         path: '/teacher',
         pageBuilder: (context, state) => NoTransitionPage(
