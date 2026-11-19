@@ -3,6 +3,7 @@
 // Sheet thêm / chỉnh sửa hoạt động tiết học (ScheduleEditorSheet)
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
@@ -93,18 +94,23 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
   }
 
   Future<void> _save() async {
+    final l10n = context.l10n;
     final name = _nameController.text.trim();
     setState(() {
-      _nameError = name.isEmpty ? 'Vui lòng nhập tên hoạt động.' : null;
+      _nameError = name.isEmpty
+          ? (l10n?.enterActivityNamePrompt ?? 'Vui lòng nhập tên hoạt động.')
+          : null;
       _error = null;
     });
     if (_nameError != null) return;
     if (_subject == null) {
-      setState(() => _error = 'Vui lòng chọn môn / hoạt động.');
+      setState(() => _error =
+          l10n?.selectSubjectPrompt ?? 'Vui lòng chọn môn / hoạt động.');
       return;
     }
     if (_slot == null) {
-      setState(() => _error = 'Vui lòng chọn khung giờ.');
+      setState(
+          () => _error = l10n?.selectTimeSlotPrompt ?? 'Vui lòng chọn khung giờ.');
       return;
     }
     setState(() => _saving = true);
@@ -119,7 +125,7 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
           activityName: name,
           roomName: _roomController.text,
         );
-        widget.onSaved('Đã thêm hoạt động', _day);
+        widget.onSaved(l10n?.activityAddedSuccess ?? 'Đã thêm hoạt động', _day);
       } else {
         final keepingCustomTime = existing.isCustomTime &&
             _slot != null &&
@@ -132,11 +138,14 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
           activityName: name,
           roomName: _roomController.text,
         );
-        widget.onSaved('Đã cập nhật hoạt động', _day);
+        widget.onSaved(
+            l10n?.activityUpdatedSuccess ?? 'Đã cập nhật hoạt động', _day);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = getFriendlyErrorMessage(e, fallback: 'Không thể lưu hoạt động. Vui lòng thử lại.'));
+        setState(() => _error = getFriendlyErrorMessage(e,
+            fallback: l10n?.cannotSaveActivity ??
+                'Không thể lưu hoạt động. Vui lòng thử lại.'));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -158,20 +167,23 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
             .where((i) => i.scheduleId != widget.existing?.scheduleId && i.dayIndex == _day && i.timeKey == selectedTimeKey)
             .toList();
 
+    final l10n = context.l10n;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.existing == null ? 'Thêm hoạt động' : 'Chỉnh sửa hoạt động',
+          Text(widget.existing == null
+              ? (l10n?.addActivityAction ?? 'Thêm hoạt động')
+              : (l10n?.editActivityTitle ?? 'Chỉnh sửa hoạt động'),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           if (widget.classes != null && widget.classes!.isNotEmpty) ...[
-            _fieldLabel(context, 'Lớp học'),
+            _fieldLabel(context, l10n?.classroomTitle ?? 'Lớp học'),
             DropdownButtonFormField<String>(
               initialValue: _selectedClassId.isNotEmpty && widget.classes!.any((c) => c['id'] == _selectedClassId)
                   ? _selectedClassId
                   : widget.classes!.first['id'],
-              decoration: _inputDecoration(context, hint: 'Chọn lớp học'),
+              decoration: _inputDecoration(context, hint: l10n?.selectClassPrompt ?? 'Chọn lớp học'),
               items: widget.classes!.map((c) => DropdownMenuItem(
                 value: c['id'],
                 child: Text(c['name'] ?? ''),
@@ -185,10 +197,10 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
             ),
             const SizedBox(height: 14),
           ],
-          _fieldLabel(context, 'Hoạt động'),
+          _fieldLabel(context, l10n?.activityNameLabel ?? 'Hoạt động'),
           TextField(
             controller: _nameController,
-            decoration: _inputDecoration(context, hint: 'VD: Vẽ sáng tạo'),
+            decoration: _inputDecoration(context, hint: l10n?.activityNameExampleHint ?? 'VD: Vẽ sáng tạo'),
           ),
           if (_nameError != null)
             Padding(
@@ -196,13 +208,13 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
               child: Text(_nameError!, style: TextStyle(fontSize: 12, color: context.k.bad)),
             ),
           const SizedBox(height: 14),
-          _fieldLabel(context, 'Môn / Hoạt động'),
+          _fieldLabel(context, l10n?.subjectActivityLabel ?? 'Môn / Hoạt động'),
           _buildSubjectScrollSelector(context),
           const SizedBox(height: 14),
-          _fieldLabel(context, 'Khung giờ'),
+          _fieldLabel(context, l10n?.timeSlotLabel ?? 'Khung giờ'),
           _buildSlotScrollSelector(context),
           const SizedBox(height: 14),
-          _fieldLabel(context, 'Thứ'),
+          _fieldLabel(context, l10n?.dayOfWeekLabel ?? 'Thứ'),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -216,10 +228,10 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
             ],
           ),
           const SizedBox(height: 14),
-          _fieldLabel(context, 'Phòng (không bắt buộc)'),
+          _fieldLabel(context, l10n?.roomOptionalLabel ?? 'Phòng (không bắt buộc)'),
           TextField(
             controller: _roomController,
-            decoration: _inputDecoration(context, hint: 'VD: Phòng tạo hình'),
+            decoration: _inputDecoration(context, hint: l10n?.roomExampleHint ?? 'VD: Phòng tạo hình'),
           ),
           if (clashes.isNotEmpty) ...[
             const SizedBox(height: 14),
@@ -234,7 +246,8 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Khung giờ này đã có "${clashes.first.displayName}" trong ngày ${kTimetableDayShort[_day]}.',
+                      l10n?.timeSlotClashWarning(clashes.first.displayName, kTimetableDayShort[_day]) ??
+                          'Khung giờ này đã có "${clashes.first.displayName}" trong ngày ${kTimetableDayShort[_day]}.',
                       style: TextStyle(fontSize: 12, height: 1.4, color: context.k.warnDeep),
                     ),
                   ),
@@ -249,11 +262,13 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(context))),
+              Expanded(child: KButton(label: l10n?.cancelAction ?? 'Hủy', secondary: true, onPressed: () => Navigator.pop(context))),
               const SizedBox(width: 12),
               Expanded(
                 child: KButton(
-                  label: _saving ? 'Đang lưu…' : 'Lưu hoạt động',
+                  label: _saving
+                      ? (l10n?.savingStatus ?? 'Đang lưu…')
+                      : (l10n?.saveActivityAction ?? 'Lưu hoạt động'),
                   icon: Icons.check,
                   onPressed: _saving ? null : _save,
                 ),
@@ -276,7 +291,8 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
           borderRadius: BorderRadius.circular(KRadii.control),
           border: Border.all(color: context.k.line),
         ),
-        child: Text('Chưa có môn học nào. Vui lòng tạo môn học trước.',
+        child: Text(context.l10n?.noSubjectsPrompt ??
+            'Chưa có môn học nào. Vui lòng tạo môn học trước.',
             style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
       );
     }
@@ -376,7 +392,8 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
           borderRadius: BorderRadius.circular(KRadii.control),
           border: Border.all(color: context.k.line),
         ),
-        child: Text('Chưa có khung giờ nào. Vui lòng tạo khung giờ trước.',
+        child: Text(context.l10n?.noTimeSlotsPrompt ??
+            'Chưa có khung giờ nào. Vui lòng tạo khung giờ trước.',
             style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
       );
     }
@@ -395,7 +412,9 @@ class _ScheduleEditorSheetState extends State<ScheduleEditorSheet> {
               border: Border.all(color: context.k.brand.withValues(alpha: 0.4)),
             ),
             child: Text(
-              'Đang giữ giờ tự do: ${existing.startTime} – ${existing.endTime} (chọn khung chuẩn bên dưới nếu muốn đổi)',
+              LocaleController.instance.isEnglish
+                  ? 'Keeping custom time: ${existing.startTime} – ${existing.endTime} (choose standard slot below to change)'
+                  : 'Đang giữ giờ tự do: ${existing.startTime} – ${existing.endTime} (chọn khung chuẩn bên dưới nếu muốn đổi)',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.k.brand),
             ),
           ),

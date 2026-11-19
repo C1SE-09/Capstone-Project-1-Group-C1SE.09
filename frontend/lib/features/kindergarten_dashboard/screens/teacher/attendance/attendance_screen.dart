@@ -159,6 +159,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _save() async {
     if (!_dirty || _saving) return;
+    final l10n = context.l10n;
+    final successMsg = l10n?.attendanceSaveSuccess ?? 'Đã lưu điểm danh thành công';
+    final failMsg = l10n?.attendanceSaveFailed ?? 'Không thể lưu điểm danh. Vui lòng thử lại sau.';
     setState(() => _saving = true);
     try {
       await _repository.saveBatchAttendance(
@@ -183,15 +186,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-            SnackBar(content: Text(context.l10n?.attendanceSaveSuccess ?? 'Đã lưu điểm danh thành công')));
+            SnackBar(content: Text(successMsg)));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Không thể lưu điểm danh. Vui lòng thử lại sau.'),
+          SnackBar(
+            content: Text(failMsg),
           ),
         );
     }
@@ -249,6 +252,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
     );
     if (shouldSend != true || !mounted) return;
+    final l10n = context.l10n;
+    final failMsg = l10n?.cannotSendAttendanceNotification ?? 'Không thể gửi thông báo lúc này. Vui lòng kiểm tra lại kết nối.';
 
     try {
       final sentCount = await _repository.notifyAbsentParents(
@@ -257,13 +262,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         childIds: _absentStudents.map((s) => s.id).toList(),
       );
       if (!mounted) return;
+      final successMsg = l10n?.attendanceNotifiedParentsCount(sentCount) ??
+          'Đã gửi thông báo điểm danh tới phụ huynh ($sentCount thiết bị nhận)';
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(
-              'Đã gửi thông báo điểm danh tới phụ huynh ($sentCount thiết bị nhận)',
-            ),
+            content: Text(successMsg),
           ),
         );
     } catch (_) {
@@ -271,10 +276,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Không thể gửi thông báo lúc này. Vui lòng kiểm tra lại kết nối.',
-            ),
+          SnackBar(
+            content: Text(failMsg),
           ),
         );
     }
@@ -293,6 +296,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       setState(() => _draft = Map.of(_saved));
     }
 
+    final l10n = context.l10n;
+    final noDataMsg = l10n?.noAttendanceDataForDate ?? 'Không có dữ liệu điểm danh cho ngày này.';
+    final loadFailMsg = l10n?.cannotLoadAttendanceForDate ?? 'Không thể tải điểm danh cho ngày đã chọn.';
     setState(() => _loading = true);
     try {
       final details = await _repository.getClassAttendanceDetails(
@@ -302,8 +308,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       if (!mounted) return;
       if (details.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Không có dữ liệu điểm danh cho ngày này.')),
+          SnackBar(
+              content: Text(noDataMsg)),
         );
         return;
       }
@@ -322,8 +328,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không thể tải điểm danh cho ngày đã chọn.'),
+        SnackBar(
+          content: Text(loadFailMsg),
         ),
       );
     } finally {
@@ -398,7 +404,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Danh sách điểm danh',
+                                    context.l10n?.attendanceListTitle ?? 'Danh sách điểm danh',
                                     style: TextStyle(
                                       fontSize: 18,
                                       height: 1.35,
@@ -426,7 +432,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   onPressed:
                                       _saving ? null : _showAbsentNotifications,
                                   icon: const Icon(Icons.notifications_none),
-                                  label: const Text('Gửi thông báo bé vắng'),
+                                  label: Text(context.l10n?.attendanceSendAbsentAlert ?? 'Gửi thông báo bé vắng'),
                                 ),
                               ),
                             ],
@@ -489,7 +495,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     style: TextStyle(
                         fontSize: 15, height: 1.24, color: context.k.ink),
                     decoration: InputDecoration(
-                      hintText: 'Tìm tên bé…',
+                      hintText: context.l10n?.incidentSearchStudentHint ?? 'Tìm tên bé…',
                       hintStyle:
                           TextStyle(fontSize: 15, color: context.k.inkSoft),
                       border: InputBorder.none,
@@ -501,7 +507,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       suffixIcon: _query.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: 'Xóa tìm kiếm',
+                              tooltip: context.l10n?.attendanceClearSearch ?? 'Xóa tìm kiếm',
                               onPressed: () => setState(() => _query = ''),
                               icon: const Icon(Icons.clear, size: 18),
                               visualDensity: VisualDensity.compact,
@@ -554,7 +560,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
         child: Center(
           child: Text(
-            'Không tìm thấy học sinh phù hợp.',
+            context.l10n?.attendanceNoMatchingStudent ?? 'Không tìm thấy học sinh phù hợp.',
             style: TextStyle(color: context.k.inkSoft),
           ),
         ),
@@ -579,8 +585,9 @@ class _AttendanceSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onTime = arrived - late;
+    final l10n = context.l10n;
     return Semantics(
-      label:
+      label: l10n?.attendanceSummaryText(arrived, total, onTime, late, absent, excusedAbsent) ??
           '$arrived/$total bé đã đến lớp. $onTime đúng giờ, $late đến trễ, $absent vắng, $excusedAbsent có phép.',
       child: ExcludeSemantics(
         child: ConstrainedBox(
@@ -607,7 +614,8 @@ class _AttendanceSummary extends StatelessWidget {
                             const SizedBox(width: 11),
                             Flexible(
                               child: Text(
-                                '$arrived/$total bé đã đến lớp',
+                                l10n?.studentsArrivedCount(arrived, total) ??
+                                    '$arrived/$total bé đã đến lớp',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -627,18 +635,18 @@ class _AttendanceSummary extends StatelessWidget {
                         runSpacing: 6,
                         children: [
                           _AttendanceCountBadge(
-                            label: '$onTime đúng giờ',
+                            label: l10n?.onTimeCount(onTime) ?? '$onTime đúng giờ',
                             color: context.k.brand,
                             background: context.k.okTint,
                           ),
                           if (late > 0)
                             _AttendanceCountBadge(
-                              label: '$late đến trễ',
+                              label: l10n?.lateCountText(late) ?? '$late đến trễ',
                               color: context.k.warnDeep,
                               background: context.k.accentTint,
                             ),
                           _AttendanceCountBadge(
-                            label: '$absent vắng',
+                            label: l10n?.absentCountText(absent) ?? '$absent vắng',
                             color: absent > 0
                                 ? context.k.badText
                                 : context.k.brand,
@@ -648,7 +656,7 @@ class _AttendanceSummary extends StatelessWidget {
                           ),
                           if (excusedAbsent > 0)
                             _AttendanceCountBadge(
-                              label: '$excusedAbsent có phép',
+                              label: l10n?.excusedAbsentCountText(excusedAbsent) ?? '$excusedAbsent có phép',
                               color: context.k.info,
                               background: context.k.infoTint,
                             ),
@@ -741,16 +749,17 @@ class _AttendanceDateLabel extends StatelessWidget {
     final parsedDay = DateTime(parsed.year, parsed.month, parsed.day);
     final isToday = parsedDay.isAtSameMomentAs(today);
     final canGoNext = parsedDay.isBefore(today);
-    final weekdays = const [
-      'Thứ Hai',
-      'Thứ Ba',
-      'Thứ Tư',
-      'Thứ Năm',
-      'Thứ Sáu',
-      'Thứ Bảy',
-      'Chủ nhật',
+    final l10n = context.l10n;
+    final weekdays = [
+      l10n?.dayMonday ?? 'Thứ Hai',
+      l10n?.dayTuesday ?? 'Thứ Ba',
+      l10n?.dayWednesday ?? 'Thứ Tư',
+      l10n?.dayThursday ?? 'Thứ Năm',
+      l10n?.dayFriday ?? 'Thứ Sáu',
+      l10n?.daySaturday ?? 'Thứ Bảy',
+      l10n?.daySunday ?? 'Chủ nhật',
     ];
-    final label = isToday ? 'Hôm nay' : weekdays[parsed.weekday - 1];
+    final label = isToday ? (l10n?.commonToday ?? 'Hôm nay') : weekdays[parsed.weekday - 1];
     final formatted =
         '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}';
 
@@ -763,7 +772,7 @@ class _AttendanceDateLabel extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Ngày trước',
+            tooltip: l10n?.attendancePrevDay ?? 'Ngày trước',
             onPressed: onPrevious,
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
@@ -787,7 +796,7 @@ class _AttendanceDateLabel extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Ngày sau',
+            tooltip: l10n?.attendanceNextDay ?? 'Ngày sau',
             onPressed: canGoNext ? onNext : null,
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
@@ -835,8 +844,8 @@ class _PendingLeaveTile extends StatelessWidget {
                   Expanded(
                     child: Text(
                       count == null
-                          ? 'Xem đơn nghỉ của lớp'
-                          : '$count đơn nghỉ đang chờ duyệt',
+                          ? (context.l10n?.attendanceViewClassRequests ?? 'Xem đơn nghỉ của lớp')
+                          : (context.l10n?.pendingLeaveRequestsCount(count!) ?? '$count đơn nghỉ đang chờ duyệt'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -877,11 +886,11 @@ class _SavedIndicator extends StatelessWidget {
           minimumSize: const Size(48, 36),
           padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
-        child: Text(saving ? 'Đang lưu…' : 'Lưu'),
+        child: Text(saving ? (context.l10n?.savingStatus ?? 'Đang lưu…') : (context.l10n?.commonSave ?? 'Lưu')),
       );
     }
     return Text(
-      'Đã cập nhật',
+      context.l10n?.attendanceUpdated ?? 'Đã cập nhật',
       style: TextStyle(fontSize: 12, height: 1.4, color: context.k.inkSoft),
     );
   }
@@ -910,10 +919,11 @@ class _AttendanceRow extends StatelessWidget {
         ? detail!.checkInTime!.trim()
         : student.time.trim();
     final expectedTime = detail?.expectedArrivalTime?.trim() ?? '';
+    final l10n = context.l10n;
     final subtitle = actualTime.isNotEmpty
-        ? 'Đến lúc ${_formatAttendanceTime(actualTime)}'
+        ? (l10n?.arrivedAtTime(_formatAttendanceTime(actualTime)) ?? 'Đến lúc ${_formatAttendanceTime(actualTime)}')
         : expectedTime.isNotEmpty
-            ? 'Dự kiến đến ${_formatAttendanceTime(expectedTime)}'
+            ? (l10n?.expectedAtTime(_formatAttendanceTime(expectedTime)) ?? 'Dự kiến đến ${_formatAttendanceTime(expectedTime)}')
             : null;
 
     return Padding(
@@ -1108,13 +1118,14 @@ class _AbsentNotificationSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Gửi thông báo bé vắng?',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            Text(
+              context.l10n?.attendanceSendAbsentAlertTitle ?? 'Gửi thông báo bé vắng?',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
-              'Gửi thông báo đẩy đến phụ huynh của ${students.length} bé vắng ngày ${_formatAttendanceDate(date)}.',
+              context.l10n?.sendAbsentNoticeConfirmMessage(students.length, _formatAttendanceDate(date)) ??
+                  'Gửi thông báo đẩy đến phụ huynh của ${students.length} bé vắng ngày ${_formatAttendanceDate(date)}.',
             ),
             if (unsaved) ...[
               const SizedBox(height: 12),
@@ -1126,7 +1137,8 @@ class _AbsentNotificationSheet extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
-                    'Điểm danh chưa lưu · Khuyên bạn nên lưu điểm danh trước khi gửi thông báo.',
+                    context.l10n?.unsavedAttendanceNoticeWarning ??
+                        'Điểm danh chưa lưu · Khuyên bạn nên lưu điểm danh trước khi gửi thông báo.',
                     style: TextStyle(
                       color: _attendanceWarningText(context),
                       fontWeight: FontWeight.w600,
@@ -1148,7 +1160,7 @@ class _AbsentNotificationSheet extends StatelessWidget {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Hủy'),
+                  child: Text(context.l10n?.commonCancel ?? 'Hủy'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1157,7 +1169,7 @@ class _AbsentNotificationSheet extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: () => Navigator.pop(context, true),
                   icon: const Icon(Icons.notifications_none),
-                  label: const Text('Gửi thông báo'),
+                  label: Text(context.l10n?.attendanceSendAlert ?? 'Gửi thông báo'),
                 ),
               ),
             ] else
@@ -1166,7 +1178,7 @@ class _AbsentNotificationSheet extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Hủy'),
+                      child: Text(context.l10n?.commonCancel ?? 'Hủy'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1174,7 +1186,7 @@ class _AbsentNotificationSheet extends StatelessWidget {
                     child: FilledButton.icon(
                       onPressed: () => Navigator.pop(context, true),
                       icon: const Icon(Icons.notifications_none),
-                      label: const Text('Gửi thông báo'),
+                      label: Text(context.l10n?.attendanceSendAlert ?? 'Gửi thông báo'),
                     ),
                   ),
                 ],
@@ -1198,30 +1210,31 @@ _StatusVisual _statusVisual(
   BuildContext context,
   AttendanceStatus status,
 ) {
+  final l10n = context.l10n;
   return switch (status) {
     AttendanceStatus.arrived => (
-        label: 'Đã đến',
+        label: l10n?.attendanceStatusArrived ?? 'Đã đến',
         icon: Icons.check_circle_outline,
         foreground: context.k.brand,
         background: context.k.okTint,
         border: context.k.okDot.withValues(alpha: .4),
       ),
     AttendanceStatus.absent => (
-        label: 'Vắng',
+        label: l10n?.attendanceStatusAbsent ?? 'Vắng',
         icon: Icons.event_busy_outlined,
         foreground: _attendanceDangerText(context),
         background: context.k.badTint,
         border: context.k.bad.withValues(alpha: .4),
       ),
     AttendanceStatus.excusedAbsent => (
-        label: 'Có phép',
+        label: l10n?.attendanceStatusExcused ?? 'Có phép',
         icon: Icons.event_available_outlined,
         foreground: _attendanceInfoText(context),
         background: context.k.infoTint,
         border: context.k.info.withValues(alpha: .4),
       ),
     AttendanceStatus.late => (
-        label: 'Đến trễ',
+        label: l10n?.attendanceStatusLate ?? 'Đến trễ',
         icon: Icons.schedule_outlined,
         foreground: _attendanceWarningText(context),
         background: context.k.accentTint,

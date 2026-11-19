@@ -229,9 +229,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Không tải được thời khóa biểu.', style: TextStyle(color: context.k.inkSoft)),
+                Text(context.l10n?.cannotLoadTimetable ?? 'Không tải được thời khóa biểu.', style: TextStyle(color: context.k.inkSoft)),
                 const SizedBox(height: 8),
-                TextButton(onPressed: _reload, child: const Text('Thử lại')),
+                TextButton(onPressed: _reload, child: Text(context.l10n?.commonRetry ?? 'Thử lại')),
               ],
             ),
           );
@@ -256,7 +256,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
       return Scaffold(
         backgroundColor: context.k.canvas,
         appBar: KAppBar(
-          title: 'Thời khóa biểu',
+          title: context.l10n?.timetableTitle ?? 'Thời khóa biểu',
           subtitle: _currentClassName,
           onBack: () => Navigator.pop(context),
         ),
@@ -321,7 +321,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Thời khóa biểu của lớp',
+                    context.l10n?.classTimetableTitle ?? 'Thời khóa biểu của lớp',
                     style: TextStyle(
                       fontSize: 16,
                       height: 1.4,
@@ -331,7 +331,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Đóng',
+                  tooltip: context.l10n?.commonClose ?? 'Đóng',
                   onPressed: () => Navigator.maybePop(context),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints.tightFor(
@@ -369,7 +369,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
           Icon(Icons.meeting_room_outlined, size: 20, color: context.k.brand),
           const SizedBox(width: 8),
           Text(
-            'Lớp học:',
+            '${context.l10n?.classroomTitle ?? 'Lớp học'}:',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.k.ink),
           ),
           const SizedBox(width: 12),
@@ -419,7 +419,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         onChanged: (val) => setState(() => _internalSearchQuery = val.trim()),
         decoration: InputDecoration(
           isDense: true,
-          hintText: 'Tìm tiết học, môn học, khung giờ (vd: 08:00, 8h)...',
+          hintText: context.l10n?.searchTimetableHint ?? 'Tìm tiết học, môn học, khung giờ (vd: 08:00, 8h)...',
           prefixIcon: const Icon(Icons.search, size: 20),
           suffixIcon: _internalSearchQuery.isNotEmpty
               ? IconButton(
@@ -469,12 +469,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   Icon(Icons.search_off_rounded, size: 48, color: context.k.inkFaint),
                   const SizedBox(height: 12),
                   Text(
-                    'Không tìm thấy hoạt động nào phù hợp',
+                    context.l10n?.noMatchingActivitiesFound ?? 'Không tìm thấy hoạt động nào phù hợp',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: context.k.ink),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Thử tìm kiếm với khung giờ khác (vd: 08:00, 8h) hoặc tên môn/phòng.',
+                    context.l10n?.searchTimetableSuggestion ?? 'Thử tìm kiếm với khung giờ khác (vd: 08:00, 8h) hoặc tên môn/phòng.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 13, color: context.k.inkSoft),
                   ),
@@ -499,7 +499,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             if (!widget.isReadOnly && !wide)
               BottomActionBar(
                 child: KButton(
-                  label: 'Thêm hoạt động',
+                  label: context.l10n?.addActivityAction ?? 'Thêm hoạt động',
                   icon: Icons.add,
                   large: true,
                   onPressed: () => _openEditor(data),
@@ -584,7 +584,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: FilterChipButton(
-                label: '${conflicts.length} xung đột',
+                label: context.l10n?.conflictsCount(conflicts.length) ?? '${conflicts.length} xung đột',
                 warn: true,
                 selected: _conflictsOnly,
                 onTap: () => setState(() => _conflictsOnly = !_conflictsOnly),
@@ -596,8 +596,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
               ? Center(
                   child: Text(
                     _conflictsOnly
-                        ? 'Không có xung đột'
-                        : 'Chưa có hoạt động',
+                        ? (context.l10n?.noConflicts ?? 'Không có xung đột')
+                        : (context.l10n?.noActivitiesYet ?? 'Chưa có hoạt động'),
                     style: TextStyle(color: context.k.inkSoft),
                   ),
                 )
@@ -649,7 +649,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Tuần này · ${gardenVoice ? _gardenVoiceWeekLabel(days) : _weekLabel(days)}',
+                  context.l10n?.thisWeekWithLabel(gardenVoice ? _gardenVoiceWeekLabel(days) : _weekLabel(days)) ??
+                      'Tuần này · ${gardenVoice ? _gardenVoiceWeekLabel(days) : _weekLabel(days)}',
                   style: TextStyle(
                     fontSize: gardenVoice ? 16 : 13,
                     height: gardenVoice ? 1.35 : null,
@@ -672,7 +673,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: FilterChipButton(
-                label: '${conflicts.length} xung đột',
+                label: context.l10n?.conflictsCount(conflicts.length) ?? '${conflicts.length} xung đột',
                 warn: true,
                 selected: _conflictsOnly,
                 onTap: () => setState(() => _conflictsOnly = !_conflictsOnly),
@@ -696,7 +697,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             child: Text(
               gardenVoice
                   ? '${_localizedDayLong(context)[selected]}, ngày ${date.day.toString().padLeft(2, '0')} tháng ${date.month.toString().padLeft(2, '0')}'
-                  : '${_localizedDayLong(context)[selected].toUpperCase()}, ${date.day}/${date.month}${isToday ? ' · HÔM NAY' : ''}',
+                  : '${_localizedDayLong(context)[selected].toUpperCase()}, ${date.day}/${date.month}${isToday ? ' · ${(context.l10n?.commonToday ?? 'Hôm nay').toUpperCase()}' : ''}',
               style: TextStyle(
                 fontSize: gardenVoice ? 14 : 11,
                 height: gardenVoice ? 1.35 : null,
@@ -714,7 +715,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 36),
                       child: Center(
                         child: Text(
-                          _conflictsOnly && dayItems.isNotEmpty ? 'Không có xung đột' : 'Chưa có hoạt động',
+                          _conflictsOnly && dayItems.isNotEmpty
+                              ? (context.l10n?.noConflicts ?? 'Không có xung đột')
+                              : (context.l10n?.noActivitiesYet ?? 'Chưa có hoạt động'),
                           style: TextStyle(fontSize: 13, color: context.k.inkFaint),
                         ),
                       ),
@@ -815,11 +818,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
       children: [
         Row(
           children: [
-            Text('Tuần này · ${_weekLabel(days)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
+            Text(context.l10n?.thisWeekWithLabel(_weekLabel(days)) ?? 'Tuần này · ${_weekLabel(days)}',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.k.inkSoft)),
             const Spacer(),
             if (conflicts.isNotEmpty) ...[
               FilterChipButton(
-                label: '${conflicts.length} xung đột',
+                label: context.l10n?.conflictsCount(conflicts.length) ?? '${conflicts.length} xung đột',
                 warn: true,
                 selected: _conflictsOnly,
                 onTap: () => setState(() => _conflictsOnly = !_conflictsOnly),
@@ -827,7 +831,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               const SizedBox(width: 12),
             ],
             if (!widget.isReadOnly)
-              KButton(label: 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
+              KButton(label: context.l10n?.addActivityAction ?? 'Thêm hoạt động', icon: Icons.add, onPressed: () => _openEditor(data)),
           ],
         ),
         const SizedBox(height: 16),
@@ -898,7 +902,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   children: [
                     Icon(Icons.place_outlined, size: 14, color: sheetCtx.k.inkFaint),
                     const SizedBox(width: 4),
-                    Text('Phòng: ${item.roomLabel}', style: TextStyle(fontSize: 13, color: sheetCtx.k.inkSoft)),
+                    Text(sheetCtx.l10n?.roomLabel(item.roomLabel) ?? 'Phòng: ${item.roomLabel}',
+                        style: TextStyle(fontSize: 13, color: sheetCtx.k.inkSoft)),
                   ],
                 ),
               ],
@@ -910,14 +915,14 @@ class _TimetableScreenState extends State<TimetableScreen> {
               if (widget.isReadOnly) ...[
                 const SizedBox(height: 16),
                 KButton(
-                  label: 'Đóng',
+                  label: sheetCtx.l10n?.commonClose ?? 'Đóng',
                   secondary: true,
                   onPressed: () => Navigator.pop(sheetCtx),
                 ),
               ] else ...[
                 const SizedBox(height: 16),
                 KButton(
-                  label: 'Chỉnh sửa',
+                  label: sheetCtx.l10n?.commonEdit ?? 'Chỉnh sửa',
                   secondary: true,
                   icon: Icons.edit_outlined,
                   onPressed: () {
@@ -933,7 +938,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   },
                   style: TextButton.styleFrom(minimumSize: const Size.fromHeight(44)),
                   icon: Icon(Icons.delete_outline, size: 18, color: sheetCtx.k.bad),
-                  label: Text('Xóa', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sheetCtx.k.bad)),
+                  label: Text(sheetCtx.l10n?.deleteAction ?? 'Xóa',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: sheetCtx.k.bad)),
                 ),
               ],
             ],
@@ -951,20 +957,22 @@ class _TimetableScreenState extends State<TimetableScreen> {
         builder: (sheetCtx) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Xóa hoạt động này?', style: Theme.of(sheetCtx).textTheme.titleMedium),
+            Text(sheetCtx.l10n?.deleteActivityConfirmTitle ?? 'Xóa hoạt động này?',
+                style: Theme.of(sheetCtx).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
-              'Hoạt động lặp lại hằng tuần — sẽ xóa khỏi thời khóa biểu của lớp.',
+              sheetCtx.l10n?.deleteActivityConfirmMessage ??
+                  'Hoạt động lặp lại hằng tuần — sẽ xóa khỏi thời khóa biểu của lớp.',
               style: TextStyle(fontSize: 13, height: 1.5, color: sheetCtx.k.inkSoft),
             ),
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(sheetCtx))),
+                Expanded(child: KButton(label: sheetCtx.l10n?.commonCancel ?? 'Hủy', secondary: true, onPressed: () => Navigator.pop(sheetCtx))),
                 const SizedBox(width: 12),
                 Expanded(
                   child: KButton(
-                    label: 'Xóa',
+                    label: sheetCtx.l10n?.deleteAction ?? 'Xóa',
                     danger: true,
                     icon: Icons.delete_outline,
                     onPressed: () async {
@@ -983,14 +991,17 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
   Future<void> _deleteItem(ClassSchedule item) async {
     if (widget.isReadOnly) return;
+    final l10n = context.l10n;
+    final deletedMsg = l10n?.activityDeletedSuccess ?? 'Đã xóa hoạt động';
+    final fallbackMsg = l10n?.cannotDeleteActivity ?? 'Không thể xóa hoạt động. Vui lòng thử lại.';
     try {
       await _repo.deleteSchedule(item.scheduleId);
       if (!mounted) return;
-      _showMessage('Đã xóa hoạt động');
+      _showMessage(deletedMsg);
       _reload(item.dayIndex);
     } catch (e) {
       if (!mounted) return;
-      _showMessage(getFriendlyErrorMessage(e, fallback: 'Không thể xóa hoạt động. Vui lòng thử lại.'));
+      _showMessage(getFriendlyErrorMessage(e, fallback: fallbackMsg));
     }
   }
 
@@ -1034,10 +1045,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 child: Icon(Icons.calendar_month_outlined, size: 26, color: context.k.inkFaint),
               ),
               const SizedBox(height: 16),
-              const Text('Tuần này chưa có hoạt động nào.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(context.l10n?.noActivitiesThisWeek ?? 'Tuần này chưa có hoạt động nào.', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text(
-                widget.isReadOnly ? 'Lớp chưa có hoạt động nào trong tuần.' : 'Thêm hoạt động để lên lịch cho cả lớp.',
+                widget.isReadOnly
+                    ? (context.l10n?.classHasNoActivitiesThisWeek ?? 'Lớp chưa có hoạt động nào trong tuần.')
+                    : (context.l10n?.addActivityToSchedulePrompt ?? 'Thêm hoạt động để lên lịch cho cả lớp.'),
                 style: TextStyle(fontSize: 13, color: context.k.inkSoft),
               ),
             ],
@@ -1146,8 +1159,8 @@ class _ViewToggle extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _option(context, label: 'Ngày', selected: !weekMode, onTap: () => onChanged(false)),
-          _option(context, label: 'Tuần', selected: weekMode, onTap: () => onChanged(true)),
+          _option(context, label: context.l10n?.dayTab ?? 'Ngày', selected: !weekMode, onTap: () => onChanged(false)),
+          _option(context, label: context.l10n?.weekTab ?? 'Tuần', selected: weekMode, onTap: () => onChanged(true)),
         ],
       ),
     );
@@ -1305,7 +1318,7 @@ class _DayColumn extends StatelessWidget {
                   '${_localizedDayShort(context)[day]} · ${date.day}/${date.month}',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isToday ? context.k.brand : context.k.inkSoft),
                 ),
-                if (isToday) Text('Hôm nay', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.brand)),
+                if (isToday) Text(context.l10n?.commonToday ?? 'Hôm nay', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.brand)),
               ],
             ),
           ),
@@ -1314,7 +1327,7 @@ class _DayColumn extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
-                child: Text('Chưa có hoạt động', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                child: Text(context.l10n?.noActivitiesYet ?? 'Chưa có hoạt động', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
               ),
             )
           else
@@ -1393,7 +1406,11 @@ class _ScheduleRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
-              status!,
+              status == 'Đang diễn ra'
+                  ? (context.l10n?.ongoingStatus ?? 'Đang diễn ra')
+                  : status == 'Tiếp theo'
+                      ? (context.l10n?.upNextStatus ?? 'Tiếp theo')
+                      : status!,
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: status == 'Đang diễn ra' ? context.k.ok : context.k.info),
             ),
           ),
@@ -1514,7 +1531,7 @@ class _ScheduleRow extends StatelessWidget {
       child: Semantics(
         key: ValueKey('timetable-icon-${item.scheduleId}'),
         image: true,
-        label: _scheduleKindLabel(kind),
+        label: _scheduleKindLabel(kind, context),
         child: SvgPicture.asset(
           _teacherScheduleIcon(kind),
           width: 19,
@@ -1625,7 +1642,7 @@ class _ParentScheduleCard extends StatelessWidget {
                   width: 40,
                   child: Semantics(
                     image: true,
-                    label: _scheduleKindLabel(kind),
+                    label: _scheduleKindLabel(kind, context),
                     child: _ParentScheduleIcon(kind: kind),
                   ),
                 ),
@@ -1677,7 +1694,7 @@ class _ParentScheduleCard extends StatelessWidget {
                         ),
                       if (conflict)
                         Text(
-                          'Xung đột khung giờ',
+                          context.l10n?.timeSlotConflict ?? 'Xung đột khung giờ',
                           style: TextStyle(
                             fontSize: 11,
                             height: 1.4,
@@ -1703,13 +1720,13 @@ class _ParentScheduleCard extends StatelessWidget {
 
 enum _ScheduleKind { attendance, food, activity, outdoor, sleep, health }
 
-String _scheduleKindLabel(_ScheduleKind kind) => switch (kind) {
-      _ScheduleKind.attendance => 'Điểm danh',
-      _ScheduleKind.food => 'Bữa ăn',
-      _ScheduleKind.activity => 'Hoạt động sáng tạo',
-      _ScheduleKind.outdoor => 'Hoạt động ngoài trời',
-      _ScheduleKind.sleep => 'Giấc ngủ',
-      _ScheduleKind.health => 'Sức khỏe',
+String _scheduleKindLabel(_ScheduleKind kind, [BuildContext? context]) => switch (kind) {
+      _ScheduleKind.attendance => context?.l10n?.teacherNavAttendance ?? 'Điểm danh',
+      _ScheduleKind.food => context?.l10n?.timetableMeals ?? 'Bữa ăn',
+      _ScheduleKind.activity => context?.l10n?.timetableCreativeActivities ?? 'Hoạt động sáng tạo',
+      _ScheduleKind.outdoor => context?.l10n?.timetableOutdoorActivities ?? 'Hoạt động ngoài trời',
+      _ScheduleKind.sleep => context?.l10n?.timetableSleep ?? 'Giấc ngủ',
+      _ScheduleKind.health => context?.l10n?.timetableHealth ?? 'Sức khỏe',
     };
 
 _ScheduleKind _scheduleKind(ClassSchedule item) {
@@ -1826,7 +1843,11 @@ class _ScheduleStatusPill extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
-          status,
+          status == 'Đang diễn ra'
+              ? (context.l10n?.ongoingStatus ?? 'Đang diễn ra')
+              : status == 'Tiếp theo'
+                  ? (context.l10n?.upNextStatus ?? 'Tiếp theo')
+                  : status,
           style: TextStyle(
             fontSize: 12,
             height: 1.4,

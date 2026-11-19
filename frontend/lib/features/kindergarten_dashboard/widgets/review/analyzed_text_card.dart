@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 class AnalyzedTextCard extends StatefulWidget {
@@ -23,10 +24,12 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
 
   void _copy() {
     Clipboard.setData(ClipboardData(text: widget.text));
+    final msg = context.l10n?.sttCopiedAnalyzedText ??
+        'Đã sao chép nội dung văn bản đã phân tích.';
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đã sao chép nội dung văn bản đã phân tích.'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -75,18 +78,22 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
                                 fontWeight: FontWeight.w700,
                                 color: context.k.brandStrong),
                           );
+                  final analyzedTitle =
+                      context.l10n?.sttAnalyzedText ?? 'Văn bản đã phân tích';
                   final titleWidth = (TextPainter(
                     text: TextSpan(
-                        text: 'Văn bản đã phân tích', style: titleTextStyle),
+                        text: analyzedTitle, style: titleTextStyle),
                     textDirection: Directionality.of(context),
                     textScaler: textScaler,
                   )..layout())
                       .width;
+                  final splitText = context.l10n?.sttSplitChildrenCount(widget.matchedChildCount) ??
+                      'Đã tách ${widget.matchedChildCount} bé';
                   final badgeTextWidth = widget.matchedChildCount == 0
                       ? 0.0
                       : (TextPainter(
                           text: TextSpan(
-                            text: 'Đã tách ${widget.matchedChildCount} bé',
+                            text: splitText,
                             style: badgeTextStyle,
                           ),
                           textDirection: Directionality.of(context),
@@ -100,7 +107,7 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
                               (widget.matchedChildCount == 0 ? 0 : 28) >
                           constraints.maxWidth;
                   final title =
-                      Text('Văn bản đã phân tích', style: titleTextStyle);
+                      Text(analyzedTitle, style: titleTextStyle);
                   final badge = widget.matchedChildCount == 0
                       ? const SizedBox.shrink()
                       : Container(
@@ -125,7 +132,7 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
                               ),
                               Flexible(
                                 child: Text(
-                                  'Đã tách ${widget.matchedChildCount} bé',
+                                  splitText,
                                   style: TextStyle(
                                       fontSize: 12,
                                       height: 1.4,
@@ -189,8 +196,10 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
                             padding: EdgeInsets.zero,
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        child: const Text('Sao chép',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        child: Text(
+                          context.l10n?.commonCopy ?? 'Sao chép',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
                       if (widget.onEdit != null) ...[
                         TextButton(
@@ -200,8 +209,10 @@ class _AnalyzedTextCardState extends State<AnalyzedTextCard> {
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                          child: const Text('Sửa & Phân tích lại',
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          child: Text(
+                            context.l10n?.sttEditAndReanalyze ?? 'Sửa & Phân tích lại',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ],
                     ],

@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
@@ -551,8 +552,8 @@ class _ParentFlowState extends State<ParentFlow> {
                 error.toString().toLowerCase().contains('404');
             if (isNoChild) {
               return NoAssignmentScreen(
-                title: 'Chưa có bé được đăng ký',
-                message:
+                title: context.l10n?.noChildRegistered ?? 'Chưa có bé được đăng ký',
+                message: context.l10n?.noChildLinkedMessage ??
                     'Tài khoản phụ huynh của bạn hiện chưa được liên kết với hồ sơ bé nào.\nVui lòng liên hệ nhà trường để được cập nhật thông tin bé.',
                 icon: Icons.child_care_outlined,
                 onBack: () {
@@ -922,32 +923,32 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
         if (eating != null)
           _ReportField(
               iconAsset: 'assets/garden_voice/review_bowl.svg',
-              label: 'Ăn uống',
+              label: context.l10n?.categoryMeal ?? 'Ăn uống',
               value: eating),
         if (sleeping != null)
           _ReportField(
               iconAsset: 'assets/garden_voice/review_moon.svg',
-              label: 'Giấc ngủ',
+              label: context.l10n?.categorySleep ?? 'Giấc ngủ',
               value: sleeping),
         if (activities != null)
           _ReportField(
               iconAsset: 'assets/garden_voice/review_artist_palette.svg',
-              label: 'Hoạt động',
+              label: context.l10n?.categoryActivity ?? 'Hoạt động',
               value: activities),
         if (mood != null)
           _ReportField(
               icon: Icons.sentiment_satisfied_outlined,
-              label: 'Tâm trạng',
+              label: context.l10n?.categoryMood ?? 'Tâm trạng',
               value: mood),
         if (health != null)
           _ReportField(
               icon: Icons.health_and_safety_outlined,
-              label: 'Sức khỏe',
+              label: context.l10n?.categoryHealth ?? 'Sức khỏe',
               value: health),
         if (note != null)
           _ReportField(
               icon: Icons.edit_note,
-              label: 'Lời nhắn của ${widget.teacherName}',
+              label: context.l10n?.parentTeacherNoteTitle(widget.teacherName) ?? 'Lời nhắn của ${widget.teacherName}',
               value: note,
               highlighted: true),
         if (!hasAnyData)
@@ -955,7 +956,7 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
               child: Text(
-                'Chưa có thông tin ghi nhận cho ngày này.',
+                context.l10n?.parentReportNoDetails ?? 'Chưa có thông tin ghi nhận cho ngày này.',
                 style: TextStyle(
                     color: context.k.inkFaint, fontSize: 13),
               ),
@@ -963,7 +964,7 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
           ),
         const SizedBox(height: KSpace.x3),
         KButton(
-          label: 'Đã đọc báo cáo ✓',
+          label: context.l10n?.reportReadConfirmed ?? 'Đã đọc báo cáo ✓',
           secondary: true,
           onPressed: () => Navigator.pop(context),
         ),
@@ -1026,7 +1027,7 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
       children: [
         Expanded(
           child: Text(
-            'Báo cáo ngày',
+            context.l10n?.parentReportDatePrefix ?? 'Báo cáo ngày',
             style: TextStyle(
               fontSize: 16,
               height: 1.4,
@@ -1036,7 +1037,7 @@ class _ParentReportBodyState extends State<_ParentReportBody> {
           ),
         ),
         IconButton(
-          tooltip: 'Đóng báo cáo',
+          tooltip: context.l10n?.commonClose ?? 'Đóng báo cáo',
           onPressed: () => Navigator.pop(context),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),

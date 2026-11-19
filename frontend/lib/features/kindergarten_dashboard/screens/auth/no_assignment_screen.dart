@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
@@ -83,7 +84,9 @@ class NoAssignmentScreen extends StatelessWidget {
                       onPressed: onBack,
                       icon: const Icon(Icons.arrow_back_rounded, size: 20),
                       label: Text(
-                        backButtonLabel,
+                        backButtonLabel == 'Đăng xuất'
+                            ? (context.l10n?.accountLogout ?? backButtonLabel)
+                            : backButtonLabel,
                         style: const TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 15),
                       ),
@@ -116,7 +119,7 @@ class NoAssignmentScreen extends StatelessWidget {
                           'assets/garden_voice/no_assignment.svg',
                           width: 76,
                           height: 76,
-                          semanticsLabel: 'Biểu tượng nhóm lớp',
+                          semanticsLabel: context.l10n?.noAssignmentClassIcon ?? 'Biểu tượng nhóm lớp',
                         ),
                         const SizedBox(height: 24),
                         Text(
@@ -144,7 +147,9 @@ class NoAssignmentScreen extends StatelessWidget {
                           width: 200,
                           height: 48,
                           child: KButton(
-                            label: backButtonLabel,
+                            label: backButtonLabel == 'Đăng xuất'
+                                ? (context.l10n?.accountLogout ?? backButtonLabel)
+                                : backButtonLabel,
                             onPressed: onBack,
                           ),
                         ),

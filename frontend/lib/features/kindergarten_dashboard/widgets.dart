@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -130,7 +131,7 @@ class KAppBar extends StatelessWidget implements PreferredSizeWidget {
           ? null
           : IconButton(
               onPressed: onBack,
-              tooltip: 'Quay lại',
+              tooltip: context.l10n?.commonBack ?? 'Quay lại',
               padding: isGardenVoice ? EdgeInsets.zero : null,
               icon: isGardenVoice
                   ? SvgPicture.asset(
@@ -332,7 +333,7 @@ class SearchField extends StatelessWidget {
         color: isGardenVoice ? context.k.ink : null,
       ),
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: hint == 'Tìm...' ? (context.l10n?.commonSearchPlaceholder ?? 'Tìm...') : hint,
         hintStyle: TextStyle(
           fontSize: 14,
           color: isGardenVoice ? context.k.inkSoft : context.k.inkFaint,

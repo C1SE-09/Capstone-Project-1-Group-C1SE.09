@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 class EditObservationScreen extends StatelessWidget {
@@ -42,7 +43,7 @@ class EditObservationScreen extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Quay lại',
+                    tooltip: context.l10n?.commonBack ?? 'Quay lại',
                     onPressed: () => Navigator.pop(context, false),
                     padding: EdgeInsets.zero,
                     constraints:
@@ -54,11 +55,15 @@ class EditObservationScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Chỉnh sửa báo cáo',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w700)),
-                        Text('$title · Hôm nay',
-                            style: TextStyle(fontSize: 12, color: k.inkSoft)),
+                        Text(
+                          context.l10n?.sttEditReport ?? 'Chỉnh sửa báo cáo',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          '$title · ${context.l10n?.commonToday ?? 'Hôm nay'}',
+                          style: TextStyle(fontSize: 12, color: k.inkSoft),
+                        ),
                       ],
                     ),
                   ),
@@ -74,7 +79,7 @@ class EditObservationScreen extends StatelessWidget {
                       context,
                       icon: Icon(Icons.chat_bubble_outline,
                           size: 18, color: context.k.brand),
-                      label: 'Nội dung đoạn nói',
+                      label: context.l10n?.sttSegmentContent ?? 'Nội dung đoạn nói',
                       controller: snippetCtrl,
                       maxLines: 3,
                     ),
@@ -83,7 +88,7 @@ class EditObservationScreen extends StatelessWidget {
                   _buildField(
                     context,
                     icon: _foodIcon(),
-                    label: 'Ăn uống',
+                    label: context.l10n?.recordMealItem ?? 'Ăn uống',
                     controller: eatingCtrl,
                     maxLines: 2,
                   ),
@@ -92,15 +97,17 @@ class EditObservationScreen extends StatelessWidget {
                     context,
                     icon:
                         SvgPicture.asset('assets/garden_voice/review_moon.svg'),
-                    label: 'Giấc ngủ',
+                    label: context.l10n?.recordNapItem ?? 'Giấc ngủ',
                     controller: sleepDescriptionCtrl,
                     maxLines: 2,
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('Thời lượng (phút)',
-                          style: TextStyle(fontSize: 12, color: k.inkSoft)),
+                      Text(
+                        context.l10n?.sttDurationMinutes ?? 'Thời lượng (phút)',
+                        style: TextStyle(fontSize: 12, color: k.inkSoft),
+                      ),
                       const SizedBox(width: 10),
                       SizedBox(
                         width: 96,
@@ -121,7 +128,7 @@ class EditObservationScreen extends StatelessWidget {
                     context,
                     icon:
                         SvgPicture.asset('assets/garden_voice/edit_health.svg'),
-                    label: 'Sức khỏe',
+                    label: context.l10n?.recordHealth ?? 'Sức khỏe',
                     controller: healthCtrl,
                     maxLines: 2,
                   ),
@@ -129,7 +136,7 @@ class EditObservationScreen extends StatelessWidget {
                   _buildField(
                     context,
                     icon: const SizedBox(width: 22, height: 22),
-                    label: 'Tâm trạng',
+                    label: context.l10n?.sttMood ?? 'Tâm trạng',
                     controller: moodCtrl,
                   ),
                   const SizedBox(height: 12),
@@ -137,7 +144,7 @@ class EditObservationScreen extends StatelessWidget {
                     context,
                     icon: SvgPicture.asset(
                         'assets/garden_voice/review_artist_palette.svg'),
-                    label: 'Hoạt động',
+                    label: context.l10n?.recordActivityItem ?? 'Hoạt động',
                     controller: activitiesCtrl,
                     maxLines: 2,
                   ),
@@ -145,7 +152,7 @@ class EditObservationScreen extends StatelessWidget {
                   _buildField(
                     context,
                     icon: const SizedBox(width: 22, height: 22),
-                    label: 'Ghi chú của cô',
+                    label: context.l10n?.sttTeacherNotes ?? 'Ghi chú của cô',
                     controller: noteCtrl,
                     maxLines: 3,
                     maxLength: 500,
@@ -166,7 +173,7 @@ class EditObservationScreen extends StatelessWidget {
                           minimumSize: const Size(0, 48),
                           shape: const StadiumBorder(),
                         ),
-                        child: const Text('Hủy'),
+                        child: Text(context.l10n?.commonCancel ?? 'Hủy'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -179,7 +186,7 @@ class EditObservationScreen extends StatelessWidget {
                           minimumSize: const Size(0, 48),
                           shape: const StadiumBorder(),
                         ),
-                        child: const Text('Lưu thay đổi'),
+                        child: Text(context.l10n?.commonSaveChanges ?? 'Lưu thay đổi'),
                       ),
                     ),
                   ],

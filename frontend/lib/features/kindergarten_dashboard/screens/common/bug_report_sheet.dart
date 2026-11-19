@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -59,9 +60,10 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
 
   Future<void> _pickImages() async {
+    final l10n = context.l10n;
     if (_attachments.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bạn chỉ có thể đính kèm tối đa 5 ảnh.')),
+        SnackBar(content: Text(l10n?.maxImagesLimitWarning(5) ?? 'Bạn chỉ có thể đính kèm tối đa 5 ảnh.')),
       );
       return;
     }
@@ -79,7 +81,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
         if (bytes.lengthInBytes > 5 * 1024 * 1024) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('File ${file.name} vượt quá 5MB cho phép.')),
+              SnackBar(content: Text(l10n?.fileExceedsSizeLimit(file.name, 5) ?? 'File ${file.name} vượt quá 5MB cho phép.')),
             );
           }
           continue;
@@ -99,7 +101,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể chọn ảnh từ thiết bị.')),
+          SnackBar(content: Text(l10n?.cannotPickImageFromDevice ?? 'Không thể chọn ảnh từ thiết bị.')),
         );
       }
     }
@@ -137,10 +139,12 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
       if (!mounted) return;
 
+      final successMsg = context.l10n?.bugReportFormSuccess ??
+          'Góp ý của bạn đã được gửi thành công! Cảm ơn bạn đã đóng góp cải thiện ứng dụng.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFF16665A),
-          content: Text('Góp ý của bạn đã được gửi thành công! Cảm ơn bạn đã đóng góp cải thiện ứng dụng.'),
+        SnackBar(
+          backgroundColor: const Color(0xFF16665A),
+          content: Text(successMsg),
         ),
       );
 
@@ -155,11 +159,13 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = e is BugReportException
+            ? e.message
+            : (context.l10n?.bugReportSendFailed ??
+                'Gửi góp ý thất bại. Vui lòng kiểm tra kết nối mạng và thử lại.');
         setState(() {
           _isSubmitting = false;
-          _formError = e is BugReportException
-              ? e.message
-              : 'Gửi góp ý thất bại. Vui lòng kiểm tra kết nối mạng và thử lại.';
+          _formError = errorMsg;
         });
       }
     }
@@ -178,6 +184,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
       child: Builder(
         builder: (context) {
           final k = context.k;
+          final l10n = context.l10n;
           return Container(
             height: sheetHeight,
             decoration: BoxDecoration(
@@ -198,7 +205,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Báo lỗi & góp ý',
+                              l10n?.accountBugReport ?? 'Báo lỗi & góp ý',
                               style: TextStyle(
                                 color: k.ink,
                                 fontSize: 16,
@@ -209,7 +216,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                           ),
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            tooltip: 'Đóng',
+                            tooltip: l10n?.commonClose ?? 'Đóng',
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints.tightFor(
                               width: 44,
@@ -241,6 +248,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
   Widget _buildFormTab(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -276,11 +284,11 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
             ],
 
             // Tiêu đề góp ý
-            _buildFieldLabel('Tiêu đề', context),
+            _buildFieldLabel(l10n?.bugReportFormTitleLabel ?? 'Tiêu đề', context),
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
-                hintText: 'Tóm tắt ngắn gọn góp ý hoặc vấn đề…',
+                hintText: l10n?.bugReportFormTitleHint ?? 'Tóm tắt ngắn gọn góp ý hoặc vấn đề…',
                 hintStyle: TextStyle(color: k.inkSoft, fontSize: 14),
                 filled: true,
                 fillColor: k.surface,
@@ -302,10 +310,10 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
               style: TextStyle(fontSize: 14, color: k.ink),
               validator: (val) {
                 if (val == null || val.trim().isEmpty) {
-                  return 'Vui lòng nhập tiêu đề góp ý hoặc vấn đề';
+                  return l10n?.titleRequired ?? 'Vui lòng nhập tiêu đề góp ý hoặc vấn đề';
                 }
                 if (val.trim().length > 200) {
-                  return 'Tiêu đề không được vượt quá 200 ký tự';
+                  return l10n?.bugReportFormValidationTitleTooLong ?? 'Tiêu đề không được vượt quá 200 ký tự';
                 }
                 return null;
               },
@@ -314,13 +322,13 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
 
             // Mô tả chi tiết
-            _buildFieldLabel('Mô tả chi tiết', context),
+            _buildFieldLabel(l10n?.bugReportFormDescriptionLabel ?? 'Mô tả chi tiết', context),
             TextFormField(
               controller: _descriptionController,
               minLines: 4,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: 'Mô tả chi tiết ý kiến cải thiện hoặc sự cố gặp phải để đội ngũ hỗ trợ tốt nhất...',
+                hintText: l10n?.bugReportFormDescriptionHint ?? 'Mô tả chi tiết ý kiến cải thiện hoặc sự cố gặp phải để đội ngũ hỗ trợ tốt nhất...',
                 hintStyle: TextStyle(color: k.inkSoft, fontSize: 14),
                 filled: true,
                 fillColor: k.surface,
@@ -341,10 +349,10 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
               style: TextStyle(fontSize: 14, color: k.ink),
               validator: (val) {
                 if (val == null || val.trim().isEmpty) {
-                  return 'Vui lòng nhập mô tả chi tiết';
+                  return l10n?.descriptionRequired ?? 'Vui lòng nhập mô tả chi tiết';
                 }
                 if (val.trim().length > 4000) {
-                  return 'Mô tả không được vượt quá 4000 ký tự';
+                  return l10n?.bugReportFormValidationDescriptionTooLong ?? 'Mô tả không được vượt quá 4000 ký tự';
                 }
                 return null;
               },
@@ -353,7 +361,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
 
             // Ảnh đính kèm
             _buildFieldLabel(
-              'Ảnh đính kèm · tối đa 5 ảnh, mỗi ảnh ≤ 5MB',
+              l10n?.bugReportAttachmentsHint ?? 'Ảnh đính kèm · tối đa 5 ảnh, mỗi ảnh ≤ 5MB',
               context,
             ),
             const SizedBox(height: 6),
@@ -401,7 +409,7 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
                         'assets/garden_voice/bug_report_add.svg',
                         width: 64,
                         height: 64,
-                        semanticsLabel: 'Thêm ảnh',
+                        semanticsLabel: l10n?.bugReportFormAddAttachment ?? 'Thêm ảnh',
                       ),
                     ),
                 ],
@@ -413,7 +421,9 @@ class _BugReportBottomSheetState extends State<BugReportBottomSheet> {
             SizedBox(
               height: 48,
               child: KButton(
-                label: _isSubmitting ? 'Đang gửi...' : 'Gửi góp ý',
+                label: _isSubmitting
+                    ? (l10n?.bugReportFormSubmitting ?? 'Đang gửi...')
+                    : (l10n?.bugReportFormSubmit ?? 'Gửi góp ý'),
                 onPressed: _isSubmitting ? null : _submitReport,
               ),
             ),

@@ -113,6 +113,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
   }
 
   void _showProfileSheet(_AccountData data) {
+    final l10n = context.l10n;
     showKSheet(
       context,
       Column(
@@ -125,20 +126,21 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
           ),
           const SizedBox(height: 12),
           KInfoRow(
-            label: 'Số điện thoại',
-            value: data.teacher.phone ?? 'Chưa cập nhật',
+            label: l10n?.phoneNumberLabel ?? 'Số điện thoại',
+            value: data.teacher.phone ?? (l10n?.notUpdated ?? 'Chưa cập nhật'),
           ),
           const Divider(),
           KInfoRow(
             label: 'Email',
             value: data.teacher.email.isEmpty
-                ? 'Chưa cập nhật'
+                ? (l10n?.notUpdated ?? 'Chưa cập nhật')
                 : data.teacher.email,
           ),
           const Divider(),
           KInfoRow(
-            label: 'Lớp phụ trách',
-            value: '${data.className} · ${data.childCount} trẻ',
+            label: l10n?.assignedClassLabel ?? 'Lớp phụ trách',
+            value: l10n?.classChildrenCount(data.className, data.childCount) ??
+                '${data.className} · ${data.childCount} trẻ',
           ),
         ],
       ),
@@ -166,7 +168,8 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
           return Center(
             child: TextButton(
               onPressed: () => setState(() => future = _load()),
-              child: const Text('Không tải được tài khoản · Thử lại'),
+              child: Text(context.l10n?.loadAccountErrorRetry ??
+                  'Không tải được tài khoản · Thử lại'),
             ),
           );
         }
@@ -263,7 +266,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Giáo viên chủ nhiệm',
+                              l10n?.headTeacherRole ?? 'Giáo viên chủ nhiệm',
                               style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
@@ -291,7 +294,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'Xem hồ sơ',
+                                    l10n?.viewProfile ?? 'Xem hồ sơ',
                                     style: TextStyle(
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.w700,
@@ -314,13 +317,13 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                     ],
                   ),
                 ),
-                const _GroupTitle('Cá nhân'),
+                _GroupTitle(l10n?.personalSection ?? 'Cá nhân'),
                 _AccountSectionCard(
                   children: [
                     _AccountMenuRow(
                       iconAsset: 'assets/garden_voice/account_user_round.svg',
                       iconTileColor: k.okTint,
-                      label: 'Thông tin liên hệ',
+                      label: l10n?.contactInfoLabel ?? 'Thông tin liên hệ',
                       onTap: () => _showProfileSheet(data),
                     ),
                   ],

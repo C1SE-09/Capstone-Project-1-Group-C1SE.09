@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/audio_player_card.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/review_common_widgets.dart';
@@ -111,7 +112,7 @@ class _DoneScreenViewState extends State<DoneScreenView> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Đã gửi thành công.',
+            context.l10n?.sttSubmittedSuccess ?? 'Đã gửi thành công.',
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 24,
@@ -121,7 +122,8 @@ class _DoneScreenViewState extends State<DoneScreenView> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Không phải nhập lại ở đâu cả. Báo cáo đã được gửi tới phụ huynh.',
+            context.l10n?.sttNoNeedToReenter ??
+                'Không phải nhập lại ở đâu cả. Báo cáo đã được gửi tới phụ huynh.',
             textAlign: TextAlign.center,
             style:
                 TextStyle(fontSize: 12, height: 1.4, color: context.k.inkSoft),
@@ -132,12 +134,20 @@ class _DoneScreenViewState extends State<DoneScreenView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _summaryRow(context, widget.parentReportsCount,
-                    'phiếu liên lạc cho phụ huynh'),
+                _summaryRow(
+                  context,
+                  widget.parentReportsCount,
+                  context.l10n?.sttParentReportsLabel ??
+                      'phiếu liên lạc cho phụ huynh',
+                ),
                 if (widget.healthRecordsCount > 0) ...[
                   const SizedBox(height: 12),
-                  _summaryRow(context, widget.healthRecordsCount,
-                      'ghi nhận vào sổ sức khỏe'),
+                  _summaryRow(
+                    context,
+                    widget.healthRecordsCount,
+                    context.l10n?.sttHealthRecordsLabel ??
+                        'ghi nhận vào sổ sức khỏe',
+                  ),
                 ],
               ],
             ),
@@ -147,7 +157,12 @@ class _DoneScreenViewState extends State<DoneScreenView> {
             borderColor: Colors.transparent,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Text(
-              '${widget.parentReportsCount} phụ huynh nhận phiếu. Sổ sức khỏe có ${widget.healthRecordsCount} dòng mới. Tất cả đến từ ghi âm lúc ${widget.recordingTime}.',
+              context.l10n?.sttReportsSummary(
+                    widget.parentReportsCount,
+                    widget.healthRecordsCount,
+                    widget.recordingTime,
+                  ) ??
+                  '${widget.parentReportsCount} phụ huynh nhận phiếu. Sổ sức khỏe có ${widget.healthRecordsCount} dòng mới. Tất cả đến từ ghi âm lúc ${widget.recordingTime}.',
               style: TextStyle(
                   fontSize: 12, height: 1.4, color: context.k.inkSoft),
             ),
@@ -193,8 +208,10 @@ class _DoneScreenViewState extends State<DoneScreenView> {
                                   'assets/garden_voice/done_replay.svg'),
                     ),
                     const SizedBox(width: 12),
-                    Text('Nghe lại bản ghi',
-                        style: TextStyle(fontSize: 14, color: context.k.ink)),
+                    Text(
+                      context.l10n?.sttListenAgain ?? 'Nghe lại bản ghi',
+                      style: TextStyle(fontSize: 14, color: context.k.ink),
+                    ),
                     const Spacer(),
                     Text(_formatDuration(_duration),
                         style:
@@ -213,7 +230,9 @@ class _DoneScreenViewState extends State<DoneScreenView> {
               minimumSize: const Size(double.infinity, 48),
               shape: const StadiumBorder(),
             ),
-            child: const Text('Về tổng quan lớp'),
+            child: Text(
+              context.l10n?.sttBackToClassOverview ?? 'Về tổng quan lớp',
+            ),
           ),
         ],
       ),

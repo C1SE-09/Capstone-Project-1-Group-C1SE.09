@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 typedef AudioPlayerFactory = AudioPlayer Function();
@@ -204,7 +205,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                 return KeyEventResult.handled;
               },
               child: Semantics(
-                label: 'Tiến trình bản ghi âm',
+                label: context.l10n?.sttAudioProgress ?? 'Tiến trình bản ghi âm',
                 value: _formatProgress(progress),
                 increasedValue: _formatProgress(progress + .05),
                 decreasedValue: _formatProgress(progress - .05),
@@ -250,7 +251,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             children: [
               Text(_formatDuration(_duration),
                   style: TextStyle(fontSize: 12, color: context.k.ink)),
-              Text('Bản ghi gốc',
+              Text(context.l10n?.sttOriginalAudio ?? 'Bản ghi gốc',
                   style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
             ],
           ),

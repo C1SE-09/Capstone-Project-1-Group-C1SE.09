@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/data/repositories/http_health_incident_repository.dart';
@@ -14,6 +15,10 @@ import 'package:intl/intl.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+
+enum NotificationFilter { all, leave, incident }
+enum NotificationGroup { newItems, today, earlier }
+enum NoticeCategory { medication, incident, attendance, report, lateArrival, leaveRequest }
 
 DateTime _dateInVietnam(DateTime value) {
   final vn = value.toUtc().add(const Duration(hours: 7));
@@ -59,7 +64,7 @@ class _TeacherNotificationsScreenState
   List<Map<String, dynamic>> _incidents = [];
   Map<String, AttendanceChildRecord> _attendance = {};
   ClassDashboardSummary? _reports;
-  String _filter = 'Tất cả';
+  NotificationFilter _filter = NotificationFilter.all;
   int _pendingOffset = 0, _reviewedOffset = 0, _version = 0;
   bool _loading = false, _hasMore = false, _retryMore = false;
   String? _error;
@@ -159,8 +164,8 @@ class _TeacherNotificationsScreenState
       if (fetched.any((item) => item.classId != widget.classId) ||
           incidents.any((item) => item['class_id'] != widget.classId) ||
           (reports != null && reports.classInfo.classId != widget.classId)) {
-        throw const LeaveRequestException(
-            'Không thể xác minh thông báo của lớp.');
+        throw LeaveRequestException(
+            context.l10n?.cannotVerifyClassNotifications ?? 'Không thể xác minh thông báo của lớp.');
       }
       setState(() {
         _pendingOffset = (more ? _pendingOffset : 0) + pages[0].items.length;
@@ -185,7 +190,7 @@ class _TeacherNotificationsScreenState
       if (mounted && version == _version) {
         setState(() => _error = e is LeaveRequestException
             ? e.message
-            : 'Không thể tải thông báo. Vui lòng thử lại.');
+            : (context.l10n?.cannotLoadNotificationsRetry ?? 'Không thể tải thông báo. Vui lòng thử lại.'));
       }
     } finally {
       if (mounted && version == _version) setState(() => _loading = false);
@@ -229,32 +234,36 @@ class _TeacherNotificationsScreenState
 
   Widget _buildScreen(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
     final items = <_InboxNotice>[
-      if (_filter == 'Tất cả' || _filter == 'Đơn nghỉ')
+      if (_filter == NotificationFilter.all || _filter == NotificationFilter.leave)
         ..._items.map((item) {
           final late = item.requestType == LeaveRequestType.lateArrival;
-          final type = late ? 'báo đi trễ' : 'đơn xin nghỉ';
+          final type = late ? (l10n?.lateArrivalNoticeType ?? 'báo đi trễ') : (l10n?.leaveRequestNoticeType ?? 'đơn xin nghỉ');
+          final childName = item.childName ?? (l10n?.student ?? 'Học sinh');
           return _InboxNotice(
               key:
                   '${item.requestId}:${item.status.name}:${_eventTime(item).toIso8601String()}',
-              category: late ? 'BÁO TRỄ' : 'ĐƠN NGHỈ',
+              category: late ? NoticeCategory.lateArrival : NoticeCategory.leaveRequest,
               time: _eventTime(item),
               title: item.status == LeaveStatus.pending
-                  ? '${late ? 'Báo đi trễ' : 'Đơn xin nghỉ'} mới — ${item.childName ?? 'Học sinh'}'
-                  : '${requestStatusLabel(item.status)} $type — ${item.childName ?? 'Học sinh'}',
+                  ? (late
+                      ? (l10n?.lateArrivalNewNotice(childName) ?? 'Báo đi trễ mới — $childName')
+                      : (l10n?.leaveRequestNewNotice(childName) ?? 'Đơn xin nghỉ mới — $childName'))
+                  : '${requestStatusLabel(item.status)} $type — $childName',
               detail: late
-                  ? 'Đi trễ ${DateFormat('dd/MM').format(item.fromDate)} · Dự kiến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'chưa cập nhật'} · ${item.reason}'
-                  : 'Nghỉ ${DateFormat('dd/MM').format(item.fromDate)}${item.totalDays > 1 ? ' · ${item.totalDays} ngày' : ''} · ${item.reason}',
+                  ? (l10n?.lateArrivalNotificationDesc(DateFormat('dd/MM').format(item.fromDate), item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n.notUpdated)) ?? 'Đi trễ ${DateFormat('dd/MM').format(item.fromDate)} · Dự kiến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'chưa cập nhật'} · ${item.reason}')
+                  : (l10n?.leaveNotificationDesc(DateFormat('dd/MM').format(item.fromDate), item.totalDays, DateFormat('HH:mm').format(item.createdAt.toUtc().add(const Duration(hours: 7)))) ?? 'Nghỉ ${DateFormat('dd/MM').format(item.fromDate)}${item.totalDays > 1 ? ' · ${item.totalDays} ngày' : ''} · ${item.reason}'),
               request: item);
         }),
-      if (_filter == 'Tất cả' || _filter == 'Sự cố')
+      if (_filter == NotificationFilter.all || _filter == NotificationFilter.incident)
         ..._incidents.map((item) => _InboxNotice(
             key: 'incident:${item['incident_id']}',
-            category: 'SỰ CỐ',
+            category: NoticeCategory.incident,
             time: DateTime.tryParse(item['reported_at']?.toString() ?? ''),
-            title: 'Sự cố sức khỏe — ${item['child_name']}',
+            title: l10n?.healthIncidentNotificationTitle(item['child_name']?.toString() ?? '') ?? 'Sự cố sức khỏe — ${item['child_name']}',
             detail: '${item['incident_type_label']} · ${item['description']}')),
-      if (_filter == 'Tất cả')
+      if (_filter == NotificationFilter.all)
         ..._attendance.values
             .where((item) =>
                 item.status == ui.AttendanceStatus.late ||
@@ -263,33 +272,33 @@ class _TeacherNotificationsScreenState
             .where((item) => item.childName?.isNotEmpty == true)
             .map((item) => _InboxNotice(
                 key: 'attendance:${item.childId}:${item.status.name}',
-                category: 'ĐIỂM DANH',
-                title: 'Điểm danh cập nhật — ${item.childName}',
+                category: NoticeCategory.attendance,
+                title: l10n?.attendanceUpdatedTitle(item.childName!) ?? 'Điểm danh cập nhật — ${item.childName}',
                 detail: item.status == ui.AttendanceStatus.late
-                    ? 'Đến trễ${item.expectedArrivalTime == null ? '' : ' · ETA ${item.expectedArrivalTime!.split(':').take(2).join(':')}'}'
+                    ? (l10n?.arrivedLateDesc(item.expectedArrivalTime == null ? '' : ' · ETA ${item.expectedArrivalTime!.split(':').take(2).join(':')}') ?? 'Đến trễ${item.expectedArrivalTime == null ? '' : ' · ETA ${item.expectedArrivalTime!.split(':').take(2).join(':')}'}')
                     : item.status == ui.AttendanceStatus.excusedAbsent
-                        ? 'Vắng có phép${item.note == null ? '' : ' · ${item.note}'}'
-                        : 'Vắng mặt${item.note == null ? '' : ' · ${item.note}'}',
+                        ? (l10n?.excusedAbsentDesc(item.note == null ? '' : ' · ${item.note}') ?? 'Vắng có phép${item.note == null ? '' : ' · ${item.note}'}')
+                        : (l10n?.unexcusedAbsentDesc(item.note == null ? '' : ' · ${item.note}') ?? 'Vắng mặt${item.note == null ? '' : ' · ${item.note}'}'),
                 isToday: true,
                 unread: false)),
-      if (_filter == 'Tất cả' && (_reports?.totalChildren ?? 0) > 0)
+      if (_filter == NotificationFilter.all && (_reports?.totalChildren ?? 0) > 0)
         _InboxNotice(
             key:
                 'reports:${_reports!.classInfo.classId}:${DateUtils.dateOnly(DateTime.now())}',
-            category: 'BÁO CÁO',
+            category: NoticeCategory.report,
             title:
-                'Báo cáo ngày đã gửi ${_reports!.completedCount}/${_reports!.totalChildren}',
+                l10n?.dailyReportSentCount(_reports!.completedCount, _reports!.totalChildren) ?? 'Báo cáo ngày đã gửi ${_reports!.completedCount}/${_reports!.totalChildren}',
             detail: _reports!.missingCount > 0
-                ? 'Còn ${_reports!.pendingChildren.where((item) => item.status == null).map((item) => item.child.fullNameWithNickname).join(', ')} chưa có báo cáo'
+                ? (l10n?.dailyReportPendingRemaining(_reports!.pendingChildren.where((item) => item.status == null).map((item) => item.child.fullNameWithNickname).join(', ')) ?? 'Còn ${_reports!.pendingChildren.where((item) => item.status == null).map((item) => item.child.fullNameWithNickname).join(', ')} chưa có báo cáo')
                 : _reports!.draftCount > 0
-                    ? 'Còn ${_reports!.draftCount} bản nháp chưa gửi'
-                    : 'Đã hoàn tất báo cáo của cả lớp',
+                    ? (l10n?.dailyReportDraftCountRemaining(_reports!.draftCount) ?? 'Còn ${_reports!.draftCount} bản nháp chưa gửi')
+                    : (l10n?.dailyReportAllCompleted ?? 'Đã hoàn tất báo cáo của cả lớp'),
             isToday: true,
             unread: false),
     ];
-    final groups = <String, List<_InboxNotice>>{
-      'Mới': items.where(_unread).toList(),
-      'Hôm nay': items
+    final groups = <NotificationGroup, List<_InboxNotice>>{
+      NotificationGroup.newItems: items.where(_unread).toList(),
+      NotificationGroup.today: items
           .where((item) =>
               !_unread(item) &&
               (item.isToday ||
@@ -297,7 +306,7 @@ class _TeacherNotificationsScreenState
                       DateUtils.isSameDay(
                           item.time!.toLocal(), DateTime.now()))))
           .toList(),
-      'Trước đó': items
+      NotificationGroup.earlier: items
           .where((item) =>
               !_unread(item) &&
               !item.isToday &&
@@ -314,7 +323,7 @@ class _TeacherNotificationsScreenState
     );
     final title = Semantics(
       header: true,
-      child: Text('Thông báo',
+      child: Text(l10n?.navNotifications ?? 'Thông báo',
           style: TextStyle(
               fontSize: 16,
               height: 1.4,
@@ -330,8 +339,8 @@ class _TeacherNotificationsScreenState
         padding: EdgeInsets.zero,
         minimumSize: const Size(44, 44),
       ),
-      child: const Text('Đánh dấu đã đọc',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+      child: Text(l10n?.notificationsMarkAllRead ?? 'Đánh dấu đã đọc',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
     );
     return ParentRequestLayout(
         bottomNavigationBar: GardenVoiceTeacherNavigation(
@@ -381,15 +390,15 @@ class _TeacherNotificationsScreenState
                   },
                 ),
                 const SizedBox(height: 12),
-                SingleChildScrollView(
+                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     spacing: 7,
                     children: [
                       for (final filter in [
-                        'Tất cả',
-                        'Đơn nghỉ',
-                        'Sự cố'
+                        NotificationFilter.all,
+                        NotificationFilter.leave,
+                        NotificationFilter.incident
                       ])
                         TextButton(
                           onPressed: () => setState(() => _filter = filter),
@@ -414,15 +423,22 @@ class _TeacherNotificationsScreenState
                                         ? k.brand
                                         : k.line),
                               ),
-                              child: Text(filter,
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: _filter == filter
-                                          ? FontWeight.w700
-                                          : FontWeight.w600,
-                                      color: _filter == filter
-                                          ? k.surface
-                                          : k.inkSoft)),
+                              child: Text(
+                                switch (filter) {
+                                  NotificationFilter.all => l10n?.notificationsAll ?? 'Tất cả',
+                                  NotificationFilter.leave => l10n?.filterLeaveRequests ?? 'Đơn nghỉ',
+                                  NotificationFilter.incident => l10n?.filterIncidents ?? 'Sự cố',
+                                },
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: _filter == filter
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  color: _filter == filter
+                                      ? k.surface
+                                      : k.inkSoft,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -433,10 +449,15 @@ class _TeacherNotificationsScreenState
                     .where((group) => group.value.isNotEmpty)) ...[
                   Padding(
                     padding: EdgeInsets.only(
-                        top: group.key == 'Mới' ? 4 : 0, bottom: 12),
+                        top: group.key == NotificationGroup.newItems ? 4 : 0, bottom: 12),
                     child: Semantics(
                       header: true,
-                      child: Text(group.key,
+                      child: Text(
+                          switch (group.key) {
+                            NotificationGroup.newItems => l10n?.notificationsNew ?? 'Mới',
+                            NotificationGroup.today => l10n?.commonToday ?? 'Hôm nay',
+                            NotificationGroup.earlier => l10n?.notificationsEarlier ?? 'Trước đó',
+                          },
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -464,10 +485,9 @@ class _TeacherNotificationsScreenState
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 32),
                     child: Text(
-                      switch (_filter) {
-                        'Sự cố' => 'Chưa có thông báo sự cố.',
-                        _ => 'Chưa có thông báo.'
-                      },
+                      _filter == NotificationFilter.incident
+                          ? (l10n?.noIncidentNotifications ?? 'Chưa có thông báo sự cố.')
+                          : (l10n?.noNotifications ?? 'Chưa có thông báo.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: k.inkSoft),
                     ),
@@ -475,10 +495,10 @@ class _TeacherNotificationsScreenState
                 if (_hasMore &&
                     !_loading &&
                     _error == null &&
-                    (_filter == 'Tất cả' || _filter == 'Đơn nghỉ'))
+                    (_filter == NotificationFilter.all || _filter == NotificationFilter.leave))
                   TextButton(
                       onPressed: () => _load(more: true),
-                      child: const Text('Tải thêm')),
+                      child: Text(l10n?.loadMore ?? 'Tải thêm')),
               ],
             ),
           ),
@@ -501,7 +521,9 @@ class _InboxNotice {
     this.request,
   });
 
-  final String key, category, title, detail;
+  final String key;
+  final NoticeCategory category;
+  final String title, detail;
   final DateTime? time;
   final bool isToday;
   final bool unread;
@@ -521,16 +543,25 @@ class _RequestNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
     final (badgeBackground, badgeForeground) = switch (item.category) {
-      'THUỐC' => (k.warnTint, k.warnDeep),
-      'SỰ CỐ' => (k.surface, k.badText),
-      'ĐIỂM DANH' => (k.okTint, k.ok),
-      'BÁO CÁO' => (k.surface, k.inkSoft),
-      _ => (k.brandTint, k.brand),
+      NoticeCategory.medication => (k.warnTint, k.warnDeep),
+      NoticeCategory.incident => (k.surface, k.badText),
+      NoticeCategory.attendance => (k.okTint, k.ok),
+      NoticeCategory.report => (k.surface, k.inkSoft),
+      NoticeCategory.lateArrival || NoticeCategory.leaveRequest => (k.brandTint, k.brand),
+    };
+    final categoryText = switch (item.category) {
+      NoticeCategory.medication => l10n?.badgeMedication ?? 'THUỐC',
+      NoticeCategory.incident => l10n?.badgeIncident ?? 'SỰ CỐ',
+      NoticeCategory.attendance => l10n?.badgeAttendance ?? 'ĐIỂM DANH',
+      NoticeCategory.report => l10n?.badgeReport ?? 'BÁO CÁO',
+      NoticeCategory.lateArrival => l10n?.badgeLateArrival ?? 'BÁO TRỄ',
+      NoticeCategory.leaveRequest => l10n?.badgeLeaveRequest ?? 'ĐƠN NGHỈ',
     };
     return Semantics(
         button: onTap != null,
-        label: unread ? 'Chưa đọc' : 'Đã đọc',
+        label: unread ? (l10n?.unreadStatus ?? 'Chưa đọc') : (l10n?.readStatus ?? 'Đã đọc'),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 98),
           child: Material(
@@ -562,7 +593,7 @@ class _RequestNotice extends StatelessWidget {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              item.category,
+                              categoryText,
                               style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,

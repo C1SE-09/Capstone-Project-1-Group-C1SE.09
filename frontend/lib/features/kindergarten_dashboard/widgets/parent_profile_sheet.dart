@@ -3,6 +3,7 @@
 // Sheet chỉnh sửa thông tin liên hệ của phụ huynh (SĐT, Email, Mối quan hệ).
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
@@ -103,11 +104,15 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
   Future<void> _save() async {
     final phone = _phoneController.text.trim();
     final email = _emailController.text.trim();
+    final l10n = context.l10n;
     if (!isValidParentPhone(phone)) return;
     if (!isValidParentEmail(email)) {
-      setState(() => _error = 'Email không hợp lệ. Vui lòng kiểm tra lại.');
+      setState(() => _error = l10n?.contactEmailInvalid ?? 'Email không hợp lệ. Vui lòng kiểm tra lại.');
       return;
     }
+
+    final successMsg = l10n?.contactSaveSuccess ?? 'Đã lưu thông tin phụ huynh';
+    final failMsg = l10n?.contactSaveFailed ?? 'Không lưu được thông tin, vui lòng thử lại.';
 
     setState(() {
       _saving = true;
@@ -125,7 +130,7 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
       widget.onSaved(phone, email.isEmpty ? null : email, _relationship);
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã lưu thông tin phụ huynh')),
+        SnackBar(content: Text(successMsg)),
       );
     } catch (error) {
       if (!mounted) return;
@@ -133,7 +138,7 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
         _saving = false;
         _error = getFriendlyErrorMessage(
           error,
-          fallback: 'Không lưu được thông tin, vui lòng thử lại.',
+          fallback: failMsg,
         );
       });
     }
@@ -159,13 +164,14 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
     final validPhone = isValidParentPhone(_phoneController.text);
     final validEmail = isValidParentEmail(_emailController.text);
     final canSave = validPhone && validEmail && !_saving;
+    final l10n = context.l10n;
 
     final form = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (!widget.fullScreen) ...[
-          Text('Chỉnh sửa thông tin',
+          Text(l10n?.parentEditInfo ?? 'Chỉnh sửa thông tin',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 16),
         ],
@@ -175,9 +181,9 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
           keyboardType: TextInputType.phone,
           autofocus: !widget.fullScreen,
           onChanged: (_) => setState(() => _error = null),
-          decoration: const InputDecoration(
-            labelText: 'Số điện thoại *',
-            helperText: '10 chữ số, bắt đầu bằng 0',
+          decoration: InputDecoration(
+            labelText: l10n?.contactPhoneLabel ?? 'Số điện thoại *',
+            helperText: l10n?.contactPhoneHint ?? '10 chữ số, bắt đầu bằng 0',
           ),
         ),
         const SizedBox(height: 12),
@@ -200,10 +206,10 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
               onTap: _selectRelationship,
               borderRadius: BorderRadius.circular(14),
               child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Quan hệ với bé'),
+                decoration: InputDecoration(labelText: l10n?.relationTitle ?? 'Quan hệ với bé'),
                 child: Row(
                   children: [
-                    Expanded(child: Text(_relationship ?? 'Chọn quan hệ')),
+                    Expanded(child: Text(_relationship ?? (l10n?.relationSelectTitle ?? 'Chọn quan hệ'))),
                     const Icon(Icons.chevron_right),
                   ],
                 ),
@@ -213,7 +219,7 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
         else
           DropdownButtonFormField<String>(
             initialValue: _relationship,
-            decoration: const InputDecoration(labelText: 'Quan hệ với bé'),
+            decoration: InputDecoration(labelText: l10n?.relationTitle ?? 'Quan hệ với bé'),
             items: kRelationshipOptions
                 .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                 .toList(),
@@ -233,7 +239,7 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
           form,
           const SizedBox(height: 20),
           KButton(
-              label: _saving ? 'Đang lưu…' : 'Lưu thay đổi',
+              label: _saving ? (l10n?.savingStatus ?? 'Đang lưu…') : (l10n?.commonSaveChanges ?? 'Lưu thay đổi'),
               onPressed: canSave ? _save : null),
         ],
       );
@@ -242,14 +248,14 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
     return Scaffold(
       backgroundColor: context.k.canvas,
       appBar: KAppBar(
-        title: 'Sửa thông tin liên hệ',
+        title: l10n?.contactEditTitle ?? 'Sửa thông tin liên hệ',
         onBack: () => Navigator.maybePop(context),
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           children: [
-            Text('Cập nhật thông tin để nhà trường liên lạc khi cần.',
+            Text(l10n?.contactEditDesc ?? 'Cập nhật thông tin để nhà trường liên lạc khi cần.',
                 style: TextStyle(
                     fontSize: 14, height: 1.4, color: context.k.inkSoft)),
             const SizedBox(height: 18),
@@ -265,11 +271,11 @@ class _ParentProfileFormState extends State<ParentProfileForm> {
             mainAxisSize: MainAxisSize.min,
             children: [
               KButton(
-                  label: _saving ? 'Đang lưu…' : 'Lưu thay đổi',
+                  label: _saving ? (l10n?.savingStatus ?? 'Đang lưu…') : (l10n?.commonSaveChanges ?? 'Lưu thay đổi'),
                   onPressed: canSave ? _save : null),
               const SizedBox(height: 12),
               KButton(
-                  label: 'Hủy',
+                  label: l10n?.commonCancel ?? 'Hủy',
                   secondary: true,
                   onPressed: () => Navigator.maybePop(context)),
             ],
@@ -290,11 +296,12 @@ class _ParentRelationshipScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: context.k.canvas,
         appBar: KAppBar(
-            title: 'Quan hệ với bé', onBack: () => Navigator.maybePop(context)),
+            title: context.l10n?.relationTitle ?? 'Quan hệ với bé',
+            onBack: () => Navigator.maybePop(context)),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            Text('Chọn mối quan hệ của bạn với $childName.',
+            Text(context.l10n?.relationSelectChildPrompt(childName) ?? 'Chọn mối quan hệ của bạn với $childName.',
                 style: TextStyle(
                     fontSize: 14, height: 1.4, color: context.k.inkSoft)),
             const SizedBox(height: 14),

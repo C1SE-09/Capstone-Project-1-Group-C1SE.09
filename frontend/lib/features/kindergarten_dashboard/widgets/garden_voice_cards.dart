@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 enum MedicationTone { brand, ok, warn, neutral }
@@ -108,11 +109,12 @@ class MedicationAction extends StatelessWidget {
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700)),
           child: busy
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, semanticsLabel: 'Đang xử lý'))
+                      strokeWidth: 2,
+                      semanticsLabel: context.l10n?.bugReportStatusInProgress ?? 'Đang xử lý'))
               : Text(label, textAlign: TextAlign.center)));
 }
 

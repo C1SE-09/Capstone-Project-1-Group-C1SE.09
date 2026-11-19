@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
@@ -43,35 +44,35 @@ class _ParentRequestAttachmentState extends State<ParentRequestAttachment> {
   Widget build(BuildContext context) => ParentRequestCard(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Ảnh giấy khám / đơn thuốc',
-            style: TextStyle(fontWeight: FontWeight.w600)),
+        Text(context.l10n?.requestPrescriptionImageTitle ?? 'Ảnh giấy khám / đơn thuốc',
+            style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         FutureBuilder<Uint8List>(
             future: _image,
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
-                return const Center(
+                return Center(
                     child: Padding(
-                        padding: EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(24),
                         child: CircularProgressIndicator(
-                            semanticsLabel: 'Đang tải ảnh y tế')));
+                            semanticsLabel: context.l10n?.requestLoadingMedicalImage ?? 'Đang tải ảnh y tế')));
               }
               if (snapshot.hasError || snapshot.data == null) {
                 return ParentRequestError(
-                    'Không thể tải ảnh đính kèm. Vui lòng thử lại.',
+                    context.l10n?.requestCannotLoadImage ?? 'Không thể tải ảnh đính kèm. Vui lòng thử lại.',
                     onRetry: _retry);
               }
               return ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.memory(snapshot.data!,
                       fit: BoxFit.contain,
-                      semanticLabel: 'Ảnh y tế đính kèm đơn',
+                      semanticLabel: context.l10n?.requestPrescriptionImageTitle ?? 'Ảnh y tế đính kèm đơn',
                       errorBuilder: (_, __, ___) => ParentRequestError(
-                          'Không thể hiển thị ảnh đính kèm.',
+                          context.l10n?.requestCannotDisplayImage ?? 'Không thể hiển thị ảnh đính kèm.',
                           onRetry: _retry)));
             }),
         const SizedBox(height: 8),
-        Text('Ảnh y tế riêng tư, chỉ người có quyền xem đơn được truy cập.',
+        Text(context.l10n?.requestMedicalPhotoAccessNote ?? 'Ảnh y tế riêng tư, chỉ người có quyền xem đơn được truy cập.',
             style: TextStyle(fontSize: 11, color: context.k.inkSoft)),
       ]));
 }

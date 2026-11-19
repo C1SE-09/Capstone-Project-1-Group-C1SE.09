@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -90,7 +91,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       setState(() {
-        _errorMessage = 'Vui lòng nhập địa chỉ email hợp lệ.';
+        _errorMessage = (context.l10n?.forgotPasswordEmailInvalid ?? 'Vui lòng nhập địa chỉ email hợp lệ.');
       });
       return;
     }
@@ -115,7 +116,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _errorMessage = getFriendlyErrorMessage(
           e,
           fallback:
-              'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.',
+              (context.l10n?.forgotPasswordErrorSendFailed ?? 'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.'),
         );
       });
     } finally {
@@ -128,7 +129,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final otp = _otpController.text.trim();
     if (otp.length != 6) {
       setState(() {
-        _errorMessage = 'Vui lòng nhập đầy đủ 6 chữ số mã xác thực.';
+        _errorMessage = (context.l10n?.forgotPasswordOtpLengthError ?? 'Vui lòng nhập đầy đủ 6 chữ số mã xác thực.');
       });
       return;
     }
@@ -147,7 +148,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
       setState(() {
         _currentStep = 2;
-        _infoMessage = 'Mã xác thực chính xác! Vui lòng tạo mật khẩu mới.';
+        _infoMessage = (context.l10n?.forgotPasswordOtpSuccess ?? 'Mã xác thực chính xác! Vui lòng tạo mật khẩu mới.');
       });
     } catch (e) {
       if (!mounted) return;
@@ -155,7 +156,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _errorMessage = getFriendlyErrorMessage(
           e,
           fallback:
-              'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.',
+              (context.l10n?.forgotPasswordOtpInvalid ?? 'Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.'),
         );
       });
     } finally {
@@ -185,7 +186,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _errorMessage = getFriendlyErrorMessage(
           e,
           fallback:
-              'Không thể gửi lại mã xác thực vào lúc này. Vui lòng thử lại sau ít phút.',
+              (context.l10n?.forgotPasswordErrorResendFailed ?? 'Không thể gửi lại mã xác thực vào lúc này. Vui lòng thử lại sau ít phút.'),
         );
       });
     } finally {
@@ -200,14 +201,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (newPass.length < 6) {
       setState(() {
-        _errorMessage = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
+        _errorMessage = (context.l10n?.forgotPasswordPasswordMinLength ?? 'Mật khẩu mới phải có ít nhất 6 ký tự.');
       });
       return;
     }
 
     if (newPass != confirmPass) {
       setState(() {
-        _errorMessage = 'Xác nhận mật khẩu không trùng khớp.';
+        _errorMessage = (context.l10n?.forgotPasswordPasswordMismatch ?? 'Xác nhận mật khẩu không trùng khớp.');
       });
       return;
     }
@@ -238,7 +239,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             children: [
               Icon(Icons.check_circle_rounded, color: context.k.ok, size: 28),
               const SizedBox(width: 10),
-              Text('Thành công',
+              Text((context.l10n?.forgotPasswordSuccessTitle ?? 'Thành công'),
                   style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 18,
@@ -246,7 +247,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ],
           ),
           content: Text(
-            'Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập với mật khẩu mới.',
+            (context.l10n?.forgotPasswordSuccessDesc ?? 'Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập với mật khẩu mới.'),
             style:
                 TextStyle(fontSize: 14, height: 1.4, color: context.k.inkSoft),
           ),
@@ -262,7 +263,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('ĐĂNG NHẬP NGAY'),
+              child: Text((context.l10n?.forgotPasswordLoginNow ?? 'ĐĂNG NHẬP NGAY')),
             ),
           ],
         ),
@@ -273,7 +274,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _errorMessage = getFriendlyErrorMessage(
           e,
           fallback:
-              'Đặt lại mật khẩu không thành công. Vui lòng thử lại sau ít phút.',
+              (context.l10n?.forgotPasswordErrorResetFailed ?? 'Đặt lại mật khẩu không thành công. Vui lòng thử lại sau ít phút.'),
         );
       });
     } finally {
@@ -304,7 +305,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       onPressed: _isLoading ? null : _goBackToLogin,
                       icon: Icon(Icons.arrow_back_rounded,
                           color: context.k.inkSoft),
-                      tooltip: 'Quay lại đăng nhập',
+                      tooltip: (context.l10n?.forgotPasswordBackToLogin ?? 'Quay lại đăng nhập'),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -438,7 +439,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       icon: Icon(Icons.arrow_back_rounded,
                           size: 16, color: context.k.inkSoft),
                       label: Text(
-                        'Quay lại màn hình đăng nhập',
+                        (context.l10n?.forgotPasswordBackToLogin ?? 'Quay lại màn hình đăng nhập'),
                         style: TextStyle(
                           color: context.k.inkSoft,
                           fontWeight: FontWeight.w600,
@@ -478,7 +479,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 dimension: 44,
                                 child: IconButton(
                                   onPressed: _isLoading ? null : _goBackToLogin,
-                                  tooltip: 'Quay lại đăng nhập',
+                                  tooltip: (context.l10n?.forgotPasswordBackToLogin ?? 'Quay lại đăng nhập'),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints.tightFor(
                                       width: 44, height: 44),
@@ -492,7 +493,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Quên mật khẩu',
+                                      (context.l10n?.forgotPasswordTitle ?? 'Quên mật khẩu'),
                                       style: TextStyle(
                                         fontFamily: 'Nunito',
                                         fontSize: 16,
@@ -502,7 +503,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'Đặt lại mật khẩu qua email',
+                                      (context.l10n?.forgotPasswordSubtitle ?? 'Đặt lại mật khẩu qua email'),
                                       style: TextStyle(
                                         fontFamily: 'Nunito',
                                         fontSize: 12,
@@ -536,7 +537,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'Bước 1/3 · Nhập email',
+                            (context.l10n?.forgotPasswordStep1 ?? 'Bước 1/3 · Nhập email'),
                             style: TextStyle(
                               fontFamily: 'Nunito',
                               fontSize: 12,
@@ -547,7 +548,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                           const SizedBox(height: 14),
                           Text(
-                            'Nhập email đã đăng ký tài khoản. KinderLog sẽ gửi mã xác nhận để bạn đặt lại mật khẩu.',
+                            (context.l10n?.forgotPasswordStep1Desc ?? 'Nhập email đã đăng ký tài khoản. KinderLog sẽ gửi mã xác nhận để bạn đặt lại mật khẩu.'),
                             style: TextStyle(
                               fontFamily: 'Nunito',
                               fontSize: 14,
@@ -651,7 +652,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Email đăng nhập',
+          (context.l10n?.forgotPasswordEmailLabel ?? 'Email đăng nhập'),
           style: TextStyle(
             fontFamily: 'Nunito',
             fontSize: 14,
@@ -697,7 +698,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         SizedBox(
           height: 48,
           child: KButton(
-            label: _isLoading ? 'Đang gửi mã...' : 'Gửi mã xác nhận',
+            label: _isLoading ? (context.l10n?.forgotPasswordSendingCode ?? 'Đang gửi mã...') : (context.l10n?.forgotPasswordSendCode ?? 'Gửi mã xác nhận'),
             onPressed: _isLoading ? null : _handleSendEmail,
           ),
         ),
@@ -710,7 +711,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            'Không nhận được mã? Kiểm tra hộp thư rác, hoặc chờ 60 giây rồi gửi lại.',
+            (context.l10n?.forgotPasswordSpamHelp ?? 'Không nhận được mã? Kiểm tra hộp thư rác, hoặc chờ 60 giây rồi gửi lại.'),
             style: TextStyle(
               fontFamily: 'Nunito',
               fontSize: 12,
@@ -745,7 +746,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Xác thực mã OTP',
+                    (context.l10n?.forgotPasswordStep2 ?? 'Xác thực mã OTP'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: context.k.ink,
@@ -765,7 +766,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Mã xác thực gồm 6 chữ số (Hiệu lực trong 5 phút)',
+          (context.l10n?.forgotPasswordOtpHelp ?? 'Mã xác thực gồm 6 chữ số (Hiệu lực trong 5 phút)'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
@@ -825,7 +826,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               },
               style: TextButton.styleFrom(padding: EdgeInsets.zero),
               child: Text(
-                'Đổi email khác',
+                (context.l10n?.forgotPasswordChangeEmail ?? 'Đổi email khác'),
                 style: TextStyle(fontSize: 12, color: context.k.inkSoft),
               ),
             ),
@@ -834,7 +835,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 onPressed: _isLoading ? null : _handleResendOtp,
                 style: TextButton.styleFrom(padding: EdgeInsets.zero),
                 child: Text(
-                  'Gửi lại mã',
+                  (context.l10n?.forgotPasswordResendCode ?? 'Gửi lại mã'),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -872,7 +873,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Text('XÁC NHẬN MÃ OTP'),
+                : Text((context.l10n?.forgotPasswordConfirmOtp ?? 'XÁC NHẬN MÃ OTP')),
           ),
         ),
       ],
@@ -901,7 +902,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Đặt mật khẩu mới',
+                    (context.l10n?.forgotPasswordStep3 ?? 'Đặt mật khẩu mới'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: context.k.ink,
@@ -921,7 +922,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Mật khẩu mới',
+          (context.l10n?.forgotPasswordNewPasswordLabel ?? 'Mật khẩu mới'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
@@ -934,7 +935,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           obscureText: _obscureNewPassword,
           style: TextStyle(color: context.k.ink),
           decoration: InputDecoration(
-            hintText: 'Nhập mật khẩu mới',
+            hintText: context.l10n?.forgotPasswordNewPasswordHint ?? 'Nhập mật khẩu mới',
             hintStyle: TextStyle(color: context.k.inkFaint),
             prefixIcon:
                 Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
@@ -970,7 +971,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          'Xác nhận mật khẩu mới',
+          (context.l10n?.forgotPasswordConfirmPasswordLabel ?? 'Xác nhận mật khẩu mới'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
@@ -983,7 +984,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           obscureText: _obscureConfirmPassword,
           style: TextStyle(color: context.k.ink),
           decoration: InputDecoration(
-            hintText: 'Nhập lại mật khẩu mới',
+            hintText: context.l10n?.forgotPasswordConfirmPasswordHint ?? 'Nhập lại mật khẩu mới',
             hintStyle: TextStyle(color: context.k.inkFaint),
             prefixIcon:
                 Icon(Icons.lock_outline, size: 20, color: context.k.inkSoft),
@@ -1041,7 +1042,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Text('CẬP NHẬT MẬT KHẨU'),
+                : Text((context.l10n?.forgotPasswordUpdateButton ?? 'CẬP NHẬT MẬT KHẨU')),
           ),
         ),
       ],

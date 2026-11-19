@@ -2,6 +2,7 @@ import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,26 @@ enum _NotificationFilter {
   const _NotificationFilter(this.label, this.emptyMessage);
   final String label;
   final String emptyMessage;
+
+  String localizedLabel(BuildContext context) {
+    final l10n = context.l10n;
+    return switch (this) {
+      _NotificationFilter.all => l10n?.commonAll ?? label,
+      _NotificationFilter.reports => l10n?.parentTodayReport ?? label,
+      _NotificationFilter.health => l10n?.categoryHealth ?? label,
+      _NotificationFilter.leave => l10n?.parentNavRequests ?? label,
+    };
+  }
+
+  String localizedEmptyMessage(BuildContext context) {
+    final l10n = context.l10n;
+    return switch (this) {
+      _NotificationFilter.all => l10n?.notificationsEmptyAll ?? emptyMessage,
+      _NotificationFilter.reports => l10n?.notificationsEmptyReports ?? emptyMessage,
+      _NotificationFilter.health => l10n?.notificationsEmptyHealth ?? emptyMessage,
+      _NotificationFilter.leave => l10n?.notificationsEmptyLeave ?? emptyMessage,
+    };
+  }
 }
 
 /// Nội dung inbox trong shell phụ huynh, giữ thanh điều hướng hiện có.
@@ -106,7 +127,7 @@ class _ParentNotificationsState extends State<ParentNotifications> {
               final title = Semantics(
                 header: true,
                 child: Text(
-                  'Thông báo',
+                  context.l10n?.parentNavNotifications ?? 'Thông báo',
                   style: TextStyle(
                       fontSize: 24,
                       height: 1.4,
@@ -121,7 +142,7 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                   padding: EdgeInsets.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text('Đánh dấu đã đọc',
+                child: Text(context.l10n?.notificationsMarkAllRead ?? 'Đánh dấu đã đọc',
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -164,7 +185,7 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                         height: 48,
                         child: Center(
                           child: FilterChipButton(
-                            label: filter.label,
+                            label: filter.localizedLabel(context),
                             selected: _filter == filter,
                             onTap: () => setState(() => _filter = filter),
                             unselectedTextColor: k.ink,
@@ -189,7 +210,7 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                 spacing: 8,
                 children: [
                   ChoiceChip(
-                    label: const Text('Tất cả bé'),
+                    label: Text(context.l10n?.notificationsFilterAllChildren ?? 'Tất cả bé'),
                     selected: _selectedChildId == null,
                     onSelected: (_) => setState(() => _selectedChildId = null),
                     selectedColor: k.brandTint,
@@ -256,13 +277,13 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: KSpace.x8),
                   child: Text(
-                    _filter.emptyMessage,
+                    _filter.localizedEmptyMessage(context),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: k.inkSoft),
                   ),
                 ),
               if (unread.isNotEmpty) ...[
-                const _SectionTitle('Mới'),
+                _SectionTitle(context.l10n?.notificationsSectionNew ?? 'Mới'),
                 const SizedBox(height: KSpace.x2),
                 for (final report in unread) ...[
                   _ReportNotification(
@@ -276,7 +297,7 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                 ],
               ],
               if (read.isNotEmpty) ...[
-                const _SectionTitle('Trước đó'),
+                _SectionTitle(context.l10n?.notificationsSectionEarlier ?? 'Trước đó'),
                 const SizedBox(height: KSpace.x2),
                 for (final report in read) ...[
                   _ReportNotification(
@@ -337,17 +358,22 @@ class _ReportNotification extends StatelessWidget {
     final dateLabel =
         DateFormat('dd/MM').format(report.publishedAt ?? report.reportDate);
     final today = DateUtils.isSameDay(report.reportDate, DateTime.now());
+    final isEn = LocaleController.instance.isEnglish;
     final details = [
-      if (report.eating?.trim().isNotEmpty == true) 'Ăn uống',
-      if (report.sleeping?.trim().isNotEmpty == true) 'Giấc ngủ',
-      if (report.activitiesText?.trim().isNotEmpty == true) 'Hoạt động',
+      if (report.eating?.trim().isNotEmpty == true) (context.l10n?.categoryMeal ?? 'Ăn uống'),
+      if (report.sleeping?.trim().isNotEmpty == true) (context.l10n?.categorySleep ?? 'Giấc ngủ'),
+      if (report.activitiesText?.trim().isNotEmpty == true) (context.l10n?.categoryActivity ?? 'Hoạt động'),
     ].join(' · ');
     final weekday = kWeekdayLabel(report.reportDate, capitalize: false);
     final description = details.isNotEmpty
-        ? '$details của $childName ${today ? 'hôm nay' : weekday}'
+        ? (isEn
+            ? '$details of $childName ${today ? 'today' : weekday}'
+            : '$details của $childName ${today ? 'hôm nay' : weekday}')
         : report.summaryText?.trim().isNotEmpty == true
             ? report.summaryText!.trim()
-            : '$teacherName đã gửi báo cáo ngày ${kDateLabel(report.reportDate)}.';
+            : (isEn
+                ? '$teacherName sent report for ${kDateLabel(report.reportDate)}.'
+                : '$teacherName đã gửi báo cáo ngày ${kDateLabel(report.reportDate)}.');
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
       side: BorderSide(color: unread ? k.lineStrong : k.line),

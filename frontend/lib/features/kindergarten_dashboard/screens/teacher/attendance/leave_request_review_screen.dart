@@ -6,6 +6,7 @@
 // - Giữ nguyên 100% UI và trải nghiệm người dùng
 // - Design System: KColors, KSpace, KRadii
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
@@ -164,7 +165,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         if (!mounted || version != _loadVersion) return;
         if (extra.classId != widget.classId ||
             extra.requestId != focused.requestId) {
-          throw const LeaveRequestException('Không thể xác minh đơn của lớp.');
+          throw LeaveRequestException(context.l10n?.cannotVerifyClassRequests ??
+              'Không thể xác minh đơn của lớp.');
         }
         if ((extra.status == LeaveStatus.pending) != (tab == 'pending')) {
           _tabController.index = extra.status == LeaveStatus.pending ? 0 : 1;
@@ -200,9 +202,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       if (!mounted || version != _loadVersion) return;
       setState(() {
         if (more) {
-          _moreError = 'Không tải thêm được đơn. Vui lòng thử lại.';
+          _moreError = context.l10n?.cannotLoadMoreRequests ??
+              'Không tải thêm được đơn. Vui lòng thử lại.';
         } else {
-          _errorMessage =
+          _errorMessage = context.l10n?.cannotLoadRequestsList ??
               'Không thể tải danh sách đơn. Vui lòng kiểm tra kết nối mạng.';
         }
         _isLoading = false;
@@ -246,8 +249,9 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     } catch (e) {
       if (!mounted || scope != _scopeVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Phê duyệt đơn thất bại. Vui lòng thử lại sau.'),
+        SnackBar(
+          content: Text(context.l10n?.approveRequestFailed ??
+              'Phê duyệt đơn thất bại. Vui lòng thử lại sau.'),
           backgroundColor: KColors.bad,
           behavior: SnackBarBehavior.floating,
         ),
@@ -266,7 +270,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     try {
       final confirmedReason = await RejectReasonDialog.show(
         context,
-        childName: item.childName ?? 'Học sinh',
+        childName: item.childName ?? (context.l10n?.student ?? 'Học sinh'),
         initialReason: _rejectionDrafts[item.requestId] ?? '',
         request: item,
       );
@@ -286,8 +290,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       if (!mounted || scope != _scopeVersion) return;
       _rejectionDrafts.remove(item.requestId);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+        SnackBar(
+          content: Text(context.l10n?.requestRejectedSuccess ??
               'Đã từ chối đơn. Phụ huynh có thể xem lý do trong ứng dụng.'),
           backgroundColor: KColors.warnDeep,
           behavior: SnackBarBehavior.floating,
@@ -306,8 +310,9 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     } catch (e) {
       if (!mounted || scope != _scopeVersion) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Từ chối đơn thất bại. Vui lòng kiểm tra lại.'),
+        SnackBar(
+          content: Text(context.l10n?.rejectRequestFailed ??
+              'Từ chối đơn thất bại. Vui lòng kiểm tra lại.'),
           backgroundColor: KColors.bad,
           behavior: SnackBarBehavior.floating,
         ),
@@ -337,7 +342,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                     Align(
                         alignment: Alignment.centerRight,
                         child: IconButton(
-                          tooltip: 'Đóng ảnh',
+                          tooltip: context.l10n?.closeImage ?? 'Đóng ảnh',
                           icon: const Icon(Icons.close),
                           onPressed: () => Navigator.pop(context),
                         )),
@@ -345,9 +350,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                         child: InteractiveViewer(
                             child: Image.memory(
                       bytes,
-                      errorBuilder: (context, error, stack) => const Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Text('Không thể hiển thị ảnh này.'),
+                      errorBuilder: (context, error, stack) => Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(context.l10n?.cannotDisplayImage ??
+                            'Không thể hiển thị ảnh này.'),
                       ),
                     ))),
                   ]),
@@ -355,8 +361,9 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
               ));
     } catch (_) {
       if (!mounted || version != _loadVersion) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Không tải được ảnh đính kèm. Vui lòng thử lại.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.l10n?.cannotLoadAttachment ??
+            'Không tải được ảnh đính kèm. Vui lòng thử lại.'),
       ));
     }
   }
@@ -454,13 +461,16 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
           style: TextStyle(
               fontSize: 13, fontWeight: FontWeight.w700, color: k.surface)),
     );
+    final l10n = context.l10n;
     final identity = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(name,
             style: TextStyle(
                 fontSize: 15, fontWeight: FontWeight.w600, color: k.ink)),
-        Text('Lớp ${widget.className ?? 'học sinh'}',
+        Text(LocaleController.instance.isEnglish
+            ? 'Class ${widget.className ?? 'student'}'
+            : 'Lớp ${widget.className ?? 'học sinh'}',
             style: TextStyle(fontSize: 12, color: k.inkSoft)),
       ],
     );
@@ -494,7 +504,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Quay lại',
+                    tooltip: l10n?.commonBack ?? 'Quay lại',
                     onPressed: () => Navigator.of(context).maybePop(),
                     padding: EdgeInsets.zero,
                     constraints:
@@ -506,13 +516,14 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Duyệt đơn xin nghỉ',
+                        Text(l10n?.reviewLeaveRequestTitle ?? 'Duyệt đơn xin nghỉ',
                             style: TextStyle(
                                 fontSize: 17,
                                 height: 1.4,
                                 fontWeight: FontWeight.w600,
                                 color: k.ink)),
-                        Text('Chi tiết đơn · ${widget.className ?? 'Lớp học'}',
+                        Text(
+                            '${l10n?.requestDetailTitle ?? 'Chi tiết đơn'} · ${widget.className ?? (l10n?.classroomTitle ?? 'Lớp học')}',
                             style: TextStyle(
                                 fontSize: 12, height: 1.4, color: k.inkSoft)),
                       ],
@@ -564,37 +575,37 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                     child: Column(
                       children: [
                         _detailRow(
-                            'Ngày nghỉ',
+                            l10n?.leaveDateLabel ?? 'Ngày nghỉ',
                             late
-                                ? '${requestDayLabel(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'chưa cập nhật'}'
+                                ? '${requestDayLabel(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'chưa cập nhật')}'
                                 : dateText),
                         Divider(height: 1, color: k.line),
-                        _detailRow('Số ngày', '${item.totalDays} ngày'),
+                        _detailRow(l10n?.requestTotalDays ?? 'Số ngày', l10n?.totalDaysCount(item.totalDays) ?? '${item.totalDays} ngày'),
                         Divider(height: 1, color: k.line),
-                        _detailRow('Lý do', item.reason),
+                        _detailRow(l10n?.reasonLabel ?? 'Lý do', item.reason),
                         Divider(height: 1, color: k.line),
-                        _detailRow('Người gửi', item.parentName ?? 'Phụ huynh'),
+                        _detailRow(l10n?.senderLabel ?? 'Người gửi', item.parentName ?? (l10n?.parentRole ?? 'Phụ huynh')),
                         Divider(height: 1, color: k.line),
-                        _detailRow('Gửi lúc', requestTimestamp(item.createdAt)),
+                        _detailRow(l10n?.sentAtLabel ?? 'Gửi lúc', requestTimestamp(item.createdAt)),
                         if (item.attachmentUrl != null) ...[
                           Divider(height: 1, color: k.line),
                           _detailRow(
-                              'Đính kèm',
+                              l10n?.attachmentLabel ?? 'Đính kèm',
                               TextButton(
                                   onPressed: () => _openAttachment(item),
-                                  child: const Text('Xem ảnh đính kèm'))),
+                                  child: Text(l10n?.viewAttachment ?? 'Xem ảnh đính kèm'))),
                         ],
                         if (item.contactPhone.isNotEmpty) ...[
                           Divider(height: 1, color: k.line),
                           _detailRow(
-                              'SĐT liên hệ',
+                              l10n?.contactPhoneLabel ?? 'SĐT liên hệ',
                               TextButton(
                                   onPressed: () => _callParent(item),
                                   child: Text(maskedPhone(item.contactPhone)))),
                         ],
                         if (item.rejectReason?.isNotEmpty == true) ...[
                           Divider(height: 1, color: k.line),
-                          _detailRow('Lý do từ chối', item.rejectReason!),
+                          _detailRow(l10n?.rejectReasonLabel ?? 'Lý do từ chối', item.rejectReason!),
                         ],
                       ],
                     ),
@@ -607,8 +618,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                         horizontal: 14, vertical: 12),
                     child: Text(
                       late
-                          ? 'Giờ đến dự kiến không phải giờ check-in thực tế.'
-                          : 'Khi duyệt, điểm danh sẽ được đồng bộ sang “Vắng có phép”; giờ check-in thực tế được giữ nguyên.',
+                          ? (l10n?.etaDisclaimer ?? 'Giờ đến dự kiến không phải giờ check-in thực tế.')
+                          : (l10n?.leaveApprovalDisclaimer ?? 'Khi duyệt, điểm danh sẽ được đồng bộ sang “Vắng có phép”; giờ check-in thực tế được giữ nguyên.'),
                       style: TextStyle(fontSize: 12, height: 1.4, color: k.ink),
                     ),
                   ),
@@ -633,7 +644,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                             minimumSize: const Size(0, 48),
                             shape: const StadiumBorder(),
                           ),
-                          child: const Text('Từ chối'),
+                          child: Text(l10n?.rejectAction ?? 'Từ chối'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -654,7 +665,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2, color: k.surface),
                                 )
-                              : const Text('Duyệt đơn'),
+                              : Text(l10n?.approveAction ?? 'Duyệt đơn'),
                         ),
                       ),
                     ],
@@ -716,11 +727,12 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không mở được ứng dụng gọi điện.')));
+          SnackBar(content: Text(context.l10n?.cannotOpenPhoneApp ?? 'Không mở được ứng dụng gọi điện.')));
     }
   }
 
   Widget _buildBody(KPalette k) {
+    final l10n = context.l10n;
     if (_isLoading) {
       return Center(child: CircularProgressIndicator(color: k.brand));
     }
@@ -745,7 +757,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                   tab: _tabController.index == 0 ? 'pending' : 'reviewed',
                 ),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Thử lại'),
+                label: Text(l10n?.commonRetry ?? 'Thử lại'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: k.brand,
                   foregroundColor: k.surface,
@@ -771,9 +783,9 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _statusFilter(k, 'Chờ duyệt ($_pendingCount)', pending, 0),
+                _statusFilter(k, l10n?.pendingReviewWithCount(_pendingCount) ?? 'Chờ duyệt ($_pendingCount)', pending, 0),
                 const SizedBox(width: 8),
-                _statusFilter(k, 'Đã xử lý', !pending, 1),
+                _statusFilter(k, l10n?.processedTab ?? 'Đã xử lý', !pending, 1),
               ],
             ),
           ),
@@ -784,8 +796,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
               child: Center(
                 child: Text(
                   pending
-                      ? 'Không có đơn nào đang chờ duyệt'
-                      : 'Chưa có lịch sử đơn đã xử lý',
+                      ? (l10n?.noPendingRequests ?? 'Không có đơn nào đang chờ duyệt')
+                      : (l10n?.noProcessedRequestsHistory ?? 'Chưa có lịch sử đơn đã xử lý'),
                   style: TextStyle(fontSize: 14, color: k.inkSoft),
                 ),
               ),
@@ -797,7 +809,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                 )),
           if (pending && _recentReviewed.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text('Đã xử lý gần đây',
+            Text(l10n?.recentlyProcessed ?? 'Đã xử lý gần đây',
                 style: TextStyle(
                     fontSize: 16, fontWeight: FontWeight.w700, color: k.ink)),
             const SizedBox(height: 12),
@@ -816,7 +828,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                   onPressed: () => _loadRequests(
                       tab: pending ? 'pending' : 'reviewed', more: true),
                   child: Text(
-                      _moreError == null ? 'Tải thêm' : 'Thử lại tải thêm')),
+                      _moreError == null ? (l10n?.loadMore ?? 'Tải thêm') : (l10n?.retryLoadMore ?? 'Thử lại tải thêm'))),
             ],
           ],
         ],
@@ -843,7 +855,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
       );
 
   Widget _requestPreview(KPalette k, LeaveRequestEntity item) {
-    final childName = item.childName ?? 'Học sinh';
+    final l10n = context.l10n;
+    final childName = item.childName ?? (l10n?.student ?? 'Học sinh');
     final initials = childName
         .trim()
         .split(RegExp(r'\s+'))
@@ -901,7 +914,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: k.ink)),
-                    Text('Nghỉ $date · ${item.parentName ?? 'Phụ huynh'}',
+                    Text(
+                        LocaleController.instance.isEnglish
+                            ? 'Leave $date · ${item.parentName ?? 'Parent'}'
+                            : 'Nghỉ $date · ${item.parentName ?? 'Phụ huynh'}',
                         style: TextStyle(fontSize: 12, color: k.inkSoft)),
                   ],
                 )),
@@ -912,7 +928,7 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
               const SizedBox(height: 10),
               Row(children: [
                 Flexible(
-                  child: Text('Xem chi tiết đơn',
+                  child: Text(l10n?.viewRequestDetail ?? 'Xem chi tiết đơn',
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -929,7 +945,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   }
 
   Widget _recentRequest(KPalette k, LeaveRequestEntity item) {
-    final name = item.childName ?? 'Học sinh';
+    final l10n = context.l10n;
+    final name = item.childName ?? (l10n?.student ?? 'Học sinh');
     final initials = name
         .trim()
         .split(RegExp(r'\s+'))
@@ -970,7 +987,10 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         Text(name,
             style: TextStyle(
                 fontSize: 15, fontWeight: FontWeight.w700, color: k.ink)),
-        Text('Nghỉ ${DateFormat('dd/MM').format(item.fromDate)}',
+        Text(
+            LocaleController.instance.isEnglish
+                ? 'Leave ${DateFormat('dd/MM').format(item.fromDate)}'
+                : 'Nghỉ ${DateFormat('dd/MM').format(item.fromDate)}',
             style: TextStyle(fontSize: 12, color: k.inkSoft)),
       ],
     );

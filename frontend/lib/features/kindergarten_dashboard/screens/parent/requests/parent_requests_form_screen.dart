@@ -95,9 +95,9 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
         firstDate: first,
         lastDate: last.isBefore(first) ? first : last,
         initialDate: initial.isBefore(first) ? first : initial,
-        cancelText: 'Hủy',
-        confirmText: 'OK',
-        helpText: end ? 'Đến ngày' : (_late ? 'Ngày đi trễ' : 'Từ ngày'));
+        cancelText: context.l10n?.commonCancel ?? 'Hủy',
+        confirmText: context.l10n?.commonConfirm ?? 'OK',
+        helpText: end ? (context.l10n?.leaveToDate ?? 'Đến ngày') : (_late ? (context.l10n?.lateDateLabel ?? 'Ngày đi trễ') : (context.l10n?.leaveFromDate ?? 'Từ ngày')));
     if (date == null || !mounted) return;
     setState(() {
       if (end) {
@@ -116,8 +116,8 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
     final value = await showTimePicker(
         context: context,
         initialTime: _eta,
-        cancelText: 'Hủy',
-        confirmText: 'Xong',
+        cancelText: context.l10n?.commonCancel ?? 'Hủy',
+        confirmText: context.l10n?.commonConfirm ?? 'Xong',
         builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
             child: child!));
@@ -171,16 +171,16 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
         await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                        title: const Text('Bỏ thay đổi?'),
-                        content: const Text(
-                            'Nội dung đơn chưa gửi sẽ không được lưu.'),
+                        title: Text(context.l10n?.parentHealthDiscardTitle ?? 'Bỏ thay đổi?'),
+                        content: Text(
+                            context.l10n?.parentHealthDiscardMessage ?? 'Nội dung đơn chưa gửi sẽ không được lưu.'),
                         actions: [
                           TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Tiếp tục soạn')),
+                              child: Text(context.l10n?.parentHealthContinueEditing ?? 'Tiếp tục soạn')),
                           TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Bỏ thay đổi')),
+                              child: Text(context.l10n?.parentHealthDiscardAction ?? 'Bỏ thay đổi')),
                         ])) ==
             true;
     _discardOpen = false;

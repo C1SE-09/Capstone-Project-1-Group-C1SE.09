@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 enum ObservationDecision { approved, discarded, pending }
@@ -93,7 +94,7 @@ class CounterPill extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
-        'Đã duyệt $approved/$total',
+        context.l10n?.reviewApprovedCount(approved, total) ?? 'Đã duyệt $approved/$total',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,

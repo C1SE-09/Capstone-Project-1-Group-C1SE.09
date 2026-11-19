@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 /// Thanh hai tab gọn của phụ huynh, cùng hình thức với mẫu Figma.
@@ -34,9 +34,9 @@ class ParentNavigationBar extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 52),
             child: Row(
               children: [
-                for (final (index, label) in const [
-                  (0, 'Tổng quan'),
-                  (1, 'Tài khoản')
+                for (final (index, label) in [
+                  (0, context.l10n?.navOverview ?? 'Tổng quan'),
+                  (1, context.l10n?.accountTitle ?? 'Tài khoản')
                 ])
                   Expanded(
                     child: Semantics(

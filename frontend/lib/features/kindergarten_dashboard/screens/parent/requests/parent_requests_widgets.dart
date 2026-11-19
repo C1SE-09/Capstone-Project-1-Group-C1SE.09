@@ -38,8 +38,9 @@ String _requestDateWithWeekday(DateTime value) =>
 
 String requestDayLabel(DateTime value) {
   final day = DateUtils.dateOnly(value);
+  final isEn = LocaleController.instance.isEnglish;
   final prefix = day.isAtSameMomentAs(DateUtils.dateOnly(DateTime.now()))
-      ? 'Hôm nay — '
+      ? (isEn ? 'Today — ' : 'Hôm nay — ')
       : '';
   return '$prefix${_requestDateWithWeekday(day)}';
 }
@@ -47,22 +48,30 @@ String requestDayLabel(DateTime value) {
 String requestTimestamp(DateTime value) => DateFormat('dd/MM/yyyy, HH:mm')
     .format(value.toUtc().add(const Duration(hours: 7)));
 
-String requestRange(LeaveRequestEntity request) => request.totalDays == 1
-    ? '${requestDate(request.fromDate)} · 1 ngày'
-    : '${requestDate(request.fromDate)} – ${requestDate(request.toDate)} · ${request.totalDays} ngày';
+String requestRange(LeaveRequestEntity request) {
+  final isEn = LocaleController.instance.isEnglish;
+  final daySuffix = isEn ? (request.totalDays == 1 ? '1 day' : '${request.totalDays} days') : (request.totalDays == 1 ? '1 ngày' : '${request.totalDays} ngày');
+  return request.totalDays == 1
+      ? '${requestDate(request.fromDate)} · $daySuffix'
+      : '${requestDate(request.fromDate)} – ${requestDate(request.toDate)} · $daySuffix';
+}
 
-String gardenVoiceRequestRange(LeaveRequestEntity request) => request
-            .totalDays ==
-        1
-    ? '${_requestDateWithWeekday(request.fromDate)} · 1 ngày'
-    : '${_requestDateWithWeekday(request.fromDate)} – ${_requestDateWithWeekday(request.toDate)} · ${request.totalDays} ngày';
+String gardenVoiceRequestRange(LeaveRequestEntity request) {
+  final isEn = LocaleController.instance.isEnglish;
+  final daySuffix = isEn ? (request.totalDays == 1 ? '1 day' : '${request.totalDays} days') : (request.totalDays == 1 ? '1 ngày' : '${request.totalDays} ngày');
+  return request.totalDays == 1
+      ? '${_requestDateWithWeekday(request.fromDate)} · $daySuffix'
+      : '${_requestDateWithWeekday(request.fromDate)} – ${_requestDateWithWeekday(request.toDate)} · $daySuffix';
+}
 
 String requestListRange(LeaveRequestEntity request) {
   String shortDate(DateTime value) =>
       '${_requestWeekday(value)}, ${DateFormat('dd/MM').format(value)}';
+  final isEn = LocaleController.instance.isEnglish;
+  final daySuffix = isEn ? (request.totalDays == 1 ? '1 day' : '${request.totalDays} days') : (request.totalDays == 1 ? '1 ngày' : '${request.totalDays} ngày');
   return request.totalDays == 1
-      ? '${shortDate(request.fromDate)} · 1 ngày'
-      : '${shortDate(request.fromDate)} – ${shortDate(request.toDate)} · ${request.totalDays} ngày';
+      ? '${shortDate(request.fromDate)} · $daySuffix'
+      : '${shortDate(request.fromDate)} – ${shortDate(request.toDate)} · $daySuffix';
 }
 
 class ParentRequestLayout extends StatelessWidget {
@@ -231,7 +240,7 @@ class ParentRequestButton extends StatelessWidget {
               children: [
                 if (busy)
                   Semantics(
-                      label: 'Đang gửi đơn',
+                      label: context.l10n?.requestSubmitting ?? 'Đang gửi đơn',
                       child: const SizedBox(
                           width: 20,
                           height: 20,
@@ -346,7 +355,9 @@ class ParentRequestError extends StatelessWidget {
         Semantics(
             liveRegion: true,
             child: Text(message, style: TextStyle(color: context.k.bad))),
-        TextButton(onPressed: onRetry, child: const Text('Thử lại')),
+        TextButton(
+            onPressed: onRetry,
+            child: Text(context.l10n?.commonRetry ?? 'Thử lại')),
       ]);
 }
 

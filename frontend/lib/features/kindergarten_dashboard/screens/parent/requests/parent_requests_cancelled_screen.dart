@@ -2,6 +2,7 @@ import 'package:adark_frontend/data/repositories/http_leave_request_repository.d
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_cards.dart';
@@ -40,7 +41,7 @@ class ParentRequestsCancelledScreen extends StatelessWidget {
                           child:
                               Icon(Icons.check, size: 30, color: k.inkSoft))),
                   const SizedBox(height: 14),
-                  Text('Đã hủy đơn',
+                  Text(context.l10n?.requestCancelledTitle ?? 'Đã hủy đơn',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 20,
@@ -62,7 +63,7 @@ class ParentRequestsCancelledScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                                 color: k.surfaceSunken,
                                 borderRadius: BorderRadius.circular(999)),
-                            child: Text('ĐÃ HỦY',
+                            child: Text(context.l10n?.requestStatusCancelledUpper ?? 'ĐÃ HỦY',
                                 style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
@@ -94,7 +95,7 @@ class ParentRequestsCancelledScreen extends StatelessWidget {
                           style: TextStyle(fontSize: 12, color: k.ink))),
                   const SizedBox(height: 14),
                   MedicationAction(
-                      label: 'Về danh sách đơn',
+                      label: context.l10n?.requestBackToList ?? 'Về danh sách đơn',
                       onPressed: () => Navigator.maybePop(context)),
                 ])));
   }

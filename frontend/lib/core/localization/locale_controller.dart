@@ -56,6 +56,9 @@ class LocaleController extends ValueNotifier<Locale> {
 
   bool get isVietnamese => value.languageCode == 'vi';
   bool get isEnglish => value.languageCode == 'en';
+
+  /// Truy cập AppLocalizations bất kỳ đâu mà không cần BuildContext (cho Repositories, Utils, v.v.)
+  AppLocalizations get currentL10n => lookupAppLocalizations(value);
 }
 
 /// Hiển thị hộp thoại chọn ngôn ngữ (Tiếng Việt / English).

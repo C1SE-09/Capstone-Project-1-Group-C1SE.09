@@ -198,16 +198,17 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
 
   Future<void> _save() async {
     if (_saving || _conflict || !_dirty) return;
+    final l10n = LocaleController.instance.currentL10n;
     if (_status == 'present' && _allergyValue.isEmpty) {
-      setState(() => _fieldError = 'Vui lòng nhập mô tả dị ứng của bé.');
+      setState(() => _fieldError = l10n.parentHealthAllergyRequired);
       _allergyFocus.requestFocus();
       return;
     }
     if (healthCharCount(_allergyValue) > _maxChars ||
         healthCharCount(_notesValue) > _maxChars) {
       setState(() {
-        _bannerTitle = 'Nội dung quá dài';
-        _bannerBody = 'Mô tả dị ứng và lưu ý chăm sóc tối đa 1000 ký tự.';
+        _bannerTitle = l10n.parentHealthTooLongTitle;
+        _bannerBody = l10n.parentHealthTooLongBody;
       });
       return;
     }
@@ -238,25 +239,22 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
         _saving = false;
         if (error.statusCode == 409) {
           _conflict = true;
-          _bannerTitle = 'Hồ sơ vừa được cập nhật ở nơi khác';
-          _bannerBody = 'Vui lòng tải lại trước khi lưu.';
+          _bannerTitle = l10n.parentHealthConflictTitle;
+          _bannerBody = l10n.parentHealthConflictBody;
         } else if (error.statusCode == 422) {
-          _bannerTitle = 'Thông tin chưa hợp lệ';
-          _bannerBody =
-              'Vui lòng kiểm tra lại thông tin dị ứng và lưu ý chăm sóc.';
+          _bannerTitle = l10n.parentHealthInvalidTitle;
+          _bannerBody = l10n.parentHealthInvalidBody;
         } else {
-          _bannerTitle = 'Chưa lưu được thay đổi';
-          _bannerBody =
-              'Kiểm tra kết nối mạng rồi thử lại. Nội dung bạn nhập vẫn được giữ nguyên.';
+          _bannerTitle = l10n.healthProfileSaveFailed;
+          _bannerBody = l10n.healthProfileSaveFailedDesc;
         }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _bannerTitle = 'Chưa lưu được thay đổi';
-        _bannerBody =
-            'Kiểm tra kết nối mạng rồi thử lại. Nội dung bạn nhập vẫn được giữ nguyên.';
+        _bannerTitle = l10n.healthProfileSaveFailed;
+        _bannerBody = l10n.healthProfileSaveFailedDesc;
       });
     }
   }
@@ -267,13 +265,14 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
         (_child.medicalAllergies ?? '').trim().isNotEmpty ||
         (_child.careNotes ?? '').trim().isNotEmpty;
     if (!hasData) return null;
+    final l10n = LocaleController.instance.currentL10n;
     if (source == 'legacy' || source == null) {
-      return 'Thông tin từ hồ sơ hiện có';
+      return l10n.parentHealthLegacyInfo;
     }
     final updatedAt = _child.healthUpdatedAt;
     if (updatedAt == null) return null;
-    final who = source == 'admin' ? 'Quản trị viên' : 'Phụ huynh';
-    return 'Cập nhật hồ sơ gần nhất: $who · ${_formatDateTime(updatedAt)}';
+    final who = source == 'admin' ? l10n.roleAdmin : l10n.entityParent;
+    return l10n.parentHealthLastUpdated(who, _formatDateTime(updatedAt));
   }
 
   String _formatDateTime(DateTime value) {
@@ -285,6 +284,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return PopScope(
       canPop: !_dirty,
       onPopInvokedWithResult: (didPop, _) async {
@@ -297,7 +297,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
       child: Scaffold(
         backgroundColor: context.k.canvas,
         appBar: KAppBar(
-          title: 'Thông tin sức khỏe',
+          title: l10n?.parentHealthTitle ?? 'Thông tin sức khỏe',
           onBack: () => Navigator.maybePop(context),
         ),
         body: SafeArea(child: _buildBody(context)),
@@ -305,7 +305,9 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
             ? null
             : BottomActionBar(
                 child: KButton(
-                  label: _saving ? 'Đang lưu...' : 'Lưu thay đổi',
+                  label: _saving
+                      ? (l10n?.bugReportAdminSaving ?? 'Đang lưu...')
+                      : (l10n?.commonSaveChanges ?? 'Lưu thay đổi'),
                   onPressed: _dirty && !_saving && !_conflict ? _save : null,
                 ),
               ),
@@ -314,6 +316,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
   }
 
   Widget _buildBody(BuildContext context) {
+    final l10n = context.l10n;
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -325,14 +328,14 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Không tải được hồ sơ sức khỏe.',
+                l10n?.parentHealthLoadError ?? 'Không tải được hồ sơ sức khỏe.',
                 style: TextStyle(fontSize: 14, color: context.k.ink),
               ),
               const SizedBox(height: 16),
-              KButton(label: 'Thử lại', onPressed: _load),
+              KButton(label: l10n?.commonRetry ?? 'Thử lại', onPressed: _load),
               const SizedBox(height: 8),
               KButton(
-                label: 'Quay lại',
+                label: l10n?.commonBack ?? 'Quay lại',
                 secondary: true,
                 onPressed: () => Navigator.maybePop(context),
               ),
@@ -370,10 +373,10 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
                   const SizedBox(width: 6),
                   Text(
                     _status == 'present'
-                        ? 'Dị ứng'
+                        ? (l10n?.parentAllergyTitle ?? 'Dị ứng')
                         : _status == 'none'
-                            ? 'Không ghi nhận dị ứng'
-                            : 'Chưa khai báo dị ứng',
+                            ? (l10n?.healthAllergyNone ?? 'Không ghi nhận dị ứng')
+                            : (l10n?.healthAllergyUndeclared ?? 'Chưa khai báo dị ứng'),
                     style: TextStyle(
                       fontSize: 14,
                       height: 1.4,
@@ -397,7 +400,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        Text('Trạng thái dị ứng',
+        Text(l10n?.parentHealthAllergyStatus ?? 'Trạng thái dị ứng',
             style: TextStyle(
                 fontSize: 14,
                 height: 1.4,
@@ -405,20 +408,20 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
                 color: context.k.ink)),
         const SizedBox(height: 8),
         _HealthOption(
-          title: 'Chưa khai báo',
-          subtitle: 'Gia đình chưa cung cấp thông tin dị ứng.',
+          title: l10n?.parentAllergyNotDeclared ?? 'Chưa khai báo',
+          subtitle: l10n?.parentHealthUndeclaredSubtitle ?? 'Gia đình chưa cung cấp thông tin dị ứng.',
           selected: _status == 'unknown',
           onTap: () => _selectStatus('unknown'),
         ),
         _HealthOption(
-          title: 'Không có dị ứng được biết',
-          subtitle: 'Gia đình chưa ghi nhận bé dị ứng với thứ gì.',
+          title: l10n?.parentHealthNoKnownAllergy ?? 'Không có dị ứng được biết',
+          subtitle: l10n?.parentHealthNoKnownAllergySubtitle ?? 'Gia đình chưa ghi nhận bé dị ứng với thứ gì.',
           selected: _status == 'none',
           onTap: () => _selectStatus('none'),
         ),
         _HealthOption(
-          title: 'Có dị ứng',
-          subtitle: 'Ghi rõ những gì bé bị dị ứng.',
+          title: l10n?.parentHasAllergy ?? 'Có dị ứng',
+          subtitle: l10n?.parentHealthHasAllergySubtitle ?? 'Ghi rõ những gì bé bị dị ứng.',
           selected: _status == 'present',
           onTap: () => _selectStatus('present'),
         ),
@@ -430,8 +433,8 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
             maxLines: 3,
             onChanged: (_) => setState(() => _fieldError = null),
             decoration: InputDecoration(
-              labelText: 'Mô tả dị ứng',
-              hintText: 'Ví dụ: Đậu phộng',
+              labelText: l10n?.parentHealthAllergyLabel ?? 'Mô tả dị ứng',
+              hintText: l10n?.parentHealthAllergyHint ?? 'Ví dụ: Đậu phộng',
               errorText: _fieldError,
             ),
           ),
@@ -441,7 +444,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
           ),
         ],
         const SizedBox(height: 12),
-        Text('Lưu ý chăm sóc',
+        Text(l10n?.parentHealthCareNotes ?? 'Lưu ý chăm sóc',
             style: TextStyle(
                 fontSize: 14,
                 height: 1.4,
@@ -454,7 +457,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
             helperText:
-                'Không dùng để gửi lời dặn trong ngày hoặc yêu cầu dùng thuốc.',
+                l10n?.parentHealthCareNotesHelper ?? 'Không dùng để gửi lời dặn trong ngày hoặc yêu cầu dùng thuốc.',
             helperMaxLines: 2,
             filled: true,
             fillColor: context.k.okTint,
@@ -643,7 +646,11 @@ class _Banner extends StatelessWidget {
           ],
           if (onReload != null) ...[
             const SizedBox(height: 8),
-            KButton(label: 'Tải lại', secondary: true, onPressed: onReload),
+            KButton(
+              label: context.l10n?.commonReload ?? 'Tải lại',
+              secondary: true,
+              onPressed: onReload,
+            ),
           ],
         ],
       ),

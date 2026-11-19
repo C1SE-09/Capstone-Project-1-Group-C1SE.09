@@ -75,7 +75,9 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
         else if (item.child.allergy case final allergy?)
           _CareItem(
             name: item.child.fullNameWithNickname,
-            detail: 'Dị ứng $allergy',
+            detail: LocaleController.instance.isEnglish
+                ? 'Allergy $allergy'
+                : 'Dị ứng $allergy',
             kind: _CareKind.health,
             childId: item.child.childId,
           ),
@@ -94,7 +96,11 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
 
   String _lateLabel(AttendanceChildRecord record) {
     final time = record.checkInTime ?? record.expectedArrivalTime;
-    return time == null || time.isEmpty ? 'Đã đến trễ' : 'Đã đến trễ lúc $time';
+    final isEn = LocaleController.instance.isEnglish;
+    if (time == null || time.isEmpty) {
+      return isEn ? 'Arrived late' : 'Đã đến trễ';
+    }
+    return isEn ? 'Arrived late at $time' : 'Đã đến trễ lúc $time';
   }
 
   String _dateLabel(DateTime date) {
@@ -278,7 +284,7 @@ class _NotificationButton extends StatelessWidget {
           color: k.infoTint,
           borderRadius: BorderRadius.circular(19),
           child: IconButton(
-            tooltip: 'Thông báo',
+            tooltip: context.l10n?.notificationsNavLabel ?? 'Thông báo',
             onPressed: onPressed,
             icon: ExcludeSemantics(
               child: SvgPicture.asset(
@@ -294,7 +300,9 @@ class _NotificationButton extends StatelessWidget {
             top: -3,
             right: -5,
             child: Semantics(
-              label: '$value thông báo chưa đọc',
+              label: LocaleController.instance.isEnglish
+                  ? '$value unread notifications'
+                  : '$value thông báo chưa đọc',
               child: Container(
                 constraints: const BoxConstraints(minWidth: 19, minHeight: 19),
                 alignment: Alignment.center,
@@ -539,8 +547,10 @@ class _AttendanceSummary extends StatelessWidget {
         ),
         Text(
           hasAttendance
-              ? '$presentCount/$totalChildren bé đã đến'
-              : 'Chưa có dữ liệu điểm danh',
+              ? (context.l10n?.studentsArrivedCount(presentCount, totalChildren) ??
+                  '$presentCount/$totalChildren bé đã đến')
+              : (context.l10n?.noAttendanceDataForDate ??
+                  'Chưa có dữ liệu điểm danh'),
           style: TextStyle(fontSize: 14, height: 1.24, color: k.inkSoft),
         ),
       ],
@@ -553,13 +563,13 @@ class _AttendanceSummary extends StatelessWidget {
       ),
     );
     final lateBadge = _AttendanceBadge(
-      label: '$lateCount đến trễ',
+      label: context.l10n?.lateCountText(lateCount) ?? '$lateCount đến trễ',
       width: normalScale ? 75 : null,
       background: k.accentTint,
       foreground: k.warn,
     );
     final absentBadge = _AttendanceBadge(
-      label: '$absentCount vắng',
+      label: context.l10n?.absentCountText(absentCount) ?? '$absentCount vắng',
       width: normalScale ? 59 : null,
       background: k.okTint,
       foreground: k.brand,
@@ -567,7 +577,7 @@ class _AttendanceSummary extends StatelessWidget {
     return Semantics(
       key: const ValueKey('garden-voice-attendance-summary'),
       button: true,
-      label: 'Điểm danh hôm nay',
+      label: context.l10n?.teacherTodayAttendance ?? 'Điểm danh hôm nay',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
