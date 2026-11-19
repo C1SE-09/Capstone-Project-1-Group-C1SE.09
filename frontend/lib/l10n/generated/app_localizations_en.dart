@@ -295,6 +295,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teacherAccountSectionClass => 'Assigned Class';
 
   @override
+  String get teacherAccountPreferences => 'Preferences';
+
+  @override
   String get teacherAccountSectionSettings => 'Settings & Support';
 
   @override

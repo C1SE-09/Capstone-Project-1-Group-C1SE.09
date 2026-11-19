@@ -296,6 +296,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get teacherAccountSectionClass => 'Lớp phụ trách';
 
   @override
+  String get teacherAccountPreferences => 'Tùy chọn';
+
+  @override
   String get teacherAccountSectionSettings => 'Cài đặt & hỗ trợ';
 
   @override

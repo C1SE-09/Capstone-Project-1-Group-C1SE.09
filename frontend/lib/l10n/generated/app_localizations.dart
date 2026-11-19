@@ -644,6 +644,12 @@ abstract class AppLocalizations {
   /// **'Assigned Class'**
   String get teacherAccountSectionClass;
 
+  /// No description provided for @teacherAccountPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get teacherAccountPreferences;
+
   /// No description provided for @teacherAccountSectionSettings.
   ///
   /// In en, this message translates to:

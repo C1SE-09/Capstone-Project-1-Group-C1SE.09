@@ -325,7 +325,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                     ),
                   ],
                 ),
-                _GroupTitle(l10n?.accountSettings ?? 'Cài đặt'),
+                _GroupTitle(l10n?.teacherAccountPreferences ?? 'Tùy chọn'),
                 _AccountSectionCard(
                   children: [
                     _AccountMenuRow(

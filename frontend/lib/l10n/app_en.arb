@@ -109,6 +109,7 @@
   },
   "teacherAccountTitle": "Account",
   "teacherAccountSectionClass": "Assigned Class",
+  "teacherAccountPreferences": "Preferences",
   "teacherAccountSectionSettings": "Settings & Support",
   "teacherAccountAbout": "About KinderLog",
   "teacherAccountQuickBug": "Bug Report & Feedback",
