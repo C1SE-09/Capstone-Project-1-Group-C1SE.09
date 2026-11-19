@@ -1,6 +1,7 @@
 // M8–M9: biên bản từ server không chứng minh phụ huynh đã nhận FCM.
 import 'dart:async';
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/data/repositories/http_health_incident_repository.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +60,17 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
     'acute_allergy': 'Dị ứng cấp tính',
     'other': 'Khác'
   };
+
+  String _typeLabel(String key) {
+    final l10n = context.l10n;
+    return switch (key) {
+      'high_fever' => l10n?.emergencyHighFever ?? 'Sốt cao',
+      'severe_injury' => l10n?.emergencyFallAccident ?? 'Tai nạn / Té ngã',
+      'acute_allergy' => l10n?.emergencyAllergyReaction ?? 'Dị ứng cấp tính',
+      'other' => l10n?.emergencyOther ?? 'Khác',
+      _ => _types[key] ?? key,
+    };
+  }
   @override
   void initState() {
     super.initState();
@@ -99,8 +111,10 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
   Future<void> _submit() async {
     if (_busy || _result != null) return;
     final id = _childId, version = _version;
+    final l10n = context.l10n;
     if (id == null || !widget.children.any((c) => c.id == id)) {
-      setState(() => _error = 'Vui lòng chọn học sinh gặp sự cố.');
+      setState(() => _error = l10n?.selectStudentEmergencyPrompt ??
+          'Vui lòng chọn học sinh gặp sự cố.');
       return;
     }
     final raw = _temperature.text.trim().replaceAll(',', '.');
@@ -110,7 +124,8 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
             !temperature.isFinite ||
             temperature < 34 ||
             temperature > 44)) {
-      setState(() => _error = 'Nhiệt độ phải là số từ 34°C đến 44°C.');
+      setState(() => _error = l10n?.temperatureRangePrompt ??
+          'Nhiệt độ phải là số từ 34°C đến 44°C.');
       return;
     }
     setState(() {
@@ -134,7 +149,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
           _contacts = contacts.cast<Map<String, dynamic>>();
           _contactsError = null;
         } else {
-          _contactsError =
+          _contactsError = l10n?.emergencySavedContactInvalid ??
               'Đã lưu sự cố nhưng danh bạ chưa hợp lệ. Hãy tải lại danh bạ, không gửi lại biên bản.';
         }
       });
@@ -214,7 +229,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
       if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
     } catch (_) {/* Danh bạ vẫn hiển thị để liên hệ qua cách khác. */}
     if (mounted) {
-      setState(() => _contactsError =
+      setState(() => _contactsError = context.l10n?.cannotOpenPhoneCallUseDirect ??
           'Không mở được ứng dụng gọi điện. Vui lòng dùng số trong danh bạ để liên hệ trực tiếp.');
     }
   }
@@ -225,7 +240,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
             phoneCallUri(contact['phone'] as String? ?? '') != null)
         .toList();
     if (contacts.isEmpty) {
-      setState(() => _contactsError =
+      setState(() => _contactsError = context.l10n?.noValidPhoneNumberInContacts ??
           'Chưa có số điện thoại hợp lệ trong danh bạ khẩn cấp.');
       return;
     }
@@ -236,14 +251,14 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
     final phone = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Chọn phụ huynh để gọi'),
+        title: Text(context.l10n?.selectParentToCall ?? 'Chọn phụ huynh để gọi'),
         children: [
           for (final contact in contacts)
             SimpleDialogOption(
               onPressed: () =>
                   Navigator.pop(context, contact['phone'] as String),
               child: Text(
-                  '${contact['name'] ?? 'Phụ huynh'} · ${contact['relationship'] ?? 'Người thân'}'),
+                  '${contact['name'] ?? (context.l10n?.parentRole ?? 'Phụ huynh')} · ${contact['relationship'] ?? 'Người thân'}'),
             ),
         ],
       ),
@@ -284,6 +299,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
           borderSide: BorderSide(color: context.k.brand)));
 
   Widget _form() {
+    final l10n = context.l10n;
     final selectedChild = _childId == null
         ? null
         : widget.children.where((c) => c.id == _childId).firstOrNull;
@@ -293,7 +309,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
           children: [
             Row(children: [
               IconButton(
-                  tooltip: 'Đóng',
+                  tooltip: l10n?.commonClose ?? 'Đóng',
                   padding: EdgeInsets.zero,
                   onPressed: () => Navigator.maybePop(context),
                   icon: SvgPicture.asset(
@@ -305,12 +321,12 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Báo sự cố',
+                    Text(l10n?.reportIncidentTitle ?? 'Báo sự cố',
                         style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
                             color: context.k.ink)),
-                    Text('Thông báo cho phụ huynh và nhà trường',
+                    Text(l10n?.notifyParentsAndSchool ?? 'Thông báo cho phụ huynh và nhà trường',
                         style:
                             TextStyle(fontSize: 12, color: context.k.inkSoft)),
                   ],
@@ -329,10 +345,11 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                     width: 28,
                     height: 28),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                     child: Text(
-                        'Kiểm tra đúng bé, nội dung và người nhận trước khi gửi cảnh báo khẩn.',
-                        style: TextStyle(fontSize: 12, height: 1.35))),
+                        l10n?.emergencyVerificationWarning ??
+                            'Kiểm tra đúng bé, nội dung và người nhận trước khi gửi cảnh báo khẩn.',
+                        style: const TextStyle(fontSize: 12, height: 1.35))),
               ]),
             ),
             const SizedBox(height: 13),
@@ -365,7 +382,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                                   if (selectedChild.allergy?.trim().isNotEmpty ?? false) ...[
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Dị ứng: ${selectedChild.allergy!.trim()}',
+                                      '${l10n?.allergyPrefix ?? 'Dị ứng: '}${selectedChild.allergy!.trim()}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -389,7 +406,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'Đổi bé',
+                                    l10n?.changeChild ?? 'Đổi bé',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -422,7 +439,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Chọn học sinh...',
+                                    l10n?.selectStudentHint ?? 'Chọn học sinh...',
                                     style: TextStyle(
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.w700,
@@ -431,7 +448,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Chạm để tìm kiếm và chọn bé',
+                                    l10n?.tapToSearchAndSelectChild ?? 'Chạm để tìm kiếm và chọn bé',
                                     style: TextStyle(
                                       fontSize: 11.5,
                                       color: context.k.inkFaint,
@@ -453,13 +470,13 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Loại sự cố',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+            Text(l10n?.incidentTypeLabel ?? 'Loại sự cố',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Wrap(spacing: 7, runSpacing: 7, children: [
               for (final type in _types.entries)
                 ChoiceChip(
-                  label: Text(type.value),
+                  label: Text(_typeLabel(type.key)),
                   selected: _type == type.key,
                   showCheckmark: false,
                   selectedColor: context.k.bad,
@@ -492,8 +509,8 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 ),
             ]),
             const SizedBox(height: 13),
-            const Text('Nhiệt độ (không bắt buộc)',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+            Text(l10n?.temperatureOptionalLabel ?? 'Nhiệt độ (không bắt buộc)',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             TextField(
                 controller: _temperature,
@@ -501,13 +518,13 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 style: const TextStyle(fontSize: 13),
-                decoration: _input('Ví dụ: 38.5').copyWith(
+                decoration: _input(l10n?.temperatureHint ?? 'Ví dụ: 38.5').copyWith(
                     suffixText: '°C',
                     suffixStyle:
                         TextStyle(fontSize: 13, color: context.k.inkSoft))),
             const SizedBox(height: 13),
-            const Text('Mô tả sự cố',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+            Text(l10n?.incidentDescriptionLabel ?? 'Mô tả sự cố',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             TextField(
                 controller: _notes,
@@ -515,16 +532,16 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 maxLines: 3,
                 style: const TextStyle(fontSize: 13),
                 decoration:
-                    _input('Tình trạng và biện pháp sơ cứu (không bắt buộc)')),
+                    _input(l10n?.incidentFirstAidHint ?? 'Tình trạng và biện pháp sơ cứu (không bắt buộc)')),
             const SizedBox(height: 16),
-            const Text('Người nhận cảnh báo',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+            Text(l10n?.alertRecipientsLabel ?? 'Người nhận cảnh báo',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             if (_loadingContacts)
-              Text('Đang tải danh bạ...',
+              Text(l10n?.loadingContacts ?? 'Đang tải danh bạ...',
                   style: TextStyle(fontSize: 12, color: context.k.inkSoft))
             else if (_contacts.isEmpty && _contactsError == null)
-              Text('Chưa cập nhật số điện thoại phụ huynh của bé này.',
+              Text(l10n?.noParentPhoneUpdatedForChild ?? 'Chưa cập nhật số điện thoại phụ huynh của bé này.',
                   style: TextStyle(fontSize: 12, color: context.k.inkSoft))
             else
               for (var index = 0; index < _contacts.length; index++) ...[
@@ -540,8 +557,8 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
               TextButton(
                   onPressed: _loadingContacts ? null : _reloadContacts,
                   child: Text(_loadingContacts
-                      ? 'Đang tải danh bạ...'
-                      : 'Tải lại danh bạ')),
+                      ? (l10n?.loadingContacts ?? 'Đang tải danh bạ...')
+                      : (l10n?.reloadContacts ?? 'Tải lại danh bạ'))),
             ],
             if (_error != null) ...[
               const SizedBox(height: 9),
@@ -552,19 +569,20 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
             ],
             const SizedBox(height: 16),
             MedicationAction(
-                label: 'Gửi cảnh báo khẩn',
+                label: l10n?.sendEmergencyAlertAction ?? 'Gửi cảnh báo khẩn',
                 danger: true,
                 busy: _busy,
                 onPressed: _submit),
             const SizedBox(height: 8),
             KButton(
-              label: 'Gọi phụ huynh',
+              label: l10n?.callParentsAction ?? 'Gọi phụ huynh',
               secondary: true,
               onPressed: _loadingContacts ? null : _callParent,
             ),
             const SizedBox(height: 10),
             Text(
-                'Một chạm tạo biên bản sự cố. Thông báo đẩy có thể được xử lý nền; hãy gọi gia đình nếu cần xác nhận ngay.',
+                l10n?.emergencyOneTapDisclaimer ??
+                    'Một chạm tạo biên bản sự cố. Thông báo đẩy có thể được xử lý nền; hãy gọi gia đình nếu cần xác nhận ngay.',
                 style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
           ]);
   }
@@ -605,6 +623,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
   }
 
   Widget _success() {
+    final l10n = context.l10n;
     final result = _result!;
     final stamp = DateTime.tryParse(result['reported_at']?.toString() ?? '');
     final clock = stamp == null
@@ -620,14 +639,14 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
       children: [
         Row(children: [
           IconButton(
-              tooltip: 'Đóng',
+              tooltip: l10n?.commonClose ?? 'Đóng',
               padding: EdgeInsets.zero,
               onPressed: () => Navigator.maybePop(context),
               icon: SvgPicture.asset('assets/garden_voice/emergency_back.svg',
                   width: 24, height: 24)),
           const SizedBox(width: 10),
-          const Text('Sự cố',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          Text(l10n?.filterIncidents ?? 'Sự cố',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: 14),
         Center(
@@ -635,12 +654,14 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
               width: 76, height: 76, excludeFromSemantics: true),
         ),
         const SizedBox(height: 9),
-        const Text('Đã lưu biên bản sự cố',
+        Text(l10n?.incidentReportSavedSuccess ?? 'Đã lưu biên bản sự cố',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
         Text(
-            'Sự cố của ${result['child_name']} đã được ghi nhận${clock == null ? '' : ' lúc $clock'}.',
+            LocaleController.instance.isEnglish
+                ? 'Incident for ${result['child_name']} has been recorded${clock == null ? '' : ' at $clock'}.'
+                : 'Sự cố của ${result['child_name']} đã được ghi nhận${clock == null ? '' : ' lúc $clock'}.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12.5, color: context.k.inkSoft)),
         const SizedBox(height: 13),
@@ -656,7 +677,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 Row(children: [
                   Expanded(
                       child: Text(
-                          '${_contacts[index]['relationship'] ?? 'Phụ huynh'}',
+                          '${_contacts[index]['relationship'] ?? (l10n?.parentRole ?? 'Phụ huynh')}',
                           style: TextStyle(
                               fontSize: 12, color: context.k.inkSoft))),
                   const SizedBox(width: 12),
@@ -675,23 +696,23 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 ]),
               ],
               if (_contacts.isEmpty) ...[
-                Text('Liên hệ',
+                Text(l10n?.contactLabel ?? 'Liên hệ',
                     style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
                 const SizedBox(height: 4),
-                const Text('Chưa cập nhật số điện thoại phụ huynh của bé.'),
+                Text(l10n?.noParentPhoneUpdatedForChild ?? 'Chưa cập nhật số điện thoại phụ huynh của bé.'),
               ],
               Divider(height: 1, color: context.k.line),
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
                     flex: 2,
-                    child: Text('Nội dung',
+                    child: Text(l10n?.commonContent ?? 'Nội dung',
                         style:
                             TextStyle(fontSize: 12, color: context.k.inkSoft))),
                 Expanded(
                     flex: 3,
                     child: Text(
                         description.isEmpty
-                            ? 'Chưa có mô tả từ giáo viên.'
+                            ? (l10n?.noTeacherDescription ?? 'Chưa có mô tả từ giáo viên.')
                             : description,
                         style: const TextStyle(fontSize: 12.5))),
               ]),
@@ -699,7 +720,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
           ),
         ),
         const SizedBox(height: 8),
-        Text('Chưa có xác nhận giao thông báo đẩy.',
+        Text(l10n?.noPushConfirmationYet ?? 'Chưa có xác nhận giao thông báo đẩy.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
         if (_contactsError != null) ...[
@@ -714,15 +735,15 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
               style: TextButton.styleFrom(foregroundColor: context.k.inkSoft),
               onPressed: _loadingContacts ? null : _reloadContacts,
               child: Text(_loadingContacts
-                  ? 'Đang tải danh bạ...'
-                  : 'Tải lại danh bạ')),
+                  ? (l10n?.loadingContacts ?? 'Đang tải danh bạ...')
+                  : (l10n?.reloadContacts ?? 'Tải lại danh bạ'))),
         const SizedBox(height: 9),
         MedicationAction(
-            label: 'Gọi phụ huynh ngay',
+            label: l10n?.callParentsNow ?? 'Gọi phụ huynh ngay',
             onPressed: hasValidContact ? _callParent : null),
         const SizedBox(height: 8),
         KButton(
-          label: 'Hoàn tất',
+          label: l10n?.completeAction ?? 'Hoàn tất',
           secondary: true,
           onPressed: () => Navigator.maybePop(context),
         ),
@@ -782,7 +803,7 @@ class _ChildPickerDialogState extends State<_ChildPickerDialog> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Chọn học sinh',
+                      context.l10n?.selectStudentTitle ?? 'Chọn học sinh',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -791,7 +812,7 @@ class _ChildPickerDialogState extends State<_ChildPickerDialog> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Đóng',
+                    tooltip: context.l10n?.commonClose ?? 'Đóng',
                     onPressed: () => Navigator.pop(context),
                     icon: Icon(Icons.close, color: k.inkSoft, size: 20),
                   ),
@@ -811,7 +832,8 @@ class _ChildPickerDialogState extends State<_ChildPickerDialog> {
                   onChanged: (val) => setState(() => _query = val),
                   style: TextStyle(fontSize: 14, color: k.ink),
                   decoration: InputDecoration(
-                    hintText: 'Tìm theo tên hoặc biệt danh bé...',
+                    hintText: context.l10n?.incidentSearchStudentHint ??
+                        'Tìm theo tên hoặc biệt danh bé...',
                     hintStyle: TextStyle(fontSize: 13, color: k.inkFaint),
                     prefixIcon: Icon(Icons.search, size: 20, color: k.inkSoft),
                     suffixIcon: _query.isNotEmpty
@@ -836,7 +858,8 @@ class _ChildPickerDialogState extends State<_ChildPickerDialog> {
                       padding: const EdgeInsets.symmetric(vertical: 40),
                       child: Center(
                         child: Text(
-                          'Không tìm thấy học sinh phù hợp.',
+                          context.l10n?.attendanceNoMatchingStudent ??
+                              'Không tìm thấy học sinh phù hợp.',
                           style: TextStyle(fontSize: 13, color: k.inkFaint),
                         ),
                       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
@@ -58,11 +59,11 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       ? _todayLong(widget.initialReport!.reportDate)
       : _todayLong(DateTime.now());
 
-  String get _headerDate {
+  String _headerDate(BuildContext context) {
     final date = widget.initialReport?.reportDate ?? DateTime.now();
     final now = DateTime.now();
     return date.year == now.year && date.month == now.month && date.day == now.day
-        ? 'Hôm nay'
+        ? (context.l10n?.commonToday ?? 'Hôm nay')
         : _todayLong(date);
   }
 
@@ -191,13 +192,16 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                 body: Center(
                   child: TextButton(
                     onPressed: () => setState(() => metaFuture = _loadMeta()),
-                    child: const Text(
-                        'Không tải được thông tin báo cáo · Thử lại'),
+                    child: Text(
+                      context.l10n?.sttCannotLoadReportRetry ??
+                          'Không tải được thông tin báo cáo · Thử lại',
+                    ),
                   ),
                 ),
               );
             }
             final k = context.k;
+            final l10n = context.l10n;
             final compact = MediaQuery.sizeOf(context).width < 360 ||
                 MediaQuery.textScalerOf(context).scale(1) > 1.2;
 
@@ -218,7 +222,8 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                             size: 18, color: k.ok),
                         const SizedBox(width: 10),
                         Text(
-                          'Báo cáo đã gửi, không thể sửa.',
+                          l10n?.sttSentCannotEdit ??
+                              'Báo cáo đã gửi, không thể sửa.',
                           style: TextStyle(fontSize: 13, color: k.inkSoft),
                         ),
                       ],
@@ -226,7 +231,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   ),
                 _FieldBlock(
                   icon: const _MealFieldIcon(),
-                  label: 'Ăn uống',
+                  label: l10n?.recordMealItem ?? 'Ăn uống',
                   child: _TextArea(
                       controller: eating, readOnly: widget.readOnly),
                 ),
@@ -237,7 +242,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                     width: 22,
                     height: 22,
                   ),
-                  label: 'Giấc ngủ',
+                  label: l10n?.recordNapItem ?? 'Giấc ngủ',
                   child: _TextArea(
                       controller: sleep, readOnly: widget.readOnly),
                 ),
@@ -248,13 +253,13 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                     width: 22,
                     height: 22,
                   ),
-                  label: 'Sức khỏe',
+                  label: l10n?.recordHealth ?? 'Sức khỏe',
                   child: _TextArea(
                       controller: health, readOnly: widget.readOnly),
                 ),
                 const SizedBox(height: KSpace.x4),
                 _FieldBlock(
-                  label: 'Tâm trạng',
+                  label: l10n?.sttMood ?? 'Tâm trạng',
                   child: _TextArea(
                       controller: mood, readOnly: widget.readOnly),
                 ),
@@ -265,13 +270,13 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                     width: 22,
                     height: 22,
                   ),
-                  label: 'Hoạt động',
+                  label: l10n?.recordActivityItem ?? 'Hoạt động',
                   child: _TextArea(
                       controller: activity, readOnly: widget.readOnly),
                 ),
                 const SizedBox(height: 12),
                 _FieldBlock(
-                  label: 'Ghi chú của cô',
+                  label: l10n?.sttTeacherNotes ?? 'Ghi chú của cô',
                   child: _TextArea(
                     controller: note,
                     readOnly: widget.readOnly,
@@ -294,7 +299,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                       height: 48,
                       width: double.infinity,
                       child: KButton(
-                        label: 'Lưu nháp',
+                        label: l10n?.sttSaveDraft ?? 'Lưu nháp',
                         secondary: true,
                         onPressed: submitting ? null : _saveDraft,
                       ),
@@ -304,7 +309,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                       height: 48,
                       width: double.infinity,
                       child: KButton(
-                        label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                        label: submitting
+                            ? (l10n?.commonSending ?? 'Đang gửi…')
+                            : (l10n?.sttSendReport ?? 'Gửi báo cáo'),
                         onPressed: submitting ? null : _confirmSend,
                       ),
                     ),
@@ -315,7 +322,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                           child: SizedBox(
                             height: 48,
                             child: KButton(
-                              label: 'Lưu nháp',
+                              label: l10n?.sttSaveDraft ?? 'Lưu nháp',
                               secondary: true,
                               onPressed: submitting ? null : _saveDraft,
                             ),
@@ -326,7 +333,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                           child: SizedBox(
                             height: 48,
                             child: KButton(
-                              label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                              label: submitting
+                                  ? (l10n?.commonSending ?? 'Đang gửi…')
+                                  : (l10n?.sttSendReport ?? 'Gửi báo cáo'),
                               onPressed: submitting ? null : _confirmSend,
                             ),
                           ),
@@ -340,16 +349,18 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
             return Scaffold(
               backgroundColor: k.canvas,
               appBar: KAppBar(
-                title: 'Chỉnh sửa báo cáo',
-                subtitle: '${widget.child.fullNameWithNickname} · $_headerDate',
+                title: l10n?.sttEditReport ?? 'Chỉnh sửa báo cáo',
+                subtitle:
+                    '${widget.child.fullNameWithNickname} · ${_headerDate(context)}',
                 onBack: () => Navigator.pop(context),
               ),
               body: _existingReportId != null
                   ? ReportDiscussionBubble(
                       reportId: _existingReportId!,
                       childName: widget.child.fullNameWithNickname,
-                      teacherName:
-                          teacherName.isNotEmpty ? teacherName : 'Cô giáo',
+                      teacherName: teacherName.isNotEmpty
+                          ? teacherName
+                          : (l10n?.teacherTitle ?? 'Cô giáo'),
                       isTeacher: true,
                       unreadCount:
                           widget.initialReport?.unreadResponseCount ?? 0,
@@ -401,11 +412,20 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã lưu bản nháp thành công')),
+        SnackBar(
+          content: Text(
+            context.l10n?.sttSaveDraftSuccess ??
+                'Đã lưu bản nháp thành công',
+          ),
+        ),
       );
     } catch (e) {
       debugPrint('Save draft error: $e');
-      if (mounted) setState(() => submitError = getFriendlyErrorMessage(e, fallback: 'Không thể lưu bản nháp. Vui lòng thử lại.'));
+      if (mounted) {
+        final fallbackMsg = context.l10n?.sttCannotSaveDraft ??
+            'Không thể lưu bản nháp. Vui lòng thử lại.';
+        setState(() => submitError = getFriendlyErrorMessage(e, fallback: fallbackMsg));
+      }
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -450,7 +470,11 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
       widget.onSent();
     } catch (e) {
       debugPrint('Send report error: $e');
-      if (mounted) setState(() => submitError = getFriendlyErrorMessage(e, fallback: 'Không thể gửi báo cáo. Vui lòng thử lại.'));
+      if (mounted) {
+        final fallbackMsg = context.l10n?.sttCannotSendReport ??
+            'Không thể gửi báo cáo. Vui lòng thử lại.';
+        setState(() => submitError = getFriendlyErrorMessage(e, fallback: fallbackMsg));
+      }
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -458,12 +482,16 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
 
   void _confirmSend() {
     final reportDateText = todayLong;
+    final l10n = context.l10n;
     showKSheet(
       context,
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Gửi báo cáo cho phụ huynh?', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            l10n?.sttSendReportConfirmTitle ?? 'Gửi báo cáo cho phụ huynh?',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -476,7 +504,10 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.child.fullNameWithNickname, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                    Text('Báo cáo ngày $reportDateText', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                    Text(
+                      l10n?.sttDailyReportDate(reportDateText) ?? 'Báo cáo ngày $reportDateText',
+                      style: TextStyle(fontSize: 12, color: context.k.inkFaint),
+                    ),
                   ],
                 ),
               ],
@@ -486,11 +517,19 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: KButton(label: 'Hủy', secondary: true, onPressed: () => Navigator.pop(context))),
+              Expanded(
+                child: KButton(
+                  label: l10n?.commonCancel ?? 'Hủy',
+                  secondary: true,
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: KButton(
-                  label: submitting ? 'Đang gửi…' : 'Gửi báo cáo',
+                  label: submitting
+                      ? (l10n?.commonSending ?? 'Đang gửi…')
+                      : (l10n?.sttSendReport ?? 'Gửi báo cáo'),
                   icon: Icons.send_outlined,
                   onPressed: submitting ? null : () async {
                     Navigator.pop(context);
@@ -614,7 +653,7 @@ class _TextArea extends StatelessWidget {
         textAlignVertical: TextAlignVertical.center,
         style: TextStyle(color: k.ink, fontSize: 14, height: 1.4),
         decoration: InputDecoration(
-          hintText: 'Chưa có ghi nhận',
+          hintText: context.l10n?.sttNoRecordYet ?? 'Chưa có ghi nhận',
           hintStyle: TextStyle(color: k.inkSoft, fontSize: 14, height: 1.4),
           filled: true,
           fillColor: k.surface,

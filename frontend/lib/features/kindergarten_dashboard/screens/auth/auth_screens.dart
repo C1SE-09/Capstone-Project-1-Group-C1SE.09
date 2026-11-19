@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (_) {
       if (mounted) {
-        _rememberError = 'Không thể đọc thông tin đã nhớ. Bạn vẫn có thể đăng nhập.';
+        _rememberError = context.l10n?.loginRememberError ?? 'Không thể đọc thông tin đã nhớ. Bạn vẫn có thể đăng nhập.';
       }
     } finally {
       if (mounted) setState(() => _loadingCredentials = false);
@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() {
           _rememberAccount = true;
-          _rememberError = 'Chưa xóa được thông tin đã nhớ. Vui lòng thử lại.';
+          _rememberError = context.l10n?.loginRememberClearError ?? 'Chưa xóa được thông tin đã nhớ. Vui lòng thử lại.';
         });
       }
     } finally {
@@ -131,8 +131,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Đã đăng nhập nhưng chưa lưu được lựa chọn ghi nhớ. '
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.l10n?.authRememberSnackBar ??
+                'Đã đăng nhập nhưng chưa lưu được lựa chọn ghi nhớ. '
                 'Hãy thử lại trên thiết bị này; bản web cần HTTPS hoặc localhost.'),
           ));
         }

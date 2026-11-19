@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
@@ -123,7 +124,10 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                   body: Center(
                       child: TextButton(
                           onPressed: () => setState(() => future = _load()),
-                          child: const Text('Không tải được lớp · Thử lại'))));
+                          child: Text(
+                            context.l10n?.sttCannotLoadClassRetry ??
+                                'Không tải được lớp · Thử lại',
+                          ))));
             }
             final data = snapshot.data!;
             final list = data.children
@@ -136,14 +140,15 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                         .contains(query.toLowerCase()))
                 .toList();
             final k = context.k;
+            final l10n = context.l10n;
             return Scaffold(
               body: SafeArea(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                   children: [
                     _GardenVoiceRecordHeader(
-                      title: 'Ghi nhận hoạt động',
-                      subtitle: 'Chọn trẻ để bắt đầu ghi nhận',
+                      title: l10n?.sttRecordActivityTitle ?? 'Ghi nhận hoạt động',
+                      subtitle: l10n?.sttSelectChildToStart ?? 'Chọn trẻ để bắt đầu ghi nhận',
                       onBack: () => Navigator.pop(context),
                       backAsset: 'assets/garden_voice/hub_back.svg',
                     ),
@@ -205,7 +210,8 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                           Expanded(child: Divider(color: k.line)),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('hoặc chọn từng trẻ',
+                            child: Text(
+                                l10n?.sttOrSelectEachChild ?? 'hoặc chọn từng trẻ',
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
@@ -223,7 +229,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                         onChanged: (value) => setState(() => query = value),
                         style: TextStyle(fontSize: 14, color: k.ink),
                         decoration: InputDecoration(
-                          hintText: 'Tìm trẻ…',
+                          hintText: l10n?.sttSearchChild ?? 'Tìm trẻ…',
                           hintStyle: TextStyle(color: k.inkSoft),
                           prefixIcon: Padding(
                             padding: const EdgeInsets.all(11),
@@ -422,7 +428,7 @@ class _GardenVoiceRecordHeader extends StatelessWidget {
           children: [
             IconButton(
               onPressed: onBack,
-              tooltip: 'Quay lại',
+              tooltip: context.l10n?.commonBack ?? 'Quay lại',
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               icon: SvgPicture.asset(backAsset),
@@ -970,7 +976,12 @@ class _RecordingScreenState extends State<RecordingScreen>
       if ((localBytes == null || localBytes.isEmpty) && audioUrl.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Chưa có file âm thanh để phát lại.')),
+            SnackBar(
+              content: Text(
+                context.l10n?.sttNoAudioToPlay ??
+                    'Chưa có file âm thanh để phát lại.',
+              ),
+            ),
           );
         }
         return;
@@ -1004,7 +1015,12 @@ class _RecordingScreenState extends State<RecordingScreen>
         if (_playingClipId == clipId) _playingClipId = null;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể phát đoạn ghi âm này.')),
+        SnackBar(
+          content: Text(
+            context.l10n?.sttCannotPlayAudio ??
+                'Không thể phát đoạn ghi âm này.',
+          ),
+        ),
       );
     }
   }
@@ -1125,7 +1141,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20)),
               title: Text(
-                'Huỷ phiên ghi âm?',
+                context.l10n?.cancelSessionConfirmTitle ?? 'Huỷ phiên ghi âm?',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -1133,18 +1149,19 @@ class _RecordingScreenState extends State<RecordingScreen>
                 ),
               ),
               content: Text(
-                'Tất cả ${session.clips.length} đoạn ghi âm trong phiên hiện tại sẽ bị huỷ bỏ.',
+                context.l10n?.cancelSessionConfirmDesc ??
+                    'Tất cả ${session.clips.length} đoạn ghi âm trong phiên hiện tại sẽ bị huỷ bỏ.',
                 style: TextStyle(fontSize: 14, color: k.inkSoft),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Giữ lại'),
+                  child: Text(context.l10n?.keepSessionAction ?? 'Giữ lại'),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(dialogContext).pop(true),
                   style: FilledButton.styleFrom(backgroundColor: k.bad),
-                  child: const Text('Huỷ phiên'),
+                  child: Text(context.l10n?.cancelSessionAction ?? 'Huỷ phiên'),
                 ),
               ],
             );
@@ -1286,11 +1303,11 @@ class _RecordingScreenState extends State<RecordingScreen>
           setState(() => isBusy = false);
           await _showRecordingRecoveryDialog(
             iconAsset: 'assets/garden_voice/record_permission.svg',
-            title: 'Chưa có quyền micro',
+            title: context.l10n?.sttNoMicPermissionTitle ?? 'Chưa có quyền micro',
             message:
                 'Vui lòng cấp quyền truy cập micro để ghi âm. Thầy cô có thể mở Cài đặt của thiết bị, chọn Quyền riêng tư → Micro và bật cho KinderLog.',
-            primaryLabel: 'Mở cài đặt',
-            secondaryLabel: 'Để sau',
+            primaryLabel: context.l10n?.openSettingsAction ?? 'Mở cài đặt',
+            secondaryLabel: context.l10n?.laterAction ?? 'Để sau',
             onPrimary: _openMicrophoneSettings,
           );
         }
@@ -1380,11 +1397,11 @@ class _RecordingScreenState extends State<RecordingScreen>
         setState(() => isBusy = false);
         await _showRecordingRecoveryDialog(
           iconAsset: 'assets/garden_voice/record_error.svg',
-          title: 'Chưa thể ghi âm',
+          title: context.l10n?.sttCannotRecordTitle ?? 'Chưa thể ghi âm',
           message:
               'Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé.',
-          primaryLabel: 'Thử lại',
-          secondaryLabel: 'Đóng',
+          primaryLabel: context.l10n?.bugReportCommonRetry ?? 'Thử lại',
+          secondaryLabel: context.l10n?.commonClose ?? 'Đóng',
           onPrimary: () => _startRecording(),
         );
       }
@@ -1392,6 +1409,8 @@ class _RecordingScreenState extends State<RecordingScreen>
   }
 
   Future<void> _openMicrophoneSettings() async {
+    final hint = context.l10n?.sttOpenSettingsForMic ??
+        'Mở Cài đặt để cấp quyền micro.';
     try {
       final opened = await launchUrl(
         Uri.parse('app-settings:'),
@@ -1399,13 +1418,13 @@ class _RecordingScreenState extends State<RecordingScreen>
       );
       if (!opened && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mở Cài đặt để cấp quyền micro.')),
+          SnackBar(content: Text(hint)),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mở Cài đặt để cấp quyền micro.')),
+          SnackBar(content: Text(hint)),
         );
       }
     }
@@ -1507,8 +1526,10 @@ class _RecordingScreenState extends State<RecordingScreen>
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text(
-                    'Bản ghi âm quá ngắn hoặc không có âm thanh. Vui lòng thử lại.'),
+                content: Text(
+                  context.l10n?.audioTooShortError ??
+                      'Bản ghi âm quá ngắn hoặc không có âm thanh. Vui lòng thử lại.',
+                ),
                 backgroundColor: context.k.warn,
               ),
             );
@@ -1552,8 +1573,10 @@ class _RecordingScreenState extends State<RecordingScreen>
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-              'Không thể hoàn tất lưu bản ghi âm. Vui lòng bấm ghi âm lại.'),
+          content: Text(
+            context.l10n?.cannotSaveAudioError ??
+                'Không thể hoàn tất lưu bản ghi âm. Vui lòng bấm ghi âm lại.',
+          ),
           backgroundColor: context.k.bad,
         ),
       );
@@ -1944,7 +1967,8 @@ class _RecordingScreenState extends State<RecordingScreen>
                           CircularProgressIndicator(color: k.brand),
                           const SizedBox(height: 12),
                           Text(
-                            'Đang lưu đoạn ghi âm vào phiên…',
+                            context.l10n?.savingClipToSession ??
+                                'Đang lưu đoạn ghi âm vào phiên…',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -1966,9 +1990,11 @@ class _RecordingScreenState extends State<RecordingScreen>
                       seconds: seconds,
                       time: time,
                       message: phase == 'ready'
-                          ? 'Nhấn để bắt đầu ghi âm'
+                          ? (context.l10n?.pressToStartRecording ??
+                              'Nhấn để bắt đầu ghi âm')
                           : recording
-                              ? 'Đang ghi âm · Nói tự nhiên'
+                              ? (context.l10n?.recordingLiveMessage ??
+                                  'Đang ghi âm · Nói tự nhiên')
                               : 'Đã ghi âm $time · ${_formatBytes(selectedFile?.size ?? 0)}',
                       wave: wave,
                       wave2: wave2,
@@ -1986,7 +2012,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                           shape: const StadiumBorder(),
                           backgroundColor: k.surface,
                         ),
-                        child: const Text('Tải lên file ghi âm'),
+                        child: Text(
+                          context.l10n?.uploadAudioFile ?? 'Tải lên file ghi âm',
+                        ),
                       ),
                     ),
                   if (hasFile)
@@ -1995,14 +2023,18 @@ class _RecordingScreenState extends State<RecordingScreen>
                       children: [
                         TextButton(
                           onPressed: _pickFile,
-                          child: const Text('Chọn file khác'),
+                          child: Text(
+                            context.l10n?.chooseAnotherFile ?? 'Chọn file khác',
+                          ),
                         ),
                         TextButton(
                           onPressed: () => setState(() {
                             selectedFile = null;
                             phase = 'ready';
                           }),
-                          child: const Text('Hủy chọn'),
+                          child: Text(
+                            context.l10n?.cancelFileSelection ?? 'Hủy chọn',
+                          ),
                         ),
                       ],
                     ),
@@ -2014,7 +2046,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                           phase = 'ready';
                           selectedFile = null;
                         }),
-                        child: const Text('Ghi âm lại'),
+                        child: Text(
+                          context.l10n?.sttRerecord ?? 'Ghi âm lại',
+                        ),
                       ),
                     ),
                   const SizedBox(height: 14),
@@ -2029,16 +2063,20 @@ class _RecordingScreenState extends State<RecordingScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Gợi ý: kể lại hoạt động của bé',
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.4,
-                              fontWeight: FontWeight.w700,
-                              color: k.ink,
-                            )),
+                        Text(
+                          context.l10n?.recordingHintTitle ??
+                              'Gợi ý: kể lại hoạt động của bé',
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700,
+                            color: k.ink,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          'Kể lần lượt: ăn uống, giấc ngủ, hoạt động, sức khỏe và tâm trạng của bé.',
+                          context.l10n?.recordingHintDesc ??
+                              'Kể lần lượt: ăn uống, giấc ngủ, hoạt động, sức khỏe và tâm trạng của bé.',
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.4,
@@ -2061,7 +2099,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                             foregroundColor: k.brand,
                             shape: const StadiumBorder(),
                           ),
-                          child: const Text('Hủy'),
+                          child: Text(context.l10n?.commonCancel ?? 'Hủy'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -2085,7 +2123,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            child: const Text('Gửi xử lý'),
+                            child: Text(
+                              context.l10n?.sendForProcessing ?? 'Gửi xử lý',
+                            ),
                           ),
                         ),
                       ),
@@ -2359,11 +2399,11 @@ class _CompactSessionRecorderDock extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Tooltip(
-                        message: 'Dừng ghi âm',
+                        message: context.l10n?.sttStopRecording ?? 'Dừng ghi âm',
                         child: FilledButton.icon(
                           onPressed: isBusy ? null : onToggleMic,
                           icon: const Icon(Icons.stop_rounded, size: 16),
-                          label: const Text('Lưu đoạn'),
+                          label: Text(context.l10n?.sttSaveClip ?? 'Lưu đoạn'),
                           style: FilledButton.styleFrom(
                             backgroundColor: k.brand,
                             foregroundColor: k.surface,
@@ -2386,7 +2426,7 @@ class _CompactSessionRecorderDock extends StatelessWidget {
           : Row(
               children: [
                 Tooltip(
-                  message: 'Bắt đầu ghi âm',
+                  message: context.l10n?.sttStartRecording ?? 'Bắt đầu ghi âm',
                   child: Material(
                     color: k.brand,
                     shape: const CircleBorder(),
@@ -2446,7 +2486,7 @@ class _CompactSessionRecorderDock extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: isBusy ? null : onPickFile,
                   icon: const Icon(Icons.upload_rounded, size: 16),
-                  label: const Text('Tải file'),
+                  label: Text(context.l10n?.sttUploadFile ?? 'Tải file'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: k.brand,
                     backgroundColor: k.surface,
@@ -2501,8 +2541,10 @@ class _SelectedAudioFileCard extends StatelessWidget {
           Text('Kích thước: ${formatBytes(file.size)}',
               style: TextStyle(color: k.inkSoft)),
           const SizedBox(height: 14),
-          Text('Đã sẵn sàng tạo báo cáo',
-              style: TextStyle(fontSize: 12, color: k.ok)),
+          Text(
+            context.l10n?.readyToGenerateReports ?? 'Đã sẵn sàng tạo báo cáo',
+            style: TextStyle(fontSize: 12, color: k.ok),
+          ),
         ],
       ),
     );
@@ -4359,7 +4401,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Quay lại',
+                    tooltip: context.l10n?.commonBack ?? 'Quay lại',
                     onPressed: widget.onBack,
                     padding: EdgeInsets.zero,
                     constraints:
@@ -4546,7 +4588,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           SizedBox(
                             height: 48,
                             child: KButton(
-                              label: 'Gửi báo cáo cho phụ huynh',
+                              label: context.l10n?.sttSendToParents ??
+                                  'Gửi báo cáo cho phụ huynh',
                               onPressed: canSend ? _sendBatch : null,
                             ),
                           ),
@@ -4554,7 +4597,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           SizedBox(
                             height: 48,
                             child: KButton(
-                              label: 'Xử lý lại đoạn ghi',
+                              label: context.l10n?.sttReprocessClip ??
+                                  'Xử lý lại đoạn ghi',
                               secondary: true,
                               onPressed: () => _restoreItem(skipped),
                             ),
@@ -4599,9 +4643,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           const SizedBox(height: 6),
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: Text('Bước 3/3 · Xem lại',
-                                style: TextStyle(
-                                    fontSize: 12, color: context.k.inkSoft)),
+                            child: Text(
+                              context.l10n?.sttStepReview ?? 'Bước 3/3 · Xem lại',
+                              style: TextStyle(
+                                  fontSize: 12, color: context.k.inkSoft),
+                            ),
                           ),
                           const SizedBox(height: 0),
                         ] else
@@ -4948,7 +4994,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 minLines: 3,
                 style: const TextStyle(fontSize: 13, height: 1.5),
                 decoration: InputDecoration(
-                  hintText: 'Nhập nội dung văn bản...',
+                  hintText: context.l10n?.sttEnterTextHint ??
+                      'Nhập nội dung văn bản...',
                   filled: true,
                   fillColor: context.k.canvas,
                   border: OutlineInputBorder(
@@ -4963,12 +5010,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: Text(context.l10n?.commonCancel ?? 'Hủy'),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(ctx, true),
             icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-            label: const Text('Phân tích lại'),
+            label: Text(context.l10n?.sttReanalyze ?? 'Phân tích lại'),
           ),
         ],
       ),
@@ -5095,7 +5142,7 @@ class _ClasswideDoneScreen extends StatelessWidget {
             return Scaffold(
               backgroundColor: k.canvas,
               appBar: KAppBar(
-                title: 'Đã gửi báo cáo',
+                title: context.l10n?.sttReportSentSuccessTitle ?? 'Đã gửi báo cáo',
                 onBack: onBack,
               ),
               body: SafeArea(
@@ -5114,7 +5161,7 @@ class _ClasswideDoneScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       KButton(
-                        label: 'Về tổng quan lớp',
+                        label: context.l10n?.sttBackToClassOverview ?? 'Về tổng quan lớp',
                         onPressed: onBack,
                       ),
                     ],
@@ -5208,7 +5255,7 @@ class _ObservationTile extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: isApproving ? null : onToggleApprove,
-                  child: const Text('Duyệt'),
+                  child: Text(context.l10n?.leaveRequestApprove ?? 'Duyệt'),
                 ),
               ),
           ],
@@ -5223,14 +5270,14 @@ class _ObservationTile extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Đã loại bỏ · ${card.fullNameWithNickname}',
+                '${context.l10n?.discardItem ?? 'Đã loại bỏ'} · ${card.fullNameWithNickname}',
                 style: TextStyle(fontSize: 12, color: context.k.inkFaint),
               ),
             ),
             TextButton.icon(
               onPressed: onRestore,
               icon: const Icon(Icons.undo_rounded, size: 15),
-              label: const Text('Hoàn tác'),
+              label: Text(context.l10n?.sttUndo ?? 'Hoàn tác'),
             ),
           ],
         ),
@@ -5274,13 +5321,13 @@ class _ObservationTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (isUnmatched)
-            Text('Chưa xác định bé',
+            Text(context.l10n?.unidentifiedChild ?? 'Chưa xác định bé',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: context.k.brandStrong))
           else if (isSegmentPreview)
-            Text('Đã nhận ra · ${card.fullNameWithNickname}',
+            Text('${context.l10n?.approvedStatus ?? 'Đã nhận ra'} · ${card.fullNameWithNickname}',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -5339,7 +5386,7 @@ class _ObservationTile extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                         ),
-                        Text('Đã duyệt',
+                        Text(context.l10n?.approvedStatus ?? 'Đã duyệt',
                             style: TextStyle(
                                 fontSize: 12,
                                 height: 1.4,
@@ -5353,7 +5400,7 @@ class _ObservationTile extends StatelessWidget {
           if (isUnmatched) ...[
             const SizedBox(height: 4),
             Text(
-              '“${card.snippet.isNotEmpty ? card.snippet : 'Chưa nhận diện chính xác được bé trong lớp.'}”',
+              '“${card.snippet.isNotEmpty ? card.snippet : (context.l10n?.unidentifiedChild ?? 'Chưa nhận diện chính xác được bé trong lớp.')}”',
               style: TextStyle(
                   fontSize: 17,
                   height: 1.4,
@@ -5371,17 +5418,17 @@ class _ObservationTile extends StatelessWidget {
           ] else ...[
             const SizedBox(height: 10),
             if (card.eating.isNotEmpty)
-              _buildReportLine(context, 'Ăn uống', card.eating),
+              _buildReportLine(context, 'eating', context.l10n?.categoryEating ?? 'Ăn uống', card.eating),
             if (card.sleep.isNotEmpty)
-              _buildReportLine(context, 'Giấc ngủ', card.sleep),
+              _buildReportLine(context, 'sleep', context.l10n?.categorySleep ?? 'Giấc ngủ', card.sleep),
             if (card.activities.isNotEmpty)
-              _buildReportLine(context, 'Hoạt động', card.activities),
+              _buildReportLine(context, 'activity', context.l10n?.categoryActivity ?? 'Hoạt động', card.activities),
             if (card.mood.isNotEmpty)
-              _buildReportLine(context, 'Tâm trạng', card.mood),
+              _buildReportLine(context, 'mood', context.l10n?.categoryMood ?? 'Tâm trạng', card.mood),
             if (card.health.isNotEmpty)
-              _buildReportLine(context, 'Sức khỏe', card.health),
+              _buildReportLine(context, 'health', context.l10n?.categoryHealth ?? 'Sức khỏe', card.health),
             if (card.note.trim().isNotEmpty)
-              _buildReportLine(context, 'Ghi chú', card.note.trim()),
+              _buildReportLine(context, 'note', context.l10n?.categoryNote ?? 'Ghi chú', card.note.trim()),
             if (card.eating.isEmpty &&
                 card.sleep.isEmpty &&
                 card.activities.isEmpty &&
@@ -5391,7 +5438,7 @@ class _ObservationTile extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  'Không có thông tin chi tiết được ghi nhận',
+                  context.l10n?.noDetailInfoRecorded ?? 'Không có thông tin chi tiết được ghi nhận',
                   style: TextStyle(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -5415,7 +5462,7 @@ class _ObservationTile extends StatelessWidget {
                   minimumSize: const Size(double.infinity, 48),
                   shape: const StadiumBorder(),
                 ),
-                child: const Text('Gán đoạn này'),
+                child: Text(context.l10n?.assignThisSegment ?? 'Gán đoạn này'),
               ),
             ),
             const SizedBox(height: 8),
@@ -5429,7 +5476,7 @@ class _ObservationTile extends StatelessWidget {
                   minimumSize: const Size(double.infinity, 48),
                   shape: const StadiumBorder(),
                 ),
-                child: const Text('Bỏ qua đoạn này'),
+                child: Text(context.l10n?.skipThisSegment ?? 'Bỏ qua đoạn này'),
               ),
             ),
           ] else if (!isSegmentPreview &&
@@ -5448,8 +5495,8 @@ class _ObservationTile extends StatelessWidget {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('Chỉnh sửa',
-                        style: TextStyle(
+                    child: Text(context.l10n?.editActivityTitle ?? 'Chỉnh sửa',
+                        style: const TextStyle(
                             fontSize: 14,
                             height: 1.4,
                             fontWeight: FontWeight.w700)),
@@ -5462,8 +5509,8 @@ class _ObservationTile extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('Loại bỏ',
-                      style: TextStyle(
+                  child: Text(context.l10n?.discardItem ?? 'Loại bỏ',
+                      style: const TextStyle(
                           fontSize: 14,
                           height: 1.4,
                           fontWeight: FontWeight.w700)),
@@ -5476,8 +5523,8 @@ class _ObservationTile extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('Bỏ duyệt',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: Text(context.l10n?.unapprovedStatus ?? 'Bỏ duyệt',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ],
             )
@@ -5496,7 +5543,7 @@ class _ObservationTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 6),
                       minimumSize: const Size(44, 44),
                     ),
-                    child: const Text('Chỉnh sửa'),
+                    child: Text(context.l10n?.editActivityTitle ?? 'Chỉnh sửa'),
                   ),
                 ],
                 TextButton(
@@ -5506,7 +5553,7 @@ class _ObservationTile extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     minimumSize: const Size(44, 44),
                   ),
-                  child: const Text('Loại bỏ'),
+                  child: Text(context.l10n?.discardItem ?? 'Loại bỏ'),
                 ),
                 if (isApproving)
                   // Đang approve → hiện spinner (block cả Loại bỏ để tránh race)
@@ -5524,7 +5571,7 @@ class _ObservationTile extends StatelessWidget {
                     icon: Icon(Icons.undo_rounded,
                         size: 15, color: context.k.warn),
                     label: Text(
-                      'Bỏ duyệt',
+                      context.l10n?.unapprovedStatus ?? 'Bỏ duyệt',
                       style: TextStyle(
                           color: context.k.warn, fontWeight: FontWeight.w600),
                     ),
@@ -5556,7 +5603,7 @@ class _ObservationTile extends StatelessWidget {
                               size: 15, color: context.k.ok),
                           const SizedBox(width: 5),
                           Text(
-                            'Đã duyệt',
+                            context.l10n?.approvedStatus ?? 'Đã duyệt',
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -5574,7 +5621,7 @@ class _ObservationTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 6),
                       minimumSize: const Size(44, 44),
                     ),
-                    child: const Text('Duyệt'),
+                    child: Text(context.l10n?.leaveRequestApprove ?? 'Duyệt'),
                   ),
               ],
             ),
@@ -5583,20 +5630,21 @@ class _ObservationTile extends StatelessWidget {
     );
   }
 
-  Widget _buildReportLine(BuildContext context, String label, String text) {
+  Widget _buildReportLine(
+      BuildContext context, String type, String label, String text) {
     if (text.isEmpty) return const SizedBox.shrink();
-    final (background, foreground, asset) = switch (label) {
-      'Ăn uống' => (
+    final (background, foreground, asset) = switch (type) {
+      'eating' => (
           context.k.foodRowTint,
           context.k.foodRowText,
           'food',
         ),
-      'Giấc ngủ' => (
+      'sleep' => (
           context.k.sleepRowTint,
           context.k.sleepRowText,
           'sleep',
         ),
-      'Hoạt động' => (
+      'activity' => (
           context.k.activityRowTint,
           context.k.activityRowText,
           'activity',
@@ -5708,7 +5756,7 @@ class _AssignScreenState extends State<_AssignScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Quay lại',
+                    tooltip: context.l10n?.commonBack ?? 'Quay lại',
                     onPressed: () => Navigator.of(context).maybePop(),
                     padding: EdgeInsets.zero,
                     constraints:
@@ -5716,8 +5764,8 @@ class _AssignScreenState extends State<_AssignScreen> {
                     icon: SvgPicture.asset('assets/notifications/back_44.svg'),
                   ),
                   const SizedBox(width: 4),
-                  const Text('Gán đoạn ghi',
-                      style: TextStyle(
+                  Text(context.l10n?.assignSegmentTitle ?? 'Gán đoạn ghi',
+                      style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF24313D))),
@@ -5739,7 +5787,7 @@ class _AssignScreenState extends State<_AssignScreen> {
                       onChanged: (value) => setState(() => query = value),
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.search_rounded),
-                        hintText: 'Tìm tên bé hoặc biệt danh',
+                        hintText: context.l10n?.sttSearchChildNameOrNick ?? 'Tìm tên bé hoặc biệt danh',
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 10),
                         border: OutlineInputBorder(

@@ -25,14 +25,14 @@ class _ParentRequestFormFields extends StatelessWidget {
                           color: k.warnTint,
                           borderRadius: BorderRadius.circular(20)),
                       child: Text(
-                          'Loại đơn mới — báo trước để giáo viên nắm lịch đến lớp của bé',
+                          context.l10n?.lateArrivalBannerNote ?? 'Loại đơn mới — báo trước để giáo viên nắm lịch đến lớp của bé',
                           style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: k.warnDeep)))),
               const SizedBox(height: 12),
             ],
-            _label(context, 'Loại đơn'),
+            _label(context, context.l10n?.requestTypeTitle ?? 'Loại đơn'),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               for (final type in LeaveRequestType.values) ...[
                 if (type == LeaveRequestType.lateArrival)
@@ -48,13 +48,13 @@ class _ParentRequestFormFields extends StatelessWidget {
                   teacherName: form.widget.teacherName),
               const SizedBox(height: 12),
             ],
-            _label(context, form._late ? 'Ngày đi trễ' : 'Từ ngày'),
+            _label(context, form._late ? (context.l10n?.lateDateLabel ?? 'Ngày đi trễ') : (context.l10n?.leaveFromDate ?? 'Từ ngày')),
             _date(context, requestDayLabel(form._from),
                 disabled ? null : () => form._pickDate(),
                 emphasized: !form._late),
             if (!form._late) ...[
               const SizedBox(height: 12),
-              _label(context, 'Đến ngày'),
+              _label(context, context.l10n?.leaveToDate ?? 'Đến ngày'),
               _date(context, requestDayLabel(form._to),
                   disabled ? null : () => form._pickDate(end: true)),
               const SizedBox(height: 12),
@@ -66,18 +66,18 @@ class _ParentRequestFormFields extends StatelessWidget {
                       decoration: BoxDecoration(
                           color: k.brandTint,
                           borderRadius: BorderRadius.circular(20)),
-                      child: Text('Tổng thời gian nghỉ: ${form._days} ngày',
+                      child: Text('${context.l10n?.leaveTotalDaysPrefix ?? "Tổng thời gian nghỉ:"} ${form._days} ${context.l10n?.commonDays ?? "ngày"}',
                           style: TextStyle(
                               color: k.brand,
                               fontWeight: FontWeight.w600,
                               fontSize: 12)))),
             ] else ...[
               const SizedBox(height: 12),
-              _label(context, 'Giờ đến dự kiến'),
+              _label(context, context.l10n?.lateArrivalExpectedTime ?? 'Giờ đến dự kiến'),
               _control(
                   context,
                   '${form._eta.hour.toString().padLeft(2, '0')}:${form._eta.minute.toString().padLeft(2, '0')}',
-                  'Chọn giờ',
+                  context.l10n?.commonSelectTime ?? 'Chọn giờ',
                   disabled ? null : form._pickTime,
                   strong: true),
               SingleChildScrollView(
@@ -101,7 +101,7 @@ class _ParentRequestFormFields extends StatelessWidget {
                   ])),
             ],
             const SizedBox(height: 12),
-            _label(context, form._late ? 'Lý do đi trễ' : 'Lý do xin nghỉ'),
+            _label(context, form._late ? (context.l10n?.lateArrivalReasonLabel ?? 'Lý do đi trễ') : (context.l10n?.leaveRequestReasonLabel ?? 'Lý do xin nghỉ')),
             Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -126,8 +126,8 @@ class _ParentRequestFormFields extends StatelessWidget {
                               contentPadding: EdgeInsets.zero,
                               counterText: '',
                               hintText: form._late
-                                  ? 'Nhập lý do bé đến lớp muộn'
-                                  : 'Nhập lý do xin nghỉ của bé',
+                                  ? (context.l10n?.lateArrivalReasonHint ?? 'Nhập lý do bé đến lớp muộn')
+                                  : (context.l10n?.leaveRequestReasonHint ?? 'Nhập lý do xin nghỉ của bé'),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none),
@@ -135,10 +135,10 @@ class _ParentRequestFormFields extends StatelessWidget {
                             final length =
                                 (value ?? '').trim().characters.length;
                             if (length < 3) {
-                              return 'Lý do cần ít nhất 3 ký tự sau khi bỏ khoảng trắng.';
+                              return context.l10n?.requestReasonTrimmedError ?? 'Lý do cần ít nhất 3 ký tự sau khi bỏ khoảng trắng.';
                             }
                             if (length > 1000) {
-                              return 'Lý do tối đa 1000 ký tự.';
+                              return context.l10n?.requestReasonMaxLength ?? 'Lý do tối đa 1000 ký tự.';
                             }
                             return null;
                           }),
@@ -156,7 +156,7 @@ class _ParentRequestFormFields extends StatelessWidget {
                     ])),
             if (!form._late) ...[
               const SizedBox(height: 12),
-              Text('Lý do tối thiểu 3 ký tự – hệ thống kiểm tra khi gửi.',
+              Text(context.l10n?.requestReasonMinLength ?? 'Lý do tối thiểu 3 ký tự – hệ thống kiểm tra khi gửi.',
                   style: TextStyle(color: k.inkSoft, fontSize: 11)),
               const SizedBox(height: 12),
               OutlinedButton(
@@ -175,14 +175,14 @@ class _ParentRequestFormFields extends StatelessWidget {
                         flex: 5,
                         child: Text(
                             form._pickingImage
-                                ? 'Đang mở ảnh…'
-                                : '+ Thêm ảnh giấy khám / đơn thuốc',
+                                ? (context.l10n?.requestOpeningImage ?? 'Đang mở ảnh…')
+                                : (context.l10n?.requestAddPrescriptionImage ?? '+ Thêm ảnh giấy khám / đơn thuốc'),
                             style: const TextStyle(
                                 fontSize: 12.5, fontWeight: FontWeight.w600))),
                     const SizedBox(width: 8),
                     Flexible(
                         flex: 2,
-                        child: Text('Không bắt buộc',
+                        child: Text(context.l10n?.commonOptional ?? 'Không bắt buộc',
                             textAlign: TextAlign.end,
                             style: TextStyle(fontSize: 11, color: k.inkSoft))),
                   ])),
@@ -202,13 +202,13 @@ class _ParentRequestFormFields extends StatelessWidget {
                     child: Text(form._imageName!,
                         style: const TextStyle(fontSize: 11))),
                 IconButton(
-                    tooltip: 'Xóa ảnh đính kèm',
+                    tooltip: context.l10n?.requestRemoveAttachment ?? 'Xóa ảnh đính kèm',
                     onPressed: disabled ? null : form._removeImage,
                     icon: const Icon(Icons.close, size: 20))
               ]),
             ],
             if (form._imageBytes != null)
-              Text('Ảnh y tế riêng tư · JPEG, PNG, WebP · Tối đa 5 MiB',
+              Text(context.l10n?.requestMedicalPhotoHint ?? 'Ảnh y tế riêng tư · JPEG, PNG, WebP · Tối đa 5 MiB',
                   style: TextStyle(fontSize: 11, color: k.inkSoft)),
             if (form._error != null) ...[
               const SizedBox(height: 12),
@@ -238,18 +238,18 @@ class _ParentRequestFormFields extends StatelessWidget {
                             ? null
                             : () =>
                                 form._discard(ParentRequestDestination.history),
-                        child: const Text('Xem lịch sử đơn'))),
+                        child: Text(context.l10n?.requestViewHistory ?? 'Xem lịch sử đơn'))),
             ],
             const SizedBox(height: 12),
             ParentRequestButton(
-                label: form._late ? 'GỬI THÔNG BÁO' : 'GỬI ĐƠN',
+                label: form._late ? (context.l10n?.requestSubmitNoticeButton ?? 'GỬI THÔNG BÁO') : (context.l10n?.requestSubmitButton ?? 'GỬI ĐƠN'),
                 onPressed: disabled ? null : form._submit,
                 busy: form._busy),
             const SizedBox(height: 8),
             Text(
                 form._late
-                    ? 'Giáo viên sẽ thấy ghi chú đi trễ khi điểm danh buổi sáng.'
-                    : 'Đơn sẽ được gửi tới giáo viên chủ nhiệm để duyệt.',
+                    ? (context.l10n?.lateArrivalTeacherNote ?? 'Giáo viên sẽ thấy ghi chú đi trễ khi điểm danh buổi sáng.')
+                    : (context.l10n?.requestSentToTeacherNote ?? 'Đơn sẽ được gửi tới giáo viên chủ nhiệm để duyệt.'),
                 style: TextStyle(fontSize: 11, color: k.inkSoft)),
           ]),
         ));
@@ -288,8 +288,8 @@ class _ParentRequestFormFields extends StatelessWidget {
                       fontSize: 13, fontWeight: FontWeight.w700)),
               Text(
                   type == LeaveRequestType.absence
-                      ? '1 ngày hoặc nhiều ngày'
-                      : 'Đến lớp muộn trong ngày',
+                      ? (context.l10n?.leaveMultipleDaysDesc ?? '1 ngày hoặc nhiều ngày')
+                      : (context.l10n?.lateArrivalDesc ?? 'Đến lớp muộn trong ngày'),
                   style: TextStyle(fontSize: 11, color: context.k.inkSoft)),
             ])));
   }
@@ -298,7 +298,7 @@ class _ParentRequestFormFields extends StatelessWidget {
 
   Widget _date(BuildContext context, String value, VoidCallback? onTap,
           {bool emphasized = false}) =>
-      _control(context, value, 'Chọn ngày', onTap,
+      _control(context, value, context.l10n?.commonSelectDate ?? 'Chọn ngày', onTap,
           borderColor: emphasized ? context.k.brand : context.k.line);
 
   Widget _control(BuildContext context, String value, String action,

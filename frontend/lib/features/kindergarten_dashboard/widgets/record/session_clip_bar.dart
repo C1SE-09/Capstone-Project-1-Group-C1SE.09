@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
@@ -205,7 +206,8 @@ class _SessionClipBarState extends State<SessionClipBar> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  'Đoạn ${widget.index + 1}',
+                                  context.l10n?.sttSegmentIndex(widget.index + 1) ??
+                                      'Đoạn ${widget.index + 1}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -271,14 +273,17 @@ class _SessionClipBarState extends State<SessionClipBar> {
                       const SizedBox(height: 5),
                       Text(
                         isPending
-                            ? 'Đang chuyển giọng nói thành văn bản…'
+                            ? (context.l10n?.sttTranscribing ??
+                                'Đang chuyển giọng nói thành văn bản…')
                             : isFailed
                                 ? (clip.errorMessage?.trim().isNotEmpty == true
                                     ? clip.errorMessage!.trim()
-                                    : 'Nhận dạng giọng nói thất bại')
+                                    : (context.l10n?.sttFailed ??
+                                        'Nhận dạng giọng nói thất bại'))
                                 : (_resolvedTranscript.isNotEmpty
                                     ? '"$_resolvedTranscript"'
-                                    : 'Chưa có nội dung văn bản'),
+                                    : (context.l10n?.sttNoText ??
+                                        'Chưa có nội dung văn bản')),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -304,7 +309,7 @@ class _SessionClipBarState extends State<SessionClipBar> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Tooltip(
-                    message: 'Xoá bản ghi này',
+                    message: context.l10n?.sttDeleteRecording ?? 'Xoá bản ghi này',
                     child: Material(
                       color: k.surface,
                       shape: CircleBorder(
@@ -336,8 +341,8 @@ class _SessionClipBarState extends State<SessionClipBar> {
                   const SizedBox(height: 6),
                   Tooltip(
                     message: widget.isExpanded
-                        ? 'Thu gọn nội dung'
-                        : 'Mở rộng nội dung đã nói',
+                        ? (context.l10n?.sttCollapse ?? 'Thu gọn nội dung')
+                        : (context.l10n?.sttExpand ?? 'Mở rộng nội dung đã nói'),
                     child: Material(
                       color: widget.isExpanded
                           ? k.brand
@@ -409,7 +414,7 @@ class _SessionClipBarState extends State<SessionClipBar> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Nội dung đã nói',
+                          context.l10n?.sttSpokenContent ?? 'Nội dung đã nói',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -443,9 +448,9 @@ class _SessionClipBarState extends State<SessionClipBar> {
                                     color: k.brand,
                                   ),
                                 )
-                              : const Text(
-                                  'Lưu chữ',
-                                  style: TextStyle(
+                              : Text(
+                                  context.l10n?.sttSaveText ?? 'Lưu chữ',
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -458,7 +463,8 @@ class _SessionClipBarState extends State<SessionClipBar> {
                     Text(
                       clip.errorMessage?.trim().isNotEmpty == true
                           ? clip.errorMessage!.trim()
-                          : 'Không thể nhận dạng đoạn này. Bấm X ở trên để xoá rồi ghi lại.',
+                          : (context.l10n?.sttCannotRecognizeHint ??
+                              'Không thể nhận dạng đoạn này. Bấm X ở trên để xoá rồi ghi lại.'),
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.45,
@@ -492,7 +498,8 @@ class _SessionClipBarState extends State<SessionClipBar> {
                         isDense: true,
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
-                        hintText: 'Nhập hoặc chỉnh sửa nội dung đoạn ghi âm…',
+                        hintText: context.l10n?.sttEditTranscriptHint ??
+                            'Nhập hoặc chỉnh sửa nội dung đoạn ghi âm…',
                         hintStyle: TextStyle(
                           fontSize: 13,
                           color: k.inkFaint,
@@ -522,15 +529,15 @@ class _ClipStatusBadge extends StatelessWidget {
     final Color fg;
 
     if (clip.isPendingOrProcessing) {
-      label = 'Đang nhận dạng…';
+      label = context.l10n?.sttRecognizing ?? 'Đang nhận dạng…';
       bg = k.warnTint;
       fg = k.warn;
     } else if (clip.isFailed) {
-      label = 'Lỗi STT';
+      label = context.l10n?.sttErrorBadge ?? 'Lỗi STT';
       bg = k.badTint;
       fg = k.badText;
     } else {
-      label = 'Đã xong';
+      label = context.l10n?.sttDoneBadge ?? 'Đã xong';
       bg = k.okTint;
       fg = k.ok;
     }

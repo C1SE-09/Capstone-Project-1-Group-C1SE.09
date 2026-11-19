@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
@@ -55,13 +56,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final confirmPass = _confirmPasswordController.text;
 
     if (newPass != confirmPass) {
-      setState(() => _errorMessage = 'Mật khẩu xác nhận không trùng khớp.');
+      setState(() => _errorMessage = (context.l10n?.changePasswordMismatch ?? 'Mật khẩu xác nhận không trùng khớp.'));
       return;
     }
 
     if (currentPass == newPass) {
       setState(() =>
-          _errorMessage = 'Mật khẩu mới không được trùng với mật khẩu hiện tại.');
+          _errorMessage = (context.l10n?.changePasswordSameAsCurrent ?? 'Mật khẩu mới không được trùng với mật khẩu hiện tại.'));
       return;
     }
 
@@ -77,8 +78,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đổi mật khẩu thành công!'),
+        SnackBar(content: Text((context.l10n?.changePasswordSuccess ?? 'Đổi mật khẩu thành công!')),
           backgroundColor: KColors.ok,
         ),
       );
@@ -94,7 +94,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       if (!mounted) return;
       setState(() => _errorMessage = getFriendlyErrorMessage(
         e,
-        fallback: 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.',
+        fallback: (context.l10n?.changePasswordFailed ?? 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.'),
       ));
     } finally {
       if (mounted) {
@@ -116,8 +116,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           return Scaffold(
             backgroundColor: k.canvas,
             appBar: KAppBar(
-              title: 'Đổi mật khẩu',
-              subtitle: 'Bảo vệ tài khoản KinderLog',
+              title: (context.l10n?.changePasswordTitle ?? 'Đổi mật khẩu'),
+              subtitle: (context.l10n?.changePasswordSubtitle ?? 'Bảo vệ tài khoản KinderLog'),
               onBack: widget.onBack ??
                   (Navigator.canPop(context) ? () => Navigator.pop(context) : null),
             ),
@@ -151,14 +151,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           ),
                         ),
                       ],
-                      _passwordLabel('Mật khẩu hiện tại', k),
+                      _passwordLabel((context.l10n?.changePasswordCurrentLabel ?? 'Mật khẩu hiện tại'), k),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _currentPasswordController,
                         obscureText: _obscureCurrent,
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
-                            return 'Vui lòng nhập mật khẩu hiện tại.';
+                            return (context.l10n?.changePasswordCurrentEmpty ?? 'Vui lòng nhập mật khẩu hiện tại.');
                           }
                           return null;
                         },
@@ -172,17 +172,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      _passwordLabel('Mật khẩu mới', k),
+                      _passwordLabel((context.l10n?.changePasswordNewLabel ?? 'Mật khẩu mới'), k),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _newPasswordController,
                         obscureText: _obscureNew,
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
-                            return 'Vui lòng nhập mật khẩu mới.';
+                            return (context.l10n?.changePasswordNewEmpty ?? 'Vui lòng nhập mật khẩu mới.');
                           }
                           if (val.length < 6) {
-                            return 'Mật khẩu mới phải có tối thiểu 6 ký tự.';
+                            return (context.l10n?.changePasswordNewMinLength ?? 'Mật khẩu mới phải có tối thiểu 6 ký tự.');
                           }
                           return null;
                         },
@@ -196,17 +196,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      _passwordLabel('Xác nhận mật khẩu mới', k),
+                      _passwordLabel((context.l10n?.changePasswordConfirmLabel ?? 'Xác nhận mật khẩu mới'), k),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirm,
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
-                            return 'Vui lòng xác nhận mật khẩu mới.';
+                            return (context.l10n?.changePasswordConfirmEmpty ?? 'Vui lòng xác nhận mật khẩu mới.');
                           }
                           if (val != _newPasswordController.text) {
-                            return 'Mật khẩu xác nhận không trùng khớp.';
+                            return (context.l10n?.changePasswordMismatch ?? 'Mật khẩu xác nhận không trùng khớp.');
                           }
                           return null;
                         },
@@ -221,7 +221,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Yêu cầu mật khẩu mới',
+                        (context.l10n?.changePasswordRequirements ?? 'Yêu cầu mật khẩu mới'),
                         style: TextStyle(
                           color: k.inkSoft,
                           fontSize: 12,
@@ -229,7 +229,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         ),
                       ),
                       Text(
-                        '· Tối thiểu 6 ký tự',
+                        (context.l10n?.changePasswordReqMinLength ?? '· Tối thiểu 6 ký tự'),
                         style: TextStyle(
                           color: k.inkSoft,
                           fontSize: 12,
@@ -243,7 +243,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         child: _isLoading
                             ? const Center(child: CircularProgressIndicator())
                             : KButton(
-                                label: 'Đổi mật khẩu',
+                                label: (context.l10n?.changePasswordTitle ?? 'Đổi mật khẩu'),
                                 onPressed: _submit,
                               ),
                       ),
@@ -295,7 +295,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ),
         errorStyle: TextStyle(color: k.badText, fontSize: 12, height: 1.4),
         suffixIcon: IconButton(
-          tooltip: obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+          tooltip: obscure ? (context.l10n?.loginShowPassword ?? 'Hiện mật khẩu') : 'Ẩn mật khẩu',
           onPressed: onToggle,
           icon: Icon(
             obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -362,13 +362,13 @@ class __ChangePasswordFormSheetState
     final confirmPass = _confirmPasswordController.text;
 
     if (newPass != confirmPass) {
-      setState(() => _errorMessage = 'Mật khẩu xác nhận không trùng khớp.');
+      setState(() => _errorMessage = (context.l10n?.changePasswordMismatch ?? 'Mật khẩu xác nhận không trùng khớp.'));
       return;
     }
 
     if (currentPass == newPass) {
       setState(() =>
-          _errorMessage = 'Mật khẩu mới không được trùng với mật khẩu hiện tại.');
+          _errorMessage = (context.l10n?.changePasswordSameAsCurrent ?? 'Mật khẩu mới không được trùng với mật khẩu hiện tại.'));
       return;
     }
 
@@ -386,8 +386,7 @@ class __ChangePasswordFormSheetState
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đổi mật khẩu thành công!'),
+        SnackBar(content: Text((context.l10n?.changePasswordSuccess ?? 'Đổi mật khẩu thành công!')),
           backgroundColor: KColors.ok,
         ),
       );
@@ -395,7 +394,7 @@ class __ChangePasswordFormSheetState
       if (!mounted) return;
       setState(() => _errorMessage = getFriendlyErrorMessage(
         e,
-        fallback: 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.',
+        fallback: (context.l10n?.changePasswordFailed ?? 'Không thể đổi mật khẩu vào lúc này. Quý phụ huynh và thầy cô vui lòng thử lại sau ít phút.'),
       ));
     } finally {
       if (mounted) {
@@ -417,7 +416,7 @@ class __ChangePasswordFormSheetState
               const Icon(Icons.lock_reset_rounded, color: KColors.brand, size: 24),
               const SizedBox(width: 10),
               Text(
-                'Đổi mật khẩu',
+                (context.l10n?.changePasswordTitle ?? 'Đổi mật khẩu'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ],
@@ -449,9 +448,9 @@ class __ChangePasswordFormSheetState
             controller: _currentPasswordController,
             obscureText: _obscureCurrent,
             validator: (val) =>
-                (val == null || val.trim().isEmpty) ? 'Vui lòng nhập mật khẩu hiện tại.' : null,
+                (val == null || val.trim().isEmpty) ? (context.l10n?.changePasswordCurrentEmpty ?? 'Vui lòng nhập mật khẩu hiện tại.') : null,
             decoration: InputDecoration(
-              labelText: 'Mật khẩu hiện tại',
+              labelText: (context.l10n?.changePasswordCurrentLabel ?? 'Mật khẩu hiện tại'),
               prefixIcon: const Icon(Icons.lock_outline, size: 18),
               suffixIcon: IconButton(
                 icon: Icon(
@@ -468,12 +467,12 @@ class __ChangePasswordFormSheetState
             controller: _newPasswordController,
             obscureText: _obscureNew,
             validator: (val) {
-              if (val == null || val.trim().isEmpty) return 'Vui lòng nhập mật khẩu mới.';
-              if (val.length < 6) return 'Mật khẩu mới phải từ 6 ký tự.';
+              if (val == null || val.trim().isEmpty) return (context.l10n?.changePasswordNewEmpty ?? 'Vui lòng nhập mật khẩu mới.');
+              if (val.length < 6) return (context.l10n?.changePasswordNewMinLength ?? 'Mật khẩu mới phải từ 6 ký tự.');
               return null;
             },
             decoration: InputDecoration(
-              labelText: 'Mật khẩu mới',
+              labelText: (context.l10n?.changePasswordNewLabel ?? 'Mật khẩu mới'),
               prefixIcon: const Icon(Icons.key_outlined, size: 18),
               suffixIcon: IconButton(
                 icon: Icon(
@@ -490,12 +489,12 @@ class __ChangePasswordFormSheetState
             controller: _confirmPasswordController,
             obscureText: _obscureConfirm,
             validator: (val) {
-              if (val == null || val.trim().isEmpty) return 'Vui lòng xác nhận mật khẩu mới.';
-              if (val != _newPasswordController.text) return 'Mật khẩu xác nhận không trùng khớp.';
+              if (val == null || val.trim().isEmpty) return (context.l10n?.changePasswordConfirmEmpty ?? 'Vui lòng xác nhận mật khẩu mới.');
+              if (val != _newPasswordController.text) return (context.l10n?.changePasswordMismatch ?? 'Mật khẩu xác nhận không trùng khớp.');
               return null;
             },
             decoration: InputDecoration(
-              labelText: 'Xác nhận mật khẩu mới',
+              labelText: (context.l10n?.changePasswordConfirmLabel ?? 'Xác nhận mật khẩu mới'),
               prefixIcon: const Icon(Icons.check_circle_outline, size: 18),
               suffixIcon: IconButton(
                 icon: Icon(
@@ -514,13 +513,11 @@ class __ChangePasswordFormSheetState
             dense: true,
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
-            title: const Text(
-              'Đăng xuất các thiết bị khác',
-              style: TextStyle(fontSize: 13),
+            title: Text((context.l10n?.changePasswordLogoutOtherDevices ?? 'Đăng xuất các thiết bị khác'),
+              style: const TextStyle(fontSize: 13),
             ),
-            subtitle: const Text(
-              'Các máy khác sẽ phải đăng nhập lại.',
-              style: TextStyle(fontSize: 11, color: KColors.inkFaint),
+            subtitle: Text((context.l10n?.changePasswordLogoutOtherDevicesDesc ?? 'Các máy khác sẽ phải đăng nhập lại.'),
+              style: const TextStyle(fontSize: 11, color: KColors.inkFaint),
             ),
           ),
           const SizedBox(height: 8),
@@ -531,7 +528,7 @@ class __ChangePasswordFormSheetState
                   children: [
                     Expanded(
                       child: KButton(
-                        label: 'Hủy',
+                        label: (context.l10n?.commonCancel ?? 'Hủy'),
                         secondary: true,
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -539,7 +536,7 @@ class __ChangePasswordFormSheetState
                     const SizedBox(width: 12),
                     Expanded(
                       child: KButton(
-                        label: 'Lưu thay đổi',
+                        label: (context.l10n?.changePasswordSaveButton ?? 'Lưu thay đổi'),
                         icon: Icons.check,
                         onPressed: _submit,
                       ),

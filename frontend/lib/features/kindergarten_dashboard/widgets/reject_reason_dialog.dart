@@ -1,4 +1,5 @@
 // Màn23 giữ hợp đồng trả lý do; không tự điền lý do mẫu của thiết kế.
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
 
@@ -47,10 +48,11 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
   @override
   Widget build(BuildContext context) {
     final count = _reason.text.trim().runes.length;
+    final l10n = context.l10n;
     return Dialog.fullscreen(
         backgroundColor: context.k.canvas,
         child: ParentRequestLayout(
-            title: 'Từ chối đơn',
+            title: l10n?.rejectAction ?? 'Từ chối đơn',
             child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                 child: Column(
@@ -97,8 +99,8 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                             ])),
                       ])),
                       const SizedBox(height: 14),
-                      const Text('Lý do từ chối *',
-                          style: TextStyle(
+                      Text(l10n?.rejectReasonPrompt ?? 'Lý do từ chối *',
+                          style: const TextStyle(
                               fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 14),
                       TextField(
@@ -108,7 +110,7 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                           autofocus: true,
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
-                              hintText:
+                              hintText: l10n?.rejectReasonHint ??
                                   'Nhập lý do cụ thể để phụ huynh nắm thông tin',
                               filled: true,
                               fillColor: context.k.surface,
@@ -129,7 +131,8 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                               fontSize: 10.5, color: context.k.inkFaint)),
                       const SizedBox(height: 14),
                       Text(
-                          'Bắt buộc nhập lý do (2–500 ký tự). Phụ huynh xem lý do trong chi tiết đơn của bé.',
+                          l10n?.rejectReasonValidation ??
+                              'Bắt buộc nhập lý do (2–500 ký tự). Phụ huynh xem lý do trong chi tiết đơn của bé.',
                           style: TextStyle(
                               fontSize: 11.5, color: context.k.warnDeep)),
                       const SizedBox(height: 14),
@@ -140,7 +143,7 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                                 style: OutlinedButton.styleFrom(
                                     shape: const StadiumBorder(),
                                     minimumSize: const Size(0, 48)),
-                                child: const Text('Quay lại'))),
+                                child: Text(l10n?.commonBack ?? 'Quay lại'))),
                         const SizedBox(width: 8),
                         Expanded(
                             child: FilledButton(
@@ -151,7 +154,7 @@ class _RejectReasonDialogState extends State<RejectReasonDialog> {
                                     backgroundColor: context.k.bad,
                                     shape: const StadiumBorder(),
                                     minimumSize: const Size(0, 48)),
-                                child: const Text('Gửi từ chối'))),
+                                child: Text(l10n?.sendRejectionAction ?? 'Gửi từ chối'))),
                       ]),
                     ]))));
   }

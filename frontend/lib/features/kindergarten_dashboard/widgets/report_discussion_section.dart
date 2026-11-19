@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
@@ -159,7 +160,8 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
       setState(() {
         _errorMessage = e is ReportResponseException
             ? e.message
-            : 'Không thể tải trao đổi. Quý phụ huynh vui lòng thử lại sau.';
+            : (context.l10n?.cannotLoadDiscussion ??
+                'Không thể tải trao đổi. Quý phụ huynh vui lòng thử lại sau.');
         _isLoading = false;
       });
     }
@@ -209,8 +211,10 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Không thể chọn ảnh. Vui lòng thử lại.'),
+          SnackBar(
+            content: Text(
+              context.l10n?.cannotPickImageGeneric ?? 'Không thể chọn ảnh. Vui lòng thử lại.',
+            ),
           ),
         );
       }
@@ -240,7 +244,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Đính kèm hình ảnh',
+                context.l10n?.attachImageTitle ?? 'Đính kèm hình ảnh',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -259,8 +263,10 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                   alignment: Alignment.center,
                   child: Icon(Icons.camera_alt_rounded, color: context.k.brand),
                 ),
-                title: const Text('Chụp ảnh từ máy ảnh',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                title: Text(
+                  context.l10n?.takePhotoCamera ?? 'Chụp ảnh từ máy ảnh',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
                 onTap: () => _pickImage(ImageSource.camera),
               ),
               ListTile(
@@ -274,8 +280,10 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                   alignment: Alignment.center,
                   child: Icon(Icons.photo_library_rounded, color: context.k.inkSoft),
                 ),
-                title: const Text('Chọn ảnh từ thư viện',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                title: Text(
+                  context.l10n?.choosePhotoGallery ?? 'Chọn ảnh từ thư viện',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
                 onTap: () => _pickImage(ImageSource.gallery),
               ),
             ],
@@ -295,9 +303,11 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
     });
 
     try {
+      final fallbackContent =
+          context.l10n?.sentAttachedImage ?? 'Đã gửi một hình ảnh đính kèm';
       final newResponse = await _repo.sendResponse(
         reportId: widget.reportId,
-        content: text.isNotEmpty ? text : 'Đã gửi một hình ảnh đính kèm',
+        content: text.isNotEmpty ? text : fallbackContent,
         imageBytes: _selectedImageBytes,
         fileName: _selectedImageName,
         isTeacher: widget.isTeacher,
@@ -323,7 +333,8 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
           content: Text(
             e is ReportResponseException
                 ? e.message
-                : 'Không thể gửi tin nhắn. Quý phụ huynh vui lòng thử lại.',
+                : (context.l10n?.cannotSendMessage ??
+                    'Không thể gửi tin nhắn. Quý phụ huynh vui lòng thử lại.'),
           ),
           backgroundColor: context.k.bad,
         ),
@@ -363,7 +374,8 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
           content: Text(
             e is ReportResponseException
                 ? e.message
-                : 'Không thể gửi tin nhắn thoại. Vui lòng thử lại sau.',
+                : (context.l10n?.cannotSendVoiceMessage ??
+                    'Không thể gửi tin nhắn thoại. Vui lòng thử lại sau.'),
           ),
           backgroundColor: context.k.bad,
         ),
@@ -544,7 +556,9 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
-          widget.isTeacher ? 'Trao đổi với phụ huynh' : 'Trao đổi với giáo viên',
+          widget.isTeacher
+              ? (context.l10n?.discussionWithParent ?? 'Trao đổi với phụ huynh')
+              : (context.l10n?.discussionWithTeacher ?? 'Trao đổi với giáo viên'),
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -558,7 +572,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            '$count phản hồi',
+            context.l10n?.discussionResponseCount(count) ?? '$count phản hồi',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -586,7 +600,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  'Đã phản hồi',
+                  context.l10n?.discussionResponded ?? 'Đã phản hồi',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -615,8 +629,8 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
           const SizedBox(height: 8),
           Text(
             widget.isTeacher
-                ? 'Chưa có trao đổi nào'
-                : 'Chưa có phản hồi nào',
+                ? (context.l10n?.discussionNoDiscussionYet ?? 'Chưa có trao đổi nào')
+                : (context.l10n?.discussionNoResponsesYet ?? 'Chưa có phản hồi nào'),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -626,8 +640,10 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
           const SizedBox(height: 4),
           Text(
             widget.isTeacher
-                ? 'Khi phụ huynh gửi phản hồi về báo cáo này, tin nhắn sẽ hiển thị tại đây để cô theo dõi và trả lời.'
-                : 'Quý phụ huynh có thể gửi tin nhắn trao đổi hoặc lời dặn dò cho cô giáo về báo cáo này.',
+                ? (context.l10n?.discussionTeacherEmptyHint ??
+                    'Khi phụ huynh gửi phản hồi về báo cáo này, tin nhắn sẽ hiển thị tại đây để cô theo dõi và trả lời.')
+                : (context.l10n?.discussionParentEmptyHint ??
+                    'Quý phụ huynh có thể gửi tin nhắn trao đổi hoặc lời dặn dò cho cô giáo về báo cáo này.'),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -662,7 +678,10 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
           TextButton.icon(
             onPressed: _fetchResponses,
             icon: const Icon(Icons.refresh_rounded, size: 16),
-            label: const Text('Thử lại', style: TextStyle(fontWeight: FontWeight.w600)),
+            label: Text(
+              context.l10n?.bugReportCommonRetry ?? 'Thử lại',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             style: TextButton.styleFrom(foregroundColor: context.k.bad),
           ),
         ],
@@ -705,8 +724,12 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
         ? msg.authorName.trim().characters.first.toUpperCase()
         : 'M';
     final readText = widget.isTeacher
-        ? (msg.isRead ? 'Đã gửi · Phụ huynh đã đọc' : 'Đã gửi')
-        : (msg.isRead ? 'Đã gửi · Cô đã đọc' : 'Đã gửi');
+        ? (msg.isRead
+            ? (context.l10n?.discussionSentReadByParent ?? 'Đã gửi · Phụ huynh đã đọc')
+            : (context.l10n?.commonSent ?? 'Đã gửi'))
+        : (msg.isRead
+            ? (context.l10n?.discussionSentReadByTeacher ?? 'Đã gửi · Cô đã đọc')
+            : (context.l10n?.commonSent ?? 'Đã gửi'));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -930,9 +953,9 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                       color: const Color(0xFFE8F5E9),
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    child: const Text(
-                      '✓ Đã ghi nhận & xử lý',
-                      style: TextStyle(
+                    child: Text(
+                      context.l10n?.discussionAcknowledged ?? '✓ Đã ghi nhận & xử lý',
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2E7D32),
@@ -970,11 +993,14 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                   Icon(Icons.check_circle_outline_rounded,
                       size: 14, color: context.k.brand),
                   const SizedBox(width: 4),
-                  Text('Đánh dấu đã xử lý',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: context.k.brand,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    context.l10n?.discussionMarkHandled ?? 'Đánh dấu đã xử lý',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.k.brand,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1009,7 +1035,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _selectedImageName ?? 'Ảnh đính kèm',
+                  _selectedImageName ?? (context.l10n?.discussionAttachedImage ?? 'Ảnh đính kèm'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1019,14 +1045,14 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                   ),
                 ),
                 Text(
-                  'Đã sẵn sàng gửi kèm tin nhắn',
+                  context.l10n?.discussionReadyToSendWithMsg ?? 'Đã sẵn sàng gửi kèm tin nhắn',
                   style: TextStyle(fontSize: 11, color: context.k.inkSoft),
                 ),
               ],
             ),
           ),
           IconButton(
-            tooltip: 'Hủy chọn ảnh',
+            tooltip: context.l10n?.discussionCancelImage ?? 'Hủy chọn ảnh',
             onPressed: () {
               setState(() {
                 _selectedImageBytes = null;
@@ -1069,7 +1095,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
               : Row(
                   children: [
                     IconButton(
-                      tooltip: 'Đính kèm ảnh',
+                      tooltip: context.l10n?.discussionAttachImageTooltip ?? 'Đính kèm ảnh',
                       onPressed: _isSending ? null : _showImageSourcePicker,
                       icon: Container(
                         width: 36,
@@ -1097,8 +1123,10 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                         style: TextStyle(fontSize: 13, color: context.k.ink),
                         decoration: InputDecoration(
                           hintText: widget.isTeacher
-                              ? 'Nhắn phản hồi cho phụ huynh về báo cáo này...'
-                              : 'Nhắn cho cô giáo về báo cáo này...',
+                              ? (context.l10n?.discussionTeacherInputHint ??
+                                  'Nhắn phản hồi cho phụ huynh về báo cáo này...')
+                              : (context.l10n?.discussionParentInputHint ??
+                                  'Nhắn cho cô giáo về báo cáo này...'),
                           hintStyle:
                               TextStyle(fontSize: 12.5, color: context.k.inkFaint),
                           isDense: true,
@@ -1271,7 +1299,7 @@ class _AttachmentThumbnailWidgetState extends State<AttachmentThumbnailWidget> {
                   size: 22, color: context.k.inkSoft),
               const SizedBox(height: 4),
               Text(
-                'Thử lại',
+                context.l10n?.bugReportCommonRetry ?? 'Thử lại',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -1354,7 +1382,7 @@ class _ImageLightboxDialog extends StatelessWidget {
                 radius: 20,
                 backgroundColor: Colors.black.withValues(alpha: 0.6),
                 child: IconButton(
-                  tooltip: 'Đóng',
+                  tooltip: context.l10n?.commonClose ?? 'Đóng',
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.close_rounded,
                       color: Colors.white, size: 24),
@@ -1489,8 +1517,8 @@ class _ReportDiscussionBubbleState extends State<ReportDiscussionBubble> {
   Widget _buildFloatingButton(BuildContext context) {
     return Tooltip(
       message: widget.isTeacher
-          ? 'Nhắn tin với phụ huynh'
-          : 'Nhắn tin với cô giáo',
+          ? (context.l10n?.chatWithParent ?? 'Nhắn tin với phụ huynh')
+          : (context.l10n?.chatWithTeacher ?? 'Nhắn tin với cô giáo'),
       child: GestureDetector(
         key: const ValueKey('report-discussion-bubble-btn'),
         onTap: _openChat,
@@ -1623,8 +1651,8 @@ class _ReportDiscussionBubbleState extends State<ReportDiscussionBubble> {
               children: [
                 Text(
                   widget.isTeacher
-                      ? 'Trao đổi với phụ huynh'
-                      : 'Trao đổi với giáo viên',
+                      ? (context.l10n?.discussionWithParent ?? 'Trao đổi với phụ huynh')
+                      : (context.l10n?.discussionWithTeacher ?? 'Trao đổi với giáo viên'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1632,7 +1660,9 @@ class _ReportDiscussionBubbleState extends State<ReportDiscussionBubble> {
                   ),
                 ),
                 Text(
-                  widget.isTeacher ? 'Bé ${widget.childName}' : widget.teacherName,
+                  widget.isTeacher
+                      ? (context.l10n?.childLabelPrefix(widget.childName) ?? 'Bé ${widget.childName}')
+                      : widget.teacherName,
                   style: TextStyle(
                     fontSize: 11.5,
                     color: context.k.inkSoft,
@@ -1644,7 +1674,7 @@ class _ReportDiscussionBubbleState extends State<ReportDiscussionBubble> {
           ),
           IconButton(
             key: const ValueKey('report-discussion-close-overlay-btn'),
-            tooltip: 'Thu nhỏ khung chat',
+            tooltip: context.l10n?.minimizeChatTooltip ?? 'Thu nhỏ khung chat',
             onPressed: _closeChat,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints.tightFor(width: 34, height: 34),

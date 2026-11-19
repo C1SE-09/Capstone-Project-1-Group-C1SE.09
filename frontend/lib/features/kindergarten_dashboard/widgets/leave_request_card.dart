@@ -1,4 +1,5 @@
 // Thẻ22: mở/thu gọn, nội dung và ETA thật; không coi báo trễ là check-in.
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
@@ -37,16 +38,18 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
     } catch (_) {/* Giữ thông tin liên hệ trên thẻ để giáo viên thử lại. */}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không mở được ứng dụng gọi điện.')));
+          SnackBar(content: Text(context.l10n?.cannotOpenPhoneApp ?? 'Không mở được ứng dụng gọi điện.')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final item = widget.item, k = context.k;
+    final l10n = context.l10n;
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
     final pending = item.status == LeaveStatus.pending;
     final late = item.requestType == LeaveRequestType.lateArrival;
-    final name = item.childName ?? 'Chưa có tên học sinh';
+    final name = item.childName ?? (l10n?.student ?? 'Chưa có tên học sinh');
     final words = name
         .trim()
         .split(RegExp(r'\s+'))
@@ -65,7 +68,7 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
       Semantics(
           button: true,
           expanded: _open,
-          label: 'Chi tiết đơn của $name',
+          label: l10n?.leaveRequestDetailOf(name) ?? 'Chi tiết đơn của $name',
           child: InkWell(
               onTap: () => setState(() {
                     _open = !_open;
@@ -96,8 +99,12 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
                                   fontSize: 14, fontWeight: FontWeight.w700)),
                           Text(
                               late
-                                  ? 'Báo đi trễ ${requestDate(item.fromDate)} · dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'chưa cập nhật'}'
-                                  : '${widget.className == null ? '' : '${widget.className} · '}Nghỉ ${item.totalDays} ngày · gửi ${requestTimestamp(item.createdAt).split(', ').last}',
+                                  ? (isEn
+                                      ? 'Late arrival ${requestDate(item.fromDate)} · expected at ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'not updated')}'
+                                      : 'Báo đi trễ ${requestDate(item.fromDate)} · dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'chưa cập nhật')}')
+                                  : (isEn
+                                      ? '${widget.className == null ? '' : '${widget.className} · '}Leave ${item.totalDays} day${item.totalDays == 1 ? '' : 's'} · sent ${requestTimestamp(item.createdAt).split(', ').last}'
+                                      : '${widget.className == null ? '' : '${widget.className} · '}Nghỉ ${item.totalDays} ngày · gửi ${requestTimestamp(item.createdAt).split(', ').last}'),
                               style: TextStyle(fontSize: 11, color: k.inkSoft)),
                         ])),
                     const SizedBox(width: 8),
@@ -108,7 +115,7 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              MedicationBadge(late ? 'Đi trễ' : 'Xin nghỉ',
+                              MedicationBadge(late ? (l10n?.statusLate ?? 'Đi trễ') : (l10n?.filterLeaveRequests ?? 'Xin nghỉ'),
                                   tone: late
                                       ? MedicationTone.warn
                                       : MedicationTone.brand),
@@ -125,31 +132,33 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
       if (_open) ...[
         const SizedBox(height: 10),
         ParentRequestInfo(
-            'Ngày',
+            l10n?.dayTab ?? 'Ngày',
             Text(
                 late
-                    ? '${requestDate(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? 'Chưa cập nhật'}'
+                    ? (isEn
+                        ? '${requestDate(item.fromDate)} · Expected at ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'Not updated')}'
+                        : '${requestDate(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'Chưa cập nhật')}')
                     : requestRange(item),
                 style: const TextStyle(
                     fontWeight: FontWeight.w600, fontSize: 12))),
-        ParentRequestInfo(late ? 'Lý do đi trễ:' : 'Lý do xin nghỉ:',
+        ParentRequestInfo(late ? (l10n?.lateArrivalReasonLabel ?? 'Lý do đi trễ:') : (l10n?.leaveReasonLabel ?? 'Lý do xin nghỉ:'),
             Text(item.reason, style: const TextStyle(fontSize: 12))),
         if (item.attachmentUrl != null)
           ParentRequestInfo(
-              'Đính kèm',
+              l10n?.attachmentLabel ?? 'Đính kèm',
               TextButton(
                   onPressed: widget.onAttachment,
-                  child: const Text('Xem ảnh đính kèm',
-                      style: TextStyle(fontSize: 12)))),
+                  child: Text(l10n?.viewAttachment ?? 'Xem ảnh đính kèm',
+                      style: const TextStyle(fontSize: 12)))),
         ParentRequestInfo(
-            'SĐT liên hệ',
+            l10n?.contactPhoneLabel ?? 'SĐT liên hệ',
             TextButton(
                 onPressed:
                     phoneCallUri(item.contactPhone) == null ? null : _call,
                 child: Text(maskedPhone(item.contactPhone),
                     style: const TextStyle(fontSize: 12)))),
         if (item.rejectReason?.isNotEmpty == true)
-          Text('Lý do từ chối: ${item.rejectReason}',
+          Text('${l10n?.rejectReasonLabel ?? 'Lý do từ chối'}: ${item.rejectReason}',
               style: TextStyle(fontSize: 12, color: k.bad)),
         if (pending) ...[
           const SizedBox(height: 10),
@@ -162,11 +171,11 @@ class _LeaveRequestCardState extends State<LeaveRequestCard> {
                         side: BorderSide(color: k.bad),
                         minimumSize: const Size(0, 48),
                         shape: const StadiumBorder()),
-                    child: const Text('Từ chối'))),
+                    child: Text(l10n?.rejectAction ?? 'Từ chối'))),
             const SizedBox(width: 8),
             Expanded(
                 child: MedicationAction(
-                    label: 'Duyệt đơn',
+                    label: l10n?.approveAction ?? 'Duyệt đơn',
                     onPressed: widget.processing ? null : widget.onApprove)),
           ])
         ],

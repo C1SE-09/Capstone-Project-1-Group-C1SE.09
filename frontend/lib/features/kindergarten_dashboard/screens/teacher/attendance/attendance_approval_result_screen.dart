@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
@@ -24,16 +25,21 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
     return name;
   }
 
-  String get _title => _isLate ? 'Đã duyệt báo trễ' : 'Đã duyệt đơn';
+  String _title(BuildContext context) => _isLate
+      ? (context.l10n?.badgeLateArrivalApproved ?? 'Đã duyệt báo trễ')
+      : (context.l10n?.badgeRequestApproved ?? 'Đã duyệt đơn');
 
-  String get _bannerTitle =>
-      _childName.isEmpty ? _title : '$_title của $_childName';
+  String _bannerTitle(BuildContext context) => _childName.isEmpty
+      ? _title(context)
+      : '${_title(context)} của $_childName';
 
-  String get _subtitle {
+  String _subtitle(BuildContext context) {
     if (_isLate) {
-      return 'Giờ đến thực tế do giáo viên xác nhận; ETA chỉ là thời gian dự kiến.';
+      return context.l10n?.etaDisclaimer ??
+          'Giờ đến thực tế do giáo viên xác nhận; ETA chỉ là thời gian dự kiến.';
     }
-    return 'Có thể kiểm tra trạng thái điểm danh tại màn hình Điểm danh sau khi duyệt đơn.';
+    return context.l10n?.checkAttendanceAfterApprovalHint ??
+        'Có thể kiểm tra trạng thái điểm danh tại màn hình Điểm danh sau khi duyệt đơn.';
   }
 
   String get _dateLabel => DateFormat('dd/MM').format(request.fromDate);
@@ -47,11 +53,13 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
     return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
   }
 
-  String get _detailLine => _isLate
+  String _detailLine(BuildContext context) => _isLate
       ? (_formatTime(request.expectedArrivalTime) == null
-          ? 'Báo đi trễ đã được duyệt'
-          : 'Dự kiến đến lúc ${_formatTime(request.expectedArrivalTime)}')
-      : 'Đơn nghỉ đã được duyệt';
+          ? (context.l10n?.lateArrivalApprovedTitle ?? 'Báo đi trễ đã được duyệt')
+          : (context.l10n?.expectedAtTime(
+                  _formatTime(request.expectedArrivalTime)!) ??
+              'Dự kiến đến lúc ${_formatTime(request.expectedArrivalTime)}'))
+      : (context.l10n?.leaveRequestApprovedTitle ?? 'Đơn nghỉ đã được duyệt');
 
   void _return(BuildContext context) {
     Navigator.of(context).pop();
@@ -63,11 +71,12 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
         child: Builder(
           builder: (context) {
             final k = context.k;
+            final l10n = context.l10n;
             return Scaffold(
               backgroundColor: k.canvas,
               appBar: KAppBar(
-                title: _title,
-                subtitle: 'Đơn đã được cập nhật',
+                title: _title(context),
+                subtitle: l10n?.requestUpdatedStatus ?? 'Đơn đã được cập nhật',
                 onBack: () => Navigator.maybePop(context),
               ),
               body: ListView(
@@ -102,7 +111,7 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _bannerTitle,
+                                  _bannerTitle(context),
                                   style: TextStyle(
                                     fontSize: 14,
                                     height: 1.4,
@@ -111,7 +120,8 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Trạng thái yêu cầu đã được cập nhật.',
+                                  l10n?.requestStatusUpdatedDesc ??
+                                      'Trạng thái yêu cầu đã được cập nhật.',
                                   style: TextStyle(
                                     fontSize: 12,
                                     height: 1.4,
@@ -128,7 +138,8 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Điểm danh ngày $_dateLabel sau khi duyệt',
+                    l10n?.attendanceDateAfterApproval(_dateLabel) ??
+                        'Điểm danh ngày $_dateLabel sau khi duyệt',
                     style: TextStyle(
                       fontSize: 14,
                       height: 1.4,
@@ -180,7 +191,7 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  _detailLine,
+                                  _detailLine(context),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -196,8 +207,10 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           StatusBadge(
                             ui.ReportStatus.submitted,
-                            labelOverride:
-                                _isLate ? 'Báo trễ đã duyệt' : 'Đã duyệt',
+                            labelOverride: _isLate
+                                ? (l10n?.badgeLateArrivalApproved ??
+                                    'Báo trễ đã duyệt')
+                                : (l10n?.leaveRequestsApproved ?? 'Đã duyệt'),
                           ),
                         ],
                       ),
@@ -215,7 +228,7 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      _subtitle,
+                      _subtitle(context),
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.4,
@@ -226,7 +239,7 @@ class AttendanceApprovalResultScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   KButton(
-                    label: 'Về Điểm danh',
+                    label: l10n?.returnToAttendanceAction ?? 'Về Điểm danh',
                     onPressed: () => _return(context),
                   ),
                 ],

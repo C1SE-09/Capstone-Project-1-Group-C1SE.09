@@ -254,7 +254,7 @@ void main() {
     await _pump(tester, _MockParentRepo());
 
     expect(find.text('Trần Văn Tuấn'), findsWidgets);
-    expect(find.text('Phụ huynh bé Bảo'), findsOneWidget);
+    expect(find.text('Phụ huynh bé Trần Bảo Bảo (Bảo)'), findsOneWidget);
     expect(find.textContaining('128 ngày đồng hành cùng KinderLog'),
         findsOneWidget);
     expect(find.text('Thông tin liên hệ'), findsOneWidget);
@@ -271,7 +271,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('parent-contact-menu')));
     await tester.pumpAndSettle();
     expect(
-        find.text('Tài khoản phụ huynh của bé Trần Bảo Bảo'), findsOneWidget);
+        find.text('Tài khoản phụ huynh của bé Trần Bảo Bảo (Bảo)'), findsOneWidget);
     expect(find.text('Chỉnh sửa thông tin'), findsOneWidget);
 
     await tester.tap(find.text('Chỉnh sửa thông tin'));

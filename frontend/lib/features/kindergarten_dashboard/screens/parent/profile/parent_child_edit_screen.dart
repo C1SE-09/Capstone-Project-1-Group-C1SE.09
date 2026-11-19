@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/utils/error_helper.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
@@ -28,7 +29,7 @@ Future<void> showParentChildEditScreen(
   onSaved(updated);
   if (messenger?.mounted ?? false) {
     messenger!.showSnackBar(
-      const SnackBar(content: Text('Đã cập nhật thông tin của bé thành công')),
+      SnackBar(content: Text(context.l10n?.childEditSuccess ?? 'Đã cập nhật thông tin của bé thành công')),
     );
   }
 }
@@ -101,9 +102,9 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
               : initialDate,
       firstDate: firstDate,
       lastDate: today,
-      helpText: 'Chọn ngày sinh của bé',
-      cancelText: 'Hủy',
-      confirmText: 'Chọn',
+      helpText: context.l10n?.childEditDobLabel ?? 'Chọn ngày sinh của bé',
+      cancelText: context.l10n?.commonCancel ?? 'Hủy',
+      confirmText: context.l10n?.commonSelect ?? 'Chọn',
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -114,16 +115,16 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final l10n = LocaleController.instance.currentL10n;
     final name = _name.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Họ và tên của bé không được để trống.');
+      setState(() => _error = l10n.childEditFullNameRequired);
       return;
     }
     if (_dateOfBirth != null &&
         DateUtils.dateOnly(_dateOfBirth!)
             .isAfter(DateUtils.dateOnly(DateTime.now()))) {
-      setState(
-          () => _error = 'Ngày sinh của bé không thể là ngày trong tương lai.');
+      setState(() => _error = l10n.childEditDobFutureError);
       return;
     }
     FocusScope.of(context).unfocus();
@@ -151,7 +152,7 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
         _saving = false;
         _error = getFriendlyErrorMessage(
           error,
-          fallback: 'Không thể lưu thông tin của bé. Vui lòng thử lại sau.',
+          fallback: l10n.childEditSaveError,
         );
       });
     }
@@ -231,10 +232,15 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
       );
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return PopScope(
         canPop: !_saving,
         child: Scaffold(
-          appBar: KAppBar(title: 'Chỉnh sửa thông tin bé', onBack: _cancel),
+          appBar: KAppBar(
+            title: l10n?.childEditInfo ?? 'Chỉnh sửa thông tin bé',
+            onBack: _cancel,
+          ),
           body: SafeArea(
             top: false,
             child: Column(
@@ -250,7 +256,8 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
                       spacing: 14,
                       children: [
                         Text(
-                          'Cập nhật thông tin để nhà trường chăm sóc bé tốt hơn.',
+                          l10n?.childEditSubtitle ??
+                              'Cập nhật thông tin để nhà trường chăm sóc bé tốt hơn.',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontSize: 15,
@@ -260,28 +267,28 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
                         ),
                         _field(
                           keyName: 'child-edit-name',
-                          label: 'Họ và tên của bé *',
+                          label: l10n?.childEditFullNameLabel ?? 'Họ và tên của bé *',
                           controller: _name,
-                          hint: 'Ví dụ: Nguyễn Minh An',
+                          hint: l10n?.childEditFullNameHint ?? 'Ví dụ: Nguyễn Minh An',
                           maxLength: 150,
                           capitalization: TextCapitalization.words,
                         ),
                         _field(
                           keyName: 'child-edit-nickname',
-                          label: 'Tên gọi ở nhà (Biệt danh)',
+                          label: l10n?.childEditNicknameLabel ?? 'Tên gọi ở nhà (Biệt danh)',
                           controller: _nickname,
-                          hint: 'Ví dụ: Bơ, Sóc, Bon…',
+                          hint: l10n?.childEditNicknameHint ?? 'Ví dụ: Bơ, Sóc, Bon…',
                           maxLength: 50,
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           spacing: 6,
                           children: [
-                            _label('Ngày sinh của bé'),
+                            _label(l10n?.childEditDobLabel ?? 'Ngày sinh của bé'),
                             Semantics(
                               button: true,
                               enabled: !_saving,
-                              label: 'Chọn ngày sinh của bé',
+                              label: l10n?.childEditDobLabel ?? 'Chọn ngày sinh của bé',
                               child: InkWell(
                                 key: const ValueKey('child-edit-dob'),
                                 onTap: _saving ? null : _pickDate,
@@ -294,7 +301,7 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
                                   ),
                                   child: Text(
                                     _dateOfBirth == null
-                                        ? 'Chọn ngày sinh'
+                                        ? (l10n?.childEditDobHint ?? 'Chọn ngày sinh')
                                         : kDateLabel(_dateOfBirth!),
                                     style: _bodyStyle,
                                   ),
@@ -307,15 +314,15 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           spacing: 6,
                           children: [
-                            _label('Giới tính'),
+                            _label(l10n?.genderLabel ?? 'Giới tính'),
                             Wrap(
                               spacing: KSpace.x2,
                               runSpacing: KSpace.x2,
                               children: [
-                                for (final option in const [
-                                  ('male', 'Bé trai (Nam)'),
-                                  ('female', 'Bé gái (Nữ)'),
-                                  ('other', 'Khác'),
+                                for (final option in [
+                                  ('male', l10n?.genderBoy ?? 'Bé trai (Nam)'),
+                                  ('female', l10n?.genderGirl ?? 'Bé gái (Nữ)'),
+                                  ('other', l10n?.genderOther ?? 'Khác'),
                                 ])
                                   Semantics(
                                     enabled: !_saving,
@@ -333,16 +340,18 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
                               ],
                             ),
                             if (_gender == null)
-                              Text('Chưa cập nhật',
-                                  style: _bodyStyle.copyWith(
-                                      color: context.k.inkSoft)),
+                              Text(
+                                l10n?.childNotUpdated ?? 'Chưa cập nhật',
+                                style: _bodyStyle.copyWith(
+                                    color: context.k.inkSoft),
+                              ),
                           ],
                         ),
                         _field(
                           keyName: 'child-edit-allergies',
-                          label: 'Dị ứng & Lưu ý sức khỏe',
+                          label: l10n?.parentHealthAllergyNotesTitle ?? 'Dị ứng & Lưu ý sức khỏe',
                           controller: _allergies,
-                          hint: 'Thông tin dị ứng cần nhà trường lưu ý',
+                          hint: l10n?.parentHealthAllergySchoolNotice ?? 'Thông tin dị ứng cần nhà trường lưu ý',
                           maxLines: 3,
                         ),
                       ],
@@ -363,11 +372,13 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
                               style: _bodyStyle.copyWith(color: context.k.bad)),
                         ),
                       KButton(
-                        label: _saving ? 'Đang lưu thông tin…' : 'Lưu thay đổi',
+                        label: _saving
+                            ? (l10n?.childEditSaving ?? 'Đang lưu thông tin…')
+                            : (l10n?.commonSaveChanges ?? 'Lưu thay đổi'),
                         onPressed: _saving ? null : _save,
                       ),
                       KButton(
-                          label: 'Hủy',
+                          label: l10n?.commonCancel ?? 'Hủy',
                           secondary: true,
                           onPressed: _saving ? null : _cancel),
                     ],
@@ -378,4 +389,5 @@ class _ParentChildEditScreenState extends State<ParentChildEditScreen> {
           ),
         ),
       );
+  }
 }

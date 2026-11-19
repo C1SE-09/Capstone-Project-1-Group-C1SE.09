@@ -58,27 +58,33 @@ String formatChildAge(DateTime? dob, {DateTime? now}) {
     years--;
     months += 12;
   }
+  final isEn = LocaleController.instance.isEnglish;
   if (years <= 0) {
-    return '$months tháng tuổi';
+    return isEn ? '$months months old' : '$months tháng tuổi';
   } else if (months == 0) {
-    return '$years tuổi';
+    return isEn ? '$years years old' : '$years tuổi';
   } else {
-    return '$years tuổi $months tháng';
+    return isEn ? '$years years $months months' : '$years tuổi $months tháng';
   }
 }
 
 /// Chuyển đổi mã giới tính sang tiếng Việt thân thiện.
 String formatGender(String? gender) {
-  if (gender == null || gender.trim().isEmpty) return 'Chưa cập nhật';
+  final isEn = LocaleController.instance.isEnglish;
+  if (gender == null || gender.trim().isEmpty) {
+    return isEn ? 'Not updated' : 'Chưa cập nhật';
+  }
   final g = gender.trim().toLowerCase();
-  if (g == 'male' || g == 'nam') return 'Bé trai (Nam)';
-  if (g == 'female' || g == 'nữ' || g == 'nu') return 'Bé gái (Nữ)';
-  return 'Khác';
+  if (g == 'male' || g == 'nam') return isEn ? 'Boy (Male)' : 'Bé trai (Nam)';
+  if (g == 'female' || g == 'nữ' || g == 'nu') return isEn ? 'Girl (Female)' : 'Bé gái (Nữ)';
+  return isEn ? 'Other' : 'Khác';
 }
 
 /// Định dạng danh sách tên trẻ cho phụ huynh (tối đa 3 trẻ liệt kê, quá 3 thì thêm "+X bé").
 /// Lấy tên thật (fullName) của bé thay vì biệt danh.
 String formatParentChildrenNames(ChildOverview overview) {
+  final isEn = LocaleController.instance.isEnglish;
+  final prefix = isEn ? "Parent of " : "Phụ huynh bé ";
   final childrenList = overview.allChildren.isNotEmpty
       ? overview.allChildren
       : [overview];
@@ -87,13 +93,15 @@ String formatParentChildrenNames(ChildOverview overview) {
       .where((n) => n.isNotEmpty)
       .toSet()
       .toList();
-  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.fullNameWithNickname}';
+  if (names.isEmpty) return '$prefix${overview.child.fullNameWithNickname}';
   if (names.length <= 3) {
-    return 'Phụ huynh bé ${names.join(', ')}';
+    return '$prefix${names.join(', ')}';
   }
   final firstThree = names.take(3).join(', ');
   final remaining = names.length - 3;
-  return 'Phụ huynh bé $firstThree, +$remaining bé';
+  return isEn
+      ? '$prefix$firstThree, +$remaining children'
+      : '$prefix$firstThree, +$remaining bé';
 }
 
 /// Lấy 2 chữ cái viết tắt của tên trẻ (ví dụ: Lê Hoàng Nôm -> HN).
@@ -350,14 +358,15 @@ class _ParentAccountState extends State<ParentAccount> {
                   ),
                   IconButton(
                     onPressed: _openProfileSheet,
-                    tooltip: 'Chỉnh sửa thông tin',
+                    tooltip: context.l10n?.childEditInfo ?? 'Chỉnh sửa thông tin',
                     icon: const Icon(Icons.edit_outlined, color: Colors.white),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
               Text(
-                '${parentJourneyDays(parent.createdAt)} ngày cùng con ở KinderLog',
+                context.l10n?.parentHeroDays(parentJourneyDays(parent.createdAt)) ??
+                    '${parentJourneyDays(parent.createdAt)} ngày cùng con ở KinderLog',
                 style: const TextStyle(fontSize: 13, color: Colors.white),
               ),
             ],
@@ -398,7 +407,7 @@ class _ParentAccountState extends State<ParentAccount> {
                     ),
                     TextButton(
                       onPressed: () => widget.onOpenReport(latestReport),
-                      child: const Text('Đọc báo cáo ›'),
+                      child: Text(context.l10n?.readReportAction ?? 'Đọc báo cáo ›'),
                     ),
                   ],
                 ),
@@ -408,26 +417,26 @@ class _ParentAccountState extends State<ParentAccount> {
         ],
 
         // ── Thông tin liên hệ ──────────────────────────────────
-        _sectionTitle(context, 'Thông tin liên hệ'),
+        _sectionTitle(context, context.l10n?.parentContactInfo ?? 'Thông tin liên hệ'),
         KCard(
           child: Column(
             children: [
               if ((parent.email ?? '').trim().isNotEmpty)
                 KInfoRow(label: 'Email', value: parent.email!.trim()),
               if (relationship != null && relationship.isNotEmpty)
-                KInfoRow(label: 'Quan hệ với bé', value: relationship),
+                KInfoRow(label: context.l10n?.relationTitle ?? 'Quan hệ với bé', value: relationship),
               if ((parent.phone ?? '').trim().isNotEmpty)
                 KInfoRow(
-                  label: 'Số điện thoại',
+                  label: context.l10n?.contactPhoneLabel ?? 'Số điện thoại',
                   value: parent.phone!.trim(),
                   showEditIcon: false,
                   onTap: () {
                     Clipboard.setData(
                         ClipboardData(text: parent.phone!.trim()));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã sao chép số điện thoại'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(context.l10n?.phoneCopied ?? 'Đã sao chép số điện thoại'),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -437,7 +446,7 @@ class _ParentAccountState extends State<ParentAccount> {
         ),
 
         // ── Thông tin bé ───────────────────────────────────────
-        _sectionTitle(context, 'Thông tin bé'),
+        _sectionTitle(context, context.l10n?.childInfoSheetTitle ?? 'Thông tin bé'),
         KCard(
           child: Column(
             children: [
@@ -461,7 +470,8 @@ class _ParentAccountState extends State<ParentAccount> {
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
                               child: Text(
-                                'Biệt danh: ${child.nickname!.trim()}',
+                                context.l10n?.nicknamePrefix(child.nickname!.trim()) ??
+                                    'Biệt danh: ${child.nickname!.trim()}',
                                 style: TextStyle(
                                     fontSize: 13, color: context.k.inkSoft),
                               ),
@@ -471,7 +481,7 @@ class _ParentAccountState extends State<ParentAccount> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
-                      tooltip: 'Chỉnh sửa thông tin bé',
+                      tooltip: context.l10n?.childEditInfo ?? 'Chỉnh sửa thông tin bé',
                       onPressed: _openEditChildSheet,
                     ),
                   ],
@@ -479,44 +489,44 @@ class _ParentAccountState extends State<ParentAccount> {
               ),
               const Divider(height: 1),
               KInfoRow(
-                label: 'Họ và tên',
+                label: context.l10n?.childFullName ?? 'Họ và tên',
                 value: child.fullName,
               ),
               KInfoRow(
-                label: 'Biệt danh',
+                label: context.l10n?.childNicknameLabel ?? 'Biệt danh',
                 value: (child.nickname ?? '').trim().isNotEmpty
                     ? child.nickname!.trim()
-                    : 'Chưa thiết lập',
+                    : (context.l10n?.childNotSet ?? 'Chưa thiết lập'),
               ),
               if (child.dateOfBirth != null)
                 KInfoRow(
-                  label: 'Sinh ngày',
+                  label: context.l10n?.parentDobLabel ?? 'Sinh ngày',
                   value: formatChildAge(child.dateOfBirth!).isNotEmpty
                       ? '${kDateLabel(child.dateOfBirth!)} (${formatChildAge(child.dateOfBirth!)})'
                       : kDateLabel(child.dateOfBirth!),
                 ),
               if (child.gender != null && child.gender!.trim().isNotEmpty)
                 KInfoRow(
-                  label: 'Giới tính',
+                  label: context.l10n?.genderLabel ?? 'Giới tính',
                   value: formatGender(child.gender),
                 ),
-              KInfoRow(label: 'Lớp', value: widget.overview.className),
+              KInfoRow(label: context.l10n?.commonClass ?? 'Lớp', value: widget.overview.className),
               KInfoRow(
-                  label: 'Giáo viên chủ nhiệm',
+                  label: context.l10n?.entityHeadTeacher ?? 'Giáo viên chủ nhiệm',
                   value: widget.overview.teacherName),
               if (child.allergy != null)
                 KInfoRow(
-                  label: 'Dị ứng',
+                  label: context.l10n?.parentAllergyTitle ?? 'Dị ứng',
                   value: child.allergy!,
                   danger: true,
                   icon: Icons.warning_amber_rounded,
                 ),
               KInfoRow(
-                label: 'Hồ sơ sức khỏe',
+                label: context.l10n?.parentHealthProfileTitle ?? 'Hồ sơ sức khỏe',
                 value: switch (child.allergyStatus) {
-                  'present' => 'Có dị ứng',
-                  'none' => 'Không có dị ứng',
-                  _ => 'Chưa khai báo',
+                  'present' => (context.l10n?.healthAllergyYes ?? (context.l10n?.healthAllergyYes ?? 'Có dị ứng')),
+                  'none' => (context.l10n?.healthAllergyNone ?? 'Không có dị ứng'),
+                  _ => (context.l10n?.healthUndeclared ?? 'Chưa khai báo'),
                 },
                 icon: Icons.health_and_safety_outlined,
                 onTap: _openHealthProfile,
@@ -533,7 +543,7 @@ class _ParentAccountState extends State<ParentAccount> {
               _settingsRow(
                 context,
                 icon: Icons.lock_outline_rounded,
-                label: 'Đổi mật khẩu',
+                label: context.l10n?.changePassword ?? 'Đổi mật khẩu',
                 trailing: Icon(Icons.chevron_right,
                     size: 18, color: context.k.inkFaint),
                 onTap: () => showChangePasswordBottomSheet(context),
@@ -769,7 +779,7 @@ class _ParentAccountState extends State<ParentAccount> {
               _accountMenuRow(
                 icon: 'assets/garden_voice/account_info.svg',
                 label: context.l10n?.accountAbout ?? 'Về KinderLog',
-                subtitle: 'Phiên bản 1.0.0',
+                subtitle: context.l10n?.appVersionLabel('1.0.0') ?? 'Phiên bản 1.0.0',
                 onTap: () => showAboutKinderLogSheet(context),
               ),
             ],
@@ -1140,7 +1150,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
               if (widget.allChildren != null && widget.allChildren!.length > 1) ...[
                 Semantics(
                   button: true,
-                  label: 'Đổi sang bé khác',
+                  label: context.l10n?.switchChildLabel ?? 'Đổi sang bé khác',
                   child: InkWell(
                     borderRadius: BorderRadius.circular(10),
                     onTap: () {
@@ -1157,7 +1167,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                               size: 14, color: context.k.brand),
                           const SizedBox(width: 4),
                           Text(
-                            'Đổi bé',
+                            context.l10n?.switchChild ?? 'Đổi bé',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -1172,7 +1182,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                 const SizedBox(width: 4),
               ],
               Expanded(
-                child: Text('Thông tin bé',
+                child: Text(context.l10n?.childInfoSheetTitle ?? 'Thông tin bé',
                     style: TextStyle(
                         fontSize: 16,
                         height: 1.4,
@@ -1180,12 +1190,12 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                         color: context.k.ink)),
               ),
               IconButton(
-                tooltip: 'Chỉnh sửa thông tin bé',
+                tooltip: context.l10n?.childEditInfo ?? 'Chỉnh sửa thông tin bé',
                 onPressed: _editChild,
                 icon: const Icon(Icons.edit_outlined),
               ),
               IconButton(
-                tooltip: 'Đóng',
+                tooltip: context.l10n?.commonClose ?? 'Đóng',
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
               ),
@@ -1312,7 +1322,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                   if (phoneAvailable) ...[
                     const SizedBox(height: 12),
                     KButton(
-                      label: 'Gọi giáo viên chủ nhiệm',
+                      label: context.l10n?.callHeadTeacher ?? 'Gọi giáo viên chủ nhiệm',
                       onPressed: () => _callTeacher(context),
                     ),
                   ],
@@ -1526,8 +1536,8 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                                       ),
                                       child: Text(
                                         child.allergyStatus == 'present'
-                                            ? 'Có dị ứng'
-                                            : 'Sức khỏe tốt',
+                                            ? (context.l10n?.healthAllergyYes ?? 'Có dị ứng')
+                                            : (context.l10n?.healthGood ?? 'Sức khỏe tốt'),
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,

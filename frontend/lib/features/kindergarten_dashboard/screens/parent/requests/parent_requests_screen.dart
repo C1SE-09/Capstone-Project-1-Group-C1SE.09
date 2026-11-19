@@ -177,24 +177,26 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
                   const SizedBox(height: 12),
                 ],
                 if (_loading)
-                  const Padding(
-                      padding: EdgeInsets.all(24),
+                  Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Center(
                           child: CircularProgressIndicator(
-                              semanticsLabel: 'Đang tải danh sách đơn'))),
+                              semanticsLabel: context.l10n?.requestDetailLoading ?? 'Đang tải danh sách đơn'))),
                 if (_error != null)
                   ParentRequestError(_error!,
                       onRetry: () => _load(more: _items.isNotEmpty)),
                 if (!_loading && _error == null && _items.isEmpty)
-                  const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
                       child:
-                          Text('Chưa có đơn nào', textAlign: TextAlign.center)),
+                          Text(context.l10n?.leaveRequestsNoRequests ?? 'Chưa có đơn nào', textAlign: TextAlign.center)),
                 if (!_loading && _error == null && _items.length < _total)
                   TextButton(
                       onPressed: () => _load(more: true),
-                      child: const Text('Tải thêm')),
-                ParentRequestButton(label: 'TẠO ĐƠN MỚI', onPressed: _create),
+                      child: Text(context.l10n?.commonLoadMore ?? 'Tải thêm')),
+                ParentRequestButton(
+                    label: (context.l10n?.parentRequestsNew ?? 'Tạo đơn mới').toUpperCase(),
+                    onPressed: _create),
               ],
             )),
       );
@@ -208,7 +210,7 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Xem chi tiết đơn ${requestTypeLabel(item.requestType)}',
+        label: 'Xem chi tiết đơn ${requestTypeLabel(item.requestType, context)}',
         child: Material(
             color: context.k.surface,
             borderRadius: BorderRadius.circular(14),
@@ -244,7 +246,7 @@ class _HistoryCard extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                     if (item.expectedArrivalTime != null)
                       Text(
-                          'Giờ đến dự kiến: ${item.expectedArrivalTime!.substring(0, 5)}',
+                          '${context.l10n?.lateArrivalExpectedTime ?? "Giờ đến dự kiến"}: ${item.expectedArrivalTime!.substring(0, 5)}',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
                     Text(item.reason,
@@ -261,7 +263,7 @@ class _HistoryCard extends StatelessWidget {
                           decoration: BoxDecoration(
                               color: context.k.badTint,
                               borderRadius: BorderRadius.circular(8)),
-                          child: Text('Lý do từ chối: ${item.rejectReason}',
+                          child: Text('${context.l10n?.requestRejectReason ?? "Lý do từ chối"}: ${item.rejectReason}',
                               style: TextStyle(
                                   fontSize: 12.5, color: context.k.ink))),
                     ],

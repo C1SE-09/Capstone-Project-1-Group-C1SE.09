@@ -83,7 +83,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Đóng',
+                  tooltip: context.l10n?.commonClose ?? 'Đóng',
                   icon: Icon(Icons.close, color: k.inkSoft, size: 22),
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -153,7 +153,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Phiên bản 1.0.0 (Build 2026.11)',
+                          '${context.l10n?.aboutVersionLabel ?? 'Phiên bản'} 1.0.0 (Build 2026.11)',
                           style: TextStyle(
                             fontSize: 11,
                             color: k.inkFaint,
@@ -180,7 +180,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                             const Text('🏫', style: TextStyle(fontSize: 18)),
                             const SizedBox(width: 8),
                             Text(
-                              'Trường Mầm Non Họa Mi',
+                              context.l10n?.aboutSchoolDefault ?? 'Trường Mầm Non Họa Mi',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
@@ -209,7 +209,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'Niên khóa: 2026 – 2027',
+                                '${context.l10n?.aboutSchoolYear ?? 'Niên khóa'}: 2026 – 2027',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -226,7 +226,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
 
                   // Key Features
                   Text(
-                    'TÍNH NĂNG NỔI BẬT',
+                    context.l10n?.aboutKeyFeatures ?? 'TÍNH NĂNG NỔI BẬT',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
@@ -239,32 +239,32 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                   _buildFeatureTile(
                     context,
                     icon: '🎙️',
-                    title: 'Giọng nói AI rảnh tay',
-                    desc:
+                    title: context.l10n?.aboutFeatureVoiceTitle ?? 'Giọng nói AI rảnh tay',
+                    desc: context.l10n?.aboutFeatureVoiceDesc ??
                         'Giáo viên tạo báo cáo nhật ký ngày bằng giọng nói, tự động chuyển đổi văn bản và phân loại hoạt động ăn, ngủ, học.',
                   ),
                   const SizedBox(height: 8),
                   _buildFeatureTile(
                     context,
                     icon: '📋',
-                    title: 'Sổ liên lạc điện tử',
-                    desc:
+                    title: context.l10n?.aboutFeatureContactBookTitle ?? 'Sổ liên lạc điện tử',
+                    desc: context.l10n?.aboutFeatureContactBookDesc ??
                         'Cập nhật hoạt động từng bé theo thời gian thực; phụ huynh theo dõi và phản hồi nhận xét của cô giáo ngay trong ngày.',
                   ),
                   const SizedBox(height: 8),
                   _buildFeatureTile(
                     context,
                     icon: '🩺',
-                    title: 'Hồ sơ sức khỏe & Dị ứng',
-                    desc:
+                    title: context.l10n?.aboutFeatureHealthTitle ?? 'Hồ sơ sức khỏe & Dị ứng',
+                    desc: context.l10n?.aboutFeatureHealthDesc ??
                         'Quản lý dị ứng, lịch sử khám sức khỏe định kỳ, theo dõi cân nặng, chiều cao và tự động tính toán thể trạng BMI.',
                   ),
                   const SizedBox(height: 8),
                   _buildFeatureTile(
                     context,
                     icon: '🗓️',
-                    title: 'Thời khóa biểu & Xin nghỉ',
-                    desc:
+                    title: context.l10n?.aboutFeatureTimetableTitle ?? 'Thời khóa biểu & Xin nghỉ',
+                    desc: context.l10n?.aboutFeatureTimetableDesc ??
                         'Xem lịch học tuần theo từng lớp, gửi đơn xin nghỉ trực tuyến và nhận xác nhận từ giáo viên nhanh chóng.',
                   ),
                   const SizedBox(height: 20),
@@ -280,27 +280,27 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                       children: [
                         _buildInfoRow(
                           context,
-                          label: 'Đội ngũ phát triển',
+                          label: context.l10n?.aboutDevTeam ?? 'Đội ngũ phát triển',
                           value: 'Capstone Group C1SE.09',
                         ),
                         Divider(height: 1, thickness: 1, color: k.line),
                         _buildInfoRow(
                           context,
-                          label: 'Hỗ trợ kỹ thuật',
+                          label: context.l10n?.aboutTechSupport ?? 'Hỗ trợ kỹ thuật',
                           value: 'support@kinderlog.vn',
                           highlight: true,
                         ),
                         Divider(height: 1, thickness: 1, color: k.line),
                         _buildInfoRow(
                           context,
-                          label: 'Chính sách quyền riêng tư',
-                          value: 'Được bảo vệ',
+                          label: context.l10n?.aboutPrivacyPolicy ?? 'Chính sách quyền riêng tư',
+                          value: context.l10n?.aboutProtected ?? 'Được bảo vệ',
                         ),
                         Divider(height: 1, thickness: 1, color: k.line),
                         _buildInfoRow(
                           context,
-                          label: 'Điều khoản dịch vụ',
-                          value: 'Tuân thủ quy định',
+                          label: context.l10n?.aboutTermsOfService ?? 'Điều khoản dịch vụ',
+                          value: context.l10n?.aboutCompliant ?? 'Tuân thủ quy định',
                         ),
                       ],
                     ),

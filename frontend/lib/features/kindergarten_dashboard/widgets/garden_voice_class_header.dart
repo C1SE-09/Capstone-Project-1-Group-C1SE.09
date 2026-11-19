@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -116,20 +117,20 @@ class GardenVoiceClassHeader extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         _ClassTabItem(
-                          label: 'Danh sách',
+                          label: context.l10n?.classListTab ?? 'Danh sách',
                           selected: selectedTab == GardenVoiceClassTab.roster,
                           onTap: () =>
                               onTabSelected(GardenVoiceClassTab.roster),
                         ),
                         _ClassTabItem(
-                          label: 'Điểm danh',
+                          label: context.l10n?.teacherNavAttendance ?? 'Điểm danh',
                           selected:
                               selectedTab == GardenVoiceClassTab.attendance,
                           onTap: () =>
                               onTabSelected(GardenVoiceClassTab.attendance),
                         ),
                         _ClassTabItem(
-                          label: 'Đơn nghỉ',
+                          label: context.l10n?.filterLeaveRequests ?? 'Đơn nghỉ',
                           selected:
                               selectedTab == GardenVoiceClassTab.leaveRequests,
                           badgeCount: pendingLeaveCount,
@@ -137,7 +138,7 @@ class GardenVoiceClassHeader extends StatelessWidget {
                               onTabSelected(GardenVoiceClassTab.leaveRequests),
                         ),
                         _ClassTabItem(
-                          label: 'Lịch học',
+                          label: context.l10n?.parentTimetableShortcut ?? 'Lịch học',
                           selected:
                               selectedTab == GardenVoiceClassTab.timetable,
                           onTap: () =>
@@ -169,7 +170,9 @@ class _ClassNotifications extends StatelessWidget {
     final unread = count ?? 0;
     return Semantics(
       button: onTap != null,
-      label: unread > 0 ? 'Thông báo, $unread chưa đọc' : 'Thông báo',
+      label: unread > 0
+          ? (context.l10n?.notificationsWithUnreadCount(unread) ?? 'Thông báo, $unread chưa đọc')
+          : (context.l10n?.navNotifications ?? 'Thông báo'),
       child: Material(
         color: k.activityRowTint,
         borderRadius: BorderRadius.circular(19),

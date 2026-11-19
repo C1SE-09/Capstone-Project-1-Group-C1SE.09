@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
@@ -97,7 +98,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
               return Center(
                 child: TextButton(
                   onPressed: () => setState(() => future = _load()),
-                  child: const Text('Không tải được tổng quan · Thử lại'),
+                  child: Text(context.l10n?.teacherOverviewLoadError ?? 'Không tải được tổng quan · Thử lại'),
                 ),
               );
             }
@@ -260,7 +261,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
                             color: k.ink,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Tìm tên bé…',
+                            hintText: context.l10n?.incidentSearchStudentHint ?? 'Tìm tên bé…',
                             hintStyle: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -293,7 +294,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
                                   minHeight: constraints.maxHeight),
                               child: Center(
                                 child: Text(
-                                  'Không tìm thấy trẻ phù hợp.',
+                                  context.l10n?.noChildMatched ?? 'Không tìm thấy trẻ phù hợp.',
                                   style: TextStyle(color: k.inkFaint),
                                 ),
                               ),
@@ -393,13 +394,14 @@ class ChildActionsScreen extends StatelessWidget {
             final k = context.k;
             final allergy = (child.allergy ?? '').trim();
             final careNotes = (child.careNotes ?? '').trim();
+            final l10n = context.l10n;
             final note = careNotes.isNotEmpty
                 ? careNotes
                 : allergy.isNotEmpty
                     ? allergy.toLowerCase().startsWith('dị ứng')
                         ? allergy
-                        : 'Dị ứng ${allergy[0].toLowerCase()}${allergy.substring(1)}'
-                    : 'Chưa có lưu ý chăm sóc.';
+                        : (l10n?.allergyTag(allergy) ?? 'Dị ứng ${allergy[0].toLowerCase()}${allergy.substring(1)}')
+                    : (l10n?.noCareNotes ?? 'Chưa có lưu ý chăm sóc.');
             return Scaffold(
               backgroundColor: k.canvas,
               appBar: KAppBar(
@@ -431,7 +433,7 @@ class ChildActionsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Ghi nhận trong ngày',
+                              l10n?.dailyRecordTitle ?? 'Ghi nhận trong ngày',
                               style: TextStyle(
                                 color: k.brandStrong,
                                 fontSize: 14,
@@ -452,7 +454,7 @@ class ChildActionsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       KButton(
-                        label: 'Ghi âm cho bé',
+                        label: l10n?.recordForChildAction ?? 'Ghi âm cho bé',
                         onPressed: () {
                           Navigator.of(context).pop();
                           onRecord();
@@ -460,7 +462,7 @@ class ChildActionsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       KButton(
-                        label: 'Soạn báo cáo',
+                        label: l10n?.sttComposeReport ?? 'Soạn báo cáo',
                         secondary: true,
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -469,7 +471,7 @@ class ChildActionsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       KButton(
-                        label: 'Xem trao đổi với phụ huynh',
+                        label: l10n?.viewParentDiscussionAction ?? 'Xem trao đổi với phụ huynh',
                         secondary: true,
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -498,21 +500,22 @@ class _ChildRow extends StatelessWidget {
     final careNotesText = (child.careNotes ?? '').trim();
     String? subtitle;
     Color subtitleColor = k.inkSoft;
+    final l10n = context.l10n;
     if (careNotesText.isNotEmpty) {
       subtitle = careNotesText;
       subtitleColor = k.inkSoft;
     } else if (allergyText.isNotEmpty) {
       subtitle = allergyText.toLowerCase().startsWith('dị ứng')
           ? allergyText
-          : 'Dị ứng: $allergyText';
+          : (l10n?.allergyTag(allergyText) ?? 'Dị ứng: $allergyText');
       subtitleColor = k.warn;
     } else if (child.severity != Severity.none) {
-      subtitle = 'Sức khỏe: ${child.severity.label}';
+      subtitle = l10n?.healthStatusLabel(child.severity.label) ?? 'Sức khỏe: ${child.severity.label}';
       subtitleColor = k.warn;
     }
     final statusLabel = switch (child.status) {
-      ReportStatus.none => 'Chưa ghi',
-      ReportStatus.submitted || ReportStatus.read => 'Đã ghi',
+      ReportStatus.none => l10n?.unrecordedStatus ?? 'Chưa ghi',
+      ReportStatus.submitted || ReportStatus.read => l10n?.recordedStatus ?? 'Đã ghi',
       _ => null,
     };
     return InkWell(
@@ -578,9 +581,11 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
+enum HistoryReportFilter { all, draft, submitted, read }
+
 class _HistoryScreenState extends State<HistoryScreen> {
   String query = '';
-  String filter = 'Tất cả';
+  HistoryReportFilter filter = HistoryReportFilter.all;
   final Set<String> _readResponseReportIds = <String>{};
   late final HttpDashboardRepository repository =
       widget.repository ?? HttpDashboardRepository();
@@ -678,27 +683,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
           return Center(
             child: TextButton(
               onPressed: () => setState(() => future = _load()),
-              child: const Text('Không tải được lịch sử · Thử lại'),
+              child: Text(context.l10n?.loadHistoryErrorRetry ?? 'Không tải được lịch sử · Thử lại'),
             ),
           );
         }
         final k = context.k;
+        final l10n = context.l10n;
         final now = widget.referenceDate ?? DateTime.now();
         final historyRows = snapshot.data ?? const <_HistoryRow>[];
         final groupsMap = <String, List<_HistoryRow>>{};
         for (final row in historyRows) {
           groupsMap
               .putIfAbsent(
-                  _historyGroupLabel(row.report.reportDate, now), () => [])
+                  _historyGroupLabel(row.report.reportDate, now, context), () => [])
               .add(row);
         }
         bool allowed(ReportStatus status) => switch (filter) {
-              'Bản nháp' => status == ReportStatus.draft ||
+              HistoryReportFilter.draft => status == ReportStatus.draft ||
                   status == ReportStatus.attention,
-              'Đã gửi' => status == ReportStatus.submitted ||
+              HistoryReportFilter.submitted => status == ReportStatus.submitted ||
                   status == ReportStatus.attention,
-              'Đã đọc' => status == ReportStatus.read,
-              _ => true,
+              HistoryReportFilter.read => status == ReportStatus.read,
+              HistoryReportFilter.all => true,
             };
         final groups = groupsMap.entries
             .map((entry) => MapEntry(
@@ -726,7 +732,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Báo cáo',
+                      l10n?.reportsTitle ?? 'Báo cáo',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
@@ -736,19 +742,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(height: 12),
                     SearchField(
-                      hint: 'Tìm theo tên bé…',
+                      hint: l10n?.searchByChildNameHint ?? 'Tìm theo tên bé…',
                       onChanged: (value) => setState(() => query = value),
                     ),
                     const SizedBox(height: 12),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: ['Tất cả', 'Bản nháp', 'Đã gửi', 'Đã đọc']
+                        children: HistoryReportFilter.values
                             .map(
                               (value) => Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: FilterChipButton(
-                                  label: value,
+                                  label: switch (value) {
+                                    HistoryReportFilter.all => l10n?.filterAll ?? 'Tất cả',
+                                    HistoryReportFilter.draft => l10n?.commonDraft ?? 'Bản nháp',
+                                    HistoryReportFilter.submitted => l10n?.commonSent ?? 'Đã gửi',
+                                    HistoryReportFilter.read => l10n?.commonRead ?? 'Đã đọc',
+                                  },
                                   selected: filter == value,
                                   onTap: () => setState(() => filter = value),
                                 ),
@@ -776,7 +787,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   minHeight: constraints.maxHeight),
                               child: Center(
                                 child: Text(
-                                  'Không có báo cáo nào khớp với bộ lọc này.',
+                                  l10n?.noReportsMatchFilter ?? 'Không có báo cáo nào khớp với bộ lọc này.',
                                   style: TextStyle(color: k.inkFaint),
                                 ),
                               ),
@@ -881,7 +892,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                       ),
                                                       const SizedBox(height: 2),
                                                       Text(
-                                                        'Báo cáo ngày · ${_rowTimeLabel(groups[groupIndex].value[index])}',
+                                                        l10n?.dailyReportDateRow(_rowTimeLabel(groups[groupIndex].value[index])) ??
+                                                            'Báo cáo ngày · ${_rowTimeLabel(groups[groupIndex].value[index])}',
                                                         style: TextStyle(
                                                           fontSize: 12,
                                                           fontWeight:
@@ -980,18 +992,19 @@ class _HistoryStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
     final (bg, fg, label) = switch (status) {
       ReportStatus.submitted => (
           k.activityRowTint,
           k.activityRowText,
-          'Đã gửi'
+          l10n?.commonSent ?? 'Đã gửi'
         ),
-      ReportStatus.read => (k.okTint, k.ok, 'Đã đọc'),
-      ReportStatus.attention => (k.accentTint, k.warn, 'Cần chú ý'),
+      ReportStatus.read => (k.okTint, k.ok, l10n?.commonRead ?? 'Đã đọc'),
+      ReportStatus.attention => (k.accentTint, k.warn, l10n?.needsAttentionFilter ?? 'Cần chú ý'),
       ReportStatus.draft || ReportStatus.processing || ReportStatus.none => (
           k.surfaceSunken,
           k.inkSoft,
-          'Bản nháp'
+          l10n?.commonDraft ?? 'Bản nháp'
         ),
     };
     return Container(
@@ -1027,11 +1040,11 @@ String _longDate(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 String _shortDate(DateTime d) => _longDate(d);
 
-String _historyGroupLabel(DateTime d, DateTime now) {
+String _historyGroupLabel(DateTime d, DateTime now, [BuildContext? context]) {
   final day = DateTime(d.year, d.month, d.day);
   final today = DateTime(now.year, now.month, now.day);
   final diff = today.difference(day).inDays;
-  if (diff == 0) return 'Hôm nay';
-  if (diff == 1) return 'Hôm qua';
+  if (diff == 0) return context?.l10n?.todayText ?? 'Hôm nay';
+  if (diff == 1) return context?.l10n?.yesterdayText ?? 'Hôm qua';
   return _shortDate(d);
 }

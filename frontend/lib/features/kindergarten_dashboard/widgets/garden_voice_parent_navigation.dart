@@ -40,7 +40,7 @@ class GardenVoiceParentNavigation extends StatelessWidget
         ),
         GardenVoiceNavigationItem(
           label: l10n?.navNotifications ?? 'Thông báo',
-          tooltip: 'Mở thông báo',
+          tooltip: l10n?.openNotifications ?? 'Mở thông báo',
           activeAsset:
               'assets/garden_voice/parent_nav_notifications_active.svg',
           inactiveAsset:

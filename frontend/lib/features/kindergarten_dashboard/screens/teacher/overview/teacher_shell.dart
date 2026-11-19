@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
@@ -190,7 +191,9 @@ class _TeacherShellState extends State<TeacherShell> {
   }
 
   Future<String> _loadClassName() async {
-    if (_activeClassId == null || _activeClassId!.isEmpty) return 'Lớp học';
+    if (_activeClassId == null || _activeClassId!.isEmpty) {
+      return LocaleController.instance.isEnglish ? 'Classroom' : 'Lớp học';
+    }
     final info = await classRepository.getClassInfo(_activeClassId!);
     return info.name;
   }
@@ -277,7 +280,7 @@ class _TeacherShellState extends State<TeacherShell> {
         onSent: () {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đã lưu bản nháp báo cáo')));
+              SnackBar(content: Text(context.l10n?.reportDraftSavedSnackBar ?? 'Đã lưu bản nháp báo cáo')));
         },
       ),
     ));
@@ -496,8 +499,8 @@ class _TeacherShellState extends State<TeacherShell> {
               _activeClassId == null ||
               _activeClassId!.isEmpty) {
             return NoAssignmentScreen(
-              title: 'Chưa được phân lớp',
-              message:
+              title: context.l10n?.noClassTitle ?? 'Chưa được phân lớp',
+              message: context.l10n?.noClassMessage ??
                   'Tài khoản của bạn chưa được Ban giám hiệu phân vào lớp nào. Vui lòng liên hệ nhà trường để được hỗ trợ, hoặc thử đăng nhập lại sau.',
               onBack: widget.onLogout,
               gardenVoice: true,
@@ -518,7 +521,7 @@ class _TeacherShellState extends State<TeacherShell> {
                     child: TextButton(
                       onPressed: () => setState(_initData),
                       child:
-                          const Text('Không tải được danh sách lớp · Thử lại'),
+                          Text(context.l10n?.loadClassListErrorRetry ?? 'Không tải được danh sách lớp · Thử lại'),
                     ),
                   ),
                 );
@@ -528,7 +531,7 @@ class _TeacherShellState extends State<TeacherShell> {
                 future: classNameFuture,
                 builder: (context, classSnapshot) {
                   if (classSnapshot.connectionState != ConnectionState.done &&
-                      !classSnapshot.hasData) {
+                  !classSnapshot.hasData) {
                     return const Scaffold(
                         body: Center(child: CircularProgressIndicator()));
                   }
@@ -537,8 +540,8 @@ class _TeacherShellState extends State<TeacherShell> {
                       body: Center(
                         child: TextButton(
                           onPressed: () => setState(() => _initData()),
-                          child: const Text(
-                              'Không tải được thông tin lớp · Thử lại'),
+                          child: Text(
+                              context.l10n?.loadClassInfoErrorRetry ?? 'Không tải được thông tin lớp · Thử lại'),
                         ),
                       ),
                     );
@@ -579,8 +582,10 @@ class _TeacherShellState extends State<TeacherShell> {
                         className: className,
                         teacherName: _teacherName,
                         pendingLeaveCount: _pendingLeaveCount,
-                        schoolName: 'Chưa có thông tin trường',
+                        schoolName: context.l10n?.noSchoolInfo ?? 'Chưa có thông tin trường',
                         onRefresh: () async {
+                          final errorMsg = context.l10n?.loadClassListError ??
+                              'Không tải được danh sách lớp. Vui lòng thử lại.';
                           unawaited(_refreshPendingLeaveCount());
                           try {
                             final c = await _loadChildren();
@@ -590,9 +595,8 @@ class _TeacherShellState extends State<TeacherShell> {
                           } catch (_) {
                             if (mounted) {
                               ScaffoldMessenger.of(this.context)
-                                  .showSnackBar(const SnackBar(
-                                content: Text(
-                                    'Không tải được danh sách lớp. Vui lòng thử lại.'),
+                                  .showSnackBar(SnackBar(
+                                content: Text(errorMsg),
                               ));
                             }
                           }

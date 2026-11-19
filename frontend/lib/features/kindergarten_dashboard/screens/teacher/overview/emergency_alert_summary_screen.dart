@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/notifications/emergency_siren_service.dart';
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
@@ -83,10 +84,11 @@ class _EmergencyAlertSummaryScreenState
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Không thể mở ứng dụng gọi điện.'),
+        content: Text(context.l10n?.cannotOpenPhoneCallApp ??
+            'Không thể mở ứng dụng gọi điện.'),
         backgroundColor: context.k.bad,
         action: SnackBarAction(
-          label: 'Sao chép',
+          label: context.l10n?.copyAction ?? 'Sao chép',
           textColor: context.k.surface,
           onPressed: () => Clipboard.setData(ClipboardData(text: phone)),
         ),
@@ -109,7 +111,7 @@ class _EmergencyAlertSummaryScreenState
     final phone = phoneCallUri(alert.teacherPhone);
     final date = alert.createdAt;
     final time = date == null
-        ? 'Chưa có thời điểm'
+        ? (context.l10n?.noTimeAvailable ?? 'Chưa có thời điểm')
         : DateFormat('HH:mm').format(
             date.toUtc().add(const Duration(hours: 7)),
           );
@@ -121,7 +123,7 @@ class _EmergencyAlertSummaryScreenState
         if (!didPop) _handleDismiss();
       },
       child: ParentRequestLayout(
-        title: 'Cảnh báo khẩn',
+        title: context.l10n?.emergencyAlertTitle ?? 'Cảnh báo khẩn',
         gardenVoice: true,
         onBack: _handleDismiss,
         child: SingleChildScrollView(
@@ -154,7 +156,10 @@ class _EmergencyAlertSummaryScreenState
                           color: context.k.bad,
                         )),
                     const SizedBox(height: 4),
-                    Text('${alert.teacherName} vừa gửi thông báo sự cố.',
+                    Text(
+                        context.l10n
+                                ?.teacherSentIncidentNotice(alert.teacherName) ??
+                            '${alert.teacherName} vừa gửi thông báo sự cố.',
                         style: const TextStyle(fontSize: 15, height: 1.4)),
                   ],
                 ),
@@ -169,7 +174,9 @@ class _EmergencyAlertSummaryScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Nội dung từ giáo viên',
+                    Text(
+                        context.l10n?.teacherContentHeader ??
+                            'Nội dung từ giáo viên',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -178,13 +185,17 @@ class _EmergencyAlertSummaryScreenState
                     const SizedBox(height: 4),
                     Text(
                       description == null || description.isEmpty
-                          ? 'Chưa có mô tả từ giáo viên.'
+                          ? (context.l10n?.noTeacherDescription ??
+                              'Chưa có mô tả từ giáo viên.')
                           : description,
                       style: const TextStyle(fontSize: 15, height: 1.4),
                     ),
                     if (alert.temperature?.isNotEmpty == true) ...[
                       const SizedBox(height: 8),
-                      Text('Nhiệt độ · ${alert.temperature}°C',
+                      Text(
+                          context.l10n?.temperatureDegrees(
+                                  alert.temperature!) ??
+                              'Nhiệt độ · ${alert.temperature}°C',
                           style: TextStyle(
                             fontSize: 12,
                             color: context.k.inkSoft,
@@ -195,18 +206,22 @@ class _EmergencyAlertSummaryScreenState
               ),
               const SizedBox(height: 14),
               KButton(
-                label: 'Gọi cho ${alert.teacherName}',
+                label: context.l10n?.callTeacherAction(alert.teacherName) ??
+                    'Gọi cho ${alert.teacherName}',
                 onPressed: phone == null ? null : _callTeacher,
               ),
               if (phone == null) ...[
                 const SizedBox(height: 6),
-                Text('Chưa có số điện thoại hợp lệ',
+                Text(
+                    context.l10n?.noValidPhoneNumberInContacts ??
+                        'Chưa có số điện thoại hợp lệ',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, color: context.k.inkSoft)),
               ],
               const SizedBox(height: 10),
               KButton(
-                label: 'Đã nắm thông tin · Tắt chuông',
+                label: context.l10n?.acknowledgedDismissSiren ??
+                    'Đã nắm thông tin · Tắt chuông',
                 secondary: true,
                 onPressed: _handleDismiss,
               ),
