@@ -17,6 +17,7 @@ import {
   getToken,
   type AdminAppInfo,
 } from "@/lib/api";
+import { useLanguage, LanguageSwitcher } from "@/lib/language-context";
 
 interface Props {
   children: ReactNode;
@@ -25,6 +26,7 @@ interface Props {
 
 export default function AdminLayout({ children, currentPage = "dashboard" }: Props) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [admin, setAdmin] = useState<AdminAppInfo | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -143,48 +145,52 @@ export default function AdminLayout({ children, currentPage = "dashboard" }: Pro
             Cổng điều hành & Hỗ trợ kỹ thuật KinderLog
           </div>
 
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] hover:bg-[#F6F7F8] transition"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#087F70] text-white font-bold flex items-center justify-center text-xs">
-                {admin?.full_name?.charAt(0).toUpperCase() || "A"}
-              </div>
-              <div className="text-left hidden sm:block">
-                <div className="text-sm font-bold text-[#102737] leading-tight">
-                  {admin?.full_name || "Admin"}
-                </div>
-                <div className="text-[11px] text-[#65727D] leading-tight">
-                  {admin?.email}
-                </div>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#65727D">
-                <path d="M7 10l5 5 5-5z" />
-              </svg>
-            </button>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
 
-            {showMenu && (
-              <div className="absolute right-0 top-12 w-64 bg-white rounded-[16px] shadow-pop border border-[#E5E8EB] p-2 z-50 animate-in fade-in slide-in-from-top-1">
-                <div className="px-3 py-2 border-b border-[#E5E8EB]">
-                  <div className="font-bold text-sm text-[#102737]">
-                    {admin?.full_name}
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] hover:bg-[#F6F7F8] transition"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#087F70] text-white font-bold flex items-center justify-center text-xs">
+                  {admin?.full_name?.charAt(0).toUpperCase() || "A"}
+                </div>
+                <div className="text-left hidden sm:block">
+                  <div className="text-sm font-bold text-[#102737] leading-tight">
+                    {admin?.full_name || "Admin"}
                   </div>
-                  <div className="text-xs text-[#65727D] truncate">
+                  <div className="text-[11px] text-[#65727D] leading-tight">
                     {admin?.email}
                   </div>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full mt-1.5 flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#A93832] hover:bg-[#FDEAE5] rounded-[10px] transition"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-                  </svg>
-                  Đăng xuất
-                </button>
-              </div>
-            )}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#65727D">
+                  <path d="M7 10l5 5 5-5z" />
+                </svg>
+              </button>
+
+              {showMenu && (
+                <div className="absolute right-0 top-12 w-64 bg-white rounded-[16px] shadow-pop border border-[#E5E8EB] p-2 z-50 animate-in fade-in slide-in-from-top-1">
+                  <div className="px-3 py-2 border-b border-[#E5E8EB]">
+                    <div className="font-bold text-sm text-[#102737]">
+                      {admin?.full_name}
+                    </div>
+                    <div className="text-xs text-[#65727D] truncate">
+                      {admin?.email}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full mt-1.5 flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#A93832] hover:bg-[#FDEAE5] rounded-[10px] transition"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </svg>
+                    {t("common.logout", "Đăng xuất")}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

@@ -1,4 +1,5 @@
 import 'dart:ui' show PointerDeviceKind;
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/crash_logging_service.dart';
@@ -6,9 +7,9 @@ import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';
+import 'package:adark_frontend/l10n/generated/app_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ Future<void> main() async {
   // Khởi tạo hệ thống bắt lỗi & lưu crash log toàn cục
   await CrashLoggingService.instance.initialize();
   await ThemeController.instance.load();
+  await LocaleController.instance.load();
   // Chỉ khôi phục phiên còn trong hạn 1 giờ trước khi dựng giao diện.
   await SessionManagementService.instance.loadPersistedSession();
   // Phiên hết hạn hẳn (server từ chối refresh) -> về màn đăng nhập, thay vì để
@@ -101,5 +103,18 @@ class _MyAppState extends State<MyApp> {
         themeMode: ThemeMode.light,
         scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
         debugShowCheckedModeBanner: false,
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: LocaleController.instance,
+        builder: (context, _) => MaterialApp.router(
+          routerConfig: appRouter,
+          theme: kinderTheme(),
+          locale: LocaleController.instance.value,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          // Dark chưa được duyệt; không theo theme máy hoặc tùy chọn cũ.
+          themeMode: ThemeMode.light,
+          scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
+          debugShowCheckedModeBanner: false,
+        ),
       );
 }

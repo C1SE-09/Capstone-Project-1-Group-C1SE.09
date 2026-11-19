@@ -11,6 +11,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
@@ -557,6 +558,15 @@ class _ParentAccountState extends State<ParentAccount> {
               const Divider(height: 1),
               _settingsRow(
                 context,
+                icon: Icons.language_rounded,
+                label: 'Ngôn ngữ / Language',
+                subtitle: LocaleController.instance.isVietnamese ? 'Tiếng Việt 🇻🇳' : 'English 🇬🇧',
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => showLanguageSelectionDialog(context),
+              ),
+              const Divider(height: 1),
+              _settingsRow(
+                context,
                 icon: Icons.info_outline,
                 label: 'Về KinderLog',
                 trailing: Text('v1.0.0',
@@ -736,6 +746,19 @@ class _ParentAccountState extends State<ParentAccount> {
                 icon: 'assets/garden_voice/account_lock.svg',
                 label: 'Đổi mật khẩu',
                 onTap: () => showChangePasswordBottomSheet(context),
+              ),
+              _accountMenuRow(
+                icon: 'assets/garden_voice/account_settings.svg',
+                label: 'Ngôn ngữ / Language',
+                trailing: Text(
+                  LocaleController.instance.isVietnamese ? 'Tiếng Việt 🇻🇳' : 'English 🇬🇧',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: k.brand,
+                  ),
+                ),
+                onTap: () => showLanguageSelectionDialog(context),
               ),
               _accountMenuRow(
                 icon: 'assets/garden_voice/account_bug.svg',

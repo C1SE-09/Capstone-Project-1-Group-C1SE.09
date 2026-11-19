@@ -1,0 +1,53 @@
+{
+  "brand": "KinderLog",
+  "systemAdmin": "System Administration",
+  "schoolAdmin": "School Administration",
+  "academicYear": "School Year 2026–2027",
+  "kindergarten": "Kindergarten",
+  "nav": {
+    "overview": "School Overview",
+    "teachers": "Teachers Management",
+    "students": "Students Management",
+    "parents": "Parents Management",
+    "schedules": "Timetable & Schedules",
+    "classes": "Classes Management",
+    "healthExam": "Health Examinations",
+    "account": "School Account",
+    "bugReports": "Bug Reports Management",
+    "otherModules": "Other Modules"
+  },
+  "login": {
+    "title": "Web Admin Portal",
+    "subtitle": "Sign in to manage the school and operate the KinderLog system",
+    "tagline": "Growing a little bit every day",
+    "desc": "Connecting schools, teachers, parents, and children's school days with utmost care and peace of mind.",
+    "usernameOrEmail": "Username or Email",
+    "usernameOrEmailPlaceholder": "admin@kinderlog.edu.vn or username",
+    "password": "Password",
+    "show": "Show",
+    "hide": "Hide",
+    "submit": "Sign in to Admin Portal",
+    "submitting": "Signing in...",
+    "footerNote": "Use email for system administration. Use username for school administration.",
+    "errorNetwork": "Unable to connect to server. Please check your internet connection or try again later.",
+    "errorFailed": "Login failed. Please check your credentials."
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search...",
+    "filter": "Filter",
+    "status": "Status",
+    "logout": "Log out",
+    "actions": "Actions",
+    "loading": "Loading...",
+    "noData": "No data found",
+    "language": "Language",
+    "vietnamese": "Tiếng Việt",
+    "english": "English"
+  }
+}

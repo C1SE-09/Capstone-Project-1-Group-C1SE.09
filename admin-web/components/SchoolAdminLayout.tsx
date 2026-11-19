@@ -16,6 +16,7 @@ import {
   getStoredSchoolAdmin,
   getToken,
 } from "@/lib/api";
+import { useLanguage, LanguageSwitcher } from "@/lib/language-context";
 
 interface Props {
   children: ReactNode;
@@ -105,6 +106,7 @@ export default function SchoolAdminLayout({
   pageAction,
 }: Props) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [ready, setReady] = useState(false);
   const [info, setInfo] = useState<{
     full_name: string;
@@ -177,13 +179,13 @@ export default function SchoolAdminLayout({
                 }`}
               >
                 <NavIcon name={item.icon} />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate">{t(`nav.${item.id === "health-exam" ? "healthExam" : item.id}`, item.label)}</span>
               </Link>
             );
           })}
 
           <div className="pt-4 pb-1 px-3 text-[11px] font-bold text-[#8C9BA5] uppercase tracking-wider">
-            Phân hệ khác
+            {t("nav.otherModules", "Phân hệ khác")}
           </div>
 
           <Link
@@ -193,7 +195,7 @@ export default function SchoolAdminLayout({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 1.59C12.96 4.51 12.49 4.41 12 4.41s-.96.1-1.41.18L5 5l1.41 4.41C5.66 7.55 5.05 8.22 4.6 9H2v2h2.09c-.05.33-.09.66-.09 1v1H2v2h2v1c0 .34.04.67.09 1H2v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-3.09c.05-.33.09-.66.09-1v-1h3v-2h-3v-1c0-.34-.04-.67-.09-1H20V8zm-6 7h-4v-2h4v2zm0-4h-4v-2h4v2z" />
             </svg>
-            Quản trị Bug Report
+            {t("nav.bugReports", "Quản trị Bug Report")}
           </Link>
         </nav>
 
@@ -205,7 +207,7 @@ export default function SchoolAdminLayout({
             className="w-[180px] h-[68px] object-cover rounded-[16px] mx-auto shadow-sm"
           />
           <div className="mt-2 text-center text-[11px] font-medium text-[#8C9BA5]">
-            Trường Mầm non · 2026–2027
+            {t("kindergarten", "Trường Mầm non")} · {t("academicYear", "2026–2027")}
           </div>
         </div>
       </aside>
@@ -216,15 +218,16 @@ export default function SchoolAdminLayout({
         <header className="h-16 bg-white border-b border-[#E5E8EB] px-8 flex items-center justify-between sticky top-0 z-40">
           <div>
             <div className="font-bold text-base text-[#102737] leading-tight">
-              {pageTitle || "Cổng Quản Trị Nhà Trường"}
+              {pageTitle || t("schoolAdmin", "Cổng Quản Trị Nhà Trường")}
             </div>
             <div className="text-xs text-[#65727D]">
-              {info?.school_name || "Trường Mầm non"} · Năm học 2026–2027
+              {info?.school_name || t("kindergarten", "Trường Mầm non")} · {t("academicYear", "Năm học 2026–2027")}
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {pageAction && <div>{pageAction}</div>}
+            <LanguageSwitcher />
 
             <div className="relative">
               <button
@@ -271,7 +274,7 @@ export default function SchoolAdminLayout({
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
                     </svg>
-                    Đăng xuất
+                    {t("common.logout", "Đăng xuất")}
                   </button>
                 </div>
               )}
