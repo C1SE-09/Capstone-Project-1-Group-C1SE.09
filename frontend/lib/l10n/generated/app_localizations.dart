@@ -1051,6 +1051,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get bugReportCommonClose;
+
+  /// No description provided for @voiceChatRecordTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Send voice message'**
+  String get voiceChatRecordTooltip;
+
+  /// No description provided for @voiceChatCancelTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel recording'**
+  String get voiceChatCancelTooltip;
+
+  /// No description provided for @voiceChatSendTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Send voice message now'**
+  String get voiceChatSendTooltip;
+
+  /// No description provided for @voiceChatPermissionError.
+  ///
+  /// In en, this message translates to:
+  /// **'App needs microphone permission to record voice messages.'**
+  String get voiceChatPermissionError;
+
+  /// No description provided for @voiceChatStartError.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot start recording. Please try again.'**
+  String get voiceChatStartError;
+
+  /// No description provided for @voiceChatSendError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error sending voice recording. Please try again.'**
+  String get voiceChatSendError;
+
+  /// No description provided for @voiceChatLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load audio'**
+  String get voiceChatLoadError;
+
+  /// No description provided for @voiceChatDefaultContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message'**
+  String get voiceChatDefaultContent;
 }
 
 class _AppLocalizationsDelegate

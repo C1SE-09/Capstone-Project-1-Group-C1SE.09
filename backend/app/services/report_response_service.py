@@ -91,6 +91,9 @@ def to_dict(response: ReportResponse) -> dict[str, Any]:
         "content": response.content,
         "image_url": response.image_url,
         "has_image": bool(response.image_url),
+        "audio_url": response.audio_url,
+        "audio_duration": response.audio_duration,
+        "has_audio": bool(response.audio_url),
         "is_read": response.is_read,
         "is_resolved": response.is_resolved,
         "resolved_at": (
@@ -197,6 +200,8 @@ def create_response(
     author: User,
     content: str,
     image_url: str | None = None,
+    audio_url: str | None = None,
+    audio_duration: int | None = None,
     author_role: str | None = None,
 ) -> ReportResponse:
     """Tạo 1 phản hồi mới dưới báo cáo.
@@ -207,14 +212,18 @@ def create_response(
         author: user đang đăng nhập
         content: nội dung (đã strip)
         image_url: đường dẫn ảnh private (nếu có)
+        audio_url: đường dẫn file âm thanh private (nếu có)
+        audio_duration: thời lượng âm thanh tính bằng giây
         author_role: snapshot vai trò; mặc định lấy từ ``author.role``
 
     Raises:
         HTTPException 422 nếu nội dung rỗng hoặc quá dài.
     """
     text = (content or "").strip()
-    if not text:
+    if not text and not audio_url and not image_url:
         raise HTTPException(status_code=422, detail="Nội dung phản hồi không được để trống")
+    if not text and (audio_url or image_url):
+        text = "Tin nhắn thoại" if audio_url else "Hình ảnh đính kèm"
     if len(text) > MAX_CONTENT_LENGTH:
         raise HTTPException(
             status_code=422,
@@ -232,6 +241,8 @@ def create_response(
         author_role=resolved_role,
         content=text,
         image_url=image_url,
+        audio_url=audio_url,
+        audio_duration=audio_duration,
         is_read=False,
         is_resolved=False,
     )

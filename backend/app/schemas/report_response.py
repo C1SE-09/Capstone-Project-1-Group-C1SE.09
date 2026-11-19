@@ -42,6 +42,16 @@ class ReportResponseOut(BaseModel):
             "Ảnh được đọc qua endpoint riêng có kiểm tra quyền, không trả URL."
         ),
     )
+    audio_url: str | None = Field(
+        None, description="Đường dẫn nội bộ đọc file âm thanh đính kèm có xác thực"
+    )
+    audio_duration: int | None = Field(
+        None, description="Thời lượng file âm thanh tính bằng giây"
+    )
+    has_audio: bool = Field(
+        False,
+        description="True nếu phản hồi có file âm thanh đính kèm",
+    )
     is_read: bool = Field(False, description="Giáo viên đã đọc phản hồi này chưa")
     is_resolved: bool = Field(False, description="Giáo viên đã xử lý phản hồi này chưa")
     resolved_at: datetime | None = Field(
