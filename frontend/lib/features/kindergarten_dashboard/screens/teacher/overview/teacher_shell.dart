@@ -306,6 +306,19 @@ class _TeacherShellState extends State<TeacherShell> {
     ));
   }
 
+  void openChildActions(Child child, String className) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChildActionsScreen(
+          child: child,
+          className: className,
+          onRecord: () => _openRecordFlow(RecordMode.child, className, child),
+          onEdit: () => openReport(child),
+        ),
+      ),
+    );
+  }
+
   Future<void> openTimetable(String className,
       [List<Child>? children, bool replace = false]) async {
     final route = PageRouteBuilder<void>(
@@ -546,6 +559,12 @@ class _TeacherShellState extends State<TeacherShell> {
                           healthOnly = true;
                           tab = TeacherTab.classList;
                         }),
+                        onSelectChild: (childId) {
+                          final match = children.where((c) => c.id == childId);
+                          if (match.isNotEmpty) {
+                            openChildActions(match.first, className);
+                          }
+                        },
                       ),
                     TeacherTab.classList => ClassListScreen(
                         initialHealthOnly: healthOnly,
