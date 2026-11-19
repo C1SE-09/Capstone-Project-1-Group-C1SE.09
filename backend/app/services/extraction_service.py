@@ -48,6 +48,11 @@ import threading
 import torch
 from torch import nn
 
+from app.services.conflict_resolution_service import (
+    merge_category_phrases,
+    resolve_conflicts,
+)
+
 logger = logging.getLogger(__name__)
 
 # =============== MODEL LOADING ===============
@@ -210,10 +215,11 @@ def extract_from_transcript(transcript: str) -> dict:
     # Parse BIO tags
     phrases_by_label = _extract_bio_phrases(tokens, pred_labels)
 
-    # Chuyển list → string (nối bằng ", ")
+    # Chuyển list → string (xử lý đối nghịch trước khi nối bằng ", ")
     result = {}
     for key, phrases in phrases_by_label.items():
-        result[key] = ", ".join(phrases) if phrases else None
+        resolved = resolve_conflicts(phrases, key)
+        result[key] = ", ".join(resolved) if resolved else None
 
     return result
 
@@ -226,7 +232,11 @@ def extract_from_transcript(transcript: str) -> dict:
 # VD: "hôm nay Lan ăn ngon" → "hôm nay" chỉ thời gian, segment vẫn match Lan OK.
 # Class-wide markers thực sự: cả lớp, các bé, mọi người, tất cả, ai cũng.
 CLASS_WIDE_KEYWORDS = [
-    "cả lớp", "các bé", "mọi người", "tất cả", "ai cũng",
+    "cả lớp",
+    "các bé",
+    "mọi người",
+    "tất cả",
+    "ai cũng",
 ]
 
 # Confidence tối thiểu của child match để GHI ĐÈ class-wide keyword.
@@ -236,7 +246,11 @@ CHILD_MATCH_CONFIDENCE_THRESHOLD = 0.5
 # Class-wide extraction fields (used to bucket class-wide statements).
 # Dùng chung cho class_wide_lists init và iteration loop.
 CLASS_WIDE_FIELDS: tuple[str, ...] = (
-    "meals", "sleeping", "health", "activities", "mood",
+    "meals",
+    "sleeping",
+    "health",
+    "activities",
+    "mood",
 )
 
 
@@ -268,7 +282,9 @@ def _is_class_wide_segment(segment_text: str, matches: list) -> bool:
     return False
 
 
-def _smart_split_transcript(text: str, children: list, min_confidence: float = 0.3) -> list[str]:
+def _smart_split_transcript(
+    text: str, children: list, min_confidence: float = 0.3
+) -> list[str]:
     """
     Anchor-based fallback splitter khi transcript KHÔNG có dấu chấm/câu kết thúc.
 
@@ -309,9 +325,7 @@ def _smart_split_transcript(text: str, children: list, min_confidence: float = 0
         # nên mỗi match = 1 anchor hợp lệ.
         for word in m.matched_words:
             word_pattern = re.escape(word.lower())
-            for hit in re.finditer(
-                rf"(?<!\w){word_pattern}(?!\w)", text_lower
-            ):
+            for hit in re.finditer(rf"(?<!\w){word_pattern}(?!\w)", text_lower):
                 if hit.start() > 0:
                     anchors.add(hit.start())
 
@@ -368,7 +382,7 @@ def _strip_matched_names(segment_text: str, matches: list) -> str:
 
     name_words = set()
     for m in matches:
-        for w in (getattr(m, "matched_words", None) or []):
+        for w in getattr(m, "matched_words", None) or []:
             if w:
                 name_words.add(w.lower())
         # Nickname cũng cần bỏ (có thể nhiều từ)
@@ -381,9 +395,7 @@ def _strip_matched_names(segment_text: str, matches: list) -> str:
 
     # Sắp xếp dài trước để "nguyễn văn" không bị "nguyễn" ăn mất trước.
     # Lookaround \w để chỉ khớp trọn từ, không khớp chuỗi con (vd "an" trong "anh").
-    pattern = "|".join(
-        re.escape(w) for w in sorted(name_words, key=len, reverse=True)
-    )
+    pattern = "|".join(re.escape(w) for w in sorted(name_words, key=len, reverse=True))
     cleaned = re.sub(
         rf"(?<!\w)(?:{pattern})(?!\w)", " ", segment_text, flags=re.IGNORECASE
     )
@@ -509,7 +521,7 @@ def extract_multi_person(
     segments_text: list[str] = []
 
     # Bước 1: regex split theo dấu câu / xuống dòng
-    regex_segments = re.split(r'[.!?\n]+', transcript)
+    regex_segments = re.split(r"[.!?\n]+", transcript)
     regex_segments = [s.strip() for s in regex_segments if s.strip()]
 
     if len(regex_segments) >= 2:
@@ -555,9 +567,7 @@ def extract_multi_person(
     # ============ 3 BUCKETS RIÊNG BIỆT ============
 
     # Bucket 1: Class-wide content (append khi gặp segment class-wide)
-    class_wide_lists: dict[str, list[str]] = {
-        key: [] for key in CLASS_WIDE_FIELDS
-    }
+    class_wide_lists: dict[str, list[str]] = {key: [] for key in CLASS_WIDE_FIELDS}
 
     # Bucket 2: Child-specific overrides (REPLACE khi gặp segment match child)
     # Chỉ chứa children CÓ override, không tạo sẵn cho all 25
@@ -578,9 +588,7 @@ def extract_multi_person(
     for segment_text in segments_text:
         # 1. Match children names in this segment
         matches = match_single_text(
-            segment_text,
-            children,
-            min_confidence=min_confidence
+            segment_text, children, min_confidence=min_confidence
         )
 
         # 1b. Bỏ tên bé đã match khỏi text trước khi trích xuất.
@@ -609,9 +617,8 @@ def extract_multi_person(
         is_class_wide = _is_class_wide_segment(segment_text, matches)
 
         # 4. Check if ambiguous (dùng math.isclose để tránh floating point equality)
-        is_ambiguous = (
-            len(matches) > 1
-            and math.isclose(matches[0].confidence, matches[1].confidence, abs_tol=1e-3)
+        is_ambiguous = len(matches) > 1 and math.isclose(
+            matches[0].confidence, matches[1].confidence, abs_tol=1e-3
         )
 
         # Build segment result (giữ nguyên format để frontend dùng)
@@ -639,12 +646,14 @@ def extract_multi_person(
         # ============ 5. Phân loại vào 3 buckets ============
 
         if is_class_wide:
-            # Class-wide: append vào bucket 1
+            # Class-wide: merge vào bucket 1 (xử lý đối nghịch)
             class_wide_count += 1
             for key in CLASS_WIDE_FIELDS:
                 value = extraction.get(key)
                 if value:
-                    class_wide_lists[key].append(value)
+                    class_wide_lists[key] = merge_category_phrases(
+                        class_wide_lists[key], value, key
+                    )
             # Nếu model không extract được gì → trả None (không guess).
             # Guess gây ra báo cáo có dữ liệu ảo, parent thấy sai còn tệ hơn
             # báo cáo trống.
@@ -653,7 +662,8 @@ def extract_multi_person(
             prev_child_id = None
 
         elif matches:
-            # Child-specific: REPLACE vào bucket 2 cho từng matched child
+            # Child-specific: MERGE vào bucket 2 cho từng matched child
+            # Cụm mới đối nghịch sẽ đè cụm cũ, cụm bổ sung (như ăn cháo) vẫn giữ nguyên
             for m in matches:
                 child_id = m.child_id
                 # Chỉ thêm child vào bucket 2 khi LẦN ĐẦU gặp
@@ -665,12 +675,15 @@ def extract_multi_person(
                         "activities": [],
                         "mood": [],
                     }
-                # REPLACE (không append) cho mỗi field có giá trị
+                # Merge với xử lý đối nghịch
                 for key in child_overrides_lists[child_id]:
                     value = extraction.get(key)
                     if value:
-                        # Replace list với 1 phần tử (override cuối cùng thắng)
-                        child_overrides_lists[child_id][key] = [value]
+                        child_overrides_lists[child_id][key] = merge_category_phrases(
+                            child_overrides_lists[child_id][key],
+                            value,
+                            key,
+                        )
             # Cập nhật context cho segment kế tiếp (lấy match đầu tiên,
             # thường là match có confidence cao nhất)
             prev_subject_type = "child"
@@ -681,7 +694,7 @@ def extract_multi_person(
             # Ví dụ: "Bé Lan ăn ngon" (match Lan) → "Ho nhẹ" (orphan, inherit Lan).
             inherited = False
             if prev_subject_type == "child" and prev_child_id is not None:
-                # Gán extraction cho child trước đó
+                # Gán extraction cho child trước đó (xử lý đối nghịch)
                 if prev_child_id not in child_overrides_lists:
                     child_overrides_lists[prev_child_id] = {
                         "meals": [],
@@ -693,15 +706,24 @@ def extract_multi_person(
                 for key in child_overrides_lists[prev_child_id]:
                     value = extraction.get(key)
                     if value:
-                        # Append (orphan có thể có nhiều thông tin cho cùng 1 child)
-                        child_overrides_lists[prev_child_id][key].append(value)
+                        child_overrides_lists[prev_child_id][key] = (
+                            merge_category_phrases(
+                                child_overrides_lists[prev_child_id][key],
+                                value,
+                                key,
+                            )
+                        )
                 inherited = True
             elif prev_subject_type == "class_wide":
-                # Append vào class-wide bucket
+                # Merge vào class-wide bucket (xử lý đối nghịch)
                 for key in CLASS_WIDE_FIELDS:
                     value = extraction.get(key)
                     if value:
-                        class_wide_lists[key].append(value)
+                        class_wide_lists[key] = merge_category_phrases(
+                            class_wide_lists[key],
+                            value,
+                            key,
+                        )
                 inherited = True
 
             if inherited:
@@ -729,8 +751,7 @@ def extract_multi_person(
     child_extractions: dict[str, dict[str, str | None]] = {}
     for child_id, data in child_overrides_lists.items():
         child_extractions[child_id] = {
-            key: ", ".join(values) if values else None
-            for key, values in data.items()
+            key: ", ".join(values) if values else None for key, values in data.items()
         }
 
     return {
@@ -777,11 +798,12 @@ def _extract_single_segment(segment_text: str) -> dict:
         output = _model(tensor)
         predictions = output.argmax(dim=-1)[0]
 
-    pred_labels = [_id_to_label[pred.item()] for pred in predictions[:len(tokens)]]
+    pred_labels = [_id_to_label[pred.item()] for pred in predictions[: len(tokens)]]
     phrases_by_label = _extract_bio_phrases(tokens, pred_labels)
 
     result = {}
     for key, phrases in phrases_by_label.items():
-        result[key] = ", ".join(phrases) if phrases else None
+        resolved = resolve_conflicts(phrases, key)
+        result[key] = ", ".join(resolved) if resolved else None
 
     return result
