@@ -341,13 +341,13 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
               backgroundColor: k.canvas,
               appBar: KAppBar(
                 title: 'Chỉnh sửa báo cáo',
-                subtitle: '${widget.child.name} · $_headerDate',
+                subtitle: '${widget.child.fullNameWithNickname} · $_headerDate',
                 onBack: () => Navigator.pop(context),
               ),
               body: _existingReportId != null
                   ? ReportDiscussionBubble(
                       reportId: _existingReportId!,
-                      childName: widget.child.name,
+                      childName: widget.child.fullNameWithNickname,
                       teacherName:
                           teacherName.isNotEmpty ? teacherName : 'Cô giáo',
                       isTeacher: true,
@@ -475,7 +475,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.child.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(widget.child.fullNameWithNickname, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                     Text('Báo cáo ngày $reportDateText', style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
                   ],
                 ),

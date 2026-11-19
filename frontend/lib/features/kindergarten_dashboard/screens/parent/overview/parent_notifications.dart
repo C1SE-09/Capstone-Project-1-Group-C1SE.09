@@ -63,7 +63,7 @@ class _ParentNotificationsState extends State<ParentNotifications> {
         (c) => c.child.childId == report.childId,
         orElse: () => widget.children.first,
       );
-      return match.child.fullName;
+      return match.child.fullNameWithNickname;
     }
     return widget.childName;
   }
@@ -211,7 +211,7 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                   ),
                   for (final c in widget.children)
                     ChoiceChip(
-                      label: Text(c.child.fullName),
+                      label: Text(c.child.fullNameWithNickname),
                       selected: _selectedChildId == c.child.childId,
                       onSelected: (_) =>
                           setState(() => _selectedChildId = c.child.childId),

@@ -83,11 +83,11 @@ String formatParentChildrenNames(ChildOverview overview) {
       ? overview.allChildren
       : [overview];
   final names = childrenList
-      .map((c) => c.child.fullName.trim())
+      .map((c) => c.child.fullNameWithNickname.trim())
       .where((n) => n.isNotEmpty)
       .toSet()
       .toList();
-  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.fullName}';
+  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.fullNameWithNickname}';
   if (names.length <= 3) {
     return 'Phụ huynh bé ${names.join(', ')}';
   }
@@ -191,7 +191,7 @@ class _ParentAccountState extends State<ParentAccount> {
     showParentProfileEditScreen(
       context,
       parent: widget.parent,
-      childName: widget.overview.child.fullName,
+      childName: widget.overview.child.fullNameWithNickname,
       repository: widget.repository,
       onSaved: (phone, email, relationship) {
         if (widget.onParentUpdated != null) {
@@ -209,7 +209,7 @@ class _ParentAccountState extends State<ParentAccount> {
       builder: (_) => GardenVoiceScope(
         child: ParentContactScreen(
           parent: widget.parent,
-          childName: widget.overview.child.fullName,
+          childName: widget.overview.child.fullNameWithNickname,
           onEdit: (onSaved) => _openProfileSheet(onSaved: onSaved),
         ),
       ),
@@ -453,7 +453,7 @@ class _ParentAccountState extends State<ParentAccount> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            child.fullName,
+                            child.fullNameWithNickname,
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w600),
                           ),
@@ -1220,7 +1220,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(child.fullName,
+                        Text(child.fullNameWithNickname,
                             style: TextStyle(
                                 fontSize: 16,
                                 height: 1.4,
@@ -1452,7 +1452,7 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        child.fullName,
+                                        child.fullNameWithNickname,
                                         style: TextStyle(
                                           fontSize: 16,
                                           height: 1.3,

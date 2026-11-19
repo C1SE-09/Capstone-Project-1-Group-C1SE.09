@@ -161,7 +161,7 @@ class _ParentFlowState extends State<ParentFlow> {
             _notificationOpened = true;
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                  'Thông báo bé vắng: ${data.overview.child.fullName}, '
+                  'Thông báo bé vắng: ${data.overview.child.fullNameWithNickname}, '
                   'ngày ${kDateLabel(attendanceDate)}. Vui lòng liên hệ giáo viên để xác nhận.'),
             ));
             PushNotificationService.instance
@@ -263,7 +263,7 @@ class _ParentFlowState extends State<ParentFlow> {
     showParentReportSheet(
       context,
       report: report,
-      childName: targetChildOverview.child.fullName,
+      childName: targetChildOverview.child.fullNameWithNickname,
       teacherName: targetChildOverview.teacherName,
       repository: repository,
       onReportRead: (updated) {
@@ -619,7 +619,7 @@ class _ParentFlowState extends State<ParentFlow> {
               ? ParentNotifications(
                   reports: data.notificationReports,
                   children: data.overview.allChildren,
-                  childName: data.overview.child.fullName,
+                  childName: data.overview.child.fullNameWithNickname,
                   teacherName: data.overview.teacherName,
                   onOpenReport: (report) => _openReport(data, report),
                   onMarkAllRead: () => _markAllNotificationsRead(data),

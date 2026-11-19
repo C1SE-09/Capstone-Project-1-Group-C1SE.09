@@ -147,7 +147,7 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
                             color: context.k.brandTint,
                             borderRadius: BorderRadius.circular(20)),
                         child: Text(
-                            'Bé ${widget.child.fullName}${widget.className.isEmpty ? '' : ' · ${widget.className}'}',
+                            'Bé ${widget.child.fullNameWithNickname}${widget.className.isEmpty ? '' : ' · ${widget.className}'}',
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
