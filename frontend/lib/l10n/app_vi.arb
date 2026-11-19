@@ -881,7 +881,7 @@
   "assignedClassLabel": "Lớp phụ trách",
   "classChildrenCount": "{className} · {count} trẻ",
   "teacherTitle": "Giáo viên",
-  "teacherPrefix": "Cô ",
+  "teacherPrefix": "Cô {name}",
   "loadAccountErrorRetry": "Không tải được tài khoản · Thử lại",
   "accountTitle": "Tài khoản",
   "headTeacherRole": "Giáo viên chủ nhiệm",
@@ -1425,5 +1425,74 @@
         "type": "String"
       }
     }
-  }
+  },
+  "homeroomTeacher": "Giáo viên chủ nhiệm",
+  "@teacherPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "childrenUnit": "Trẻ",
+  "allergyLabel": "dị ứng",
+  "needsAttentionLabel": "cần chú ý",
+  "dailyReportDate": "Báo cáo ngày · {time}",
+  "@dailyReportDate": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "unmatchedSegmentsNeedConfirm": "{classLabel} · {count} đoạn cần cô xác nhận",
+  "@unmatchedSegmentsNeedConfirm": {
+    "placeholders": {
+      "classLabel": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readInSpokenOrder": "Đọc lại theo đúng thứ tự cô đã kể.",
+  "@arrivedAtTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "expectedAtTimeFormat": "Dự kiến đến {time}",
+  "@expectedAtTimeFormat": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAbsencePushConfirm": "Gửi thông báo đẩy đến phụ huynh của {count} bé vắng ngày {date}.",
+  "@sendAbsencePushConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingReportsRemaining": "Còn {names} chưa có báo cáo",
+  "@pendingReportsRemaining": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "thisWeekPrefix": "Tuần này",
+  "sttSeparatedByChild": "Đã tách thông tin theo từng bé",
+  "sttMicPermissionMessage": "Vui lòng cấp quyền truy cập micro để ghi âm. Thầy cô có thể mở Cài đặt của thiết bị, chọn Quyền riêng tư → Micro và bật cho KinderLog.",
+  "sttCannotRecordMessage": "Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé."
 }

@@ -4439,7 +4439,7 @@ abstract class AppLocalizations {
   /// No description provided for @noSchoolInfo.
   ///
   /// In en, this message translates to:
-  /// **'No school info available'**
+  /// **'No school information'**
   String get noSchoolInfo;
 
   /// No description provided for @loadClassListError.
@@ -4613,8 +4613,8 @@ abstract class AppLocalizations {
   /// No description provided for @teacherPrefix.
   ///
   /// In en, this message translates to:
-  /// **'Teacher '**
-  String get teacherPrefix;
+  /// **'Teacher {name}'**
+  String teacherPrefix(String name);
 
   /// No description provided for @loadAccountErrorRetry.
   ///
@@ -5017,7 +5017,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Arrived at {time}'**
-  String arrivedAtTime(Object time);
+  String arrivedAtTime(String time);
 
   /// No description provided for @expectedAtTime.
   ///
@@ -6926,6 +6926,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Version {version}'**
   String appVersionLabel(String version);
+
+  /// No description provided for @homeroomTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Homeroom Teacher'**
+  String get homeroomTeacher;
+
+  /// No description provided for @childrenUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Children'**
+  String get childrenUnit;
+
+  /// No description provided for @allergyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'allergy'**
+  String get allergyLabel;
+
+  /// No description provided for @needsAttentionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'needs attention'**
+  String get needsAttentionLabel;
+
+  /// No description provided for @dailyReportDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily report · {time}'**
+  String dailyReportDate(String time);
+
+  /// No description provided for @unmatchedSegmentsNeedConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'{classLabel} · {count} segment(s) need confirmation'**
+  String unmatchedSegmentsNeedConfirm(String classLabel, int count);
+
+  /// No description provided for @readInSpokenOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Read back in the exact order told.'**
+  String get readInSpokenOrder;
+
+  /// No description provided for @expectedAtTimeFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected at {time}'**
+  String expectedAtTimeFormat(String time);
+
+  /// No description provided for @sendAbsencePushConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Send push notification to parents of {count} absent children on {date}.'**
+  String sendAbsencePushConfirm(int count, String date);
+
+  /// No description provided for @pendingReportsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} have no reports yet'**
+  String pendingReportsRemaining(String names);
+
+  /// No description provided for @thisWeekPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get thisWeekPrefix;
+
+  /// No description provided for @sttSeparatedByChild.
+  ///
+  /// In en, this message translates to:
+  /// **'Separated information by child'**
+  String get sttSeparatedByChild;
+
+  /// No description provided for @sttMicPermissionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please grant microphone access to record audio. You can open Device Settings, select Privacy → Microphone and enable it for KinderLog.'**
+  String get sttMicPermissionMessage;
+
+  /// No description provided for @sttCannotRecordMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The app cannot record yet. Please check microphone access in device settings and try again.'**
+  String get sttCannotRecordMessage;
 }
 
 class _AppLocalizationsDelegate

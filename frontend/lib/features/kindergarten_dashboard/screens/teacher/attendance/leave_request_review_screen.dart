@@ -390,7 +390,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
         child: Column(
           children: [
             GardenVoiceClassHeader(
-              className: widget.className ?? 'Lớp học',
+              className: widget.className ??
+                  (LocaleController.instance.isEnglish ? 'Classroom' : 'Lớp học'),
               subtitle: widget.teacherName ?? '',
               selectedTab: GardenVoiceClassTab.leaveRequests,
               notificationCount: widget.notificationCount,
@@ -431,7 +432,8 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
   Widget _buildFocusedDetail(LeaveRequestEntity item) {
     final pending = item.status == LeaveStatus.pending;
     final late = item.requestType == LeaveRequestType.lateArrival;
-    final name = item.childName ?? 'Học sinh';
+    final name = item.childName ??
+        (LocaleController.instance.isEnglish ? 'Student' : 'Học sinh');
     final words = name
         .trim()
         .split(RegExp(r'\s+'))
@@ -577,7 +579,9 @@ class _LeaveRequestReviewScreenState extends State<LeaveRequestReviewScreen>
                         _detailRow(
                             l10n?.leaveDateLabel ?? 'Ngày nghỉ',
                             late
-                                ? '${requestDayLabel(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'chưa cập nhật')}'
+                                ? (LocaleController.instance.isEnglish
+                                    ? '${requestDayLabel(item.fromDate)} · Expected at ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'Not updated')}'
+                                    : '${requestDayLabel(item.fromDate)} · Dự kiến đến ${item.expectedArrivalTime?.split(':').take(2).join(':') ?? (l10n?.notUpdated ?? 'chưa cập nhật')}')
                                 : dateText),
                         Divider(height: 1, color: k.line),
                         _detailRow(l10n?.requestTotalDays ?? 'Số ngày', l10n?.totalDaysCount(item.totalDays) ?? '${item.totalDays} ngày'),

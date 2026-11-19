@@ -209,10 +209,13 @@ class _TeacherShellState extends State<TeacherShell> {
     final dashboard = values[1] as ClassDashboardSummary;
     final rawTeacher = dashboard.teacherName.trim();
     if (rawTeacher.isNotEmpty) {
+      final isEn = LocaleController.instance.isEnglish;
       _teacherName =
           rawTeacher.startsWith('Cô ') || rawTeacher.startsWith('Thầy ')
-              ? rawTeacher
-              : 'Cô $rawTeacher';
+              ? (isEn
+                  ? rawTeacher.replaceFirst(RegExp(r'^(Cô|Thầy)\s+'), 'Teacher ')
+                  : rawTeacher)
+              : (isEn ? 'Teacher $rawTeacher' : 'Cô $rawTeacher');
     }
     final statuses = {
       for (final item in dashboard.pendingChildren) item.child.childId: item
@@ -252,7 +255,9 @@ class _TeacherShellState extends State<TeacherShell> {
     }
     return Child(
       id: '',
-      name: name.trim().isEmpty ? 'Trẻ' : name.trim(),
+      name: name.trim().isEmpty
+          ? (LocaleController.instance.isEnglish ? 'Child' : 'Trẻ')
+          : name.trim(),
       status: ReportStatus.submitted,
       present: true,
       time: '',

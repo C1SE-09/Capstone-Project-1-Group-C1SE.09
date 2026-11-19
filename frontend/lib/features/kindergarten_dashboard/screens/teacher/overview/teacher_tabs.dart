@@ -200,10 +200,17 @@ class _ClassListScreenState extends State<ClassListScreen> {
               child.severity != Severity.none ||
               (child.allergy != null && child.allergy!.trim().isNotEmpty));
     }).toList();
-    final subtitleText =
-        (widget.teacherName != null && widget.teacherName!.trim().isNotEmpty)
-            ? widget.teacherName!.trim()
-            : widget.schoolName;
+    final isEn = LocaleController.instance.isEnglish;
+    final resolvedSchoolName = widget.schoolName == 'Chưa có thông tin trường'
+        ? (context.l10n?.noSchoolInfo ?? (isEn ? 'No school information' : 'Chưa có thông tin trường'))
+        : widget.schoolName;
+    String rawTeacher = widget.teacherName?.trim() ?? '';
+    if (isEn && (rawTeacher.startsWith('Cô ') || rawTeacher.startsWith('Thầy '))) {
+      rawTeacher = rawTeacher.replaceFirst(RegExp(r'^(Cô|Thầy)\s+'), 'Teacher ');
+    } else if (isEn && rawTeacher.isNotEmpty && !rawTeacher.startsWith('Teacher ')) {
+      rawTeacher = 'Teacher $rawTeacher';
+    }
+    final subtitleText = rawTeacher.isNotEmpty ? rawTeacher : resolvedSchoolName;
     final content = Builder(
       builder: (context) {
         final k = context.k;

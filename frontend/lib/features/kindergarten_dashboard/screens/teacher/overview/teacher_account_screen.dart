@@ -147,13 +147,15 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
     );
   }
 
-  static String _displayTeacherName(String fullName) {
+  static String _displayTeacherName(String fullName, {bool isEn = false}) {
     final trimmed = fullName.trim();
-    if (trimmed.isEmpty) return 'Giáo viên';
+    if (trimmed.isEmpty) return isEn ? 'Teacher' : 'Giáo viên';
     if (trimmed.startsWith('Cô ') || trimmed.startsWith('Thầy ')) {
-      return trimmed;
+      return isEn
+          ? trimmed.replaceFirst(RegExp(r'^(Cô|Thầy)\s+'), 'Teacher ')
+          : trimmed;
     }
-    return 'Cô $trimmed';
+    return isEn ? 'Teacher $trimmed' : 'Cô $trimmed';
   }
 
   @override
@@ -254,7 +256,8 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _displayTeacherName(teacher.fullName),
+                              _displayTeacherName(teacher.fullName,
+                                  isEn: LocaleController.instance.isEnglish),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

@@ -855,7 +855,7 @@
   "noClassMessage": "Your account has not been assigned to any class yet. Please contact school administration for assistance, or try logging in again later.",
   "loadClassListErrorRetry": "Failed to load class list · Retry",
   "loadClassInfoErrorRetry": "Failed to load class info · Retry",
-  "noSchoolInfo": "No school info available",
+  "noSchoolInfo": "No school information",
   "loadClassListError": "Failed to load class list. Please try again.",
   "searchChildNameHint": "Search child's name…",
   "noChildMatched": "No matching child found.",
@@ -884,7 +884,7 @@
   "assignedClassLabel": "Assigned class",
   "classChildrenCount": "{className} · {count} children",
   "teacherTitle": "Teacher",
-  "teacherPrefix": "Teacher ",
+  "teacherPrefix": "Teacher {name}",
   "loadAccountErrorRetry": "Failed to load account · Retry",
   "accountTitle": "Account",
   "headTeacherRole": "Head teacher",
@@ -1428,5 +1428,74 @@
         "type": "String"
       }
     }
-  }
+  },
+  "homeroomTeacher": "Homeroom Teacher",
+  "@teacherPrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "childrenUnit": "Children",
+  "allergyLabel": "allergy",
+  "needsAttentionLabel": "needs attention",
+  "dailyReportDate": "Daily report · {time}",
+  "@dailyReportDate": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "unmatchedSegmentsNeedConfirm": "{classLabel} · {count} segment(s) need confirmation",
+  "@unmatchedSegmentsNeedConfirm": {
+    "placeholders": {
+      "classLabel": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readInSpokenOrder": "Read back in the exact order told.",
+  "@arrivedAtTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "expectedAtTimeFormat": "Expected at {time}",
+  "@expectedAtTimeFormat": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAbsencePushConfirm": "Send push notification to parents of {count} absent children on {date}.",
+  "@sendAbsencePushConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingReportsRemaining": "{names} have no reports yet",
+  "@pendingReportsRemaining": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "thisWeekPrefix": "This week",
+  "sttSeparatedByChild": "Separated information by child",
+  "sttMicPermissionMessage": "Please grant microphone access to record audio. You can open Device Settings, select Privacy → Microphone and enable it for KinderLog.",
+  "sttCannotRecordMessage": "The app cannot record yet. Please check microphone access in device settings and try again."
 }

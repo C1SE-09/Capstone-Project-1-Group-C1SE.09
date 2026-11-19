@@ -193,8 +193,8 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     final classId = widget.child.classId;
     if (classId == null || classId.isEmpty) {
-      setState(() =>
-          _error = 'Bé chưa có thông tin lớp. Vui lòng liên hệ nhà trường.');
+      setState(() => _error = context.l10n?.requestNoClassWarning ??
+          'Bé chưa có thông tin lớp. Vui lòng liên hệ nhà trường.');
       return;
     }
     final today = DateUtils.dateOnly(DateTime.now());
@@ -204,7 +204,7 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
         _to.isBefore(_from) ||
         _days > 366 ||
         (_late && !arrival.isAfter(DateTime.now()))) {
-      setState(() => _error =
+      setState(() => _error = context.l10n?.requestDateRangeHelp ??
           'Chọn ngày và giờ trong tương lai; mỗi đơn tối đa 366 ngày.');
       return;
     }

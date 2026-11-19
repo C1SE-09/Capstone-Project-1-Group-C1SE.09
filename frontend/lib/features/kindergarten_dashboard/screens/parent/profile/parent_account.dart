@@ -1126,17 +1126,26 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
     final phoneAvailable = phoneCallUri(overview.teacherPhone ?? '') != null;
     final dateOfBirth = child.dateOfBirth;
     final className = overview.className.trim();
+    final isEn = LocaleController.instance.isEnglish;
     final classDisplay = className.isEmpty
         ? ''
-        : (className.toLowerCase().startsWith('lớp')
-            ? className
-            : 'Lớp $className');
+        : (isEn
+            ? (className.toLowerCase().startsWith('class')
+                ? className
+                : 'Class $className')
+            : (className.toLowerCase().startsWith('lớp')
+                ? className
+                : 'Lớp $className'));
     final teacherDisplay = overview.teacherName.trim().isEmpty
         ? ''
         : (overview.teacherName.trim().toLowerCase().startsWith('cô') ||
                 overview.teacherName.trim().toLowerCase().startsWith('thầy')
-            ? overview.teacherName.trim()
-            : 'Cô ${overview.teacherName.trim()}');
+            ? (isEn
+                ? overview.teacherName.trim().replaceFirst(RegExp(r'^(Cô|Thầy|cô|thầy)\s+'), 'Teacher ')
+                : overview.teacherName.trim())
+            : (isEn
+                ? 'Teacher ${overview.teacherName.trim()}'
+                : 'Cô ${overview.teacherName.trim()}'));
 
     return ConstrainedBox(
       constraints:
@@ -1400,21 +1409,30 @@ class _ParentChildSelectionSheet extends StatelessWidget {
               itemCount: children.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
+                final isEn = LocaleController.instance.isEnglish;
                 final item = children[index];
                 final child = item.child;
                 final isCurrent = child.childId == currentChildId;
                 final className = item.className.trim();
                 final classDisplay = className.isEmpty
                     ? ''
-                    : (className.toLowerCase().startsWith('lớp')
-                        ? className
-                        : 'Lớp $className');
+                    : (isEn
+                        ? (className.toLowerCase().startsWith('class')
+                            ? className
+                            : 'Class $className')
+                        : (className.toLowerCase().startsWith('lớp')
+                            ? className
+                            : 'Lớp $className'));
                 final teacherDisplay = item.teacherName.trim().isEmpty
                     ? ''
                     : (item.teacherName.toLowerCase().startsWith('cô') ||
                             item.teacherName.toLowerCase().startsWith('thầy')
-                        ? item.teacherName.trim()
-                        : 'Cô ${item.teacherName.trim()}');
+                        ? (isEn
+                            ? item.teacherName.trim().replaceFirst(RegExp(r'^(Cô|Thầy|cô|thầy)\s+'), 'Teacher ')
+                            : item.teacherName.trim())
+                        : (isEn
+                            ? 'Teacher ${item.teacherName.trim()}'
+                            : 'Cô ${item.teacherName.trim()}'));
 
                 return Material(
                   color: isCurrent

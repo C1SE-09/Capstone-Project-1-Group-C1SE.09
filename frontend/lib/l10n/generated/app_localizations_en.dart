@@ -2346,7 +2346,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loadClassInfoErrorRetry => 'Failed to load class info · Retry';
 
   @override
-  String get noSchoolInfo => 'No school info available';
+  String get noSchoolInfo => 'No school information';
 
   @override
   String get loadClassListError =>
@@ -2442,7 +2442,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teacherTitle => 'Teacher';
 
   @override
-  String get teacherPrefix => 'Teacher ';
+  String teacherPrefix(String name) {
+    return 'Teacher $name';
+  }
 
   @override
   String get loadAccountErrorRetry => 'Failed to load account · Retry';
@@ -2686,7 +2688,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updatedStatus => 'Updated';
 
   @override
-  String arrivedAtTime(Object time) {
+  String arrivedAtTime(String time) {
     return 'Arrived at $time';
   }
 
@@ -3768,4 +3770,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String appVersionLabel(String version) {
     return 'Version $version';
   }
+
+  @override
+  String get homeroomTeacher => 'Homeroom Teacher';
+
+  @override
+  String get childrenUnit => 'Children';
+
+  @override
+  String get allergyLabel => 'allergy';
+
+  @override
+  String get needsAttentionLabel => 'needs attention';
+
+  @override
+  String dailyReportDate(String time) {
+    return 'Daily report · $time';
+  }
+
+  @override
+  String unmatchedSegmentsNeedConfirm(String classLabel, int count) {
+    return '$classLabel · $count segment(s) need confirmation';
+  }
+
+  @override
+  String get readInSpokenOrder => 'Read back in the exact order told.';
+
+  @override
+  String expectedAtTimeFormat(String time) {
+    return 'Expected at $time';
+  }
+
+  @override
+  String sendAbsencePushConfirm(int count, String date) {
+    return 'Send push notification to parents of $count absent children on $date.';
+  }
+
+  @override
+  String pendingReportsRemaining(String names) {
+    return '$names have no reports yet';
+  }
+
+  @override
+  String get thisWeekPrefix => 'This week';
+
+  @override
+  String get sttSeparatedByChild => 'Separated information by child';
+
+  @override
+  String get sttMicPermissionMessage =>
+      'Please grant microphone access to record audio. You can open Device Settings, select Privacy → Microphone and enable it for KinderLog.';
+
+  @override
+  String get sttCannotRecordMessage =>
+      'The app cannot record yet. Please check microphone access in device settings and try again.';
 }

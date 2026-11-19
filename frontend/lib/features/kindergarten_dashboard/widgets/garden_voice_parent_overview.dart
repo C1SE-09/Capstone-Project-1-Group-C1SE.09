@@ -104,7 +104,9 @@ class _GardenVoiceParentOverviewState extends State<GardenVoiceParentOverview> {
       orElse: () => overview,
     );
 
-    final displayName = parent.fullName.isEmpty ? 'Phụ huynh' : parent.fullName;
+    final displayName = parent.fullName.isEmpty
+        ? (LocaleController.instance.isEnglish ? 'Parent' : 'Phụ huynh')
+        : parent.fullName;
     return GardenVoiceScope(
       child: Builder(
         builder: (context) {
@@ -434,11 +436,17 @@ class _ChildOverviewCard extends StatelessWidget {
     final l10n = context.l10n;
     final allergy = overview.child.allergy;
     final rawClassName = overview.className.trim();
+    final isEn = LocaleController.instance.isEnglish;
+    final cleanUpper = rawClassName
+        .replaceFirst(RegExp(r'^(LỚP|CLASS)\s*', caseSensitive: false), '')
+        .toUpperCase();
     final classLabel = rawClassName.isEmpty
-        ? 'LỚP HỌC'
-        : (rawClassName.toUpperCase().startsWith('LỚP')
-            ? rawClassName.toUpperCase()
-            : 'LỚP ${rawClassName.toUpperCase()}');
+        ? (isEn ? 'CLASS' : 'LỚP HỌC')
+        : (isEn
+            ? (cleanUpper.isEmpty ? 'CLASS' : 'CLASS $cleanUpper')
+            : (rawClassName.toUpperCase().startsWith('LỚP')
+                ? rawClassName.toUpperCase()
+                : 'LỚP ${rawClassName.toUpperCase()}'));
     return Container(
       key: const ValueKey('garden-voice-parent-child-card'),
       height: 160,
