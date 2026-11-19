@@ -85,29 +85,19 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        routerConfig: appRouter,
-        theme: kinderTheme(),
-        scrollBehavior: const MaterialScrollBehavior().copyWith(
-          dragDevices: {
-            PointerDeviceKind.mouse,
-            PointerDeviceKind.touch,
-            PointerDeviceKind.trackpad,
-            PointerDeviceKind.stylus,
-          },
-        ),
-        locale: const Locale('vi'),
-        supportedLocales: const [Locale('vi'), Locale('en')],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        // Dark chưa được duyệt; không theo theme máy hoặc tùy chọn cũ.
-        themeMode: ThemeMode.light,
-        scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
-        debugShowCheckedModeBanner: false,
   Widget build(BuildContext context) => ListenableBuilder(
         listenable: LocaleController.instance,
         builder: (context, _) => MaterialApp.router(
           routerConfig: appRouter,
           theme: kinderTheme(),
+          scrollBehavior: const MaterialScrollBehavior().copyWith(
+            dragDevices: {
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.touch,
+              PointerDeviceKind.trackpad,
+              PointerDeviceKind.stylus,
+            },
+          ),
           locale: LocaleController.instance.value,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
