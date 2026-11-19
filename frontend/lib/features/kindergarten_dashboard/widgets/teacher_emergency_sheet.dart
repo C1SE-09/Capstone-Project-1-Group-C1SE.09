@@ -609,7 +609,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    '${contact['name'] ?? 'Phụ huynh'} · ${contact['relationship'] ?? 'Người thân'}',
+                    '${contact['name'] ?? (context.l10n?.parentRole ?? (LocaleController.instance.isEnglish ? 'Parent' : 'Phụ huynh'))} · ${contact['relationship'] ?? (LocaleController.instance.isEnglish ? 'Relative' : 'Người thân')}',
                     style: const TextStyle(
                         fontSize: 13.5, fontWeight: FontWeight.w700)),
                 Text(maskedPhone(phone),

@@ -300,6 +300,7 @@ class _ReviewStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final isEn = LocaleController.instance.isEnglish;
     if (request.status == LeaveStatus.approved) {
       return ParentRequestCard(
           color: k.okTint,
@@ -310,7 +311,9 @@ class _ReviewStatus extends StatelessWidget {
                     fontSize: 16, fontWeight: FontWeight.w700, color: k.ok)),
             const SizedBox(height: 3),
             Text(
-                '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' duyệt lúc ${requestTimestamp(request.reviewedAt!)}'}',
+                isEn
+                    ? '${request.reviewerName ?? 'Teacher'}${request.reviewedAt == null ? '' : ' approved at ${requestTimestamp(request.reviewedAt!)}'}'
+                    : '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' duyệt lúc ${requestTimestamp(request.reviewedAt!)}'}',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 11.5, color: k.inkSoft)),
           ]));
@@ -338,10 +341,14 @@ class _ReviewStatus extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                     request.status == LeaveStatus.pending
-                        ? 'Đã gửi lúc ${requestTimestamp(request.createdAt)}'
+                        ? (isEn
+                            ? 'Sent at ${requestTimestamp(request.createdAt)}'
+                            : 'Đã gửi lúc ${requestTimestamp(request.createdAt)}')
                         : request.status == LeaveStatus.cancelled
-                            ? 'Phụ huynh đã hủy đơn'
-                            : '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}',
+                            ? (isEn ? 'Cancelled by parent' : 'Phụ huynh đã hủy đơn')
+                            : (isEn
+                                ? '${request.reviewerName ?? 'Teacher'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}'
+                                : '${request.reviewerName ?? 'Giáo viên'}${request.reviewedAt == null ? '' : ' · ${requestTimestamp(request.reviewedAt!)}'}'),
                     style: TextStyle(fontSize: 11.5, color: ink)),
               ])),
         ]));

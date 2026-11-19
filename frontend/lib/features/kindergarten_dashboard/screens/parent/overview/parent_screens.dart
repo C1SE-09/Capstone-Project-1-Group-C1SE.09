@@ -162,8 +162,12 @@ class _ParentFlowState extends State<ParentFlow> {
             _notificationOpened = true;
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                  'Thông báo bé vắng: ${data.overview.child.fullNameWithNickname}, '
-                  'ngày ${kDateLabel(attendanceDate)}. Vui lòng liên hệ giáo viên để xác nhận.'),
+                LocaleController.instance.isEnglish
+                    ? 'Absence notice: ${data.overview.child.fullNameWithNickname}, '
+                      'date ${kDateLabel(attendanceDate)}. Please contact teacher for confirmation.'
+                    : 'Thông báo bé vắng: ${data.overview.child.fullNameWithNickname}, '
+                      'ngày ${kDateLabel(attendanceDate)}. Vui lòng liên hệ giáo viên để xác nhận.',
+              ),
             ));
             PushNotificationService.instance
                 .completePendingNotification(widget.notificationId);
@@ -474,8 +478,14 @@ class _ParentFlowState extends State<ParentFlow> {
                 ? overview.child.classId!
                 : 'aaaaaaaa-0000-0000-0000-000000000001',
             className: overview.className.isNotEmpty
-                ? 'Lớp ${overview.className}'
-                : 'Lớp của bé',
+                ? (LocaleController.instance.isEnglish
+                    ? (overview.className.toLowerCase().startsWith('class')
+                        ? overview.className
+                        : 'Class ${overview.className}')
+                    : (overview.className.toLowerCase().startsWith('lớp')
+                        ? overview.className
+                        : 'Lớp ${overview.className}'))
+                : (LocaleController.instance.isEnglish ? "Child's Class" : 'Lớp của bé'),
             repository: widget.scheduleRepository,
             isReadOnly: true,
             embedded: true,

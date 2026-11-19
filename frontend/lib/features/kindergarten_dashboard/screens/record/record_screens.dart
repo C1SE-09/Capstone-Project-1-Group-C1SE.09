@@ -177,7 +177,9 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                        'Cả Lớp ${data.className.replaceFirst(RegExp(r'^Lớp\s+'), '')}',
+                                        LocaleController.instance.isEnglish
+                                            ? 'All Class ${data.className.replaceFirst(RegExp(r'^(Lớp|Class)\s*', caseSensitive: false), '')}'
+                                            : 'Cả Lớp ${data.className.replaceFirst(RegExp(r'^Lớp\s+'), '')}',
                                         style: TextStyle(
                                           fontSize: 16,
                                           height: 1.4,
@@ -185,7 +187,9 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                           color: k.ink,
                                         )),
                                     Text(
-                                        'Ghi một lần, tạo báo cáo cho tất cả trẻ.',
+                                        LocaleController.instance.isEnglish
+                                            ? 'Record once, generate reports for all children.'
+                                            : 'Ghi một lần, tạo báo cáo cho tất cả trẻ.',
                                         style: TextStyle(
                                           fontSize: 12,
                                           height: 1.4,
@@ -622,7 +626,12 @@ class _RecordFlowScreenState extends State<RecordFlowScreen> {
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Đã tạo và gửi báo cáo thành công!'),
+                    content: Text(
+                      context.l10n?.sttSubmittedSuccess ??
+                          (LocaleController.instance.isEnglish
+                              ? 'Report created and sent successfully!'
+                              : 'Đã tạo và gửi báo cáo thành công!'),
+                    ),
                     backgroundColor: context.k.brand,
                   ),
                 );
@@ -1304,8 +1313,10 @@ class _RecordingScreenState extends State<RecordingScreen>
           await _showRecordingRecoveryDialog(
             iconAsset: 'assets/garden_voice/record_permission.svg',
             title: context.l10n?.sttNoMicPermissionTitle ?? 'Chưa có quyền micro',
-            message:
-                'Vui lòng cấp quyền truy cập micro để ghi âm. Thầy cô có thể mở Cài đặt của thiết bị, chọn Quyền riêng tư → Micro và bật cho KinderLog.',
+            message: context.l10n?.sttMicPermissionMessage ??
+                (LocaleController.instance.isEnglish
+                    ? 'Please grant microphone access to record audio. You can open Device Settings, select Privacy → Microphone and enable it for KinderLog.'
+                    : 'Vui lòng cấp quyền truy cập micro để ghi âm. Thầy cô có thể mở Cài đặt của thiết bị, chọn Quyền riêng tư → Micro và bật cho KinderLog.'),
             primaryLabel: context.l10n?.openSettingsAction ?? 'Mở cài đặt',
             secondaryLabel: context.l10n?.laterAction ?? 'Để sau',
             onPrimary: _openMicrophoneSettings,
@@ -1398,8 +1409,10 @@ class _RecordingScreenState extends State<RecordingScreen>
         await _showRecordingRecoveryDialog(
           iconAsset: 'assets/garden_voice/record_error.svg',
           title: context.l10n?.sttCannotRecordTitle ?? 'Chưa thể ghi âm',
-          message:
-              'Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé.',
+          message: context.l10n?.sttCannotRecordMessage ??
+              (LocaleController.instance.isEnglish
+                  ? 'The app cannot record yet. Please check microphone access in device settings and try again.'
+                  : 'Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé.'),
           primaryLabel: context.l10n?.bugReportCommonRetry ?? 'Thử lại',
           secondaryLabel: context.l10n?.commonClose ?? 'Đóng',
           onPrimary: () => _startRecording(),
@@ -1621,7 +1634,9 @@ class _RecordingScreenState extends State<RecordingScreen>
               children: [
                 Text(
                   child == null
-                      ? 'Cả lớp $classLabel'
+                      ? (LocaleController.instance.isEnglish
+                          ? 'All Class $classLabel'
+                          : 'Cả lớp $classLabel')
                       : child.fullNameWithNickname,
                   style: TextStyle(
                     fontSize: 14,
@@ -1632,7 +1647,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                 ),
                 Text(
                   child == null
-                      ? 'Ghi một lần, tạo báo cáo cho tất cả trẻ.'
+                      ? (LocaleController.instance.isEnglish
+                          ? 'Record once, generate reports for all children.'
+                          : 'Ghi một lần, tạo báo cáo cho tất cả trẻ.')
                       : classLabel,
                   style: TextStyle(
                     fontSize: 12,
@@ -1915,10 +1932,14 @@ class _RecordingScreenState extends State<RecordingScreen>
     final child = widget.child;
     final allergy =
         child?.allergy == null ? null : _recordAllergy(child!.allergy!);
-    final classLabel = widget.className.startsWith('Lớp ')
-        ? widget.className
-        : 'Lớp ${widget.className}';
-    final title = child?.fullNameWithNickname ?? 'Cả lớp';
+    final isEn = LocaleController.instance.isEnglish;
+    final cleanClass = widget.className.replaceFirst(RegExp(r'^(Lớp|Class)\s*', caseSensitive: false), '');
+    final classLabel = isEn
+        ? (cleanClass.isEmpty ? 'Class' : 'Class $cleanClass')
+        : (widget.className.startsWith('Lớp ')
+            ? widget.className
+            : 'Lớp ${widget.className}');
+    final title = child?.fullNameWithNickname ?? (isEn ? 'Entire class' : 'Cả lớp');
     final subtitle = child == null ? classLabel : '$title · $classLabel';
     final canSubmit = !isBusy && (hasFile || phase == 'done');
 
@@ -2823,9 +2844,12 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         if (e.statusCode == 400) {
           if (!mounted) return;
           setState(() => isProcessing = false);
+          final isEn = LocaleController.instance.isEnglish;
           final serverMessage = e.message.isNotEmpty
               ? e.message
-              : 'Nội dung ghi âm không liên quan đến báo cáo học sinh.';
+              : (isEn
+                  ? 'Audio recording is not relevant to student reports.'
+                  : 'Nội dung ghi âm không liên quan đến báo cáo học sinh.');
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
@@ -2837,22 +2861,24 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                   Icon(Icons.warning_amber_rounded,
                       color: context.k.warn, size: 26),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Nội dung không liên quan',
-                      style: TextStyle(fontSize: 16),
+                      isEn ? 'Irrelevant Content' : 'Nội dung không liên quan',
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ),
                 ],
               ),
               content: Text(
-                '$serverMessage\n\nVui lòng ghi âm lại và mô tả về bé trong ngày (ăn uống, giấc ngủ, tâm trạng, hoạt động…).',
+                isEn
+                    ? '$serverMessage\n\nPlease record again and describe the child during the day (eating, sleeping, mood, activities...).'
+                    : '$serverMessage\n\nVui lòng ghi âm lại và mô tả về bé trong ngày (ăn uống, giấc ngủ, tâm trạng, hoạt động…).',
                 style: const TextStyle(fontSize: 14, height: 1.55),
               ),
               actions: [
                 FilledButton.icon(
                   icon: const Icon(Icons.mic_none_rounded, size: 18),
-                  label: const Text('Ghi âm lại'),
+                  label: Text(isEn ? 'Record again' : 'Ghi âm lại'),
                   onPressed: () {
                     Navigator.pop(context); // đóng dialog
                     widget.onBack(); // về màn hình ghi âm
@@ -2878,6 +2904,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           errorMessage = null;
         });
         if (!mounted) return;
+        final isEn = LocaleController.instance.isEnglish;
         await showDialog<void>(
           context: context,
           builder: (_) => AlertDialog(
@@ -2887,25 +2914,27 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
               children: [
                 Icon(Icons.warning_amber_rounded, color: context.k.warn),
                 const SizedBox(width: 8),
-                const Text('Nội dung không liên quan',
-                    style: TextStyle(fontSize: 18)),
+                Text(isEn ? 'Irrelevant Content' : 'Nội dung không liên quan',
+                    style: const TextStyle(fontSize: 18)),
               ],
             ),
-            content: const Text(
-              'Nội dung ghi âm không liên quan đến hoạt động học sinh.\n\nVui lòng ghi âm lại và mô tả về bé trong ngày (ăn uống, giấc ngủ, tâm trạng, hoạt động…).',
-              style: TextStyle(fontSize: 14, height: 1.5),
+            content: Text(
+              isEn
+                  ? 'Audio recording is not relevant to student activities.\n\nPlease record again and describe the child during the day (eating, sleeping, mood, activities...).'
+                  : 'Nội dung ghi âm không liên quan đến hoạt động học sinh.\n\nVui lòng ghi âm lại và mô tả về bé trong ngày (ăn uống, giấc ngủ, tâm trạng, hoạt động…).',
+              style: const TextStyle(fontSize: 14, height: 1.5),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Ghi âm lại'),
+                child: Text(isEn ? 'Record again' : 'Ghi âm lại'),
               ),
               FilledButton(
                 onPressed: () {
                   Navigator.pop(context);
                   widget.onDone(currentRecord, extraction);
                 },
-                child: const Text('Vẫn tiếp tục'),
+                child: Text(isEn ? 'Continue anyway' : 'Vẫn tiếp tục'),
               ),
             ],
           ),
@@ -2989,14 +3018,19 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Thầy cô có thể',
+                                Text(
+                                    LocaleController.instance.isEnglish
+                                        ? 'You can'
+                                        : 'Thầy cô có thể',
                                     style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
                                         color: k.ink)),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Thử lại sau ít phút, hoặc quay lại để chọn bản ghi khác.',
+                                  LocaleController.instance.isEnglish
+                                      ? 'Try again in a few moments, or go back to select another recording.'
+                                      : 'Thử lại sau ít phút, hoặc quay lại để chọn bản ghi khác.',
                                   style:
                                       TextStyle(fontSize: 12, color: k.inkSoft),
                                 ),
@@ -4059,7 +4093,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Đã bỏ duyệt mục riêng của "${item.name}". Bé sẽ nhận báo cáo chung của cả lớp.'),
+              LocaleController.instance.isEnglish
+                  ? 'Unapproved specific section for "${item.name}". The child will receive the class-wide report.'
+                  : 'Đã bỏ duyệt mục riêng của "${item.name}". Bé sẽ nhận báo cáo chung của cả lớp.',
+            ),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -4315,9 +4352,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final classLabel = widget.className.startsWith('Lớp ')
-        ? widget.className
-        : 'Lớp ${widget.className}';
+    final isEn = LocaleController.instance.isEnglish;
+    final cleanClass = widget.className.replaceFirst(RegExp(r'^(Lớp|Class)\s*', caseSensitive: false), '');
+    final classLabel = isEn
+        ? (cleanClass.isEmpty ? 'Class' : 'Class $cleanClass')
+        : (widget.className.startsWith('Lớp ')
+            ? widget.className
+            : 'Lớp ${widget.className}');
     if (isDone) {
       final classwideItems =
           items.where((item) => item.kind == ObservationKind.classwide).toList();
@@ -4415,12 +4456,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       children: [
                         Text(
                           isClasswideReview
-                              ? 'Duyệt báo cáo cả lớp'
+                              ? (isEn ? 'Review class-wide report' : 'Duyệt báo cáo cả lớp')
                               : isSkippedReview
-                                  ? 'Duyệt báo cáo'
+                                  ? (isEn ? 'Review report' : 'Duyệt báo cáo')
                                   : hasUnmatchedActive
-                                      ? 'Xem lại bản ghi'
-                                      : 'Xem lại báo cáo',
+                                      ? (isEn ? 'Review recording' : 'Xem lại bản ghi')
+                                      : (isEn ? 'Review report' : 'Xem lại báo cáo'),
                           style: TextStyle(
                               fontSize: 16,
                               height: 1.4,
@@ -4430,8 +4471,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         if (!isClasswideReview && !isSkippedReview)
                           Text(
                             hasUnmatchedActive
-                                ? '$classLabel · $unmatchedActiveCount đoạn cần cô xác nhận'
-                                : 'Đã tách thông tin theo từng bé',
+                                ? (context.l10n?.unmatchedSegmentsNeedConfirm(classLabel, unmatchedActiveCount) ??
+                                    (isEn
+                                        ? '$classLabel · $unmatchedActiveCount segment(s) need confirmation'
+                                        : '$classLabel · $unmatchedActiveCount đoạn cần cô xác nhận'))
+                                : (context.l10n?.sttSeparatedByChild ??
+                                    (isEn ? 'Separated information by child' : 'Đã tách thông tin theo từng bé')),
                             style: TextStyle(
                                 fontSize: 12,
                                 height: 1.4,
@@ -4504,10 +4549,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     final childItem = classwideChildItems.single;
                     final classwideItem = classwideItems.single;
                     final actionLabel = pendingCount > 0
-                        ? 'Duyệt tất cả'
+                        ? (isEn ? 'Approve all' : 'Duyệt tất cả')
                         : approvedCount > 0
-                            ? 'Xác nhận gửi cho cả lớp'
-                            : 'Chưa duyệt mục nào để gửi';
+                            ? (isEn ? 'Confirm send to entire class' : 'Xác nhận gửi cho cả lớp')
+                            : (isEn ? 'No items approved to send' : 'Chưa duyệt mục nào để gửi');
                     final VoidCallback? action = isSubmitting
                         ? null
                         : pendingCount > 0
@@ -4521,7 +4566,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            '$classLabel · Đã xử lý tất cả đoạn ghi',
+                            isEn
+                                ? '$classLabel · All audio segments processed'
+                                : '$classLabel · Đã xử lý tất cả đoạn ghi',
                             style: TextStyle(
                               color: context.k.inkSoft,
                               fontSize: 15,
@@ -4532,12 +4579,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           reviewTile(
                             childItem,
                             summaryStyle: true,
-                            summaryLabel: 'Riêng ${childItem.fullNameWithNickname}',
+                            summaryLabel: isEn
+                                ? 'Specific to ${childItem.fullNameWithNickname}'
+                                : 'Riêng ${childItem.fullNameWithNickname}',
                           ),
                           reviewTile(
                             classwideItem,
                             summaryStyle: true,
-                            summaryLabel: 'Áp dụng cho cả lớp',
+                            summaryLabel: isEn
+                                ? 'Apply to entire class'
+                                : 'Áp dụng cho cả lớp',
                           ),
                           SizedBox(
                             height: 48,
@@ -4715,7 +4766,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Đọc lại theo đúng thứ tự cô đã kể.',
+                            context.l10n?.readInSpokenOrder ??
+                                'Đọc lại theo đúng thứ tự cô đã kể.',
                             style: TextStyle(
                                 fontSize: 12, color: context.k.inkSoft),
                           ),
@@ -5229,7 +5281,9 @@ class _ObservationTile extends StatelessWidget {
             Text(
               summaryLabel ??
                   (card.kind == ObservationKind.classwide
-                      ? 'Áp dụng cho cả lớp'
+                      ? (LocaleController.instance.isEnglish
+                          ? 'Apply to entire class'
+                          : 'Áp dụng cho cả lớp')
                       : card.fullNameWithNickname),
               style: TextStyle(
                 color: k.brandStrong,
@@ -5240,7 +5294,9 @@ class _ObservationTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               summary.isEmpty
-                  ? 'Không có thông tin chi tiết được ghi nhận'
+                  ? (LocaleController.instance.isEnglish
+                      ? 'No detailed information recorded'
+                      : 'Không có thông tin chi tiết được ghi nhận')
                   : summary,
               style: TextStyle(
                 color: k.ink,
@@ -5356,9 +5412,13 @@ class _ObservationTile extends StatelessWidget {
                               color: context.k.ink,
                               fontWeight: FontWeight.w700)),
                       Text(
-                          className.startsWith('Lớp ')
-                              ? className
-                              : 'Lớp $className',
+                          LocaleController.instance.isEnglish
+                              ? (className.replaceFirst(RegExp(r'^(Lớp|Class)\s*', caseSensitive: false), '').isEmpty
+                                  ? 'Class'
+                                  : 'Class ${className.replaceFirst(RegExp(r'^(Lớp|Class)\s*', caseSensitive: false), '')}')
+                              : (className.startsWith('Lớp ')
+                                  ? className
+                                  : 'Lớp $className'),
                           style: TextStyle(
                               fontSize: 11, color: context.k.inkFaint)),
                     ],

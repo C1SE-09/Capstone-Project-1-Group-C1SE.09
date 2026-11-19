@@ -2427,7 +2427,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get teacherTitle => 'Giáo viên';
 
   @override
-  String get teacherPrefix => 'Cô ';
+  String teacherPrefix(String name) {
+    return 'Cô $name';
+  }
 
   @override
   String get loadAccountErrorRetry => 'Không tải được tài khoản · Thử lại';
@@ -2672,7 +2674,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get updatedStatus => 'Đã cập nhật';
 
   @override
-  String arrivedAtTime(Object time) {
+  String arrivedAtTime(String time) {
     return 'Đến lúc $time';
   }
 
@@ -3755,4 +3757,58 @@ class AppLocalizationsVi extends AppLocalizations {
   String appVersionLabel(String version) {
     return 'Phiên bản $version';
   }
+
+  @override
+  String get homeroomTeacher => 'Giáo viên chủ nhiệm';
+
+  @override
+  String get childrenUnit => 'Trẻ';
+
+  @override
+  String get allergyLabel => 'dị ứng';
+
+  @override
+  String get needsAttentionLabel => 'cần chú ý';
+
+  @override
+  String dailyReportDate(String time) {
+    return 'Báo cáo ngày · $time';
+  }
+
+  @override
+  String unmatchedSegmentsNeedConfirm(String classLabel, int count) {
+    return '$classLabel · $count đoạn cần cô xác nhận';
+  }
+
+  @override
+  String get readInSpokenOrder => 'Đọc lại theo đúng thứ tự cô đã kể.';
+
+  @override
+  String expectedAtTimeFormat(String time) {
+    return 'Dự kiến đến $time';
+  }
+
+  @override
+  String sendAbsencePushConfirm(int count, String date) {
+    return 'Gửi thông báo đẩy đến phụ huynh của $count bé vắng ngày $date.';
+  }
+
+  @override
+  String pendingReportsRemaining(String names) {
+    return 'Còn $names chưa có báo cáo';
+  }
+
+  @override
+  String get thisWeekPrefix => 'Tuần này';
+
+  @override
+  String get sttSeparatedByChild => 'Đã tách thông tin theo từng bé';
+
+  @override
+  String get sttMicPermissionMessage =>
+      'Vui lòng cấp quyền truy cập micro để ghi âm. Thầy cô có thể mở Cài đặt của thiết bị, chọn Quyền riêng tư → Micro và bật cho KinderLog.';
+
+  @override
+  String get sttCannotRecordMessage =>
+      'Ứng dụng chưa thể ghi âm. Thầy cô vui lòng kiểm tra quyền truy cập Micro trong cài đặt thiết bị và thử lại nhé.';
 }
