@@ -43,6 +43,9 @@ kinderlog_firebase_service.json
 GEMINI.md
 .agents/
 
+# Skill local cho OpenCode - mỗi người một kiểu vibe-code, không commit vào repo chung
+.opencode/skills/
+
 # Chỉ version tài liệu thiết kế Markdown; dataset/binary trong docs vẫn bị bỏ qua.
 /docs/*
 !/docs/design/
