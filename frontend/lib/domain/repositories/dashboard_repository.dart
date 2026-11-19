@@ -49,6 +49,9 @@ abstract class DashboardRepository {
   /// Bé được chỉ định bởi push; backend xác minh liên kết với phụ huynh.
   Future<ChildOverview> getChildOverviewForParent(String parentId, String childId);
 
+  /// Danh sách toàn bộ các bé thuộc quyền của phụ huynh (khi có nhiều con).
+  Future<List<ChildOverview>> getAllChildrenForParent(String parentId);
+
   /// Đọc chính xác báo cáo đã gửi, kể cả ngoài danh sách gần đây.
   Future<DailyReport> getParentReport(String reportId);
 
