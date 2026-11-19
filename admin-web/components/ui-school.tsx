@@ -231,15 +231,29 @@ export function Modal({
   footer,
   size = "md",
 }: ModalProps) {
+  const isBackdropMouseDownRef = useRef(false);
+
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(20,24,28,0.45)" }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop: Tách riêng và kiểm tra mousedown để tránh đóng popup khi bôi đen chữ rồi kéo thả chuột ra ngoài */}
       <div
-        className={`bg-white rounded-card w-full ${MODAL_SIZE[size]} max-h-[92vh] flex flex-col shadow-pop`}
+        className="fixed inset-0 transition-opacity"
+        style={{ background: "rgba(20,24,28,0.45)" }}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            isBackdropMouseDownRef.current = true;
+          }
+        }}
+        onClick={(e) => {
+          if (isBackdropMouseDownRef.current && e.target === e.currentTarget) {
+            onClose();
+          }
+          isBackdropMouseDownRef.current = false;
+        }}
+      />
+      <div
+        className={`relative z-10 bg-white rounded-card w-full ${MODAL_SIZE[size]} max-h-[92vh] flex flex-col shadow-pop`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-line">
@@ -277,15 +291,29 @@ export function Drawer({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex justify-end"
-      style={{ background: "rgba(20,24,28,0.45)" }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Backdrop: Tách riêng và kiểm tra mousedown để tránh đóng popup khi bôi đen chữ rồi kéo thả chuột ra ngoài */}
       <div
-        className="bg-white w-full max-w-lg h-full flex flex-col shadow-pop"
+        className="fixed inset-0 transition-opacity"
+        style={{ background: "rgba(20,24,28,0.45)" }}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            isBackdropMouseDownRef.current = true;
+          }
+        }}
+        onClick={(e) => {
+          if (isBackdropMouseDownRef.current && e.target === e.currentTarget) {
+            onClose();
+          }
+          isBackdropMouseDownRef.current = false;
+        }}
+      />
+      <div
+        className="relative z-10 bg-white w-full max-w-lg h-full flex flex-col shadow-pop"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-line">

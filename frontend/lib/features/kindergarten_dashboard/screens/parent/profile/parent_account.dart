@@ -77,16 +77,17 @@ String formatGender(String? gender) {
 }
 
 /// Định dạng danh sách tên trẻ cho phụ huynh (tối đa 3 trẻ liệt kê, quá 3 thì thêm "+X bé").
+/// Lấy tên thật (fullName) của bé thay vì biệt danh.
 String formatParentChildrenNames(ChildOverview overview) {
   final childrenList = overview.allChildren.isNotEmpty
       ? overview.allChildren
       : [overview];
   final names = childrenList
-      .map((c) => c.child.displayName.trim())
+      .map((c) => c.child.fullName.trim())
       .where((n) => n.isNotEmpty)
       .toSet()
       .toList();
-  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.displayName}';
+  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.fullName}';
   if (names.length <= 3) {
     return 'Phụ huynh bé ${names.join(', ')}';
   }
@@ -124,6 +125,7 @@ class ParentAccount extends StatefulWidget {
     this.onLogout,
     this.onHealthUpdated,
     this.onOpenNotifications,
+    this.onSelectChild,
   });
 
   final Parent parent;
@@ -138,6 +140,7 @@ class ParentAccount extends StatefulWidget {
   final VoidCallback? onLogout;
   final ValueChanged<Child>? onHealthUpdated;
   final VoidCallback? onOpenNotifications;
+  final ValueChanged<String>? onSelectChild;
 
   @override
   State<ParentAccount> createState() => _ParentAccountState();
@@ -252,6 +255,7 @@ class _ParentAccountState extends State<ParentAccount> {
           children: children,
           currentChildId: widget.overview.child.childId,
           onSelectChild: (selectedOverview) {
+            widget.onSelectChild?.call(selectedOverview.child.childId);
             _openSingleChildInfo(selectedOverview);
           },
         ),
