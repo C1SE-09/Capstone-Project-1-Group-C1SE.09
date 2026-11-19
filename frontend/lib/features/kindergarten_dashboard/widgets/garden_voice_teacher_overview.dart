@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
@@ -110,6 +111,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
       child: Builder(
         builder: (context) {
           final k = context.k;
+          final l10n = context.l10n;
           return RefreshIndicator(
             onRefresh: onRefresh ?? () async {},
             child: ListView(
@@ -142,7 +144,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Chào buổi sáng,',
+                              l10n?.teacherGreetingGoodMorning ?? 'Chào buổi sáng,',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -189,8 +191,8 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                 _QuickAction(
                   icon: 'assets/garden_voice/triangle_alert.svg',
                   iconBackground: k.badTint,
-                  title: 'Báo sự cố',
-                  detail: 'Gửi phụ huynh',
+                  title: l10n?.teacherReportIncident ?? 'Báo sự cố',
+                  detail: l10n?.teacherSendToParents ?? 'Gửi phụ huynh',
                   onTap: onEmergencyAlert,
                 ),
                 const Divider(height: 16),
@@ -204,7 +206,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                 ),
                 const Divider(height: 21),
                 Text(
-                  'Cần chú ý',
+                  l10n?.teacherAttentionTitle ?? 'Cần chú ý',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -216,7 +218,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     child: Text(
-                      'Chưa có lưu ý đặc biệt hôm nay.',
+                      l10n?.teacherNoAttentionToday ?? 'Chưa có lưu ý đặc biệt hôm nay.',
                       style: TextStyle(color: k.inkSoft),
                     ),
                   )
@@ -352,7 +354,7 @@ class _ReportInvitation extends StatelessWidget {
                 top: 15,
                 width: 225,
                 child: Text(
-                  'Ghi lại một ngày\ncủa bé',
+                  context.l10n?.teacherRecordBannerTitle ?? 'Ghi lại một ngày\ncủa bé',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -368,7 +370,7 @@ class _ReportInvitation extends StatelessWidget {
                 top: 82,
                 width: 225,
                 child: Text(
-                  'Ăn, ngủ, học và những điều cần lưu ý.',
+                  context.l10n?.teacherRecordBannerSubtitle ?? 'Ăn, ngủ, học và những điều cần lưu ý.',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12.3, color: k.inkSoft),
@@ -382,7 +384,7 @@ class _ReportInvitation extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Bắt đầu báo cáo',
+                        context.l10n?.teacherStartReport ?? 'Bắt đầu báo cáo',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -527,7 +529,7 @@ class _AttendanceSummary extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Điểm danh hôm nay',
+          context.l10n?.teacherTodayAttendance ?? 'Điểm danh hôm nay',
           style: TextStyle(
             fontSize: 14.2,
             height: 1.24,

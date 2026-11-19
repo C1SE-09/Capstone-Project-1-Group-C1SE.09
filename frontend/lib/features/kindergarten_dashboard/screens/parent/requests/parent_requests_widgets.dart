@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:flutter/material.dart';
@@ -9,15 +10,24 @@ import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
 
 enum ParentRequestDestination { history, home }
 
-String requestTypeLabel(LeaveRequestType type) =>
-    type == LeaveRequestType.absence ? 'Nghỉ học' : 'Báo đi trễ';
+String requestTypeLabel(LeaveRequestType type, [BuildContext? context]) {
+  final l10n = context?.l10n;
+  if (type == LeaveRequestType.absence) {
+    return l10n?.leaveTypeAbsent ?? 'Nghỉ học';
+  } else {
+    return l10n?.leaveTypeLate ?? 'Báo đi trễ';
+  }
+}
 
-String requestStatusLabel(LeaveStatus status) => switch (status) {
-      LeaveStatus.pending => 'Chờ duyệt',
-      LeaveStatus.approved => 'Đã duyệt',
-      LeaveStatus.rejected => 'Từ chối',
-      LeaveStatus.cancelled => 'Đã hủy',
-    };
+String requestStatusLabel(LeaveStatus status, [BuildContext? context]) {
+  final l10n = context?.l10n;
+  return switch (status) {
+    LeaveStatus.pending => l10n?.leaveRequestsPending ?? 'Chờ duyệt',
+    LeaveStatus.approved => l10n?.leaveRequestsApproved ?? 'Đã duyệt',
+    LeaveStatus.rejected => l10n?.leaveRequestsRejected ?? 'Từ chối',
+    LeaveStatus.cancelled => l10n?.leaveRequestsCancelled ?? 'Đã hủy',
+  };
+}
 
 String requestDate(DateTime value) => DateFormat('dd/MM/yyyy').format(value);
 
@@ -178,8 +188,8 @@ class ParentRequestStatus extends StatelessWidget {
           BoxDecoration(color: tint, borderRadius: BorderRadius.circular(20)),
       child: Text(
           gardenVoice && status == LeaveStatus.rejected
-              ? 'Đã từ chối'
-              : requestStatusLabel(status),
+              ? (context.l10n?.leaveRequestsRejected ?? 'Đã từ chối')
+              : requestStatusLabel(status, context),
           style: TextStyle(
               color: ink,
               fontSize: gardenVoice ? 12 : 10,

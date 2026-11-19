@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
@@ -117,10 +118,10 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
   @override
   Widget build(BuildContext context) => ParentRequestLayout(
         gardenVoice: true,
-        title: 'Xin phép nghỉ / báo trễ',
+        title: context.l10n?.parentRequestsTitle ?? 'Xin phép nghỉ / báo trễ',
         actions: [
           IconButton(
-              tooltip: 'Tạo đơn mới',
+              tooltip: context.l10n?.parentRequestsNew ?? 'Tạo đơn mới',
               onPressed: _create,
               icon: Container(
                   width: 44,
@@ -159,8 +160,8 @@ class _ParentRequestsScreenState extends State<ParentRequestsScreen> {
                       for (final status in [null, ...LeaveStatus.values]) ...[
                         ParentRequestPill(
                             label: status == null
-                                ? 'Tất cả'
-                                : requestStatusLabel(status),
+                                ? (context.l10n?.commonAll ?? 'Tất cả')
+                                : requestStatusLabel(status, context),
                             selected: _status == status,
                             onPressed: () {
                               if (_status == status) return;
@@ -231,7 +232,7 @@ class _HistoryCard extends StatelessWidget {
                             runSpacing: 4,
                             spacing: 12,
                             children: [
-                              Text(requestTypeLabel(item.requestType),
+                              Text(requestTypeLabel(item.requestType, context),
                                   style: TextStyle(
                                       color: context.k.brand,
                                       fontWeight: FontWeight.w700)),

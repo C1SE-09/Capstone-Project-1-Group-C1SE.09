@@ -1,7 +1,6 @@
 {
   "@@locale": "vi",
   "appTitle": "KinderLog",
-
   "commonSave": "Lưu",
   "commonCancel": "Hủy",
   "commonClose": "Đóng",
@@ -13,12 +12,10 @@
   "commonLoading": "Đang tải...",
   "commonSuccess": "Thành công",
   "commonError": "Đã có lỗi xảy ra. Vui lòng thử lại sau.",
-
   "language": "Ngôn ngữ",
   "languageVietnamese": "Tiếng Việt",
   "languageEnglish": "English",
   "languageSelectTitle": "Chọn ngôn ngữ hiển thị",
-
   "navOverview": "Tổng quan",
   "navClass": "Lớp",
   "navRecord": "Ghi âm",
@@ -27,7 +24,6 @@
   "navAccount": "Tài khoản",
   "navTimetable": "Thời khóa biểu",
   "navAttendance": "Điểm danh",
-
   "accountSettings": "Cài đặt",
   "accountSupport": "Hỗ trợ",
   "accountSettingsAndSupport": "Cài đặt & Hỗ trợ",
@@ -50,7 +46,6 @@
   "accountAllergies": "Dị ứng",
   "accountHealthNotes": "Ghi chú sức khỏe",
   "logoutConfirmMessage": "Bạn có chắc chắn muốn đăng xuất không?",
-
   "loginWelcomeBack": "Chào mừng trở lại!",
   "loginTagline": "Cùng gia đình lưu giữ từng khoảnh khắc khôn lớn của bé.",
   "loginUsernameLabel": "TÊN ĐĂNG NHẬP",
@@ -68,7 +63,6 @@
   "loginRememberClearError": "Chưa xóa được thông tin đã nhớ. Vui lòng thử lại.",
   "loginShowPassword": "Hiện mật khẩu",
   "loginHidePassword": "Ẩn mật khẩu",
-
   "changePasswordTitle": "Đổi mật khẩu",
   "changePasswordOldLabel": "Mật khẩu hiện tại",
   "changePasswordOldHint": "Nhập mật khẩu đang dùng",
@@ -80,7 +74,6 @@
   "changePasswordSuccess": "Đổi mật khẩu thành công!",
   "changePasswordMismatch": "Mật khẩu xác nhận không khớp.",
   "changePasswordEmpty": "Vui lòng điền đầy đủ các thông tin mật khẩu.",
-
   "forgotPasswordTitle": "Quên mật khẩu",
   "forgotPasswordInstruction": "Nhập email tài khoản đã đăng ký để nhận mã OTP đặt lại mật khẩu.",
   "forgotPasswordEmailLabel": "Email tài khoản",
@@ -88,7 +81,6 @@
   "forgotPasswordSendOtp": "Gửi mã xác thực",
   "forgotPasswordEnterOtp": "Nhập mã OTP",
   "forgotPasswordVerify": "Xác thực OTP",
-
   "teacherNavAttendance": "Điểm danh",
   "teacherNavTimetable": "Thời khóa biểu",
   "teacherNavRecord": "Nhật ký",
@@ -96,15 +88,27 @@
   "teacherNavAccount": "Tài khoản",
   "teacherGreeting": "Xin chào, Cô {name}!",
   "@teacherGreeting": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "teacherClassTitle": "Lớp {className}",
   "@teacherClassTitle": {
-    "placeholders": { "className": { "type": "String" } }
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
   },
   "teacherStudentCount": "{count} học sinh",
   "@teacherStudentCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "teacherAccountTitle": "Tài khoản",
   "teacherAccountSectionClass": "Lớp phụ trách",
@@ -114,7 +118,6 @@
   "teacherAccountQuickBug": "Báo lỗi & góp ý",
   "teacherLogoutConfirmTitle": "Bạn có muốn đăng xuất không ?",
   "teacherLogoutConfirmButton": "Đăng xuất",
-
   "attendanceTitle": "Điểm danh hàng ngày",
   "attendanceSummaryPresent": "Có mặt",
   "attendanceSummaryAbsent": "Vắng mặt",
@@ -130,9 +133,12 @@
   "leaveRequestReject": "Từ chối",
   "leaveRequestReason": "Lý do: {reason}",
   "@leaveRequestReason": {
-    "placeholders": { "reason": { "type": "String" } }
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   },
-
   "recordTitle": "Nhật ký lớp học",
   "recordMeal": "Bữa ăn",
   "recordNap": "Giấc ngủ",
@@ -143,7 +149,6 @@
   "recordVoiceListening": "Đang lắng nghe...",
   "recordVoiceStop": "Dừng ghi",
   "recordVoiceProcessing": "Đang chuyển đổi giọng nói...",
-
   "parentNavDaily": "Hôm nay",
   "parentNavActivities": "Hoạt động",
   "parentNavRequests": "Đơn từ",
@@ -156,14 +161,16 @@
   "parentPushSubtitle": "Nhận thông báo khi có báo cáo mới",
   "parentAppVersion": "Phiên bản {version}",
   "@parentAppVersion": {
-    "placeholders": { "version": { "type": "String" } }
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   },
   "parentLogoutConfirmTitle": "Bạn có muốn đăng xuất không ?",
-
   "bugReportTitle": "Góp ý & Cải thiện ứng dụng",
   "bugReportNewButton": "Góp ý cải thiện",
   "bugReportAdminListButton": "Quản lý ý kiến đóng góp",
-
   "bugReportFormTitleLabel": "Tiêu đề",
   "bugReportFormTitleHint": "Mô tả ngắn gọn góp ý hoặc vấn đề (tối đa 200 ký tự)",
   "bugReportFormDescriptionLabel": "Mô tả chi tiết",
@@ -180,13 +187,11 @@
   "bugReportFormValidationEmpty": "Vui lòng nhập tiêu đề và mô tả.",
   "bugReportFormValidationTitleTooLong": "Tiêu đề tối đa 200 ký tự.",
   "bugReportFormValidationDescriptionTooLong": "Mô tả tối đa 4000 ký tự.",
-
   "bugReportDetailTitle": "Chi tiết báo cáo lỗi",
   "bugReportDetailSectionMetadata": "Môi trường",
   "bugReportDetailSectionAttachments": "Ảnh đính kèm",
   "bugReportDetailSectionHistory": "Lịch sử trạng thái",
   "bugReportDetailTapToZoom": "Bấm để phóng to",
-
   "bugReportAdminTitle": "Quản lý báo cáo lỗi (Admin)",
   "bugReportAdminFilter": "Bộ lọc",
   "bugReportAdminSearchHint": "Tìm theo tiêu đề...",
@@ -199,18 +204,15 @@
   "bugReportAdminSave": "Lưu",
   "bugReportAdminSaving": "Đang lưu...",
   "bugReportAdminSaved": "Đã cập nhật báo cáo.",
-
   "bugReportStatusOpen": "Mới",
   "bugReportStatusInProgress": "Đang xử lý",
   "bugReportStatusResolved": "Đã sửa",
   "bugReportStatusClosed": "Đã đóng",
   "bugReportStatusWontFix": "Không sửa",
-
   "bugReportSeverityLow": "Thấp",
   "bugReportSeverityMedium": "Trung bình",
   "bugReportSeverityHigh": "Cao",
   "bugReportSeverityCritical": "Nghiêm trọng",
-
   "bugReportCategoryUi": "Giao diện",
   "bugReportCategoryPerformance": "Hiệu năng",
   "bugReportCategoryCrash": "Crash",
@@ -219,16 +221,17 @@
   "bugReportCategoryNetwork": "Mạng",
   "bugReportCategoryAuth": "Xác thực",
   "bugReportCategoryOther": "Khác",
-
   "bugReportCommonAttachmentsCount": "{count, plural, =0{Không có ảnh} =1{1 ảnh} other{{count} ảnh}}",
   "@bugReportCommonAttachmentsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "bugReportCommonRetry": "Thử lại",
   "bugReportCommonCancel": "Hủy",
   "bugReportCommonClose": "Đóng",
-
   "voiceChatRecordTooltip": "Gửi tin nhắn thoại",
   "voiceChatCancelTooltip": "Hủy ghi âm",
   "voiceChatSendTooltip": "Gửi tin nhắn thoại ngay",
@@ -236,5 +239,161 @@
   "voiceChatStartError": "Không thể bắt đầu ghi âm. Vui lòng thử lại.",
   "voiceChatSendError": "Lỗi khi gửi file ghi âm. Vui lòng thử lại.",
   "voiceChatLoadError": "Lỗi tải audio",
-  "voiceChatDefaultContent": "Tin nhắn thoại"
+  "voiceChatDefaultContent": "Tin nhắn thoại",
+  "parentGreetingGoodMorning": "Chào buổi sáng,",
+  "parentTodayReport": "Báo cáo hôm nay",
+  "parentNoReportToday": "Chưa có báo cáo hôm nay.",
+  "parentNoAttendanceToday": "Chưa có cập nhật điểm danh hôm nay",
+  "parentAllergyPrefix": "Dị ứng: {allergy}",
+  "@parentAllergyPrefix": {
+    "placeholders": {
+      "allergy": {
+        "type": "String"
+      }
+    }
+  },
+  "parentTeacherNoteTitle": "Lời nhắn của {teacherName}",
+  "@parentTeacherNoteTitle": {
+    "placeholders": {
+      "teacherName": {
+        "type": "String"
+      }
+    }
+  },
+  "parentTimetableShortcut": "Lịch học",
+  "parentRequestsShortcut": "Xin nghỉ · Trễ",
+  "parentUnreadReportsBadge": "{count} báo cáo chưa đọc",
+  "@parentUnreadReportsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "parentLoadDataError": "Không tải được dữ liệu phụ huynh.",
+  "parentOpenReportError": "Không thể mở báo cáo này. Vui lòng thử lại sau.",
+  "parentNoDataForDay": "Chưa có thông tin ghi nhận cho ngày này.",
+  "parentDailyReportTitle": "Báo cáo ngày",
+  "recordMealItem": "Ăn uống",
+  "recordNapItem": "Giấc ngủ",
+  "recordActivityItem": "Hoạt động",
+  "commonNotUpdated": "Chưa cập nhật",
+  "commonAll": "Tất cả",
+  "parentSectionFamily": "Gia đình",
+  "parentContactInfo": "Thông tin liên hệ",
+  "parentChildHealthProfile": "Thông tin bé · Hồ sơ sức khỏe",
+  "parentAllergyCareNotes": "Dị ứng và lưu ý chăm sóc",
+  "parentSectionPreferences": "Tùy chọn",
+  "parentPushEnabled": "Đã bật trên thiết bị",
+  "parentPushDisabled": "Đã tắt trên thiết bị",
+  "parentFamilySummary": "Gia đình có {count} bé đang theo học",
+  "@parentFamilySummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "parentSelectChild": "Chọn thông tin bé",
+  "parentSelected": "Đang chọn",
+  "parentDateOfBirth": "Ngày sinh",
+  "parentNickname": "Biệt danh: {nickname}",
+  "@parentNickname": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
+  "parentViewDetail": "Xem ›",
+  "parentReadReport": "Đọc báo cáo ›",
+  "parentCopyPhoneTooltip": "Sao chép số điện thoại",
+  "parentCopiedPhoneSnackbar": "Đã sao chép số điện thoại",
+  "parentAccountChildPrefix": "Tài khoản phụ huynh của bé {childName}",
+  "@parentAccountChildPrefix": {
+    "placeholders": {
+      "childName": {
+        "type": "String"
+      }
+    }
+  },
+  "parentFullNameLabel": "Họ và tên",
+  "parentRelationshipLabel": "Vai trò / Mối quan hệ",
+  "parentNoAllergyRecorded": "Không có ghi nhận dị ứng",
+  "parentHasAllergy": "Có dị ứng",
+  "parentNoAllergy": "Không có dị ứng",
+  "parentAllergyNotDeclared": "Chưa khai báo",
+  "parentJourneyDaysText": "{days} ngày đồng hành cùng KinderLog",
+  "@parentJourneyDaysText": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "parentEditInfo": "Chỉnh sửa thông tin",
+  "parentEditContactInfo": "Sửa thông tin liên hệ",
+  "parentHealthChangeConfirmTitle": "Thay đổi thông tin dị ứng?",
+  "parentHealthChangeConfirmMessage": "Thông tin dị ứng hiện có sẽ được thay thế sau khi lưu.",
+  "parentHealthContinueEditing": "Tiếp tục chỉnh sửa",
+  "parentHealthDiscardTitle": "Bỏ thay đổi?",
+  "parentHealthDiscardMessage": "Những thay đổi bạn vừa nhập sẽ không được lưu.",
+  "parentHealthDiscardAction": "Bỏ thay đổi",
+  "parentHealthUpdateSuccess": "Đã cập nhật thông tin sức khỏe",
+  "parentHealthLoadError": "Không tải được hồ sơ sức khỏe.",
+  "parentHealthAllergyStatus": "Trạng thái dị ứng",
+  "parentHealthCareNotes": "Lưu ý chăm sóc",
+  "teacherGreetingGoodMorning": "Chào buổi sáng,",
+  "teacherAttentionTitle": "Cần chú ý",
+  "teacherNoAttentionToday": "Chưa có lưu ý đặc biệt hôm nay.",
+  "teacherRecordBannerTitle": "Ghi lại một ngày\ncủa bé",
+  "teacherRecordBannerSubtitle": "Ăn, ngủ, học và những điều cần lưu ý.",
+  "teacherStartReport": "Bắt đầu báo cáo",
+  "teacherTodayAttendance": "Điểm danh hôm nay",
+  "teacherReportIncident": "Báo sự cố",
+  "teacherSendToParents": "Gửi phụ huynh",
+  "teacherSearchChildHint": "Tìm tên bé…",
+  "teacherNoChildrenFound": "Không tìm thấy trẻ phù hợp",
+  "teacherOverviewLoadError": "Không tải được tổng quan · Thử lại",
+  "teacherNoSchoolInfo": "Chưa có thông tin trường",
+  "attendanceSaveButton": "Lưu điểm danh",
+  "attendanceDiscardConfirmTitle": "Bỏ thay đổi điểm danh?",
+  "attendanceDiscardConfirmMessage": "Các thay đổi trên thẻ điểm danh sẽ không được lưu.",
+  "attendanceContinue": "Tiếp tục điểm danh",
+  "attendanceDiscardAction": "Bỏ thay đổi",
+  "dayMonday": "Thứ Hai",
+  "dayTuesday": "Thứ Ba",
+  "dayWednesday": "Thứ Tư",
+  "dayThursday": "Thứ Năm",
+  "dayFriday": "Thứ Sáu",
+  "daySaturday": "Thứ Bảy",
+  "daySunday": "Chủ Nhật",
+  "dayShortMon": "T2",
+  "dayShortTue": "T3",
+  "dayShortWed": "T4",
+  "dayShortThu": "T5",
+  "dayShortFri": "T6",
+  "dayShortSat": "T7",
+  "dayShortSun": "CN",
+  "timetableMorning": "Buổi sáng",
+  "timetableAfternoon": "Buổi chiều",
+  "timetableEmpty": "Chưa có lịch học",
+  "parentRequestsTitle": "Xin phép nghỉ / báo trễ",
+  "parentRequestsNew": "Tạo đơn mới",
+  "leaveRequestsCancelled": "Đã hủy",
+  "leaveTypeAbsent": "Nghỉ học",
+  "leaveTypeLate": "Báo đi trễ",
+  "parentRequestsFormTitle": "Tạo đơn xin nghỉ / đi trễ",
+  "parentRequestsTypeLabel": "Loại yêu cầu",
+  "parentRequestsFromDate": "Từ ngày",
+  "parentRequestsToDate": "Đến ngày",
+  "parentRequestsLateDate": "Ngày đi trễ",
+  "parentRequestsExpectedTime": "Giờ dự kiến đến",
+  "parentRequestsReasonLabel": "Lý do",
+  "parentRequestsSubmit": "Gửi đơn",
+  "aboutAppTagline": "Sổ liên lạc & Báo cáo mầm non thông minh",
+  "aboutAppDescription": "Hệ thống quản trị và kết nối số toàn diện giữa Nhà trường · Giáo viên · Phụ huynh.",
+  "voiceChatInputHint": "Nhập tin nhắn phản hồi...",
+  "voiceChatRecording": "Đang ghi âm...",
+  "voiceChatSendReply": "Gửi phản hồi"
 }

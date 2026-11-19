@@ -8,6 +8,7 @@
 // - Sheets: hành động (Sửa/Xóa), biểu mẫu thêm/sửa, xác nhận xóa (danger).
 // - Xung đột: trùng khung giờ trong cùng ngày → cảnh báo mềm, không chặn.
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/timetable/subject.dart';
@@ -26,6 +27,32 @@ export 'package:adark_frontend/features/kindergarten_dashboard/widgets/timetable
 
 const _dayShort = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const _dayLong = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+
+List<String> _localizedDayShort(BuildContext context) {
+  final l10n = context.l10n;
+  if (l10n == null) return _dayShort;
+  return [
+    l10n.dayShortMon,
+    l10n.dayShortTue,
+    l10n.dayShortWed,
+    l10n.dayShortThu,
+    l10n.dayShortFri,
+    l10n.dayShortSat,
+  ];
+}
+
+List<String> _localizedDayLong(BuildContext context) {
+  final l10n = context.l10n;
+  if (l10n == null) return _dayLong;
+  return [
+    l10n.dayMonday,
+    l10n.dayTuesday,
+    l10n.dayWednesday,
+    l10n.dayThursday,
+    l10n.dayFriday,
+    l10n.daySaturday,
+  ];
+}
 
 /// Kiểm tra xem một tiết học có khớp với từ khóa tìm kiếm (bao gồm tên tiết, môn học, phòng, giáo viên và KHUNG GIỜ) hay không.
 bool matchesTimetableQuery(ClassSchedule item, String query) {
@@ -513,7 +540,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   child: Semantics(
                     button: true,
                     selected: day == selected,
-                    label: _dayLong[day],
+                    label: _localizedDayLong(context)[day],
                     child: InkWell(
                       onTap: () => setState(() => _selectedDay = day),
                       borderRadius: BorderRadius.circular(14),
@@ -534,7 +561,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          _dayShort[day],
+                          _localizedDayShort(context)[day],
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.4,
@@ -668,8 +695,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
             child: Text(
               gardenVoice
-                  ? '${_dayLong[selected]}, ngày ${date.day.toString().padLeft(2, '0')} tháng ${date.month.toString().padLeft(2, '0')}'
-                  : '${_dayLong[selected].toUpperCase()}, ${date.day}/${date.month}${isToday ? ' · HÔM NAY' : ''}',
+                  ? '${_localizedDayLong(context)[selected]}, ngày ${date.day.toString().padLeft(2, '0')} tháng ${date.month.toString().padLeft(2, '0')}'
+                  : '${_localizedDayLong(context)[selected].toUpperCase()}, ${date.day}/${date.month}${isToday ? ' · HÔM NAY' : ''}',
               style: TextStyle(
                 fontSize: gardenVoice ? 14 : 11,
                 height: gardenVoice ? 1.35 : null,
@@ -713,7 +740,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
               child: Text(
-                '${_dayLong[d].toUpperCase()}, ${_dateOfDay(d).day}/${_dateOfDay(d).month}${d == todayIndex ? ' · HÔM NAY' : ''}',
+                '${_localizedDayLong(context)[d].toUpperCase()}, ${_dateOfDay(d).day}/${_dateOfDay(d).month}${d == todayIndex ? ' · HÔM NAY' : ''}',
               style: TextStyle(
                 fontSize: gardenVoice ? 14 : 11,
                 height: gardenVoice ? 1.35 : null,
@@ -1194,7 +1221,7 @@ class _DayStrip extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _dayShort[d],
+                        _localizedDayShort(context)[d],
                         style: TextStyle(
                           fontSize: gardenVoice ? 12 : 11,
                           fontWeight: FontWeight.w700,
@@ -1275,7 +1302,7 @@ class _DayColumn extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${_dayShort[day]} · ${date.day}/${date.month}',
+                  '${_localizedDayShort(context)[day]} · ${date.day}/${date.month}',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isToday ? context.k.brand : context.k.inkSoft),
                 ),
                 if (isToday) Text('Hôm nay', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.k.brand)),

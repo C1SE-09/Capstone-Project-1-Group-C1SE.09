@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
@@ -182,7 +183,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-            const SnackBar(content: Text('Đã lưu điểm danh thành công')));
+            SnackBar(content: Text(context.l10n?.attendanceSaveSuccess ?? 'Đã lưu điểm danh thành công')));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -198,24 +199,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<bool> _confirmDiscard() async {
     if (!_dirty) return true;
+    final l10n = context.l10n;
     final discard = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Bỏ thay đổi điểm danh?'),
-        content: const Text(
-          'Các thay đổi trên thẻ điểm danh sẽ không được lưu.',
+        title: Text(l10n?.attendanceDiscardConfirmTitle ?? 'Bỏ thay đổi điểm danh?'),
+        content: Text(
+          l10n?.attendanceDiscardConfirmMessage ?? 'Các thay đổi trên thẻ điểm danh sẽ không được lưu.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Tiếp tục điểm danh'),
+            child: Text(l10n?.attendanceContinue ?? 'Tiếp tục điểm danh'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Bỏ thay đổi'),
+            child: Text(l10n?.attendanceDiscardAction ?? 'Bỏ thay đổi'),
           ),
         ],
       ),

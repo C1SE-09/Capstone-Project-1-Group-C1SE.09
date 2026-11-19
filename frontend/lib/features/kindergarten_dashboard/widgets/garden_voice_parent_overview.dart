@@ -1,4 +1,6 @@
 import 'dart:ui' show PointerDeviceKind;
+
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
@@ -107,6 +109,7 @@ class _GardenVoiceParentOverviewState extends State<GardenVoiceParentOverview> {
       child: Builder(
         builder: (context) {
           final k = context.k;
+          final l10n = context.l10n;
           return ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.fromLTRB(20, 20, 20,
@@ -119,7 +122,7 @@ class _GardenVoiceParentOverviewState extends State<GardenVoiceParentOverview> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Chào buổi sáng,',
+                          l10n?.parentGreetingGoodMorning ?? 'Chào buổi sáng,',
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.35,
@@ -254,7 +257,7 @@ class _GardenVoiceParentOverviewState extends State<GardenVoiceParentOverview> {
                       runSpacing: 4,
                       children: [
                         Text(
-                          'Báo cáo hôm nay',
+                          l10n?.parentTodayReport ?? 'Báo cáo hôm nay',
                           style: TextStyle(
                             fontSize: 19,
                             height: 1.35,
@@ -304,13 +307,13 @@ class _GardenVoiceParentOverviewState extends State<GardenVoiceParentOverview> {
                     _ParentShortcut(
                       icon: 'assets/garden_voice/calendar.svg',
                       background: k.infoTint,
-                      label: 'Lịch học',
+                      label: l10n?.parentTimetableShortcut ?? 'Lịch học',
                       onTap: onOpenTimetable,
                     ),
                     _ParentShortcut(
                       icon: 'assets/garden_voice/calendar_leave.svg',
                       background: k.badTint.withValues(alpha: .7),
-                      label: 'Xin nghỉ · Trễ',
+                      label: l10n?.parentRequestsShortcut ?? 'Xin nghỉ · Trễ',
                       onTap: onOpenRequests,
                     ),
                   ];
@@ -366,6 +369,7 @@ class _ParentNotificationButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -373,7 +377,7 @@ class _ParentNotificationButton extends StatelessWidget {
           color: k.infoTint,
           borderRadius: BorderRadius.circular(21),
           child: IconButton(
-            tooltip: 'Thông báo',
+            tooltip: l10n?.navNotifications ?? 'Thông báo',
             onPressed: onPressed,
             icon: ExcludeSemantics(
               child: SvgPicture.asset(
@@ -389,7 +393,7 @@ class _ParentNotificationButton extends StatelessWidget {
             top: -4,
             right: -4,
             child: Semantics(
-              label: '$unreadCount báo cáo chưa đọc',
+              label: l10n?.parentUnreadReportsBadge(unreadCount) ?? '$unreadCount báo cáo chưa đọc',
               child: Container(
                 key: const ValueKey('garden-voice-parent-unread-badge'),
                 constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
@@ -427,6 +431,7 @@ class _ChildOverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
     final allergy = overview.child.allergy;
     final rawClassName = overview.className.trim();
     final classLabel = rawClassName.isEmpty
@@ -541,8 +546,8 @@ class _ChildOverviewCard extends StatelessWidget {
               ),
               child: Text(
                 allergy == null
-                    ? 'Chưa có cập nhật điểm danh hôm nay'
-                    : 'Dị ứng: $allergy',
+                    ? (l10n?.parentNoAttendanceToday ?? 'Chưa có cập nhật điểm danh hôm nay')
+                    : (l10n?.parentAllergyPrefix(allergy) ?? 'Dị ứng: $allergy'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -569,6 +574,7 @@ class _DailyReportSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
     if (report == null) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -577,7 +583,7 @@ class _DailyReportSummary extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
-          'Chưa có báo cáo hôm nay.',
+          l10n?.parentNoReportToday ?? 'Chưa có báo cáo hôm nay.',
           style: TextStyle(color: k.inkSoft),
         ),
       );
@@ -595,22 +601,22 @@ class _DailyReportSummary extends StatelessWidget {
               _ReportRow(
                 icon: 'assets/garden_voice/utensils.svg',
                 background: k.accentTint,
-                label: 'Ăn uống',
-                detail: report!.eating ?? 'Chưa cập nhật',
+                label: l10n?.recordMealItem ?? 'Ăn uống',
+                detail: report!.eating ?? (l10n?.commonNotUpdated ?? 'Chưa cập nhật'),
               ),
               Divider(height: 1, color: k.line),
               _ReportRow(
                 icon: 'assets/garden_voice/moon.svg',
                 background: k.infoTint.withValues(alpha: .7),
-                label: 'Giấc ngủ',
-                detail: _stripSleepMinutes(report!.sleeping) ?? 'Chưa cập nhật',
+                label: l10n?.recordNapItem ?? 'Giấc ngủ',
+                detail: _stripSleepMinutes(report!.sleeping) ?? (l10n?.commonNotUpdated ?? 'Chưa cập nhật'),
               ),
               Divider(height: 1, color: k.line),
               _ReportRow(
                 icon: 'assets/garden_voice/sparkles.svg',
                 background: k.infoTint,
-                label: 'Hoạt động',
-                detail: report!.activitiesText ?? 'Chưa cập nhật',
+                label: l10n?.recordActivityItem ?? 'Hoạt động',
+                detail: report!.activitiesText ?? (l10n?.commonNotUpdated ?? 'Chưa cập nhật'),
               ),
             ],
           ),
@@ -773,6 +779,7 @@ class _TeacherNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -798,7 +805,7 @@ class _TeacherNote extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Lời nhắn của $teacherName',
+                  l10n?.parentTeacherNoteTitle(teacherName) ?? 'Lời nhắn của $teacherName',
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.28,

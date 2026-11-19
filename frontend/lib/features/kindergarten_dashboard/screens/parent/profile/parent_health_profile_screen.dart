@@ -4,6 +4,7 @@
 // dị ứng dài hạn + lưu ý chăm sóc, lưu qua PATCH có kiểm tra version.
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
@@ -143,21 +144,22 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
   Future<void> _selectStatus(String value) async {
     if (value == _status) return;
     if (_initialStatus != 'unknown') {
+      final l10n = context.l10n;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Thay đổi thông tin dị ứng?'),
-          content: const Text(
-            'Thông tin dị ứng hiện có sẽ được thay thế sau khi lưu.',
+          title: Text(l10n?.parentHealthChangeConfirmTitle ?? 'Thay đổi thông tin dị ứng?'),
+          content: Text(
+            l10n?.parentHealthChangeConfirmMessage ?? 'Thông tin dị ứng hiện có sẽ được thay thế sau khi lưu.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Tiếp tục chỉnh sửa'),
+              child: Text(l10n?.parentHealthContinueEditing ?? 'Tiếp tục chỉnh sửa'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Xác nhận thay đổi'),
+              child: Text(l10n?.commonConfirm ?? 'Xác nhận thay đổi'),
             ),
           ],
         ),
@@ -173,19 +175,20 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
   }
 
   Future<bool> _confirmDiscard() async {
+    final l10n = context.l10n;
     final discard = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Bỏ thay đổi?'),
-        content: const Text('Những thay đổi bạn vừa nhập sẽ không được lưu.'),
+        title: Text(l10n?.parentHealthDiscardTitle ?? 'Bỏ thay đổi?'),
+        content: Text(l10n?.parentHealthDiscardMessage ?? 'Những thay đổi bạn vừa nhập sẽ không được lưu.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Tiếp tục chỉnh sửa'),
+            child: Text(l10n?.parentHealthContinueEditing ?? 'Tiếp tục chỉnh sửa'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Bỏ thay đổi'),
+            child: Text(l10n?.parentHealthDiscardAction ?? 'Bỏ thay đổi'),
           ),
         ],
       ),
@@ -227,7 +230,7 @@ class _ParentHealthProfileScreenState extends State<ParentHealthProfileScreen> {
       widget.onSaved?.call(saved);
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật thông tin sức khỏe')),
+        SnackBar(content: Text(context.l10n?.parentHealthUpdateSuccess ?? 'Đã cập nhật thông tin sức khỏe')),
       );
     } on ClassDataException catch (error) {
       if (!mounted) return;

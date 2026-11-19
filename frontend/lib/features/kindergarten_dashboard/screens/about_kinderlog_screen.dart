@@ -4,6 +4,7 @@
 // Phụ huynh và Giáo viên (Garden Voice Design System 1:1)
 
 import 'package:flutter/material.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 /// Hiển thị Bottom Sheet "Về KinderLog"
@@ -54,7 +55,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'Về KinderLog',
+                        context.l10n?.accountAbout ?? 'Về KinderLog',
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -142,7 +143,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Sổ liên lạc & Báo cáo mầm non thông minh',
+                          context.l10n?.aboutAppTagline ?? 'Sổ liên lạc & Báo cáo mầm non thông minh',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
@@ -190,7 +191,7 @@ class AboutKinderLogBottomSheet extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Hệ thống quản trị và kết nối số toàn diện giữa Nhà trường · Giáo viên · Phụ huynh.',
+                          context.l10n?.aboutAppDescription ?? 'Hệ thống quản trị và kết nối số toàn diện giữa Nhà trường · Giáo viên · Phụ huynh.',
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.4,
