@@ -192,6 +192,21 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
     unawaited(_loadContacts(id));
   }
 
+  Future<void> _openChildPicker() async {
+    final selectedId = await showDialog<String>(
+      context: context,
+      builder: (_) => GardenVoiceScope(
+        child: _ChildPickerDialog(
+          children: widget.children,
+          selectedId: _childId,
+        ),
+      ),
+    );
+    if (selectedId != null && selectedId != _childId) {
+      _selectChild(selectedId);
+    }
+  }
+
   Future<void> _call(String phone) async {
     final uri = phoneCallUri(phone);
     if (uri == null) return;
@@ -268,20 +283,11 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: context.k.brand)));
 
-  Widget _childRow(Child child) {
-    return Row(children: [
-      Avatar(name: child.name, size: 42),
-      const SizedBox(width: 12),
-      Expanded(
-          child: Text(child.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w700))),
-    ]);
-  }
-
-  Widget _form() => Column(
+  Widget _form() {
+    final selectedChild = _childId == null
+        ? null
+        : widget.children.where((c) => c.id == _childId).firstOrNull;
+    return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -332,21 +338,117 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
             const SizedBox(height: 13),
             MedicationCard(
               radius: 24,
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _childId,
-                  isExpanded: true,
-                  icon: SvgPicture.asset(
-                      'assets/garden_voice/chevron_right.svg',
-                      width: 18,
-                      height: 18),
-                  hint: Text('Chọn học sinh...',
-                      style: TextStyle(fontSize: 14, color: context.k.inkSoft)),
-                  items: widget.children
-                      .map((child) => DropdownMenuItem(
-                          value: child.id, child: _childRow(child)))
-                      .toList(),
-                  onChanged: _busy ? null : _selectChild,
+              child: InkWell(
+                onTap: _busy ? null : _openChildPicker,
+                borderRadius: BorderRadius.circular(24),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: selectedChild != null
+                      ? Row(
+                          children: [
+                            Avatar(name: selectedChild.name, size: 42),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    selectedChild.fullNameWithNickname,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: context.k.ink,
+                                    ),
+                                  ),
+                                  if (selectedChild.allergy?.trim().isNotEmpty ?? false) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Dị ứng: ${selectedChild.allergy!.trim()}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.k.warn,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: context.k.surfaceSunken,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Đổi bé',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: context.k.brand,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.unfold_more,
+                                      size: 16, color: context.k.brand),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: context.k.surfaceSunken,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.person_search_rounded,
+                                  color: context.k.inkSoft, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Chọn học sinh...',
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: context.k.inkSoft,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Chạm để tìm kiếm và chọn bé',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: context.k.inkFaint,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SvgPicture.asset(
+                              'assets/garden_voice/chevron_right.svg',
+                              width: 18,
+                              height: 18,
+                              colorFilter: ColorFilter.mode(
+                                  context.k.inkSoft, BlendMode.srcIn),
+                            ),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -360,8 +462,14 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                   label: Text(type.value),
                   selected: _type == type.key,
                   showCheckmark: false,
-                  selectedColor: context.k.accentTint,
+                  selectedColor: context.k.bad,
                   backgroundColor: context.k.accentTint,
+                  color: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return context.k.bad;
+                    }
+                    return context.k.accentTint;
+                  }),
                   surfaceTintColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   elevation: 0,
@@ -375,8 +483,10 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                   visualDensity: VisualDensity.compact,
                   labelStyle: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: context.k.accentDeep),
+                      fontWeight: FontWeight.w700,
+                      color: _type == type.key
+                          ? Colors.white
+                          : context.k.accentDeep),
                   onSelected:
                       _busy ? null : (_) => setState(() => _type = type.key),
                 ),
@@ -457,6 +567,7 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
                 'Một chạm tạo biên bản sự cố. Thông báo đẩy có thể được xử lý nền; hãy gọi gia đình nếu cần xác nhận ngay.',
                 style: TextStyle(fontSize: 11.5, color: context.k.inkSoft)),
           ]);
+  }
 
   Widget _recipient(Map<String, dynamic> contact) {
     final phone = contact['phone'] as String? ?? '';
@@ -616,6 +727,181 @@ class _TeacherEmergencySheetState extends State<TeacherEmergencySheet> {
           onPressed: () => Navigator.maybePop(context),
         ),
       ],
+    );
+  }
+}
+
+class _ChildPickerDialog extends StatefulWidget {
+  const _ChildPickerDialog({
+    required this.children,
+    required this.selectedId,
+  });
+
+  final List<Child> children;
+  final String? selectedId;
+
+  @override
+  State<_ChildPickerDialog> createState() => _ChildPickerDialogState();
+}
+
+class _ChildPickerDialogState extends State<_ChildPickerDialog> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final q = _query.trim().toLowerCase();
+    final filtered = widget.children.where((c) {
+      if (q.isEmpty) return true;
+      final nameWithNick = c.fullNameWithNickname.toLowerCase();
+      final nick = (c.nickname ?? '').toLowerCase();
+      return nameWithNick.contains(q) || nick.contains(q);
+    }).toList();
+
+    return Dialog(
+      backgroundColor: k.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 540),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Chọn học sinh',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: k.ink,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Đóng',
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: k.inkSoft, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: k.canvas,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: k.line),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _query = val),
+                  style: TextStyle(fontSize: 14, color: k.ink),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm theo tên hoặc biệt danh bé...',
+                    hintStyle: TextStyle(fontSize: 13, color: k.inkFaint),
+                    prefixIcon: Icon(Icons.search, size: 20, color: k.inkSoft),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, size: 18, color: k.inkSoft),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: filtered.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Text(
+                          'Không tìm thấy học sinh phù hợp.',
+                          style: TextStyle(fontSize: 13, color: k.inkFaint),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => Divider(height: 1, color: k.line),
+                      itemBuilder: (context, index) {
+                        final child = filtered[index];
+                        final isSelected = child.id == widget.selectedId;
+                        return InkWell(
+                          onTap: () => Navigator.pop(context, child.id),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isSelected ? k.brandTint.withValues(alpha: .25) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                Avatar(name: child.name, size: 40),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        child.fullNameWithNickname,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                                          color: isSelected ? k.brand : k.ink,
+                                        ),
+                                      ),
+                                      if (child.allergy?.trim().isNotEmpty ?? false) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Dị ứng: ${child.allergy!.trim()}',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: k.warn,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(Icons.check_circle_rounded, color: k.brand, size: 22)
+                                else
+                                  Icon(Icons.radio_button_unchecked, color: k.lineStrong, size: 20),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
