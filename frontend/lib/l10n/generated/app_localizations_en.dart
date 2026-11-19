@@ -57,6 +57,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageSelectTitle => 'Select Display Language';
 
   @override
+  String get navOverview => 'Overview';
+
+  @override
+  String get navClass => 'Class';
+
+  @override
+  String get navRecord => 'Record';
+
+  @override
+  String get navReports => 'Reports';
+
+  @override
+  String get navNotifications => 'Notifications';
+
+  @override
+  String get navAccount => 'Account';
+
+  @override
+  String get navTimetable => 'Timetable';
+
+  @override
+  String get navAttendance => 'Attendance';
+
+  @override
+  String get accountSettings => 'Settings';
+
+  @override
+  String get accountSupport => 'Support';
+
+  @override
+  String get accountSettingsAndSupport => 'Settings & Support';
+
+  @override
+  String get accountChangePassword => 'Change Password';
+
+  @override
+  String get accountLanguage => 'Ngôn ngữ / Language';
+
+  @override
+  String get accountBugReport => 'Bug Report & Feedback';
+
+  @override
+  String get accountAbout => 'About KinderLog';
+
+  @override
+  String get accountLogout => 'Log out';
+
+  @override
+  String get accountAssignedClass => 'Assigned Class';
+
+  @override
+  String get accountStudents => 'Students';
+
+  @override
+  String get accountChildProfile => 'Child Profile';
+
+  @override
+  String get accountChildParent => 'Child\'s Parent';
+
+  @override
+  String get accountTeacherInCharge => 'Teacher in Charge';
+
+  @override
+  String get accountPhoneNumber => 'Phone Number';
+
+  @override
+  String get accountEmail => 'Email';
+
+  @override
+  String get accountAddress => 'Address';
+
+  @override
+  String get accountWeight => 'Weight';
+
+  @override
+  String get accountHeight => 'Height';
+
+  @override
+  String get accountBloodType => 'Blood Type';
+
+  @override
+  String get accountAllergies => 'Allergies';
+
+  @override
+  String get accountHealthNotes => 'Health Notes';
+
+  @override
+  String get logoutConfirmMessage => 'Are you sure you want to log out?';
+
+  @override
   String get loginWelcomeBack => 'Welcome back!';
 
   @override
