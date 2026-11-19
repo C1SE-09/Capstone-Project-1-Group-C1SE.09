@@ -1,6 +1,9 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/profile/parent_account.dart'
+    show childInitials;
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
     show kDateLabel;
@@ -8,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class GardenVoiceParentOverview extends StatelessWidget {
+class GardenVoiceParentOverview extends StatefulWidget {
   const GardenVoiceParentOverview({
     super.key,
     required this.parent,
@@ -20,6 +23,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
     required this.onOpenTimetable,
     required this.onOpenRequests,
     this.onOpenMedication,
+    this.onSelectChild,
   });
 
   final Parent parent;
@@ -31,9 +35,73 @@ class GardenVoiceParentOverview extends StatelessWidget {
   final VoidCallback onOpenTimetable;
   final VoidCallback onOpenRequests;
   final VoidCallback? onOpenMedication;
+  final ValueChanged<String>? onSelectChild;
+
+  @override
+  State<GardenVoiceParentOverview> createState() =>
+      _GardenVoiceParentOverviewState();
+}
+
+class _GardenVoiceParentOverviewState extends State<GardenVoiceParentOverview> {
+  String? _activeChildId;
+  late final ScrollController _childScrollController = ScrollController();
+  final _childItemKeys = <String, GlobalKey>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _activeChildId = widget.overview.child.childId;
+  }
+
+  @override
+  void didUpdateWidget(GardenVoiceParentOverview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.overview.child.childId != oldWidget.overview.child.childId) {
+      _activeChildId = widget.overview.child.childId;
+      _scrollToSelectedChild(widget.overview.child.childId);
+    }
+  }
+
+  @override
+  void dispose() {
+    _childScrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSelectedChild(String childId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_childScrollController.hasClients) return;
+      final key = _childItemKeys[childId];
+      final itemContext = key?.currentContext;
+      if (itemContext != null) {
+        Scrollable.ensureVisible(
+          itemContext,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          alignment: 0.5,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final parent = widget.parent;
+    final overview = widget.overview;
+    final report = widget.report;
+    final unreadCount = widget.unreadCount;
+    final onOpenReport = widget.onOpenReport;
+    final onOpenNotifications = widget.onOpenNotifications;
+    final onOpenTimetable = widget.onOpenTimetable;
+    final onOpenRequests = widget.onOpenRequests;
+    final onSelectChild = widget.onSelectChild;
+
+    final activeId = _activeChildId ?? overview.child.childId;
+    final effectiveOverview = overview.allChildren.firstWhere(
+      (c) => c.child.childId == activeId,
+      orElse: () => overview,
+    );
+
     final displayName = parent.fullName.isEmpty ? 'Phụ huynh' : parent.fullName;
     return GardenVoiceScope(
       child: Builder(
@@ -77,7 +145,105 @@ class GardenVoiceParentOverview extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 23),
-              _ChildOverviewCard(overview: overview),
+              _ChildOverviewCard(
+                overview: effectiveOverview,
+                onSelectChild: onSelectChild,
+              ),
+              if (overview.allChildren.length > 1) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 38,
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                        PointerDeviceKind.stylus,
+                      },
+                    ),
+                    child: ListView.separated(
+                      key: const PageStorageKey<String>(
+                          'parent_overview_children_pills_scroll'),
+                      controller: _childScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      itemCount: overview.allChildren.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final item = overview.allChildren[index];
+                        final isSelected = item.child.childId == activeId;
+                        final itemKey = _childItemKeys.putIfAbsent(
+                          item.child.childId,
+                          () => GlobalKey(),
+                        );
+                        return Material(
+                          key: itemKey,
+                          color: isSelected ? k.brand : k.surfaceSunken,
+                          borderRadius: BorderRadius.circular(19),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(19),
+                            onTap: () {
+                              if (item.child.childId != activeId) {
+                                setState(
+                                    () => _activeChildId = item.child.childId);
+                                _scrollToSelectedChild(item.child.childId);
+                                onSelectChild?.call(item.child.childId);
+                              }
+                            },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(19),
+                              border: Border.all(
+                                color: isSelected ? k.brand : k.line,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? k.surface : k.brand,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    childInitials(item.child.fullName),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: isSelected ? k.brand : k.surface,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  item.child.fullName,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                    color: isSelected ? k.surface : k.ink,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -96,7 +262,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
                             color: k.ink,
                           ),
                         ),
-                        if (report != null && report!.hasUnreadResponses) ...[
+                        if (report != null && report.hasUnreadResponses) ...[
                           const SizedBox(width: 8),
                           Container(
                             key: const ValueKey('parent-report-unread-dot'),
@@ -115,7 +281,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
                   Text(
                     report == null
                         ? kDateLabel(DateTime.now())
-                        : kDateLabel(report!.reportDate),
+                        : kDateLabel(report.reportDate),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -127,7 +293,7 @@ class GardenVoiceParentOverview extends StatelessWidget {
               const SizedBox(height: 14),
               _DailyReportSummary(
                 report: report,
-                onTap: report == null ? null : () => onOpenReport(report!),
+                onTap: report == null ? null : () => onOpenReport(report),
               ),
               const SizedBox(height: 14),
               LayoutBuilder(
@@ -250,17 +416,24 @@ class _ParentNotificationButton extends StatelessWidget {
 }
 
 class _ChildOverviewCard extends StatelessWidget {
-  const _ChildOverviewCard({required this.overview});
+  const _ChildOverviewCard({
+    required this.overview,
+    this.onSelectChild,
+  });
 
   final ChildOverview overview;
+  final ValueChanged<String>? onSelectChild;
 
   @override
   Widget build(BuildContext context) {
     final k = context.k;
     final allergy = overview.child.allergy;
-    final classLabel = overview.className.isEmpty
+    final rawClassName = overview.className.trim();
+    final classLabel = rawClassName.isEmpty
         ? 'LỚP HỌC'
-        : 'LỚP ${overview.className.toUpperCase()}';
+        : (rawClassName.toUpperCase().startsWith('LỚP')
+            ? rawClassName.toUpperCase()
+            : 'LỚP ${rawClassName.toUpperCase()}');
     return Container(
       key: const ValueKey('garden-voice-parent-child-card'),
       height: 160,
@@ -278,17 +451,43 @@ class _ChildOverviewCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  classLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1.28,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .66,
-                    color: k.brandStrong,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        classLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.28,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: .66,
+                          color: k.brandStrong,
+                        ),
+                      ),
+                    ),
+                    if (overview.allChildren.length > 1) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: k.brand,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${overview.allChildren.length} bé',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: k.surface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 3),
                 Text(

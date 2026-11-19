@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/crash_logging_service.dart';
@@ -85,6 +86,14 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) => MaterialApp.router(
         routerConfig: appRouter,
         theme: kinderTheme(),
+        scrollBehavior: const MaterialScrollBehavior().copyWith(
+          dragDevices: {
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.touch,
+            PointerDeviceKind.trackpad,
+            PointerDeviceKind.stylus,
+          },
+        ),
         locale: const Locale('vi'),
         supportedLocales: const [Locale('vi'), Locale('en')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
