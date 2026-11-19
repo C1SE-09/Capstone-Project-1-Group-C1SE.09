@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:adark_frontend/l10n/generated/app_localizations.dart';
+
+/// Extension tiện ích giúp truy cập l10n nhanh gọn từ BuildContext: `context.l10n`
+extension LocalizationExtension on BuildContext {
+  AppLocalizations? get l10n => AppLocalizations.of(this);
+  bool get isVietnamese => LocaleController.instance.isVietnamese;
+}
 
 /// Quản lý lựa chọn ngôn ngữ toàn ứng dụng (Tiếng Việt / English).
 /// Kế thừa `ValueNotifier<Locale>` để UI tự động cập nhật khi đổi ngôn ngữ.
@@ -53,13 +60,14 @@ class LocaleController extends ValueNotifier<Locale> {
 
 /// Hiển thị hộp thoại chọn ngôn ngữ (Tiếng Việt / English).
 void showLanguageSelectionDialog(BuildContext context) {
+  final l10n = context.l10n;
   showDialog<void>(
     context: context,
     builder: (dialogCtx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
-        'Ngôn ngữ / Language',
-        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+      title: Text(
+        l10n?.languageSelectTitle ?? 'Ngôn ngữ / Language',
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
       ),
       content: ListenableBuilder(
         listenable: LocaleController.instance,
@@ -91,7 +99,7 @@ void showLanguageSelectionDialog(BuildContext context) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogCtx),
-          child: const Text('Đóng / Close'),
+          child: Text(l10n?.commonClose ?? 'Đóng / Close'),
         ),
       ],
     ),

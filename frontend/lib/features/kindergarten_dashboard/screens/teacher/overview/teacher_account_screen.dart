@@ -174,6 +174,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
         final teacher = data.teacher;
         final className = data.className;
         final k = context.k;
+        final l10n = context.l10n;
 
         return ColoredBox(
           color: k.canvas,
@@ -213,7 +214,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                         top: 39,
                         right: 84,
                         child: Text(
-                          'Tài khoản',
+                          l10n?.teacherAccountTitle ?? 'Tài khoản',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -324,27 +325,27 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                     ),
                   ],
                 ),
-                const _GroupTitle('Tùy chọn'),
+                _GroupTitle(l10n?.teacherAccountPreferences ?? 'Tùy chọn'),
                 _AccountSectionCard(
                   children: [
                     _AccountMenuRow(
                       iconAsset: 'assets/garden_voice/account_bell.svg',
                       iconTileColor: k.accentTint,
-                      label: 'Thông báo',
+                      label: l10n?.navNotifications ?? 'Thông báo',
                       onTap: widget.onOpenNotifications,
                     ),
                     Divider(height: 0.6, thickness: 0.6, color: k.line),
                     _AccountMenuRow(
                       iconAsset: 'assets/garden_voice/account_settings.svg',
                       iconTileColor: k.sleepRowTint,
-                      label: 'Đổi mật khẩu',
+                      label: l10n?.accountChangePassword ?? 'Đổi mật khẩu',
                       onTap: () => context.push('/change-password'),
                     ),
                     Divider(height: 0.6, thickness: 0.6, color: k.line),
                     _AccountMenuRow(
                       iconAsset: 'assets/garden_voice/account_settings.svg',
                       iconTileColor: k.brandTint,
-                      label: 'Ngôn ngữ / Language',
+                      label: l10n?.accountLanguage ?? 'Ngôn ngữ / Language',
                       trailing: Text(
                         LocaleController.instance.isVietnamese ? 'Tiếng Việt 🇻🇳' : 'English 🇬🇧',
                         style: TextStyle(
@@ -357,27 +358,20 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                     ),
                   ],
                 ),
-                const _GroupTitle('Hỗ trợ'),
+                _GroupTitle(l10n?.accountSupport ?? 'Hỗ trợ'),
                 _AccountSectionCard(
                   children: [
                     _AccountMenuRow(
                       iconAsset: 'assets/garden_voice/account_help.svg',
                       iconTileColor: k.okTint,
-                      label: 'Trợ giúp & Hỏi đáp',
-                      onTap: () => showBugReportBottomSheet(context),
-                    ),
-                    Divider(height: 0.6, thickness: 0.6, color: k.line),
-                    _AccountMenuRow(
-                      iconAsset: 'assets/garden_voice/account_bug.svg',
-                      iconTileColor: k.badTint,
-                      label: 'Báo lỗi nhanh',
+                      label: l10n?.teacherAccountQuickBug ?? 'Trợ giúp & Báo lỗi',
                       onTap: () => showBugReportBottomSheet(context),
                     ),
                     Divider(height: 0.6, thickness: 0.6, color: k.line),
                     _AccountMenuRow(
                       iconAsset: 'assets/garden_voice/account_info.svg',
                       iconTileColor: k.activityRowTint,
-                      label: 'Về KinderLog',
+                      label: l10n?.teacherAccountAbout ?? 'Về KinderLog',
                       onTap: () => showAboutKinderLogSheet(context),
                     ),
                   ],
@@ -406,7 +400,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
-                                'Đăng xuất',
+                                l10n?.accountLogout ?? 'Đăng xuất',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800,

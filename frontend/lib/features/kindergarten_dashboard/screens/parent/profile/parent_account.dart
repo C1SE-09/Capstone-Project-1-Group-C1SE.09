@@ -542,7 +542,7 @@ class _ParentAccountState extends State<ParentAccount> {
               _settingsRow(
                 context,
                 icon: Icons.rate_review_outlined,
-                label: 'Góp ý & Cải thiện ứng dụng',
+                label: context.l10n?.accountBugReport ?? 'Góp ý & Cải thiện ứng dụng',
                 trailing: Icon(Icons.chevron_right,
                     size: 18, color: context.k.inkFaint),
                 onTap: () => showBugReportBottomSheet(context),
@@ -551,15 +551,15 @@ class _ParentAccountState extends State<ParentAccount> {
               _settingsRow(
                 context,
                 icon: Icons.notifications_outlined,
-                label: 'Thông báo đẩy',
-                subtitle: 'Nhận thông báo khi có báo cáo mới',
+                label: context.l10n?.parentPushNotification ?? 'Thông báo đẩy',
+                subtitle: context.l10n?.parentPushSubtitle ?? 'Nhận thông báo khi có báo cáo mới',
                 trailing: Switch(value: _pushEnabled, onChanged: _setPush),
               ),
               const Divider(height: 1),
               _settingsRow(
                 context,
                 icon: Icons.language_rounded,
-                label: 'Ngôn ngữ / Language',
+                label: context.l10n?.accountLanguage ?? 'Ngôn ngữ / Language',
                 subtitle: LocaleController.instance.isVietnamese ? 'Tiếng Việt 🇻🇳' : 'English 🇬🇧',
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => showLanguageSelectionDialog(context),
@@ -568,7 +568,7 @@ class _ParentAccountState extends State<ParentAccount> {
               _settingsRow(
                 context,
                 icon: Icons.info_outline,
-                label: 'Về KinderLog',
+                label: context.l10n?.accountAbout ?? 'Về KinderLog',
                 trailing: Text('v1.0.0',
                     style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
                 onTap: () => showAboutKinderLogSheet(context),
@@ -579,7 +579,7 @@ class _ParentAccountState extends State<ParentAccount> {
 
         const SizedBox(height: 20),
         KButton(
-          label: 'Đăng xuất',
+          label: context.l10n?.accountLogout ?? 'Đăng xuất',
           icon: Icons.logout_rounded,
           secondary: true,
           onPressed: widget.onLogout == null
@@ -739,17 +739,17 @@ class _ParentAccountState extends State<ParentAccount> {
               ),
             ],
           ),
-          _accountSectionTitle(context, 'Cài đặt & hỗ trợ'),
+          _accountSectionTitle(context, context.l10n?.accountSettingsAndSupport ?? 'Cài đặt & hỗ trợ'),
           Column(
             children: [
               _accountMenuRow(
                 icon: 'assets/garden_voice/account_lock.svg',
-                label: 'Đổi mật khẩu',
+                label: context.l10n?.accountChangePassword ?? 'Đổi mật khẩu',
                 onTap: () => showChangePasswordBottomSheet(context),
               ),
               _accountMenuRow(
                 icon: 'assets/garden_voice/account_settings.svg',
-                label: 'Ngôn ngữ / Language',
+                label: context.l10n?.accountLanguage ?? 'Ngôn ngữ / Language',
                 trailing: Text(
                   LocaleController.instance.isVietnamese ? 'Tiếng Việt 🇻🇳' : 'English 🇬🇧',
                   style: TextStyle(
@@ -762,12 +762,12 @@ class _ParentAccountState extends State<ParentAccount> {
               ),
               _accountMenuRow(
                 icon: 'assets/garden_voice/account_bug.svg',
-                label: 'Báo lỗi & góp ý',
+                label: context.l10n?.accountBugReport ?? 'Báo lỗi & góp ý',
                 onTap: () => showBugReportBottomSheet(context),
               ),
               _accountMenuRow(
                 icon: 'assets/garden_voice/account_info.svg',
-                label: 'Về KinderLog',
+                label: context.l10n?.accountAbout ?? 'Về KinderLog',
                 subtitle: 'Phiên bản 1.0.0',
                 onTap: () => showAboutKinderLogSheet(context),
               ),
@@ -785,7 +785,7 @@ class _ParentAccountState extends State<ParentAccount> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
             ),
             icon: SvgPicture.asset('assets/garden_voice/account_logout.svg'),
-            label: const Text('Đăng xuất'),
+            label: Text(context.l10n?.accountLogout ?? 'Đăng xuất'),
           ),
         ],
       ),
@@ -1603,14 +1603,14 @@ Future<void> showParentLogoutSheet(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Bạn có muốn đăng xuất không ?',
+        Text(context.l10n?.parentLogoutConfirmTitle ?? 'Bạn có muốn đăng xuất không ?',
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 20),
         Row(
           children: [
             Expanded(
               child: KButton(
-                label: 'Hủy',
+                label: context.l10n?.commonCancel ?? 'Hủy',
                 secondary: true,
                 onPressed: () => Navigator.pop(context),
               ),
@@ -1618,7 +1618,7 @@ Future<void> showParentLogoutSheet(
             const SizedBox(width: 12),
             Expanded(
               child: KButton(
-                label: 'Đăng xuất',
+                label: context.l10n?.accountLogout ?? 'Đăng xuất',
                 icon: Icons.logout_rounded,
                 onPressed: () {
                   Navigator.pop(context);

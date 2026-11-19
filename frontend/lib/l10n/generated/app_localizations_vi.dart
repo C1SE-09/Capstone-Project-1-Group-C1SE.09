@@ -57,6 +57,96 @@ class AppLocalizationsVi extends AppLocalizations {
   String get languageSelectTitle => 'Chọn ngôn ngữ hiển thị';
 
   @override
+  String get navOverview => 'Tổng quan';
+
+  @override
+  String get navClass => 'Lớp';
+
+  @override
+  String get navRecord => 'Ghi âm';
+
+  @override
+  String get navReports => 'Báo cáo';
+
+  @override
+  String get navNotifications => 'Thông báo';
+
+  @override
+  String get navAccount => 'Tài khoản';
+
+  @override
+  String get navTimetable => 'Thời khóa biểu';
+
+  @override
+  String get navAttendance => 'Điểm danh';
+
+  @override
+  String get accountSettings => 'Cài đặt';
+
+  @override
+  String get accountSupport => 'Hỗ trợ';
+
+  @override
+  String get accountSettingsAndSupport => 'Cài đặt & Hỗ trợ';
+
+  @override
+  String get accountChangePassword => 'Đổi mật khẩu';
+
+  @override
+  String get accountLanguage => 'Ngôn ngữ / Language';
+
+  @override
+  String get accountBugReport => 'Báo lỗi & góp ý';
+
+  @override
+  String get accountAbout => 'Về KinderLog';
+
+  @override
+  String get accountLogout => 'Đăng xuất';
+
+  @override
+  String get accountAssignedClass => 'Lớp phụ trách';
+
+  @override
+  String get accountStudents => 'Học sinh';
+
+  @override
+  String get accountChildProfile => 'Hồ sơ của bé';
+
+  @override
+  String get accountChildParent => 'Phụ huynh của bé';
+
+  @override
+  String get accountTeacherInCharge => 'Giáo viên phụ trách';
+
+  @override
+  String get accountPhoneNumber => 'Số điện thoại';
+
+  @override
+  String get accountEmail => 'Email';
+
+  @override
+  String get accountAddress => 'Địa chỉ';
+
+  @override
+  String get accountWeight => 'Cân nặng';
+
+  @override
+  String get accountHeight => 'Chiều cao';
+
+  @override
+  String get accountBloodType => 'Nhóm máu';
+
+  @override
+  String get accountAllergies => 'Dị ứng';
+
+  @override
+  String get accountHealthNotes => 'Ghi chú sức khỏe';
+
+  @override
+  String get logoutConfirmMessage => 'Bạn có chắc chắn muốn đăng xuất không?';
+
+  @override
   String get loginWelcomeBack => 'Chào mừng trở lại!';
 
   @override
@@ -204,6 +294,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get teacherAccountSectionClass => 'Lớp phụ trách';
+
+  @override
+  String get teacherAccountPreferences => 'Tùy chọn';
 
   @override
   String get teacherAccountSectionSettings => 'Cài đặt & hỗ trợ';

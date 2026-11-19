@@ -194,6 +194,186 @@ abstract class AppLocalizations {
   /// **'Select Display Language'**
   String get languageSelectTitle;
 
+  /// No description provided for @navOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get navOverview;
+
+  /// No description provided for @navClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Class'**
+  String get navClass;
+
+  /// No description provided for @navRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get navRecord;
+
+  /// No description provided for @navReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get navReports;
+
+  /// No description provided for @navNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get navNotifications;
+
+  /// No description provided for @navAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get navAccount;
+
+  /// No description provided for @navTimetable.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable'**
+  String get navTimetable;
+
+  /// No description provided for @navAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get navAttendance;
+
+  /// No description provided for @accountSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get accountSettings;
+
+  /// No description provided for @accountSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get accountSupport;
+
+  /// No description provided for @accountSettingsAndSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings & Support'**
+  String get accountSettingsAndSupport;
+
+  /// No description provided for @accountChangePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get accountChangePassword;
+
+  /// No description provided for @accountLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Ngôn ngữ / Language'**
+  String get accountLanguage;
+
+  /// No description provided for @accountBugReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug Report & Feedback'**
+  String get accountBugReport;
+
+  /// No description provided for @accountAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About KinderLog'**
+  String get accountAbout;
+
+  /// No description provided for @accountLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get accountLogout;
+
+  /// No description provided for @accountAssignedClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned Class'**
+  String get accountAssignedClass;
+
+  /// No description provided for @accountStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Students'**
+  String get accountStudents;
+
+  /// No description provided for @accountChildProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Child Profile'**
+  String get accountChildProfile;
+
+  /// No description provided for @accountChildParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Child\'s Parent'**
+  String get accountChildParent;
+
+  /// No description provided for @accountTeacherInCharge.
+  ///
+  /// In en, this message translates to:
+  /// **'Teacher in Charge'**
+  String get accountTeacherInCharge;
+
+  /// No description provided for @accountPhoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number'**
+  String get accountPhoneNumber;
+
+  /// No description provided for @accountEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get accountEmail;
+
+  /// No description provided for @accountAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get accountAddress;
+
+  /// No description provided for @accountWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get accountWeight;
+
+  /// No description provided for @accountHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Height'**
+  String get accountHeight;
+
+  /// No description provided for @accountBloodType.
+  ///
+  /// In en, this message translates to:
+  /// **'Blood Type'**
+  String get accountBloodType;
+
+  /// No description provided for @accountAllergies.
+  ///
+  /// In en, this message translates to:
+  /// **'Allergies'**
+  String get accountAllergies;
+
+  /// No description provided for @accountHealthNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Notes'**
+  String get accountHealthNotes;
+
+  /// No description provided for @logoutConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get logoutConfirmMessage;
+
   /// No description provided for @loginWelcomeBack.
   ///
   /// In en, this message translates to:
@@ -463,6 +643,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assigned Class'**
   String get teacherAccountSectionClass;
+
+  /// No description provided for @teacherAccountPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get teacherAccountPreferences;
 
   /// No description provided for @teacherAccountSectionSettings.
   ///
