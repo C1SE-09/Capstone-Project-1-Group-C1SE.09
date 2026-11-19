@@ -163,18 +163,64 @@ class HttpDashboardRepository implements DashboardRepository {
   }
 
   @override
+  Future<List<ChildOverview>> getAllChildrenForParent(String parentId) async {
+    final list = await _getList('/api/parent/$parentId/children');
+    return list
+        .whereType<Map>()
+        .map((item) => _parseChildOverview(_asMap(item)))
+        .toList();
+  }
+
+  @override
   Future<DailyReport> getParentReport(String reportId) async {
     return DailyReport.fromJson(await _get('/api/parent/reports/$reportId'));
   }
 
   ChildOverview _parseChildOverview(Map<String, dynamic> data) {
+    final rawChildren = data['children'];
+    final allChildren = <ChildOverview>[];
+    if (rawChildren is List) {
+      for (final item in rawChildren) {
+        if (item is Map) {
+          final m = _asMap(item);
+          allChildren.add(ChildOverview(
+            child: Child.fromJson(_asMap(m['child'])),
+            className: m['class_name'] as String? ?? '',
+            teacherName: m['teacher_name'] as String? ?? '',
+            teacherId: m['teacher_id'] as String?,
+            teacherPhone: m['teacher_phone'] as String?,
+            roomNumber: m['room_number'] as String?,
+          ));
+        }
+      }
+    }
+
+    final mainChild = Child.fromJson(_asMap(data['child']));
+    final className = data['class_name'] as String? ?? '';
+    final teacherName = data['teacher_name'] as String? ?? '';
+    final teacherId = data['teacher_id'] as String?;
+    final teacherPhone = data['teacher_phone'] as String?;
+    final roomNumber = data['room_number'] as String?;
+
     return ChildOverview(
-      child: Child.fromJson(_asMap(data['child'])),
-      className: data['class_name'] as String? ?? '',
-      teacherName: data['teacher_name'] as String? ?? '',
-      teacherId: data['teacher_id'] as String?,
-      teacherPhone: data['teacher_phone'] as String?,
-      roomNumber: data['room_number'] as String?,
+      child: mainChild,
+      className: className,
+      teacherName: teacherName,
+      teacherId: teacherId,
+      teacherPhone: teacherPhone,
+      roomNumber: roomNumber,
+      allChildren: allChildren.isNotEmpty
+          ? allChildren
+          : [
+              ChildOverview(
+                child: mainChild,
+                className: className,
+                teacherName: teacherName,
+                teacherId: teacherId,
+                teacherPhone: teacherPhone,
+                roomNumber: roomNumber,
+              ),
+            ],
     );
   }
 
@@ -392,6 +438,24 @@ class HttpDashboardRepository implements DashboardRepository {
     try {
       final response = await _dio.get(path, queryParameters: query);
       return _asMap(response.data);
+    } on DioException catch (error) {
+      throw ClassDataException(
+        _extractErrorMessage(error, 'Không thể tải dữ liệu. Vui lòng kiểm tra lại mạng hoặc thử lại sau.'),
+        statusCode: error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<List<dynamic>> _getList(
+    String path, {
+    Map<String, String>? query,
+  }) async {
+    try {
+      final response = await _dio.get(path, queryParameters: query);
+      if (response.data is List) {
+        return response.data as List<dynamic>;
+      }
+      return const [];
     } on DioException catch (error) {
       throw ClassDataException(
         _extractErrorMessage(error, 'Không thể tải dữ liệu. Vui lòng kiểm tra lại mạng hoặc thử lại sau.'),

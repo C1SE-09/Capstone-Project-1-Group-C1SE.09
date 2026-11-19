@@ -13,6 +13,7 @@ import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart'
     as domain_class;
 import 'package:adark_frontend/core/localization/locale_controller.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/about_kinderlog_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
@@ -377,6 +378,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                       iconAsset: 'assets/garden_voice/account_info.svg',
                       iconTileColor: k.activityRowTint,
                       label: 'Về KinderLog',
+                      onTap: () => showAboutKinderLogSheet(context),
                     ),
                   ],
                 ),
