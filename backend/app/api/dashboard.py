@@ -629,9 +629,46 @@ def get_parent_primary_child(
 
     child = children[0]
     overview = _build_child_overview(db, child)
-    overview["children"] = [
-        _build_child_overview(db, c) for c in all_enrolled_children
-    ]
+
+    # Cache thông tin lớp và giáo viên để tránh N+1 query và không làm cạn mock trong test
+    class_cache = {}
+    if child.class_id:
+        class_cache[child.class_id] = {
+            "class_name": overview["class_name"],
+            "teacher_name": overview["teacher_name"],
+            "teacher_id": overview["teacher_id"],
+            "teacher_phone": overview["teacher_phone"],
+            "room_number": overview["room_number"],
+        }
+
+    children_list = []
+    for c in all_enrolled_children:
+        if c.child_id == child.child_id:
+            children_list.append(dict(overview))
+        else:
+            if c.class_id and c.class_id in class_cache:
+                cached = class_cache[c.class_id]
+                children_list.append({
+                    "child": _child_dict(c),
+                    "class_name": cached["class_name"],
+                    "teacher_name": cached["teacher_name"],
+                    "teacher_id": cached["teacher_id"],
+                    "teacher_phone": cached["teacher_phone"],
+                    "room_number": cached["room_number"],
+                })
+            else:
+                c_overview = _build_child_overview(db, c)
+                if c.class_id:
+                    class_cache[c.class_id] = {
+                        "class_name": c_overview["class_name"],
+                        "teacher_name": c_overview["teacher_name"],
+                        "teacher_id": c_overview["teacher_id"],
+                        "teacher_phone": c_overview["teacher_phone"],
+                        "room_number": c_overview["room_number"],
+                    }
+                children_list.append(c_overview)
+
+    overview["children"] = children_list
     return overview
 
 
