@@ -225,7 +225,7 @@ class _GardenVoiceParentOverviewState extends State<GardenVoiceParentOverview> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  item.child.fullName,
+                                  item.child.fullNameWithNickname,
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: isSelected
@@ -491,7 +491,7 @@ class _ChildOverviewCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  overview.child.fullName,
+                  overview.child.fullNameWithNickname,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

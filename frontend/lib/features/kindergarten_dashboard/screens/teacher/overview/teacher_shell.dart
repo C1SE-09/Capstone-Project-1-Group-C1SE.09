@@ -235,9 +235,15 @@ class _TeacherShellState extends State<TeacherShell> {
     final clean = name.trim().toLowerCase();
     for (final child in children) {
       final childClean = child.name.trim().toLowerCase();
+      final fullWithNick = child.fullNameWithNickname.trim().toLowerCase();
+      final nick = (child.nickname ?? '').trim().toLowerCase();
       if (childClean == clean ||
+          fullWithNick == clean ||
+          nick == clean ||
           clean.contains(childClean) ||
-          childClean.contains(clean)) {
+          childClean.contains(clean) ||
+          clean.contains(fullWithNick) ||
+          fullWithNick.contains(clean)) {
         return child;
       }
     }

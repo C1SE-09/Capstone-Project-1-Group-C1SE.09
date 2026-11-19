@@ -78,7 +78,7 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
     final agreed = await showParentRequestDialog(context,
         title: 'Hủy đơn xin nghỉ?',
         message:
-            'Đơn ${requestTypeLabel(request.requestType).toLowerCase()} $range của bé ${child.fullName} sẽ bị hủy. Điểm danh thực tế được giữ nguyên.',
+            'Đơn ${requestTypeLabel(request.requestType).toLowerCase()} $range của bé ${child.fullNameWithNickname} sẽ bị hủy. Điểm danh thực tế được giữ nguyên.',
         cancelLabel: 'Giữ đơn',
         confirmLabel: 'Hủy đơn',
         danger: true);
@@ -173,7 +173,7 @@ class _ParentRequestDetailScreenState extends State<ParentRequestDetailScreen> {
                             ParentRequestInfo(
                                 'Bé',
                                 _value(
-                                    '${widget.child.fullName}${widget.className.isEmpty ? '' : ' — ${widget.className}'}'),
+                                    '${widget.child.fullNameWithNickname}${widget.className.isEmpty ? '' : ' — ${widget.className}'}'),
                                 gardenVoice: true),
                             ParentRequestInfo('Thời gian',
                                 _value(gardenVoiceRequestRange(request)),

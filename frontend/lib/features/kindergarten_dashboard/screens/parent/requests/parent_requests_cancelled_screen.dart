@@ -48,7 +48,7 @@ class ParentRequestsCancelledScreen extends StatelessWidget {
                           color: k.ink)),
                   const SizedBox(height: 6),
                   Text(
-                      '${request.requestType == LeaveRequestType.absence ? 'Đơn nghỉ' : 'Đơn báo trễ'} ${requestDate(request.fromDate)} · ${child.fullName}',
+                      '${request.requestType == LeaveRequestType.absence ? 'Đơn nghỉ' : 'Đơn báo trễ'} ${requestDate(request.fromDate)} · ${child.fullNameWithNickname}',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12.5, color: k.inkSoft)),
                   const SizedBox(height: 14),

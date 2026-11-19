@@ -705,9 +705,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 entry.key,
                 entry.value
                     .where((row) =>
-                        row.child.name
-                            .toLowerCase()
-                            .contains(query.toLowerCase()) &&
+                        (row.child.fullNameWithNickname
+                                .toLowerCase()
+                                .contains(query.toLowerCase()) ||
+                            (row.child.nickname ?? '')
+                                .toLowerCase()
+                                .contains(query.toLowerCase())) &&
                         allowed(_rowStatus(row)))
                     .toList()))
             .where((entry) => entry.value.isNotEmpty)

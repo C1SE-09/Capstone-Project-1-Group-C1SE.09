@@ -396,7 +396,7 @@ class ParentRequestChild extends StatelessWidget {
       Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(child.fullName,
+        Text(child.fullNameWithNickname,
             style: const TextStyle(fontWeight: FontWeight.w600)),
         Text(
             [className, teacherName]

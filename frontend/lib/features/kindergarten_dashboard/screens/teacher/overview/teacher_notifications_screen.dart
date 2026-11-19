@@ -280,7 +280,7 @@ class _TeacherNotificationsScreenState
             title:
                 'Báo cáo ngày đã gửi ${_reports!.completedCount}/${_reports!.totalChildren}',
             detail: _reports!.missingCount > 0
-                ? 'Còn ${_reports!.pendingChildren.where((item) => item.status == null).map((item) => item.child.displayName).join(', ')} chưa có báo cáo'
+                ? 'Còn ${_reports!.pendingChildren.where((item) => item.status == null).map((item) => item.child.fullNameWithNickname).join(', ')} chưa có báo cáo'
                 : _reports!.draftCount > 0
                     ? 'Còn ${_reports!.draftCount} bản nháp chưa gửi'
                     : 'Đã hoàn tất báo cáo của cả lớp',
