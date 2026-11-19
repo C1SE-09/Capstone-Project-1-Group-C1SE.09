@@ -77,16 +77,17 @@ String formatGender(String? gender) {
 }
 
 /// Định dạng danh sách tên trẻ cho phụ huynh (tối đa 3 trẻ liệt kê, quá 3 thì thêm "+X bé").
+/// Lấy tên thật (fullName) của bé thay vì biệt danh.
 String formatParentChildrenNames(ChildOverview overview) {
   final childrenList = overview.allChildren.isNotEmpty
       ? overview.allChildren
       : [overview];
   final names = childrenList
-      .map((c) => c.child.displayName.trim())
+      .map((c) => c.child.fullNameWithNickname.trim())
       .where((n) => n.isNotEmpty)
       .toSet()
       .toList();
-  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.displayName}';
+  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.fullNameWithNickname}';
   if (names.length <= 3) {
     return 'Phụ huynh bé ${names.join(', ')}';
   }
@@ -124,6 +125,7 @@ class ParentAccount extends StatefulWidget {
     this.onLogout,
     this.onHealthUpdated,
     this.onOpenNotifications,
+    this.onSelectChild,
   });
 
   final Parent parent;
@@ -138,6 +140,7 @@ class ParentAccount extends StatefulWidget {
   final VoidCallback? onLogout;
   final ValueChanged<Child>? onHealthUpdated;
   final VoidCallback? onOpenNotifications;
+  final ValueChanged<String>? onSelectChild;
 
   @override
   State<ParentAccount> createState() => _ParentAccountState();
@@ -188,7 +191,7 @@ class _ParentAccountState extends State<ParentAccount> {
     showParentProfileEditScreen(
       context,
       parent: widget.parent,
-      childName: widget.overview.child.fullName,
+      childName: widget.overview.child.fullNameWithNickname,
       repository: widget.repository,
       onSaved: (phone, email, relationship) {
         if (widget.onParentUpdated != null) {
@@ -206,7 +209,7 @@ class _ParentAccountState extends State<ParentAccount> {
       builder: (_) => GardenVoiceScope(
         child: ParentContactScreen(
           parent: widget.parent,
-          childName: widget.overview.child.fullName,
+          childName: widget.overview.child.fullNameWithNickname,
           onEdit: (onSaved) => _openProfileSheet(onSaved: onSaved),
         ),
       ),
@@ -252,6 +255,7 @@ class _ParentAccountState extends State<ParentAccount> {
           children: children,
           currentChildId: widget.overview.child.childId,
           onSelectChild: (selectedOverview) {
+            widget.onSelectChild?.call(selectedOverview.child.childId);
             _openSingleChildInfo(selectedOverview);
           },
         ),
@@ -449,7 +453,7 @@ class _ParentAccountState extends State<ParentAccount> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            child.fullName,
+                            child.fullNameWithNickname,
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w600),
                           ),
@@ -1218,7 +1222,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(child.fullName,
+                        Text(child.fullNameWithNickname,
                             style: TextStyle(
                                 fontSize: 16,
                                 height: 1.4,
@@ -1450,7 +1454,7 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        child.fullName,
+                                        child.fullNameWithNickname,
                                         style: TextStyle(
                                           fontSize: 16,
                                           height: 1.3,

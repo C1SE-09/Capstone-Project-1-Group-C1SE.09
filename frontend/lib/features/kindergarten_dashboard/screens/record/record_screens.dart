@@ -128,7 +128,12 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
             final data = snapshot.data!;
             final list = data.children
                 .where((child) =>
-                    child.name.toLowerCase().contains(query.toLowerCase()))
+                    child.fullNameWithNickname
+                        .toLowerCase()
+                        .contains(query.toLowerCase()) ||
+                    (child.nickname ?? '')
+                        .toLowerCase()
+                        .contains(query.toLowerCase()))
                 .toList();
             final k = context.k;
             return Scaffold(
@@ -315,7 +320,7 @@ class _RecordHubScreenState extends State<RecordHubScreen> {
                                                   CrossAxisAlignment.start,
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Text(child.name,
+                                                Text(child.fullNameWithNickname,
                                                     style: TextStyle(
                                                       fontSize: 14.5,
                                                       fontWeight:
@@ -1592,7 +1597,9 @@ class _RecordingScreenState extends State<RecordingScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  child == null ? 'Cả lớp $classLabel' : child.name,
+                  child == null
+                      ? 'Cả lớp $classLabel'
+                      : child.fullNameWithNickname,
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.4,
@@ -1603,7 +1610,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                 Text(
                   child == null
                       ? 'Ghi một lần, tạo báo cáo cho tất cả trẻ.'
-                      : '$classLabel${child.nickname == null ? '' : ' · ${child.nickname}'}',
+                      : classLabel,
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.4,
@@ -1888,7 +1895,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     final classLabel = widget.className.startsWith('Lớp ')
         ? widget.className
         : 'Lớp ${widget.className}';
-    final title = child?.name ?? 'Cả lớp';
+    final title = child?.fullNameWithNickname ?? 'Cả lớp';
     final subtitle = child == null ? classLabel : '$title · $classLabel';
     final canSubmit = !isBusy && (hasFile || phase == 'done');
 
@@ -3238,6 +3245,14 @@ class ObservationItem {
   String name;
   String? childId;
   String? nickname;
+
+  String get fullNameWithNickname {
+    final nick = nickname?.trim();
+    if (nick != null && nick.isNotEmpty && !name.contains('($nick)')) {
+      return '$name ($nick)';
+    }
+    return name;
+  }
   bool matched;
   ObservationDecision decision;
   ObservationKind kind;
@@ -4475,7 +4490,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           reviewTile(
                             childItem,
                             summaryStyle: true,
-                            summaryLabel: 'Riêng ${childItem.name}',
+                            summaryLabel: 'Riêng ${childItem.fullNameWithNickname}',
                           ),
                           reviewTile(
                             classwideItem,
@@ -4526,7 +4541,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                               item,
                               summaryStyle: true,
                               showApproveAction: true,
-                              summaryLabel: item.name,
+                              summaryLabel: item.fullNameWithNickname,
                             ),
                           SizedBox(
                             height: 48,
@@ -4850,7 +4865,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => GardenVoiceScope(
         child: EditObservationScreen(
-          title: item.name,
+          title: item.fullNameWithNickname,
           isUnmatched: item.kind == ObservationKind.unmatched,
           eatingCtrl: eatingCtrl,
           sleepCtrl: sleepCtrl,
@@ -5168,7 +5183,7 @@ class _ObservationTile extends StatelessWidget {
               summaryLabel ??
                   (card.kind == ObservationKind.classwide
                       ? 'Áp dụng cho cả lớp'
-                      : card.name),
+                      : card.fullNameWithNickname),
               style: TextStyle(
                 color: k.brandStrong,
                 fontSize: 14,
@@ -5208,7 +5223,7 @@ class _ObservationTile extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Đã loại bỏ · ${card.name}',
+                'Đã loại bỏ · ${card.fullNameWithNickname}',
                 style: TextStyle(fontSize: 12, color: context.k.inkFaint),
               ),
             ),
@@ -5265,7 +5280,7 @@ class _ObservationTile extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: context.k.brandStrong))
           else if (isSegmentPreview)
-            Text('Đã nhận ra · ${card.name}',
+            Text('Đã nhận ra · ${card.fullNameWithNickname}',
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -5288,7 +5303,7 @@ class _ObservationTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(card.name,
+                      Text(card.fullNameWithNickname,
                           style: TextStyle(
                               fontSize: 14,
                               color: context.k.ink,
@@ -5675,7 +5690,10 @@ class _AssignScreenState extends State<_AssignScreen> {
     final list = widget.roster
         .where((c) =>
             query.isEmpty ||
-            '${c.name} ${c.nickname ?? ''}'
+            c.fullNameWithNickname
+                .toLowerCase()
+                .contains(query.toLowerCase()) ||
+            (c.nickname ?? '')
                 .toLowerCase()
                 .contains(query.toLowerCase()))
         .toList();
@@ -5741,7 +5759,7 @@ class _AssignScreenState extends State<_AssignScreen> {
                           minimumSize: const Size(double.infinity, 48),
                           shape: const StadiumBorder(),
                         ),
-                        child: Text(child.name),
+                        child: Text(child.fullNameWithNickname),
                       ),
                     ),
                     const SizedBox(height: 10),

@@ -39,9 +39,17 @@ class Child extends BaseEntity {
   final String? healthUpdateSource; // parent | admin | legacy
   final int healthVersion;
 
-  /// Tên hiển thị: ưu tiên nickname, không có thì dùng tên đầy đủ.
-  String get displayName =>
-      (nickname?.isNotEmpty ?? false) ? nickname! : fullName;
+  /// Tên hiển thị: ưu tiên tên đầy đủ kèm biệt danh nếu có (vd "Lê Ngọc Ánh (Bống)")
+  String get displayName => fullNameWithNickname;
+
+  /// Tên đầy đủ kèm biệt danh (nếu có): vd "Lê Ngọc Ánh (Bống)", không có nickname thì "Lê Ngọc Ánh"
+  String get fullNameWithNickname {
+    final nick = nickname?.trim();
+    if (nick != null && nick.isNotEmpty) {
+      return '$fullName ($nick)';
+    }
+    return fullName;
+  }
 
   /// Chuỗi seed/kế thừa ghi "Không có" thay vì để trống khi bé không bị dị ứng.
   static const _noAllergy = {'', 'không', 'không có', 'none'};

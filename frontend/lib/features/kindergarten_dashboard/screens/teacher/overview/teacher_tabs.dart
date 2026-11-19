@@ -31,6 +31,7 @@ class OverviewScreen extends StatefulWidget {
     this.onEmergencyAlert,
     this.onOpenNotifications,
     this.onStartReport,
+    this.onSelectChild,
     this.notificationCount,
     this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
     this.repository,
@@ -46,6 +47,7 @@ class OverviewScreen extends StatefulWidget {
   final VoidCallback? onEmergencyAlert;
   final VoidCallback? onOpenNotifications;
   final VoidCallback? onStartReport;
+  final ValueChanged<String>? onSelectChild;
   final int? notificationCount;
   final String classId;
   final HttpDashboardRepository? repository;
@@ -110,6 +112,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
               onOpenAttendance: widget.onOpenAttendance,
               onEmergencyAlert: widget.onEmergencyAlert,
               onHealth: widget.onHealth,
+              onSelectChild: widget.onSelectChild,
               onRefresh: () async {
                 final refreshed = await _load();
                 if (mounted) setState(() => future = Future.value(refreshed));
@@ -188,8 +191,13 @@ class _ClassListScreenState extends State<ClassListScreen> {
   @override
   Widget build(BuildContext context) {
     final list = widget.children.where((child) {
-      final matches = child.name.toLowerCase().contains(query.toLowerCase());
-      return matches && (!healthOnly || child.severity != Severity.none);
+      final matches = child.fullNameWithNickname
+          .toLowerCase()
+          .contains(query.toLowerCase());
+      return matches &&
+          (!healthOnly ||
+              child.severity != Severity.none ||
+              (child.allergy != null && child.allergy!.trim().isNotEmpty));
     }).toList();
     final subtitleText =
         (widget.teacherName != null && widget.teacherName!.trim().isNotEmpty)
@@ -354,7 +362,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
   void _showActions(Child child) {
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => _ChildActionsScreen(
+      builder: (_) => ChildActionsScreen(
         child: child,
         className: widget.className,
         onRecord: () => widget.onRecord(child),
@@ -364,8 +372,9 @@ class _ClassListScreenState extends State<ClassListScreen> {
   }
 }
 
-class _ChildActionsScreen extends StatelessWidget {
-  const _ChildActionsScreen({
+class ChildActionsScreen extends StatelessWidget {
+  const ChildActionsScreen({
+    super.key,
     required this.child,
     required this.className,
     required this.onRecord,
@@ -384,17 +393,17 @@ class _ChildActionsScreen extends StatelessWidget {
             final k = context.k;
             final allergy = (child.allergy ?? '').trim();
             final careNotes = (child.careNotes ?? '').trim();
-            final note = allergy.isNotEmpty
-                ? allergy.toLowerCase().startsWith('dị ứng')
-                    ? allergy
-                    : 'Dị ứng ${allergy[0].toLowerCase()}${allergy.substring(1)}'
-                : careNotes.isNotEmpty
-                    ? careNotes
+            final note = careNotes.isNotEmpty
+                ? careNotes
+                : allergy.isNotEmpty
+                    ? allergy.toLowerCase().startsWith('dị ứng')
+                        ? allergy
+                        : 'Dị ứng ${allergy[0].toLowerCase()}${allergy.substring(1)}'
                     : 'Chưa có lưu ý chăm sóc.';
             return Scaffold(
               backgroundColor: k.canvas,
               appBar: KAppBar(
-                title: child.name,
+                title: child.fullNameWithNickname,
                 onBack: () => Navigator.of(context).pop(),
               ),
               body: SafeArea(
@@ -489,14 +498,14 @@ class _ChildRow extends StatelessWidget {
     final careNotesText = (child.careNotes ?? '').trim();
     String? subtitle;
     Color subtitleColor = k.inkSoft;
-    if (allergyText.isNotEmpty) {
+    if (careNotesText.isNotEmpty) {
+      subtitle = careNotesText;
+      subtitleColor = k.inkSoft;
+    } else if (allergyText.isNotEmpty) {
       subtitle = allergyText.toLowerCase().startsWith('dị ứng')
           ? allergyText
           : 'Dị ứng: $allergyText';
       subtitleColor = k.warn;
-    } else if (careNotesText.isNotEmpty) {
-      subtitle = careNotesText;
-      subtitleColor = k.inkSoft;
     } else if (child.severity != Severity.none) {
       subtitle = 'Sức khỏe: ${child.severity.label}';
       subtitleColor = k.warn;
@@ -519,7 +528,7 @@ class _ChildRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    child.name,
+                    child.fullNameWithNickname,
                     style: TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w800,
@@ -696,9 +705,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 entry.key,
                 entry.value
                     .where((row) =>
-                        row.child.name
-                            .toLowerCase()
-                            .contains(query.toLowerCase()) &&
+                        (row.child.fullNameWithNickname
+                                .toLowerCase()
+                                .contains(query.toLowerCase()) ||
+                            (row.child.nickname ?? '')
+                                .toLowerCase()
+                                .contains(query.toLowerCase())) &&
                         allowed(_rowStatus(row)))
                     .toList()))
             .where((entry) => entry.value.isNotEmpty)

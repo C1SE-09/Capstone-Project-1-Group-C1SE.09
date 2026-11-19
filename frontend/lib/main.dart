@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
@@ -90,6 +91,14 @@ class _MyAppState extends State<MyApp> {
           key: ValueKey('kinderlog_app_${LocaleController.instance.value.languageCode}'),
           routerConfig: appRouter,
           theme: kinderTheme(),
+          scrollBehavior: const MaterialScrollBehavior().copyWith(
+            dragDevices: {
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.touch,
+              PointerDeviceKind.trackpad,
+              PointerDeviceKind.stylus,
+            },
+          ),
           locale: LocaleController.instance.value,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

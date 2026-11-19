@@ -235,9 +235,15 @@ class _TeacherShellState extends State<TeacherShell> {
     final clean = name.trim().toLowerCase();
     for (final child in children) {
       final childClean = child.name.trim().toLowerCase();
+      final fullWithNick = child.fullNameWithNickname.trim().toLowerCase();
+      final nick = (child.nickname ?? '').trim().toLowerCase();
       if (childClean == clean ||
+          fullWithNick == clean ||
+          nick == clean ||
           clean.contains(childClean) ||
-          childClean.contains(clean)) {
+          childClean.contains(clean) ||
+          clean.contains(fullWithNick) ||
+          fullWithNick.contains(clean)) {
         return child;
       }
     }
@@ -304,6 +310,19 @@ class _TeacherShellState extends State<TeacherShell> {
         repository: repository,
       ),
     ));
+  }
+
+  void openChildActions(Child child, String className) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChildActionsScreen(
+          child: child,
+          className: className,
+          onRecord: () => _openRecordFlow(RecordMode.child, className, child),
+          onEdit: () => openReport(child),
+        ),
+      ),
+    );
   }
 
   Future<void> openTimetable(String className,
@@ -546,6 +565,12 @@ class _TeacherShellState extends State<TeacherShell> {
                           healthOnly = true;
                           tab = TeacherTab.classList;
                         }),
+                        onSelectChild: (childId) {
+                          final match = children.where((c) => c.id == childId);
+                          if (match.isNotEmpty) {
+                            openChildActions(match.first, className);
+                          }
+                        },
                       ),
                     TeacherTab.classList => ClassListScreen(
                         initialHealthOnly: healthOnly,

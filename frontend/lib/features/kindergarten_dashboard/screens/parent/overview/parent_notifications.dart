@@ -1,3 +1,4 @@
+import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class ParentNotifications extends StatefulWidget {
     required this.teacherName,
     required this.onOpenReport,
     required this.onMarkAllRead,
+    this.children = const [],
   });
 
   final List<DailyReport> reports;
@@ -36,6 +38,7 @@ class ParentNotifications extends StatefulWidget {
   final String teacherName;
   final ValueChanged<DailyReport> onOpenReport;
   final VoidCallback onMarkAllRead;
+  final List<ChildOverview> children;
 
   @override
   State<ParentNotifications> createState() => _ParentNotificationsState();
@@ -43,20 +46,50 @@ class ParentNotifications extends StatefulWidget {
 
 class _ParentNotificationsState extends State<ParentNotifications> {
   final _filterScroll = ScrollController();
+  final _childFilterScroll = ScrollController();
   _NotificationFilter _filter = _NotificationFilter.all;
+  String? _selectedChildId; // null = tất cả bé liên kết
 
   @override
   void dispose() {
     _filterScroll.dispose();
+    _childFilterScroll.dispose();
     super.dispose();
+  }
+
+  String _resolveChildName(DailyReport report) {
+    if (widget.children.isNotEmpty && report.childId != null) {
+      final match = widget.children.firstWhere(
+        (c) => c.child.childId == report.childId,
+        orElse: () => widget.children.first,
+      );
+      return match.child.fullNameWithNickname;
+    }
+    return widget.childName;
+  }
+
+  String _resolveTeacherName(DailyReport report) {
+    if (widget.children.isNotEmpty && report.childId != null) {
+      final match = widget.children.firstWhere(
+        (c) => c.child.childId == report.childId,
+        orElse: () => widget.children.first,
+      );
+      return match.teacherName;
+    }
+    return widget.teacherName;
   }
 
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    // Lọc theo bé nếu phụ huynh chọn lọc riêng
+    final filteredByChild = _selectedChildId == null
+        ? widget.reports
+        : widget.reports.where((r) => r.childId == _selectedChildId).toList();
+
     // shortcut: API chỉ có lịch sử báo cáo, nối hai nhóm còn lại khi có inbox backend.
     final reports = switch (_filter) {
-      _NotificationFilter.all || _NotificationFilter.reports => widget.reports,
+      _NotificationFilter.all || _NotificationFilter.reports => filteredByChild,
       _ => const <DailyReport>[],
     };
     final unread = reports.where((r) => r.status != ReportStatus.read).toList();
@@ -144,6 +177,70 @@ class _ParentNotificationsState extends State<ParentNotifications> {
             ),
           ),
         ),
+        if (widget.children.length > 1) ...[
+          Padding(
+            padding:
+                const EdgeInsets.fromLTRB(KSpace.x5, KSpace.x2, KSpace.x5, 0),
+            child: SingleChildScrollView(
+              controller: _childFilterScroll,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Tất cả bé'),
+                    selected: _selectedChildId == null,
+                    onSelected: (_) => setState(() => _selectedChildId = null),
+                    selectedColor: k.brandTint,
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      fontWeight: _selectedChildId == null
+                          ? FontWeight.w700
+                          : FontWeight.w600,
+                      color: _selectedChildId == null ? k.brand : k.ink,
+                    ),
+                    backgroundColor: k.surfaceSunken,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: _selectedChildId == null ? k.brand : k.line,
+                      ),
+                    ),
+                    showCheckmark: false,
+                  ),
+                  for (final c in widget.children)
+                    ChoiceChip(
+                      label: Text(c.child.fullNameWithNickname),
+                      selected: _selectedChildId == c.child.childId,
+                      onSelected: (_) =>
+                          setState(() => _selectedChildId = c.child.childId),
+                      selectedColor: k.brandTint,
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: _selectedChildId == c.child.childId
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        color: _selectedChildId == c.child.childId
+                            ? k.brand
+                            : k.ink,
+                      ),
+                      backgroundColor: k.surfaceSunken,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: _selectedChildId == c.child.childId
+                              ? k.brand
+                              : k.line,
+                        ),
+                      ),
+                      showCheckmark: false,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: KSpace.x2),
         Expanded(
           child: ListView(
@@ -170,8 +267,9 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                 for (final report in unread) ...[
                   _ReportNotification(
                     report: report,
-                    childName: widget.childName,
-                    teacherName: widget.teacherName,
+                    childName: _resolveChildName(report),
+                    teacherName: _resolveTeacherName(report),
+                    showChildBadge: widget.children.length > 1,
                     onTap: () => widget.onOpenReport(report),
                   ),
                   const SizedBox(height: KSpace.x3),
@@ -183,8 +281,9 @@ class _ParentNotificationsState extends State<ParentNotifications> {
                 for (final report in read) ...[
                   _ReportNotification(
                     report: report,
-                    childName: widget.childName,
-                    teacherName: widget.teacherName,
+                    childName: _resolveChildName(report),
+                    teacherName: _resolveTeacherName(report),
+                    showChildBadge: widget.children.length > 1,
                     onTap: () => widget.onOpenReport(report),
                   ),
                   const SizedBox(height: KSpace.x3),
@@ -220,12 +319,14 @@ class _ReportNotification extends StatelessWidget {
     required this.childName,
     required this.teacherName,
     required this.onTap,
+    this.showChildBadge = false,
   });
 
   final DailyReport report;
   final String childName;
   final String teacherName;
   final VoidCallback onTap;
+  final bool showChildBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -306,6 +407,23 @@ class _ReportNotification extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            if (showChildBadge && childName.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: k.brandTint,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  childName,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: k.brand,
+                                  ),
+                                ),
+                              ),
                             Text(dateLabel,
                                 style:
                                     TextStyle(fontSize: 12, color: k.inkSoft)),

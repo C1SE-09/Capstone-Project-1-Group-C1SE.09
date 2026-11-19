@@ -53,6 +53,15 @@ class Child {
   final String? allergy;
   final String? careNotes;
   final Severity severity;
+
+  /// Tên đầy đủ kèm biệt danh (nếu có): vd "Lê Ngọc Ánh (Bống)", không có nickname thì "Lê Ngọc Ánh"
+  String get fullNameWithNickname {
+    final nick = nickname?.trim();
+    if (nick != null && nick.isNotEmpty) {
+      return '$name ($nick)';
+    }
+    return name;
+  }
 }
 
 class ClassInfo {

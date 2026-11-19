@@ -75,6 +75,9 @@ class _ParentFlowState extends State<ParentFlow> {
   bool _notificationsOpen = false;
   final _pages = <int, Widget>{};
   bool _notificationOpened = false;
+  String? _selectedChildId;
+  Parent? _cachedParent;
+  _ParentData? _lastData;
 
   @override
   void initState() {
@@ -158,7 +161,7 @@ class _ParentFlowState extends State<ParentFlow> {
             _notificationOpened = true;
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                  'Thông báo bé vắng: ${data.overview.child.fullName}, '
+                  'Thông báo bé vắng: ${data.overview.child.fullNameWithNickname}, '
                   'ngày ${kDateLabel(attendanceDate)}. Vui lòng liên hệ giáo viên để xác nhận.'),
             ));
             PushNotificationService.instance
@@ -182,24 +185,48 @@ class _ParentFlowState extends State<ParentFlow> {
 
   // Loads parent-linked child and report history from existing endpoints.
   Future<_ParentData> _load() async {
-    final childId = widget.childId;
-    final parent = await repository.getCurrentParent();
+    final childId = _selectedChildId ?? widget.childId;
+    final parent = _cachedParent ?? await repository.getCurrentParent();
+    _cachedParent = parent;
     try {
       final overview = childId == null
           ? await repository.getPrimaryChildOverview(parent.parentId)
           : await repository.getChildOverviewForParent(
               parent.parentId, childId);
-      final reports = await repository.getRecentReports(
-        overview.child.childId,
-        includeDraft: false,
-      );
       final today = DateTime.now();
-      final todayReport = await repository.getTodayReport(
-        overview.child.childId,
-        today,
-        includeDraft: false,
+
+      final childrenList = overview.allChildren.isNotEmpty
+          ? overview.allChildren
+          : [overview];
+
+      final allReportsMap = <String, List<DailyReport>>{};
+      final allTodayMap = <String, DailyReport?>{};
+
+      await Future.wait(childrenList.map((c) async {
+        final cid = c.child.childId;
+        try {
+          final results = await Future.wait([
+            repository.getRecentReports(cid, includeDraft: false),
+            repository.getTodayReport(cid, today, includeDraft: false),
+          ]);
+          allReportsMap[cid] = results[0] as List<DailyReport>;
+          allTodayMap[cid] = results[1] as DailyReport?;
+        } catch (_) {}
+      }));
+
+      final reports = allReportsMap[overview.child.childId] ?? const [];
+      final todayReport = allTodayMap[overview.child.childId];
+
+      final data = _ParentData(
+        parent,
+        overview,
+        reports,
+        todayReport,
+        allChildrenReports: allReportsMap,
+        allChildrenToday: allTodayMap,
       );
-      return _ParentData(parent, overview, reports, todayReport);
+      _lastData = data;
+      return data;
     } on DioException catch (e) {
       if (e.response?.statusCode == 404 ||
           (e.response?.data is Map &&
@@ -219,18 +246,31 @@ class _ParentFlowState extends State<ParentFlow> {
   void _openReport(_ParentData data, DailyReport report) {
     if (report.hasUnreadResponses) {
       final cleared = report.copyWith(unreadResponseCount: 0);
+      if (_lastData != null) {
+        _lastData = _lastData!.withReport(cleared);
+      }
       setState(() {
         future = future.then((current) => current.withReport(cleared));
       });
     }
+    final allChildrenList = data.overview.allChildren.isNotEmpty
+        ? data.overview.allChildren
+        : [data.overview];
+    final targetChildOverview = allChildrenList.firstWhere(
+      (c) => c.child.childId == report.childId,
+      orElse: () => data.overview,
+    );
     showParentReportSheet(
       context,
       report: report,
-      childName: data.overview.child.fullName,
-      teacherName: data.overview.teacherName,
+      childName: targetChildOverview.child.fullNameWithNickname,
+      teacherName: targetChildOverview.teacherName,
       repository: repository,
       onReportRead: (updated) {
         if (!mounted) return;
+        if (_lastData != null) {
+          _lastData = _lastData!.withReport(updated);
+        }
         setState(() {
           future = future.then((current) => current.withReport(updated));
         });
@@ -239,6 +279,16 @@ class _ParentFlowState extends State<ParentFlow> {
   }
 
   void _onPhoneUpdated(String phone) {
+    if (_lastData != null) {
+      _lastData = _ParentData(
+        _lastData!.parent.copyWith(phone: phone),
+        _lastData!.overview,
+        _lastData!.reports,
+        _lastData!.today,
+        allChildrenReports: _lastData!.allChildrenReports,
+        allChildrenToday: _lastData!.allChildrenToday,
+      );
+    }
     setState(() {
       future = future.then(
         (current) => _ParentData(
@@ -246,6 +296,8 @@ class _ParentFlowState extends State<ParentFlow> {
           current.overview,
           current.reports,
           current.today,
+          allChildrenReports: current.allChildrenReports,
+          allChildrenToday: current.allChildrenToday,
         ),
       );
     });
@@ -253,7 +305,93 @@ class _ParentFlowState extends State<ParentFlow> {
 
   void _onHealthUpdated(Child child) => _onChildUpdated(child);
 
+  void _onSelectChild(String childId) {
+    if (_selectedChildId == childId) return;
+    _selectedChildId = childId;
+    _pages.clear();
+
+    final current = _lastData;
+    if (current != null) {
+      final targetOverview = current.overview.allChildren.firstWhere(
+        (c) => c.child.childId == childId,
+        orElse: () => current.overview,
+      );
+      if (targetOverview.child.childId == childId) {
+        final cachedReports = current.allChildrenReports[childId] ?? const [];
+        final cachedToday = current.allChildrenToday[childId];
+        final immediateData = _ParentData(
+          current.parent,
+          targetOverview.copyWith(allChildren: current.overview.allChildren),
+          cachedReports,
+          cachedToday,
+          allChildrenReports: current.allChildrenReports,
+          allChildrenToday: current.allChildrenToday,
+        );
+        setState(() {
+          _lastData = immediateData;
+          future = _loadChildFast(current.parent, immediateData);
+        });
+        return;
+      }
+    }
+
+    setState(_reload);
+  }
+
+  Future<_ParentData> _loadChildFast(
+    Parent parent,
+    _ParentData immediateData,
+  ) async {
+    final targetChildId = immediateData.overview.child.childId;
+    try {
+      final today = DateTime.now();
+      final results = await Future.wait([
+        repository.getRecentReports(targetChildId, includeDraft: false),
+        repository.getTodayReport(targetChildId, today, includeDraft: false),
+      ]);
+      final reports = results[0] as List<DailyReport>;
+      final todayReport = results[1] as DailyReport?;
+      final allReports =
+          Map<String, List<DailyReport>>.from(immediateData.allChildrenReports);
+      final allToday =
+          Map<String, DailyReport?>.from(immediateData.allChildrenToday);
+      allReports[targetChildId] = reports;
+      allToday[targetChildId] = todayReport;
+      final fullData = _ParentData(
+        parent,
+        immediateData.overview,
+        reports,
+        todayReport,
+        allChildrenReports: allReports,
+        allChildrenToday: allToday,
+      );
+      if (mounted &&
+          (_selectedChildId == null || _selectedChildId == targetChildId)) {
+        setState(() {
+          _lastData = fullData;
+        });
+      }
+      return fullData;
+    } catch (_) {
+      return immediateData;
+    }
+  }
+
   void _onParentUpdated(String phone, String? email, String? relationship) {
+    if (_lastData != null) {
+      _lastData = _ParentData(
+        _lastData!.parent.copyWith(
+          phone: phone,
+          email: email,
+          relationship: relationship,
+        ),
+        _lastData!.overview,
+        _lastData!.reports,
+        _lastData!.today,
+        allChildrenReports: _lastData!.allChildrenReports,
+        allChildrenToday: _lastData!.allChildrenToday,
+      );
+    }
     setState(() {
       future = future.then(
         (current) => _ParentData(
@@ -265,26 +403,33 @@ class _ParentFlowState extends State<ParentFlow> {
           current.overview,
           current.reports,
           current.today,
+          allChildrenReports: current.allChildrenReports,
+          allChildrenToday: current.allChildrenToday,
         ),
       );
     });
   }
 
   void _onChildUpdated(Child updatedChild) {
+    if (_lastData != null) {
+      _lastData = _ParentData(
+        _lastData!.parent,
+        _lastData!.overview.copyWith(child: updatedChild),
+        _lastData!.reports,
+        _lastData!.today,
+        allChildrenReports: _lastData!.allChildrenReports,
+        allChildrenToday: _lastData!.allChildrenToday,
+      );
+    }
     setState(() {
       future = future.then(
         (current) => _ParentData(
           current.parent,
-          ChildOverview(
-            child: updatedChild,
-            className: current.overview.className,
-            teacherName: current.overview.teacherName,
-            teacherId: current.overview.teacherId,
-            teacherPhone: current.overview.teacherPhone,
-            roomNumber: current.overview.roomNumber,
-          ),
+          current.overview.copyWith(child: updatedChild),
           current.reports,
           current.today,
+          allChildrenReports: current.allChildrenReports,
+          allChildrenToday: current.allChildrenToday,
         ),
       );
     });
@@ -346,6 +491,9 @@ class _ParentFlowState extends State<ParentFlow> {
       try {
         final updated = await repository.markReportAsRead(report.dailyReportId);
         if (!mounted) return;
+        if (_lastData != null) {
+          _lastData = _lastData!.withReport(updated);
+        }
         setState(() {
           future = future.then((current) => current.withReport(updated));
         });
@@ -389,13 +537,14 @@ class _ParentFlowState extends State<ParentFlow> {
         future: future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done &&
-              !snapshot.hasData) {
+              !snapshot.hasData &&
+              _lastData == null) {
             return Scaffold(
               backgroundColor: context.k.canvas,
               body: const Center(child: CircularProgressIndicator()),
             );
           }
-          if (snapshot.hasError) {
+          if (snapshot.hasError && _lastData == null) {
             final error = snapshot.error;
             final isNoChild = error is NoChildAssignedException ||
                 error.toString().toLowerCase().contains('child not found') ||
@@ -434,7 +583,16 @@ class _ParentFlowState extends State<ParentFlow> {
               ),
             );
           }
-          final data = snapshot.data;
+          if (snapshot.connectionState == ConnectionState.done &&
+              snapshot.hasData) {
+            final completed = snapshot.data;
+            if (completed != null &&
+                (_selectedChildId == null ||
+                    completed.overview.child.childId == _selectedChildId)) {
+              _lastData = completed;
+            }
+          }
+          final data = _lastData ?? snapshot.data;
           if (data == null) {
             return Scaffold(
               backgroundColor: context.k.canvas,
@@ -455,17 +613,20 @@ class _ParentFlowState extends State<ParentFlow> {
               ),
             );
           }
+          _cachedParent = data.parent;
           final unread = _unreadCount(data);
           final page = _notificationsOpen
               ? ParentNotifications(
                   reports: data.notificationReports,
-                  childName: data.overview.child.fullName,
+                  children: data.overview.allChildren,
+                  childName: data.overview.child.fullNameWithNickname,
                   teacherName: data.overview.teacherName,
                   onOpenReport: (report) => _openReport(data, report),
                   onMarkAllRead: () => _markAllNotificationsRead(data),
                 )
               : _tab == 0
                   ? GardenVoiceParentOverview(
+                      key: const ValueKey('garden-voice-parent-overview'),
                       parent: data.parent,
                       overview: data.overview,
                       report: data.today,
@@ -475,6 +636,7 @@ class _ParentFlowState extends State<ParentFlow> {
                           setState(() => _notificationsOpen = true),
                       onOpenTimetable: () => _openTimetable(data),
                       onOpenRequests: () => _openRequests(data),
+                      onSelectChild: _onSelectChild,
                     )
                   : ParentAccount(
                       parent: data.parent,
@@ -487,6 +649,7 @@ class _ParentFlowState extends State<ParentFlow> {
                       onParentUpdated: _onParentUpdated,
                       onChildUpdated: _onChildUpdated,
                       onLogout: widget.onLogout,
+                      onSelectChild: _onSelectChild,
                       onOpenNotifications: () =>
                           setState(() => _notificationsOpen = true),
                     );
@@ -578,14 +741,23 @@ class _ParentFlowState extends State<ParentFlow> {
 }
 
 class _ParentData {
-  const _ParentData(this.parent, this.overview, this.reports, this.today);
+  const _ParentData(
+    this.parent,
+    this.overview,
+    this.reports,
+    this.today, {
+    this.allChildrenReports = const {},
+    this.allChildrenToday = const {},
+  });
   final Parent parent;
   final ChildOverview overview;
   final List<DailyReport> reports;
   final DailyReport? today;
+  final Map<String, List<DailyReport>> allChildrenReports;
+  final Map<String, DailyReport?> allChildrenToday;
 
   List<DailyReport> get notificationReports {
-    // Báo cáo hôm nay có thể đồng thời nằm trong lịch sử; ưu tiên dữ liệu mới nhất.
+    // Báo cáo của tất cả các bé liên kết, ưu tiên dữ liệu mới nhất.
     final unique = <String, DailyReport>{};
     for (final report in [if (today != null) today!, ...reports]) {
       if (report.status == domain_status.ReportStatus.published ||
@@ -593,19 +765,45 @@ class _ParentData {
         unique.putIfAbsent(report.dailyReportId, () => report);
       }
     }
+    for (final entry in allChildrenReports.entries) {
+      final childToday = allChildrenToday[entry.key];
+      for (final report in [if (childToday != null) childToday, ...entry.value]) {
+        if (report.status == domain_status.ReportStatus.published ||
+            report.status == domain_status.ReportStatus.read) {
+          unique.putIfAbsent(report.dailyReportId, () => report);
+        }
+      }
+    }
     return unique.values.toList()
       ..sort((a, b) => (b.publishedAt ?? b.reportDate)
           .compareTo(a.publishedAt ?? a.reportDate));
   }
 
-  _ParentData withReport(DailyReport updated) => _ParentData(
-        parent,
-        overview,
-        reports
-            .map((r) => r.dailyReportId == updated.dailyReportId ? updated : r)
-            .toList(),
-        today?.dailyReportId == updated.dailyReportId ? updated : today,
-      );
+  _ParentData withReport(DailyReport updated) {
+    final updatedAllReports = <String, List<DailyReport>>{};
+    for (final entry in allChildrenReports.entries) {
+      updatedAllReports[entry.key] = entry.value
+          .map((r) => r.dailyReportId == updated.dailyReportId ? updated : r)
+          .toList();
+    }
+    final updatedAllToday = <String, DailyReport?>{};
+    for (final entry in allChildrenToday.entries) {
+      updatedAllToday[entry.key] =
+          entry.value?.dailyReportId == updated.dailyReportId
+              ? updated
+              : entry.value;
+    }
+    return _ParentData(
+      parent,
+      overview,
+      reports
+          .map((r) => r.dailyReportId == updated.dailyReportId ? updated : r)
+          .toList(),
+      today?.dailyReportId == updated.dailyReportId ? updated : today,
+      allChildrenReports: updatedAllReports,
+      allChildrenToday: updatedAllToday,
+    );
+  }
 }
 
 /// Sheet báo cáo hằng ngày — mở từ card báo cáo, danh sách gần đây,

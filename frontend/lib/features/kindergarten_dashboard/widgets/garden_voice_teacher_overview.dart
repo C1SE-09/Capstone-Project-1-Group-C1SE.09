@@ -24,6 +24,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
     this.onOpenMedications,
     this.onEmergencyAlert,
     this.onHealth,
+    this.onSelectChild,
     this.onRefresh,
   });
 
@@ -38,6 +39,7 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
   final VoidCallback? onOpenMedications;
   final VoidCallback? onEmergencyAlert;
   final VoidCallback? onHealth;
+  final ValueChanged<String>? onSelectChild;
   final Future<void> Function()? onRefresh;
 
   int get _presentCount => attendance.values
@@ -63,19 +65,28 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
     };
     final items = <_CareItem>[
       for (final item in dashboard.pendingChildren)
-        if (item.child.allergy case final allergy?)
+        if ((item.child.careNotes ?? '').trim().isNotEmpty)
           _CareItem(
-            name: item.child.displayName,
+            name: item.child.fullNameWithNickname,
+            detail: item.child.careNotes!.trim(),
+            kind: _CareKind.health,
+            childId: item.child.childId,
+          )
+        else if (item.child.allergy case final allergy?)
+          _CareItem(
+            name: item.child.fullNameWithNickname,
             detail: 'Dị ứng $allergy',
             kind: _CareKind.health,
+            childId: item.child.childId,
           ),
       for (final entry in attendance.entries)
         if (entry.value.status == AttendanceStatus.late &&
             children[entry.key] != null)
           _CareItem(
-            name: children[entry.key]!.displayName,
+            name: children[entry.key]!.fullNameWithNickname,
             detail: _lateLabel(entry.value),
             kind: _CareKind.late,
+            childId: entry.key,
           ),
     ];
     return items.take(2).toList(growable: false);
@@ -222,9 +233,16 @@ class GardenVoiceTeacherOverview extends StatelessWidget {
                             index++) ...[
                           _CareRow(
                             item: careItems[index],
-                            onTap: careItems[index].kind == _CareKind.health
-                                ? onHealth
-                                : onOpenAttendance,
+                            onTap: () {
+                              final cid = careItems[index].childId;
+                              if (cid != null && onSelectChild != null) {
+                                onSelectChild!(cid);
+                              } else if (careItems[index].kind == _CareKind.health) {
+                                onHealth?.call();
+                              } else {
+                                onOpenAttendance?.call();
+                              }
+                            },
                           ),
                           if (index < careItems.length - 1)
                             Padding(
@@ -637,11 +655,13 @@ class _CareItem {
     required this.name,
     required this.detail,
     required this.kind,
+    this.childId,
   });
 
   final String name;
   final String detail;
   final _CareKind kind;
+  final String? childId;
 }
 
 class _CareRow extends StatelessWidget {
@@ -655,10 +675,11 @@ class _CareRow extends StatelessWidget {
     final k = context.k;
     final isHealth = item.kind == _CareKind.health;
     final pair = isHealth ? (k.accentTint, k.accentDeep) : (k.badTint, k.bad);
-    final words = item.name.trim().split(RegExp(r'\s+'));
+    final cleanName = item.name.replaceAll(RegExp(r'\(.*?\)'), '').trim();
+    final words = cleanName.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     final initials = words.length > 1
-        ? '${words[0].characters.first}${words.last.characters.first}'
-        : words.first.characters.first;
+        ? '${words.first.characters.first}${words.last.characters.first}'
+        : (words.isNotEmpty ? words.first.characters.first : '?');
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),

@@ -67,7 +67,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (_query.trim().isEmpty) return widget.roster;
     final q = _query.trim().toLowerCase();
     return widget.roster.where((c) {
-      return c.name.toLowerCase().contains(q) ||
+      return c.fullNameWithNickname.toLowerCase().contains(q) ||
           (c.nickname?.toLowerCase().contains(q) ?? false);
     }).toList();
   }
@@ -929,7 +929,7 @@ class _AttendanceRow extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  student.name,
+                  student.fullNameWithNickname,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1140,7 +1140,7 @@ class _AbsentNotificationSheet extends StatelessWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(child: Text(_initials(student.name))),
-                title: Text(student.name),
+                title: Text(student.fullNameWithNickname),
               ),
             const SizedBox(height: 16),
             if (largeText) ...[
