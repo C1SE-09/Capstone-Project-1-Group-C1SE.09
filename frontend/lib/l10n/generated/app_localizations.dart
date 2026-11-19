@@ -1285,6 +1285,648 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Voice message'**
   String get voiceChatDefaultContent;
+
+  /// No description provided for @parentGreetingGoodMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning,'**
+  String get parentGreetingGoodMorning;
+
+  /// No description provided for @parentTodayReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Report'**
+  String get parentTodayReport;
+
+  /// No description provided for @parentNoReportToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No report for today yet.'**
+  String get parentNoReportToday;
+
+  /// No description provided for @parentNoAttendanceToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No attendance update for today'**
+  String get parentNoAttendanceToday;
+
+  /// No description provided for @parentAllergyPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Allergy: {allergy}'**
+  String parentAllergyPrefix(String allergy);
+
+  /// No description provided for @parentTeacherNoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Note from {teacherName}'**
+  String parentTeacherNoteTitle(String teacherName);
+
+  /// No description provided for @parentTimetableShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable'**
+  String get parentTimetableShortcut;
+
+  /// No description provided for @parentRequestsShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave · Late'**
+  String get parentRequestsShortcut;
+
+  /// No description provided for @parentUnreadReportsBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No unread reports} =1{1 unread report} other{{count} unread reports}}'**
+  String parentUnreadReportsBadge(int count);
+
+  /// No description provided for @parentLoadDataError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load parent data.'**
+  String get parentLoadDataError;
+
+  /// No description provided for @parentOpenReportError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open this report. Please try again later.'**
+  String get parentOpenReportError;
+
+  /// No description provided for @parentNoDataForDay.
+  ///
+  /// In en, this message translates to:
+  /// **'No recorded data for this day.'**
+  String get parentNoDataForDay;
+
+  /// No description provided for @parentDailyReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Report'**
+  String get parentDailyReportTitle;
+
+  /// No description provided for @recordMealItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals'**
+  String get recordMealItem;
+
+  /// No description provided for @recordNapItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep'**
+  String get recordNapItem;
+
+  /// No description provided for @recordActivityItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get recordActivityItem;
+
+  /// No description provided for @commonNotUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Not updated'**
+  String get commonNotUpdated;
+
+  /// No description provided for @commonAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get commonAll;
+
+  /// No description provided for @parentSectionFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get parentSectionFamily;
+
+  /// No description provided for @parentContactInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Information'**
+  String get parentContactInfo;
+
+  /// No description provided for @parentChildHealthProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Child Details · Health Profile'**
+  String get parentChildHealthProfile;
+
+  /// No description provided for @parentAllergyCareNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Allergies & Care Notes'**
+  String get parentAllergyCareNotes;
+
+  /// No description provided for @parentSectionPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get parentSectionPreferences;
+
+  /// No description provided for @parentPushEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled on device'**
+  String get parentPushEnabled;
+
+  /// No description provided for @parentPushDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled on device'**
+  String get parentPushDisabled;
+
+  /// No description provided for @parentFamilySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Family has {count, plural, =1{1 enrolled child} other{{count} enrolled children}}'**
+  String parentFamilySummary(int count);
+
+  /// No description provided for @parentSelectChild.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Child'**
+  String get parentSelectChild;
+
+  /// No description provided for @parentSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get parentSelected;
+
+  /// No description provided for @parentDateOfBirth.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of Birth'**
+  String get parentDateOfBirth;
+
+  /// No description provided for @parentNickname.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname: {nickname}'**
+  String parentNickname(String nickname);
+
+  /// No description provided for @parentViewDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'View ›'**
+  String get parentViewDetail;
+
+  /// No description provided for @parentReadReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Read report ›'**
+  String get parentReadReport;
+
+  /// No description provided for @parentCopyPhoneTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy phone number'**
+  String get parentCopyPhoneTooltip;
+
+  /// No description provided for @parentCopiedPhoneSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number copied'**
+  String get parentCopiedPhoneSnackbar;
+
+  /// No description provided for @parentAccountChildPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent account of {childName}'**
+  String parentAccountChildPrefix(String childName);
+
+  /// No description provided for @parentFullNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name'**
+  String get parentFullNameLabel;
+
+  /// No description provided for @parentRelationshipLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Role / Relationship'**
+  String get parentRelationshipLabel;
+
+  /// No description provided for @parentNoAllergyRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'No allergies recorded'**
+  String get parentNoAllergyRecorded;
+
+  /// No description provided for @parentHasAllergy.
+  ///
+  /// In en, this message translates to:
+  /// **'Has allergies'**
+  String get parentHasAllergy;
+
+  /// No description provided for @parentNoAllergy.
+  ///
+  /// In en, this message translates to:
+  /// **'No allergies'**
+  String get parentNoAllergy;
+
+  /// No description provided for @parentAllergyNotDeclared.
+  ///
+  /// In en, this message translates to:
+  /// **'Not declared'**
+  String get parentAllergyNotDeclared;
+
+  /// No description provided for @parentJourneyDaysText.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days journeying with KinderLog'**
+  String parentJourneyDaysText(int days);
+
+  /// No description provided for @parentEditInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Information'**
+  String get parentEditInfo;
+
+  /// No description provided for @parentEditContactInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Contact Information'**
+  String get parentEditContactInfo;
+
+  /// No description provided for @parentHealthChangeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change allergy information?'**
+  String get parentHealthChangeConfirmTitle;
+
+  /// No description provided for @parentHealthChangeConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing allergy information will be overwritten after saving.'**
+  String get parentHealthChangeConfirmMessage;
+
+  /// No description provided for @parentHealthContinueEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Editing'**
+  String get parentHealthContinueEditing;
+
+  /// No description provided for @parentHealthDiscardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes?'**
+  String get parentHealthDiscardTitle;
+
+  /// No description provided for @parentHealthDiscardMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes you just made will not be saved.'**
+  String get parentHealthDiscardMessage;
+
+  /// No description provided for @parentHealthDiscardAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get parentHealthDiscardAction;
+
+  /// No description provided for @parentHealthUpdateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Health information updated'**
+  String get parentHealthUpdateSuccess;
+
+  /// No description provided for @parentHealthLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load health profile.'**
+  String get parentHealthLoadError;
+
+  /// No description provided for @parentHealthAllergyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Allergy Status'**
+  String get parentHealthAllergyStatus;
+
+  /// No description provided for @parentHealthCareNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Care Notes'**
+  String get parentHealthCareNotes;
+
+  /// No description provided for @teacherGreetingGoodMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning,'**
+  String get teacherGreetingGoodMorning;
+
+  /// No description provided for @teacherAttentionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Attention'**
+  String get teacherAttentionTitle;
+
+  /// No description provided for @teacherNoAttentionToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No special notes today.'**
+  String get teacherNoAttentionToday;
+
+  /// No description provided for @teacherRecordBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record the day\nfor children'**
+  String get teacherRecordBannerTitle;
+
+  /// No description provided for @teacherRecordBannerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals, nap, activities and care notes.'**
+  String get teacherRecordBannerSubtitle;
+
+  /// No description provided for @teacherStartReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Daily Report'**
+  String get teacherStartReport;
+
+  /// No description provided for @teacherTodayAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Attendance'**
+  String get teacherTodayAttendance;
+
+  /// No description provided for @teacherReportIncident.
+  ///
+  /// In en, this message translates to:
+  /// **'Incident'**
+  String get teacherReportIncident;
+
+  /// No description provided for @teacherSendToParents.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to Parents'**
+  String get teacherSendToParents;
+
+  /// No description provided for @teacherSearchChildHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search child name...'**
+  String get teacherSearchChildHint;
+
+  /// No description provided for @teacherNoChildrenFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching children found'**
+  String get teacherNoChildrenFound;
+
+  /// No description provided for @teacherOverviewLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load overview · Retry'**
+  String get teacherOverviewLoadError;
+
+  /// No description provided for @teacherNoSchoolInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'School info unavailable'**
+  String get teacherNoSchoolInfo;
+
+  /// No description provided for @attendanceSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Attendance'**
+  String get attendanceSaveButton;
+
+  /// No description provided for @attendanceDiscardConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard attendance changes?'**
+  String get attendanceDiscardConfirmTitle;
+
+  /// No description provided for @attendanceDiscardConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes on attendance cards will not be saved.'**
+  String get attendanceDiscardConfirmMessage;
+
+  /// No description provided for @attendanceContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Attendance'**
+  String get attendanceContinue;
+
+  /// No description provided for @attendanceDiscardAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get attendanceDiscardAction;
+
+  /// No description provided for @dayMonday.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get dayMonday;
+
+  /// No description provided for @dayTuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get dayTuesday;
+
+  /// No description provided for @dayWednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get dayWednesday;
+
+  /// No description provided for @dayThursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get dayThursday;
+
+  /// No description provided for @dayFriday.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get dayFriday;
+
+  /// No description provided for @daySaturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get daySaturday;
+
+  /// No description provided for @daySunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get daySunday;
+
+  /// No description provided for @dayShortMon.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get dayShortMon;
+
+  /// No description provided for @dayShortTue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get dayShortTue;
+
+  /// No description provided for @dayShortWed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get dayShortWed;
+
+  /// No description provided for @dayShortThu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get dayShortThu;
+
+  /// No description provided for @dayShortFri.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get dayShortFri;
+
+  /// No description provided for @dayShortSat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get dayShortSat;
+
+  /// No description provided for @dayShortSun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get dayShortSun;
+
+  /// No description provided for @timetableMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning'**
+  String get timetableMorning;
+
+  /// No description provided for @timetableAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Afternoon'**
+  String get timetableAfternoon;
+
+  /// No description provided for @timetableEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No classes scheduled'**
+  String get timetableEmpty;
+
+  /// No description provided for @parentRequestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave / Late Requests'**
+  String get parentRequestsTitle;
+
+  /// No description provided for @parentRequestsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Request'**
+  String get parentRequestsNew;
+
+  /// No description provided for @leaveRequestsCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get leaveRequestsCancelled;
+
+  /// No description provided for @leaveTypeAbsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Absent'**
+  String get leaveTypeAbsent;
+
+  /// No description provided for @leaveTypeLate.
+  ///
+  /// In en, this message translates to:
+  /// **'Late Arrival'**
+  String get leaveTypeLate;
+
+  /// No description provided for @parentRequestsFormTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Leave / Late Request'**
+  String get parentRequestsFormTitle;
+
+  /// No description provided for @parentRequestsTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Type'**
+  String get parentRequestsTypeLabel;
+
+  /// No description provided for @parentRequestsFromDate.
+  ///
+  /// In en, this message translates to:
+  /// **'From Date'**
+  String get parentRequestsFromDate;
+
+  /// No description provided for @parentRequestsToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'To Date'**
+  String get parentRequestsToDate;
+
+  /// No description provided for @parentRequestsLateDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Late Date'**
+  String get parentRequestsLateDate;
+
+  /// No description provided for @parentRequestsExpectedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected Arrival Time'**
+  String get parentRequestsExpectedTime;
+
+  /// No description provided for @parentRequestsReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get parentRequestsReasonLabel;
+
+  /// No description provided for @parentRequestsSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Request'**
+  String get parentRequestsSubmit;
+
+  /// No description provided for @aboutAppTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Kindergarten Communication & Reporting'**
+  String get aboutAppTagline;
+
+  /// No description provided for @aboutAppDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Comprehensive administrative & digital connection between School · Teachers · Parents.'**
+  String get aboutAppDescription;
+
+  /// No description provided for @voiceChatInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a reply...'**
+  String get voiceChatInputHint;
+
+  /// No description provided for @voiceChatRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording...'**
+  String get voiceChatRecording;
+
+  /// No description provided for @voiceChatSendReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reply'**
+  String get voiceChatSendReply;
 }
 
 class _AppLocalizationsDelegate

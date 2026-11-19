@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_report_response_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
@@ -299,7 +300,7 @@ class _VoiceMessageBubbleWidgetState extends State<VoiceMessageBubbleWidget> {
                     ),
                     if (_hasError)
                       Text(
-                        'Lỗi tải audio',
+                        context.l10n?.voiceChatLoadError ?? 'Lỗi tải audio',
                         style: TextStyle(
                           fontSize: 10,
                           color: context.k.bad,

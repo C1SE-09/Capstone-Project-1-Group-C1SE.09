@@ -636,4 +636,345 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get voiceChatDefaultContent => 'Tin nhắn thoại';
+
+  @override
+  String get parentGreetingGoodMorning => 'Chào buổi sáng,';
+
+  @override
+  String get parentTodayReport => 'Báo cáo hôm nay';
+
+  @override
+  String get parentNoReportToday => 'Chưa có báo cáo hôm nay.';
+
+  @override
+  String get parentNoAttendanceToday => 'Chưa có cập nhật điểm danh hôm nay';
+
+  @override
+  String parentAllergyPrefix(String allergy) {
+    return 'Dị ứng: $allergy';
+  }
+
+  @override
+  String parentTeacherNoteTitle(String teacherName) {
+    return 'Lời nhắn của $teacherName';
+  }
+
+  @override
+  String get parentTimetableShortcut => 'Lịch học';
+
+  @override
+  String get parentRequestsShortcut => 'Xin nghỉ · Trễ';
+
+  @override
+  String parentUnreadReportsBadge(int count) {
+    return '$count báo cáo chưa đọc';
+  }
+
+  @override
+  String get parentLoadDataError => 'Không tải được dữ liệu phụ huynh.';
+
+  @override
+  String get parentOpenReportError =>
+      'Không thể mở báo cáo này. Vui lòng thử lại sau.';
+
+  @override
+  String get parentNoDataForDay => 'Chưa có thông tin ghi nhận cho ngày này.';
+
+  @override
+  String get parentDailyReportTitle => 'Báo cáo ngày';
+
+  @override
+  String get recordMealItem => 'Ăn uống';
+
+  @override
+  String get recordNapItem => 'Giấc ngủ';
+
+  @override
+  String get recordActivityItem => 'Hoạt động';
+
+  @override
+  String get commonNotUpdated => 'Chưa cập nhật';
+
+  @override
+  String get commonAll => 'Tất cả';
+
+  @override
+  String get parentSectionFamily => 'Gia đình';
+
+  @override
+  String get parentContactInfo => 'Thông tin liên hệ';
+
+  @override
+  String get parentChildHealthProfile => 'Thông tin bé · Hồ sơ sức khỏe';
+
+  @override
+  String get parentAllergyCareNotes => 'Dị ứng và lưu ý chăm sóc';
+
+  @override
+  String get parentSectionPreferences => 'Tùy chọn';
+
+  @override
+  String get parentPushEnabled => 'Đã bật trên thiết bị';
+
+  @override
+  String get parentPushDisabled => 'Đã tắt trên thiết bị';
+
+  @override
+  String parentFamilySummary(int count) {
+    return 'Gia đình có $count bé đang theo học';
+  }
+
+  @override
+  String get parentSelectChild => 'Chọn thông tin bé';
+
+  @override
+  String get parentSelected => 'Đang chọn';
+
+  @override
+  String get parentDateOfBirth => 'Ngày sinh';
+
+  @override
+  String parentNickname(String nickname) {
+    return 'Biệt danh: $nickname';
+  }
+
+  @override
+  String get parentViewDetail => 'Xem ›';
+
+  @override
+  String get parentReadReport => 'Đọc báo cáo ›';
+
+  @override
+  String get parentCopyPhoneTooltip => 'Sao chép số điện thoại';
+
+  @override
+  String get parentCopiedPhoneSnackbar => 'Đã sao chép số điện thoại';
+
+  @override
+  String parentAccountChildPrefix(String childName) {
+    return 'Tài khoản phụ huynh của bé $childName';
+  }
+
+  @override
+  String get parentFullNameLabel => 'Họ và tên';
+
+  @override
+  String get parentRelationshipLabel => 'Vai trò / Mối quan hệ';
+
+  @override
+  String get parentNoAllergyRecorded => 'Không có ghi nhận dị ứng';
+
+  @override
+  String get parentHasAllergy => 'Có dị ứng';
+
+  @override
+  String get parentNoAllergy => 'Không có dị ứng';
+
+  @override
+  String get parentAllergyNotDeclared => 'Chưa khai báo';
+
+  @override
+  String parentJourneyDaysText(int days) {
+    return '$days ngày đồng hành cùng KinderLog';
+  }
+
+  @override
+  String get parentEditInfo => 'Chỉnh sửa thông tin';
+
+  @override
+  String get parentEditContactInfo => 'Sửa thông tin liên hệ';
+
+  @override
+  String get parentHealthChangeConfirmTitle => 'Thay đổi thông tin dị ứng?';
+
+  @override
+  String get parentHealthChangeConfirmMessage =>
+      'Thông tin dị ứng hiện có sẽ được thay thế sau khi lưu.';
+
+  @override
+  String get parentHealthContinueEditing => 'Tiếp tục chỉnh sửa';
+
+  @override
+  String get parentHealthDiscardTitle => 'Bỏ thay đổi?';
+
+  @override
+  String get parentHealthDiscardMessage =>
+      'Những thay đổi bạn vừa nhập sẽ không được lưu.';
+
+  @override
+  String get parentHealthDiscardAction => 'Bỏ thay đổi';
+
+  @override
+  String get parentHealthUpdateSuccess => 'Đã cập nhật thông tin sức khỏe';
+
+  @override
+  String get parentHealthLoadError => 'Không tải được hồ sơ sức khỏe.';
+
+  @override
+  String get parentHealthAllergyStatus => 'Trạng thái dị ứng';
+
+  @override
+  String get parentHealthCareNotes => 'Lưu ý chăm sóc';
+
+  @override
+  String get teacherGreetingGoodMorning => 'Chào buổi sáng,';
+
+  @override
+  String get teacherAttentionTitle => 'Cần chú ý';
+
+  @override
+  String get teacherNoAttentionToday => 'Chưa có lưu ý đặc biệt hôm nay.';
+
+  @override
+  String get teacherRecordBannerTitle => 'Ghi lại một ngày\ncủa bé';
+
+  @override
+  String get teacherRecordBannerSubtitle =>
+      'Ăn, ngủ, học và những điều cần lưu ý.';
+
+  @override
+  String get teacherStartReport => 'Bắt đầu báo cáo';
+
+  @override
+  String get teacherTodayAttendance => 'Điểm danh hôm nay';
+
+  @override
+  String get teacherReportIncident => 'Báo sự cố';
+
+  @override
+  String get teacherSendToParents => 'Gửi phụ huynh';
+
+  @override
+  String get teacherSearchChildHint => 'Tìm tên bé…';
+
+  @override
+  String get teacherNoChildrenFound => 'Không tìm thấy trẻ phù hợp';
+
+  @override
+  String get teacherOverviewLoadError => 'Không tải được tổng quan · Thử lại';
+
+  @override
+  String get teacherNoSchoolInfo => 'Chưa có thông tin trường';
+
+  @override
+  String get attendanceSaveButton => 'Lưu điểm danh';
+
+  @override
+  String get attendanceDiscardConfirmTitle => 'Bỏ thay đổi điểm danh?';
+
+  @override
+  String get attendanceDiscardConfirmMessage =>
+      'Các thay đổi trên thẻ điểm danh sẽ không được lưu.';
+
+  @override
+  String get attendanceContinue => 'Tiếp tục điểm danh';
+
+  @override
+  String get attendanceDiscardAction => 'Bỏ thay đổi';
+
+  @override
+  String get dayMonday => 'Thứ Hai';
+
+  @override
+  String get dayTuesday => 'Thứ Ba';
+
+  @override
+  String get dayWednesday => 'Thứ Tư';
+
+  @override
+  String get dayThursday => 'Thứ Năm';
+
+  @override
+  String get dayFriday => 'Thứ Sáu';
+
+  @override
+  String get daySaturday => 'Thứ Bảy';
+
+  @override
+  String get daySunday => 'Chủ Nhật';
+
+  @override
+  String get dayShortMon => 'T2';
+
+  @override
+  String get dayShortTue => 'T3';
+
+  @override
+  String get dayShortWed => 'T4';
+
+  @override
+  String get dayShortThu => 'T5';
+
+  @override
+  String get dayShortFri => 'T6';
+
+  @override
+  String get dayShortSat => 'T7';
+
+  @override
+  String get dayShortSun => 'CN';
+
+  @override
+  String get timetableMorning => 'Buổi sáng';
+
+  @override
+  String get timetableAfternoon => 'Buổi chiều';
+
+  @override
+  String get timetableEmpty => 'Chưa có lịch học';
+
+  @override
+  String get parentRequestsTitle => 'Xin phép nghỉ / báo trễ';
+
+  @override
+  String get parentRequestsNew => 'Tạo đơn mới';
+
+  @override
+  String get leaveRequestsCancelled => 'Đã hủy';
+
+  @override
+  String get leaveTypeAbsent => 'Nghỉ học';
+
+  @override
+  String get leaveTypeLate => 'Báo đi trễ';
+
+  @override
+  String get parentRequestsFormTitle => 'Tạo đơn xin nghỉ / đi trễ';
+
+  @override
+  String get parentRequestsTypeLabel => 'Loại yêu cầu';
+
+  @override
+  String get parentRequestsFromDate => 'Từ ngày';
+
+  @override
+  String get parentRequestsToDate => 'Đến ngày';
+
+  @override
+  String get parentRequestsLateDate => 'Ngày đi trễ';
+
+  @override
+  String get parentRequestsExpectedTime => 'Giờ dự kiến đến';
+
+  @override
+  String get parentRequestsReasonLabel => 'Lý do';
+
+  @override
+  String get parentRequestsSubmit => 'Gửi đơn';
+
+  @override
+  String get aboutAppTagline => 'Sổ liên lạc & Báo cáo mầm non thông minh';
+
+  @override
+  String get aboutAppDescription =>
+      'Hệ thống quản trị và kết nối số toàn diện giữa Nhà trường · Giáo viên · Phụ huynh.';
+
+  @override
+  String get voiceChatInputHint => 'Nhập tin nhắn phản hồi...';
+
+  @override
+  String get voiceChatRecording => 'Đang ghi âm...';
+
+  @override
+  String get voiceChatSendReply => 'Gửi phản hồi';
 }

@@ -637,4 +637,358 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceChatDefaultContent => 'Voice message';
+
+  @override
+  String get parentGreetingGoodMorning => 'Good morning,';
+
+  @override
+  String get parentTodayReport => 'Today\'s Report';
+
+  @override
+  String get parentNoReportToday => 'No report for today yet.';
+
+  @override
+  String get parentNoAttendanceToday => 'No attendance update for today';
+
+  @override
+  String parentAllergyPrefix(String allergy) {
+    return 'Allergy: $allergy';
+  }
+
+  @override
+  String parentTeacherNoteTitle(String teacherName) {
+    return 'Note from $teacherName';
+  }
+
+  @override
+  String get parentTimetableShortcut => 'Timetable';
+
+  @override
+  String get parentRequestsShortcut => 'Leave · Late';
+
+  @override
+  String parentUnreadReportsBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unread reports',
+      one: '1 unread report',
+      zero: 'No unread reports',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get parentLoadDataError => 'Unable to load parent data.';
+
+  @override
+  String get parentOpenReportError =>
+      'Unable to open this report. Please try again later.';
+
+  @override
+  String get parentNoDataForDay => 'No recorded data for this day.';
+
+  @override
+  String get parentDailyReportTitle => 'Daily Report';
+
+  @override
+  String get recordMealItem => 'Meals';
+
+  @override
+  String get recordNapItem => 'Sleep';
+
+  @override
+  String get recordActivityItem => 'Activities';
+
+  @override
+  String get commonNotUpdated => 'Not updated';
+
+  @override
+  String get commonAll => 'All';
+
+  @override
+  String get parentSectionFamily => 'Family';
+
+  @override
+  String get parentContactInfo => 'Contact Information';
+
+  @override
+  String get parentChildHealthProfile => 'Child Details · Health Profile';
+
+  @override
+  String get parentAllergyCareNotes => 'Allergies & Care Notes';
+
+  @override
+  String get parentSectionPreferences => 'Preferences';
+
+  @override
+  String get parentPushEnabled => 'Enabled on device';
+
+  @override
+  String get parentPushDisabled => 'Disabled on device';
+
+  @override
+  String parentFamilySummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count enrolled children',
+      one: '1 enrolled child',
+    );
+    return 'Family has $_temp0';
+  }
+
+  @override
+  String get parentSelectChild => 'Select Child';
+
+  @override
+  String get parentSelected => 'Selected';
+
+  @override
+  String get parentDateOfBirth => 'Date of Birth';
+
+  @override
+  String parentNickname(String nickname) {
+    return 'Nickname: $nickname';
+  }
+
+  @override
+  String get parentViewDetail => 'View ›';
+
+  @override
+  String get parentReadReport => 'Read report ›';
+
+  @override
+  String get parentCopyPhoneTooltip => 'Copy phone number';
+
+  @override
+  String get parentCopiedPhoneSnackbar => 'Phone number copied';
+
+  @override
+  String parentAccountChildPrefix(String childName) {
+    return 'Parent account of $childName';
+  }
+
+  @override
+  String get parentFullNameLabel => 'Full Name';
+
+  @override
+  String get parentRelationshipLabel => 'Role / Relationship';
+
+  @override
+  String get parentNoAllergyRecorded => 'No allergies recorded';
+
+  @override
+  String get parentHasAllergy => 'Has allergies';
+
+  @override
+  String get parentNoAllergy => 'No allergies';
+
+  @override
+  String get parentAllergyNotDeclared => 'Not declared';
+
+  @override
+  String parentJourneyDaysText(int days) {
+    return '$days days journeying with KinderLog';
+  }
+
+  @override
+  String get parentEditInfo => 'Edit Information';
+
+  @override
+  String get parentEditContactInfo => 'Edit Contact Information';
+
+  @override
+  String get parentHealthChangeConfirmTitle => 'Change allergy information?';
+
+  @override
+  String get parentHealthChangeConfirmMessage =>
+      'Existing allergy information will be overwritten after saving.';
+
+  @override
+  String get parentHealthContinueEditing => 'Continue Editing';
+
+  @override
+  String get parentHealthDiscardTitle => 'Discard changes?';
+
+  @override
+  String get parentHealthDiscardMessage =>
+      'Changes you just made will not be saved.';
+
+  @override
+  String get parentHealthDiscardAction => 'Discard';
+
+  @override
+  String get parentHealthUpdateSuccess => 'Health information updated';
+
+  @override
+  String get parentHealthLoadError => 'Unable to load health profile.';
+
+  @override
+  String get parentHealthAllergyStatus => 'Allergy Status';
+
+  @override
+  String get parentHealthCareNotes => 'Care Notes';
+
+  @override
+  String get teacherGreetingGoodMorning => 'Good morning,';
+
+  @override
+  String get teacherAttentionTitle => 'Needs Attention';
+
+  @override
+  String get teacherNoAttentionToday => 'No special notes today.';
+
+  @override
+  String get teacherRecordBannerTitle => 'Record the day\nfor children';
+
+  @override
+  String get teacherRecordBannerSubtitle =>
+      'Meals, nap, activities and care notes.';
+
+  @override
+  String get teacherStartReport => 'Start Daily Report';
+
+  @override
+  String get teacherTodayAttendance => 'Today\'s Attendance';
+
+  @override
+  String get teacherReportIncident => 'Incident';
+
+  @override
+  String get teacherSendToParents => 'Send to Parents';
+
+  @override
+  String get teacherSearchChildHint => 'Search child name...';
+
+  @override
+  String get teacherNoChildrenFound => 'No matching children found';
+
+  @override
+  String get teacherOverviewLoadError => 'Unable to load overview · Retry';
+
+  @override
+  String get teacherNoSchoolInfo => 'School info unavailable';
+
+  @override
+  String get attendanceSaveButton => 'Save Attendance';
+
+  @override
+  String get attendanceDiscardConfirmTitle => 'Discard attendance changes?';
+
+  @override
+  String get attendanceDiscardConfirmMessage =>
+      'Changes on attendance cards will not be saved.';
+
+  @override
+  String get attendanceContinue => 'Continue Attendance';
+
+  @override
+  String get attendanceDiscardAction => 'Discard';
+
+  @override
+  String get dayMonday => 'Monday';
+
+  @override
+  String get dayTuesday => 'Tuesday';
+
+  @override
+  String get dayWednesday => 'Wednesday';
+
+  @override
+  String get dayThursday => 'Thursday';
+
+  @override
+  String get dayFriday => 'Friday';
+
+  @override
+  String get daySaturday => 'Saturday';
+
+  @override
+  String get daySunday => 'Sunday';
+
+  @override
+  String get dayShortMon => 'Mon';
+
+  @override
+  String get dayShortTue => 'Tue';
+
+  @override
+  String get dayShortWed => 'Wed';
+
+  @override
+  String get dayShortThu => 'Thu';
+
+  @override
+  String get dayShortFri => 'Fri';
+
+  @override
+  String get dayShortSat => 'Sat';
+
+  @override
+  String get dayShortSun => 'Sun';
+
+  @override
+  String get timetableMorning => 'Morning';
+
+  @override
+  String get timetableAfternoon => 'Afternoon';
+
+  @override
+  String get timetableEmpty => 'No classes scheduled';
+
+  @override
+  String get parentRequestsTitle => 'Leave / Late Requests';
+
+  @override
+  String get parentRequestsNew => 'New Request';
+
+  @override
+  String get leaveRequestsCancelled => 'Cancelled';
+
+  @override
+  String get leaveTypeAbsent => 'Absent';
+
+  @override
+  String get leaveTypeLate => 'Late Arrival';
+
+  @override
+  String get parentRequestsFormTitle => 'Create Leave / Late Request';
+
+  @override
+  String get parentRequestsTypeLabel => 'Request Type';
+
+  @override
+  String get parentRequestsFromDate => 'From Date';
+
+  @override
+  String get parentRequestsToDate => 'To Date';
+
+  @override
+  String get parentRequestsLateDate => 'Late Date';
+
+  @override
+  String get parentRequestsExpectedTime => 'Expected Arrival Time';
+
+  @override
+  String get parentRequestsReasonLabel => 'Reason';
+
+  @override
+  String get parentRequestsSubmit => 'Submit Request';
+
+  @override
+  String get aboutAppTagline => 'Smart Kindergarten Communication & Reporting';
+
+  @override
+  String get aboutAppDescription =>
+      'Comprehensive administrative & digital connection between School · Teachers · Parents.';
+
+  @override
+  String get voiceChatInputHint => 'Type a reply...';
+
+  @override
+  String get voiceChatRecording => 'Recording...';
+
+  @override
+  String get voiceChatSendReply => 'Send reply';
 }

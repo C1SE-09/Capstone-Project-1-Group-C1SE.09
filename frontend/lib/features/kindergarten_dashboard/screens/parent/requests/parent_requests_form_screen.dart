@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
@@ -253,6 +254,7 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
         } on LeaveRequestException catch (e) {
           if (e.code != 'meal_warning_required' || acknowledged) rethrow;
           if (!mounted) return;
+          setState(() => _busy = false);
           final agreed = await showParentRequestDialog(context,
               title: 'Gửi đơn sau 7:30 sáng',
               message: e.message,
@@ -262,6 +264,7 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
               accent: context.k.warn,
               tint: context.k.warnTint);
           if (!mounted || !agreed) return;
+          setState(() => _busy = true);
           acknowledged = true;
         }
       }
@@ -288,7 +291,9 @@ class _ParentRequestFormScreenState extends State<ParentRequestFormScreen> {
         },
         child: ParentRequestLayout(
             gardenVoice: true,
-            title: _late ? 'Báo đi trễ' : 'Tạo đơn xin nghỉ',
+            title: _late
+                ? (context.l10n?.leaveTypeLate ?? 'Báo đi trễ')
+                : (context.l10n?.parentLeaveRequestButton ?? 'Tạo đơn xin nghỉ'),
             child: _ParentRequestFormFields(this)),
       );
 }

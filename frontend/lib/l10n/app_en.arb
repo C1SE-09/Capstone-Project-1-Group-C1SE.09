@@ -1,8 +1,9 @@
 {
   "@@locale": "en",
   "appTitle": "KinderLog",
-  "@appTitle": { "description": "App name shown in title bar" },
-
+  "@appTitle": {
+    "description": "App name shown in title bar"
+  },
   "commonSave": "Save",
   "commonCancel": "Cancel",
   "commonClose": "Close",
@@ -14,12 +15,10 @@
   "commonLoading": "Loading...",
   "commonSuccess": "Success",
   "commonError": "An error occurred. Please try again later.",
-
   "language": "Language",
   "languageVietnamese": "Tiếng Việt",
   "languageEnglish": "English",
   "languageSelectTitle": "Select Display Language",
-
   "navOverview": "Overview",
   "navClass": "Class",
   "navRecord": "Record",
@@ -28,7 +27,6 @@
   "navAccount": "Account",
   "navTimetable": "Timetable",
   "navAttendance": "Attendance",
-
   "accountSettings": "Settings",
   "accountSupport": "Support",
   "accountSettingsAndSupport": "Settings & Support",
@@ -51,7 +49,6 @@
   "accountAllergies": "Allergies",
   "accountHealthNotes": "Health Notes",
   "logoutConfirmMessage": "Are you sure you want to log out?",
-
   "loginWelcomeBack": "Welcome back!",
   "loginTagline": "Preserving every precious moment of your child's growth together.",
   "loginUsernameLabel": "USERNAME",
@@ -69,7 +66,6 @@
   "loginRememberClearError": "Failed to clear saved credentials. Please try again.",
   "loginShowPassword": "Show password",
   "loginHidePassword": "Hide password",
-
   "changePasswordTitle": "Change Password",
   "changePasswordOldLabel": "Current password",
   "changePasswordOldHint": "Enter current password",
@@ -81,7 +77,6 @@
   "changePasswordSuccess": "Password changed successfully!",
   "changePasswordMismatch": "Passwords do not match.",
   "changePasswordEmpty": "Please fill in all password fields.",
-
   "forgotPasswordTitle": "Forgot Password",
   "forgotPasswordInstruction": "Enter your registered email address to receive an OTP code to reset your password.",
   "forgotPasswordEmailLabel": "Account Email",
@@ -89,7 +84,6 @@
   "forgotPasswordSendOtp": "Send Verification Code",
   "forgotPasswordEnterOtp": "Enter OTP Code",
   "forgotPasswordVerify": "Verify OTP",
-
   "teacherNavAttendance": "Attendance",
   "teacherNavTimetable": "Timetable",
   "teacherNavRecord": "Daily Log",
@@ -97,15 +91,27 @@
   "teacherNavAccount": "Account",
   "teacherGreeting": "Hello, Teacher {name}!",
   "@teacherGreeting": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "teacherClassTitle": "Class {className}",
   "@teacherClassTitle": {
-    "placeholders": { "className": { "type": "String" } }
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
   },
   "teacherStudentCount": "{count} students",
   "@teacherStudentCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "teacherAccountTitle": "Account",
   "teacherAccountSectionClass": "Assigned Class",
@@ -115,7 +121,6 @@
   "teacherAccountQuickBug": "Bug Report & Feedback",
   "teacherLogoutConfirmTitle": "Do you want to log out?",
   "teacherLogoutConfirmButton": "Log out",
-
   "attendanceTitle": "Daily Attendance",
   "attendanceSummaryPresent": "Present",
   "attendanceSummaryAbsent": "Absent",
@@ -131,9 +136,12 @@
   "leaveRequestReject": "Reject",
   "leaveRequestReason": "Reason: {reason}",
   "@leaveRequestReason": {
-    "placeholders": { "reason": { "type": "String" } }
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   },
-
   "recordTitle": "Class Daily Log",
   "recordMeal": "Meals",
   "recordNap": "Nap",
@@ -144,7 +152,6 @@
   "recordVoiceListening": "Listening...",
   "recordVoiceStop": "Stop Recording",
   "recordVoiceProcessing": "Processing voice note...",
-
   "parentNavDaily": "Today",
   "parentNavActivities": "Activities",
   "parentNavRequests": "Requests",
@@ -157,14 +164,16 @@
   "parentPushSubtitle": "Get notified when new daily reports are posted",
   "parentAppVersion": "Version {version}",
   "@parentAppVersion": {
-    "placeholders": { "version": { "type": "String" } }
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   },
   "parentLogoutConfirmTitle": "Do you want to log out?",
-
   "bugReportTitle": "Report a Bug",
   "bugReportNewButton": "Report a bug",
   "bugReportAdminListButton": "Manage bug reports",
-
   "bugReportFormTitleLabel": "Title",
   "bugReportFormTitleHint": "Briefly describe the issue (max 200 chars)",
   "bugReportFormDescriptionLabel": "Description",
@@ -181,13 +190,11 @@
   "bugReportFormValidationEmpty": "Please fill in title and description.",
   "bugReportFormValidationTitleTooLong": "Title must be at most 200 characters.",
   "bugReportFormValidationDescriptionTooLong": "Description must be at most 4000 characters.",
-
   "bugReportDetailTitle": "Bug Report Detail",
   "bugReportDetailSectionMetadata": "Environment",
   "bugReportDetailSectionAttachments": "Attachments",
   "bugReportDetailSectionHistory": "Status History",
   "bugReportDetailTapToZoom": "Tap to zoom",
-
   "bugReportAdminTitle": "Bug Reports (Admin)",
   "bugReportAdminFilter": "Filters",
   "bugReportAdminSearchHint": "Search by title...",
@@ -200,18 +207,15 @@
   "bugReportAdminSave": "Save",
   "bugReportAdminSaving": "Saving...",
   "bugReportAdminSaved": "Report updated.",
-
   "bugReportStatusOpen": "Open",
   "bugReportStatusInProgress": "In progress",
   "bugReportStatusResolved": "Resolved",
   "bugReportStatusClosed": "Closed",
   "bugReportStatusWontFix": "Won't fix",
-
   "bugReportSeverityLow": "Low",
   "bugReportSeverityMedium": "Medium",
   "bugReportSeverityHigh": "High",
   "bugReportSeverityCritical": "Critical",
-
   "bugReportCategoryUi": "UI",
   "bugReportCategoryPerformance": "Performance",
   "bugReportCategoryCrash": "Crash",
@@ -220,16 +224,17 @@
   "bugReportCategoryNetwork": "Network",
   "bugReportCategoryAuth": "Authentication",
   "bugReportCategoryOther": "Other",
-
   "bugReportCommonAttachmentsCount": "{count, plural, =0{No attachments} =1{1 attachment} other{{count} attachments}}",
   "@bugReportCommonAttachmentsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "bugReportCommonRetry": "Retry",
   "bugReportCommonCancel": "Cancel",
   "bugReportCommonClose": "Close",
-
   "voiceChatRecordTooltip": "Send voice message",
   "voiceChatCancelTooltip": "Cancel recording",
   "voiceChatSendTooltip": "Send voice message now",
@@ -237,5 +242,161 @@
   "voiceChatStartError": "Cannot start recording. Please try again.",
   "voiceChatSendError": "Error sending voice recording. Please try again.",
   "voiceChatLoadError": "Failed to load audio",
-  "voiceChatDefaultContent": "Voice message"
+  "voiceChatDefaultContent": "Voice message",
+  "parentGreetingGoodMorning": "Good morning,",
+  "parentTodayReport": "Today's Report",
+  "parentNoReportToday": "No report for today yet.",
+  "parentNoAttendanceToday": "No attendance update for today",
+  "parentAllergyPrefix": "Allergy: {allergy}",
+  "@parentAllergyPrefix": {
+    "placeholders": {
+      "allergy": {
+        "type": "String"
+      }
+    }
+  },
+  "parentTeacherNoteTitle": "Note from {teacherName}",
+  "@parentTeacherNoteTitle": {
+    "placeholders": {
+      "teacherName": {
+        "type": "String"
+      }
+    }
+  },
+  "parentTimetableShortcut": "Timetable",
+  "parentRequestsShortcut": "Leave · Late",
+  "parentUnreadReportsBadge": "{count, plural, =0{No unread reports} =1{1 unread report} other{{count} unread reports}}",
+  "@parentUnreadReportsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "parentLoadDataError": "Unable to load parent data.",
+  "parentOpenReportError": "Unable to open this report. Please try again later.",
+  "parentNoDataForDay": "No recorded data for this day.",
+  "parentDailyReportTitle": "Daily Report",
+  "recordMealItem": "Meals",
+  "recordNapItem": "Sleep",
+  "recordActivityItem": "Activities",
+  "commonNotUpdated": "Not updated",
+  "commonAll": "All",
+  "parentSectionFamily": "Family",
+  "parentContactInfo": "Contact Information",
+  "parentChildHealthProfile": "Child Details · Health Profile",
+  "parentAllergyCareNotes": "Allergies & Care Notes",
+  "parentSectionPreferences": "Preferences",
+  "parentPushEnabled": "Enabled on device",
+  "parentPushDisabled": "Disabled on device",
+  "parentFamilySummary": "Family has {count, plural, =1{1 enrolled child} other{{count} enrolled children}}",
+  "@parentFamilySummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "parentSelectChild": "Select Child",
+  "parentSelected": "Selected",
+  "parentDateOfBirth": "Date of Birth",
+  "parentNickname": "Nickname: {nickname}",
+  "@parentNickname": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
+  "parentViewDetail": "View ›",
+  "parentReadReport": "Read report ›",
+  "parentCopyPhoneTooltip": "Copy phone number",
+  "parentCopiedPhoneSnackbar": "Phone number copied",
+  "parentAccountChildPrefix": "Parent account of {childName}",
+  "@parentAccountChildPrefix": {
+    "placeholders": {
+      "childName": {
+        "type": "String"
+      }
+    }
+  },
+  "parentFullNameLabel": "Full Name",
+  "parentRelationshipLabel": "Role / Relationship",
+  "parentNoAllergyRecorded": "No allergies recorded",
+  "parentHasAllergy": "Has allergies",
+  "parentNoAllergy": "No allergies",
+  "parentAllergyNotDeclared": "Not declared",
+  "parentJourneyDaysText": "{days} days journeying with KinderLog",
+  "@parentJourneyDaysText": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "parentEditInfo": "Edit Information",
+  "parentEditContactInfo": "Edit Contact Information",
+  "parentHealthChangeConfirmTitle": "Change allergy information?",
+  "parentHealthChangeConfirmMessage": "Existing allergy information will be overwritten after saving.",
+  "parentHealthContinueEditing": "Continue Editing",
+  "parentHealthDiscardTitle": "Discard changes?",
+  "parentHealthDiscardMessage": "Changes you just made will not be saved.",
+  "parentHealthDiscardAction": "Discard",
+  "parentHealthUpdateSuccess": "Health information updated",
+  "parentHealthLoadError": "Unable to load health profile.",
+  "parentHealthAllergyStatus": "Allergy Status",
+  "parentHealthCareNotes": "Care Notes",
+  "teacherGreetingGoodMorning": "Good morning,",
+  "teacherAttentionTitle": "Needs Attention",
+  "teacherNoAttentionToday": "No special notes today.",
+  "teacherRecordBannerTitle": "Record the day\nfor children",
+  "teacherRecordBannerSubtitle": "Meals, nap, activities and care notes.",
+  "teacherStartReport": "Start Daily Report",
+  "teacherTodayAttendance": "Today's Attendance",
+  "teacherReportIncident": "Incident",
+  "teacherSendToParents": "Send to Parents",
+  "teacherSearchChildHint": "Search child name...",
+  "teacherNoChildrenFound": "No matching children found",
+  "teacherOverviewLoadError": "Unable to load overview · Retry",
+  "teacherNoSchoolInfo": "School info unavailable",
+  "attendanceSaveButton": "Save Attendance",
+  "attendanceDiscardConfirmTitle": "Discard attendance changes?",
+  "attendanceDiscardConfirmMessage": "Changes on attendance cards will not be saved.",
+  "attendanceContinue": "Continue Attendance",
+  "attendanceDiscardAction": "Discard",
+  "dayMonday": "Monday",
+  "dayTuesday": "Tuesday",
+  "dayWednesday": "Wednesday",
+  "dayThursday": "Thursday",
+  "dayFriday": "Friday",
+  "daySaturday": "Saturday",
+  "daySunday": "Sunday",
+  "dayShortMon": "Mon",
+  "dayShortTue": "Tue",
+  "dayShortWed": "Wed",
+  "dayShortThu": "Thu",
+  "dayShortFri": "Fri",
+  "dayShortSat": "Sat",
+  "dayShortSun": "Sun",
+  "timetableMorning": "Morning",
+  "timetableAfternoon": "Afternoon",
+  "timetableEmpty": "No classes scheduled",
+  "parentRequestsTitle": "Leave / Late Requests",
+  "parentRequestsNew": "New Request",
+  "leaveRequestsCancelled": "Cancelled",
+  "leaveTypeAbsent": "Absent",
+  "leaveTypeLate": "Late Arrival",
+  "parentRequestsFormTitle": "Create Leave / Late Request",
+  "parentRequestsTypeLabel": "Request Type",
+  "parentRequestsFromDate": "From Date",
+  "parentRequestsToDate": "To Date",
+  "parentRequestsLateDate": "Late Date",
+  "parentRequestsExpectedTime": "Expected Arrival Time",
+  "parentRequestsReasonLabel": "Reason",
+  "parentRequestsSubmit": "Submit Request",
+  "aboutAppTagline": "Smart Kindergarten Communication & Reporting",
+  "aboutAppDescription": "Comprehensive administrative & digital connection between School · Teachers · Parents.",
+  "voiceChatInputHint": "Type a reply...",
+  "voiceChatRecording": "Recording...",
+  "voiceChatSendReply": "Send reply"
 }

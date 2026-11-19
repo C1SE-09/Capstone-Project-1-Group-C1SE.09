@@ -603,7 +603,7 @@ class _ParentAccountState extends State<ParentAccount> {
             children: [
               Expanded(
                 child: Text(
-                  'Tài khoản',
+                  context.l10n?.navAccount ?? 'Tài khoản',
                   style: TextStyle(
                     fontSize: 24,
                     height: 1.4,
@@ -613,7 +613,7 @@ class _ParentAccountState extends State<ParentAccount> {
                 ),
               ),
               IconButton(
-                tooltip: 'Thông báo',
+                tooltip: context.l10n?.navNotifications ?? 'Thông báo',
                 onPressed: widget.onOpenNotifications,
                 icon: Container(
                   width: 46,
@@ -685,7 +685,8 @@ class _ParentAccountState extends State<ParentAccount> {
                             ),
                             if (parent.createdAt != null)
                               Text(
-                                '${parentJourneyDays(parent.createdAt)} ngày đồng hành cùng KinderLog',
+                                context.l10n?.parentJourneyDaysText(parentJourneyDays(parent.createdAt)) ??
+                                    '${parentJourneyDays(parent.createdAt)} ngày đồng hành cùng KinderLog',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -704,33 +705,33 @@ class _ParentAccountState extends State<ParentAccount> {
               ],
             ),
           ),
-          _accountSectionTitle(context, 'Gia đình'),
+          _accountSectionTitle(context, context.l10n?.parentSectionFamily ?? 'Gia đình'),
           Column(
             children: [
               _accountMenuRow(
                 key: const ValueKey('parent-contact-menu'),
                 icon: 'assets/garden_voice/account_phone.svg',
-                label: 'Thông tin liên hệ',
+                label: context.l10n?.parentContactInfo ?? 'Thông tin liên hệ',
                 onTap: _openContactScreen,
               ),
               _accountMenuRow(
                 key: const ValueKey('parent-child-menu'),
                 icon: 'assets/garden_voice/account_heart.svg',
-                label: 'Thông tin bé · Hồ sơ sức khỏe',
-                subtitle: 'Dị ứng và lưu ý chăm sóc',
+                label: context.l10n?.parentChildHealthProfile ?? 'Thông tin bé · Hồ sơ sức khỏe',
+                subtitle: context.l10n?.parentAllergyCareNotes ?? 'Dị ứng và lưu ý chăm sóc',
                 onTap: _openChildInfo,
               ),
             ],
           ),
-          _accountSectionTitle(context, 'Tùy chọn'),
+          _accountSectionTitle(context, context.l10n?.parentSectionPreferences ?? 'Tùy chọn'),
           Column(
             children: [
               _accountMenuRow(
                 icon: 'assets/garden_voice/account_bell.svg',
-                label: 'Thông báo đẩy',
+                label: context.l10n?.parentPushNotification ?? 'Thông báo đẩy',
                 subtitle: _pushEnabled
-                    ? 'Đã bật trên thiết bị'
-                    : 'Đã tắt trên thiết bị',
+                    ? (context.l10n?.parentPushEnabled ?? 'Đã bật trên thiết bị')
+                    : (context.l10n?.parentPushDisabled ?? 'Đã tắt trên thiết bị'),
                 trailing: Switch(value: _pushEnabled, onChanged: _setPush),
               ),
             ],
@@ -956,26 +957,27 @@ class _ParentContactScreenState extends State<ParentContactScreen> {
   @override
   Widget build(BuildContext context) {
     final phone = _phone?.trim() ?? '';
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: context.k.canvas,
       appBar: KAppBar(
-          title: 'Thông tin liên hệ',
+          title: l10n?.parentContactInfo ?? 'Thông tin liên hệ',
           onBack: () => Navigator.maybePop(context)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
             Text(
-              'Tài khoản phụ huynh của bé ${widget.childName}',
+              l10n?.parentAccountChildPrefix(widget.childName) ?? 'Tài khoản phụ huynh của bé ${widget.childName}',
               style: TextStyle(
                   fontSize: 14, height: 1.4, color: context.k.inkSoft),
             ),
             const SizedBox(height: 14),
-            _contactCard(context, 'Họ và tên', widget.parent.fullName),
+            _contactCard(context, l10n?.parentFullNameLabel ?? 'Họ và tên', widget.parent.fullName),
             const SizedBox(height: 14),
             Semantics(
               button: phoneCallUri(phone) != null,
-              label: 'Sao chép số điện thoại',
+              label: l10n?.parentCopyPhoneTooltip ?? 'Sao chép số điện thoại',
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: phoneCallUri(phone) == null
@@ -983,29 +985,29 @@ class _ParentContactScreenState extends State<ParentContactScreen> {
                     : () {
                         Clipboard.setData(ClipboardData(text: phone));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Đã sao chép số điện thoại')),
+                          SnackBar(
+                              content: Text(l10n?.parentCopiedPhoneSnackbar ?? 'Đã sao chép số điện thoại')),
                         );
                       },
                 child: _contactCard(
                   context,
-                  'Số điện thoại',
-                  phone.isEmpty ? 'Chưa cập nhật' : maskedPhone(phone),
+                  l10n?.accountPhoneNumber ?? 'Số điện thoại',
+                  phone.isEmpty ? (l10n?.commonNotUpdated ?? 'Chưa cập nhật') : maskedPhone(phone),
                 ),
               ),
             ),
             const SizedBox(height: 14),
-            _contactCard(context, 'Email', _maskedEmail(_email)),
+            _contactCard(context, l10n?.accountEmail ?? 'Email', _maskedEmail(_email)),
             const SizedBox(height: 14),
             _contactCard(
               context,
-              'Quan hệ với bé',
+              l10n?.parentRelationshipLabel ?? 'Quan hệ với bé',
               _relationship?.trim().isNotEmpty == true
                   ? _relationship!.trim()
-                  : 'Chưa cập nhật',
+                  : (l10n?.commonNotUpdated ?? 'Chưa cập nhật'),
             ),
             const SizedBox(height: 14),
-            KButton(label: 'Chỉnh sửa thông tin', onPressed: _edit),
+            KButton(label: l10n?.parentEditInfo ?? 'Chỉnh sửa thông tin', onPressed: _edit),
           ],
         ),
       ),
@@ -1249,13 +1251,13 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                       children: [
                         if (dateOfBirth != null)
                           KInfoRow(
-                            label: 'Ngày sinh',
+                            label: context.l10n?.parentDateOfBirth ?? 'Ngày sinh',
                             value:
                                 '${kDateLabel(dateOfBirth)}${formatChildAge(dateOfBirth).isEmpty ? '' : ' · ${formatChildAge(dateOfBirth)}'}',
                           ),
                         if (teacherDisplay.isNotEmpty)
                           KInfoRow(
-                              label: 'Giáo viên chủ nhiệm',
+                              label: context.l10n?.accountTeacherInCharge ?? 'Giáo viên chủ nhiệm',
                               value: teacherDisplay),
                       ],
                     ),
@@ -1283,7 +1285,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Hồ sơ sức khỏe',
+                              Text(context.l10n?.accountHealthNotes ?? 'Hồ sơ sức khỏe',
                                   style: TextStyle(
                                       fontSize: 14,
                                       height: 1.4,
@@ -1297,7 +1299,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                             ],
                           ),
                         ),
-                        Text('Xem ›',
+                        Text(context.l10n?.parentViewDetail ?? 'Xem ›',
                             style: TextStyle(
                                 fontSize: 12, color: context.k.accentDeep)),
                       ],
@@ -1350,7 +1352,7 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Chọn thông tin bé',
+                      context.l10n?.parentSelectChild ?? 'Chọn thông tin bé',
                       style: TextStyle(
                         fontSize: 18,
                         height: 1.3,
@@ -1360,7 +1362,7 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Gia đình có ${children.length} bé đang theo học',
+                      context.l10n?.parentFamilySummary(children.length) ?? 'Gia đình có ${children.length} bé đang theo học',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.3,
@@ -1371,7 +1373,7 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: 'Đóng',
+                tooltip: context.l10n?.commonClose ?? 'Đóng',
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
               ),
@@ -1467,7 +1469,7 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                                               BorderRadius.circular(12),
                                         ),
                                         child: Text(
-                                          'Đang chọn',
+                                          context.l10n?.parentSelected ?? 'Đang chọn',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,

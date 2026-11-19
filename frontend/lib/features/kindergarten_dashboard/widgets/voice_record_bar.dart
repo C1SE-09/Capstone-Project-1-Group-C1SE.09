@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 typedef OnVoiceRecordedCallback = Future<void> Function({
@@ -74,8 +75,9 @@ class VoiceRecordBarState extends State<VoiceRecordBar>
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Ứng dụng cần quyền sử dụng micro để ghi âm tin nhắn thoại.',
+            content: Text(
+              context.l10n?.voiceChatPermissionError ??
+                  'Ứng dụng cần quyền sử dụng micro để ghi âm tin nhắn thoại.',
             ),
             backgroundColor: context.k.bad,
           ),
@@ -118,7 +120,10 @@ class VoiceRecordBarState extends State<VoiceRecordBar>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Không thể bắt đầu ghi âm. Vui lòng thử lại.'),
+          content: Text(
+            context.l10n?.voiceChatStartError ??
+                'Không thể bắt đầu ghi âm. Vui lòng thử lại.',
+          ),
           backgroundColor: context.k.bad,
         ),
       );
@@ -174,7 +179,10 @@ class VoiceRecordBarState extends State<VoiceRecordBar>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Lỗi khi gửi file ghi âm. Vui lòng thử lại.'),
+          content: Text(
+            context.l10n?.voiceChatSendError ??
+                'Lỗi khi gửi file ghi âm. Vui lòng thử lại.',
+          ),
           backgroundColor: context.k.bad,
         ),
       );
@@ -192,7 +200,7 @@ class VoiceRecordBarState extends State<VoiceRecordBar>
     if (!_isRecording) {
       // Khi không ghi âm: hiển thị nút icon Micro tròn gọn gàng
       return IconButton(
-        tooltip: 'Gửi tin nhắn thoại',
+        tooltip: context.l10n?.voiceChatRecordTooltip ?? 'Gửi tin nhắn thoại',
         onPressed: widget.isSending ? null : startRecording,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -280,7 +288,7 @@ class VoiceRecordBarState extends State<VoiceRecordBar>
             const SizedBox(width: 8),
             // Nút Huỷ (Thùng rác)
             IconButton(
-              tooltip: 'Huỷ ghi âm',
+              tooltip: context.l10n?.voiceChatCancelTooltip ?? 'Huỷ ghi âm',
               onPressed: cancelRecording,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
