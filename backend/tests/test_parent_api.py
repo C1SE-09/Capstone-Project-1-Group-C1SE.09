@@ -156,6 +156,36 @@ class TestGetParentPrimaryChild:
         # Giữ nguyên phần frontend đang dùng
         assert body["class_name"] == "Mầm A"
         assert body["teacher_name"] == "Cô Nguyễn Thị Mai"
+        assert "children" in body
+        assert len(body["children"]) == 1
+        assert body["children"][0]["child"]["child_id"] == str(child.child_id)
+
+    def test_child_payload_multiple_children_uses_cached_class(self, client, mock_db):
+        parent = _make_parent(PARENT_A)
+        child1 = _make_child(PARENT_A)
+        child2 = _make_child(PARENT_A)
+        child2.full_name = "Lê Ngọc Ánh"
+        child2.class_id = child1.class_id  # Cùng lớp
+        class_ = _make_class(child1.class_id)
+        teacher = _make_teacher(class_.class_id)
+
+        mock_db.query.return_value.filter.return_value.first.side_effect = [
+            parent,
+            class_,
+            teacher,
+        ]
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = [
+            child1,
+            child2,
+        ]
+
+        resp = client.get(f"/api/parent/{PARENT_A}/child")
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert len(body["children"]) == 2
+        names = [c["child"]["full_name"] for c in body["children"]]
+        assert "Trần Gia Bảo" in names
+        assert "Lê Ngọc Ánh" in names
 
 
 class TestUpdateParentPhone:

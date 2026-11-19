@@ -553,50 +553,7 @@ def get_parent(
     }
 
 
-@router.get(
-    "/api/parent/{parent_id}/child",
-    summary="Con mặc định hoặc bé được chọn + lớp + giáo viên",
-)
-def get_parent_primary_child(
-    parent_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("parent", "admin")),
-    child_id: uuid.UUID | None = None,
-):
-    """
-    Không có child_id thì giữ cách chọn bé mặc định; có child_id thì chỉ trả
-    bé liên kết với phụ huynh qua N-N hoặc khóa ngoại trực tiếp.
-    """
-    parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
-    if not parent:
-        raise HTTPException(status_code=404, detail="Parent not found")
-    if role_of(current_user) == "parent" and current_user.parent_id != parent_id:
-        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
-
-    children: list[Child] = []
-    if hasattr(parent, "children") and parent.children:
-        children = [
-            c for c in parent.children if getattr(c, "status", None) == ChildStatus.ENROLLED
-        ]
-    if not children or child_id is not None:
-        direct_children = (
-            db.query(Child)
-            .filter(
-                Child.parent_id == parent_id,
-                Child.status == ChildStatus.ENROLLED,
-            )
-            .order_by(Child.full_name)
-            .all()
-        )
-        children.extend(child for child in direct_children if child not in children)
-
-    if child_id is not None:
-        children = [child for child in children if child.child_id == child_id]
-
-    if not children:
-        raise HTTPException(status_code=404, detail="Child not found")
-
-    child = children[0]
+def _build_child_overview(db: Session, child: Child) -> dict:
     class_name = ""
     teacher_name = ""
     teacher_id = None
@@ -623,6 +580,131 @@ def get_parent_primary_child(
         "teacher_phone": teacher_phone,
         "room_number": room_number,
     }
+
+
+@router.get(
+    "/api/parent/{parent_id}/child",
+    summary="Con mặc định hoặc bé được chọn + lớp + giáo viên",
+)
+def get_parent_primary_child(
+    parent_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
+    child_id: uuid.UUID | None = None,
+):
+    """
+    Không có child_id thì giữ cách chọn bé mặc định; có child_id thì chỉ trả
+    bé liên kết với phụ huynh qua N-N hoặc khóa ngoại trực tiếp.
+    Đồng thời trả về danh sách toàn bộ các bé thuộc quyền phụ huynh trong 'children'.
+    """
+    parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    if role_of(current_user) == "parent" and current_user.parent_id != parent_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+
+    children: list[Child] = []
+    if hasattr(parent, "children") and parent.children:
+        children = [
+            c for c in parent.children if getattr(c, "status", None) == ChildStatus.ENROLLED
+        ]
+    direct_children = (
+        db.query(Child)
+        .filter(
+            Child.parent_id == parent_id,
+            Child.status == ChildStatus.ENROLLED,
+        )
+        .order_by(Child.full_name)
+        .all()
+    )
+    children.extend(child for child in direct_children if child not in children)
+
+    all_enrolled_children = list(children)
+
+    if child_id is not None:
+        children = [child for child in children if child.child_id == child_id]
+
+    if not children:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    child = children[0]
+    overview = _build_child_overview(db, child)
+
+    # Cache thông tin lớp và giáo viên để tránh N+1 query và không làm cạn mock trong test
+    class_cache = {}
+    if child.class_id:
+        class_cache[child.class_id] = {
+            "class_name": overview["class_name"],
+            "teacher_name": overview["teacher_name"],
+            "teacher_id": overview["teacher_id"],
+            "teacher_phone": overview["teacher_phone"],
+            "room_number": overview["room_number"],
+        }
+
+    children_list = []
+    for c in all_enrolled_children:
+        if c.child_id == child.child_id:
+            children_list.append(dict(overview))
+        else:
+            if c.class_id and c.class_id in class_cache:
+                cached = class_cache[c.class_id]
+                children_list.append({
+                    "child": _child_dict(c),
+                    "class_name": cached["class_name"],
+                    "teacher_name": cached["teacher_name"],
+                    "teacher_id": cached["teacher_id"],
+                    "teacher_phone": cached["teacher_phone"],
+                    "room_number": cached["room_number"],
+                })
+            else:
+                c_overview = _build_child_overview(db, c)
+                if c.class_id:
+                    class_cache[c.class_id] = {
+                        "class_name": c_overview["class_name"],
+                        "teacher_name": c_overview["teacher_name"],
+                        "teacher_id": c_overview["teacher_id"],
+                        "teacher_phone": c_overview["teacher_phone"],
+                        "room_number": c_overview["room_number"],
+                    }
+                children_list.append(c_overview)
+
+    overview["children"] = children_list
+    return overview
+
+
+@router.get(
+    "/api/parent/{parent_id}/children",
+    summary="Danh sách tất cả các bé của phụ huynh",
+)
+def get_parent_all_children(
+    parent_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
+):
+    """Trả về danh sách toàn bộ các bé của phụ huynh kèm lớp và giáo viên."""
+    parent = db.query(Parent).filter(Parent.parent_id == parent_id).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    if role_of(current_user) == "parent" and current_user.parent_id != parent_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+
+    children: list[Child] = []
+    if hasattr(parent, "children") and parent.children:
+        children = [
+            c for c in parent.children if getattr(c, "status", None) == ChildStatus.ENROLLED
+        ]
+    direct_children = (
+        db.query(Child)
+        .filter(
+            Child.parent_id == parent_id,
+            Child.status == ChildStatus.ENROLLED,
+        )
+        .order_by(Child.full_name)
+        .all()
+    )
+    children.extend(child for child in direct_children if child not in children)
+
+    return [_build_child_overview(db, c) for c in children]
 
 
 # ---------------------------------------------------------------------------

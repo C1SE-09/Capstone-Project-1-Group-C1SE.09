@@ -21,6 +21,7 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/about_kinderlog_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_health_profile_screen.dart';
@@ -72,6 +73,40 @@ String formatGender(String? gender) {
   if (g == 'male' || g == 'nam') return 'Bé trai (Nam)';
   if (g == 'female' || g == 'nữ' || g == 'nu') return 'Bé gái (Nữ)';
   return 'Khác';
+}
+
+/// Định dạng danh sách tên trẻ cho phụ huynh (tối đa 3 trẻ liệt kê, quá 3 thì thêm "+X bé").
+String formatParentChildrenNames(ChildOverview overview) {
+  final childrenList = overview.allChildren.isNotEmpty
+      ? overview.allChildren
+      : [overview];
+  final names = childrenList
+      .map((c) => c.child.displayName.trim())
+      .where((n) => n.isNotEmpty)
+      .toSet()
+      .toList();
+  if (names.isEmpty) return 'Phụ huynh bé ${overview.child.displayName}';
+  if (names.length <= 3) {
+    return 'Phụ huynh bé ${names.join(', ')}';
+  }
+  final firstThree = names.take(3).join(', ');
+  final remaining = names.length - 3;
+  return 'Phụ huynh bé $firstThree, +$remaining bé';
+}
+
+/// Lấy 2 chữ cái viết tắt của tên trẻ (ví dụ: Lê Hoàng Nôm -> HN).
+String childInitials(String name) {
+  final words =
+      name.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+  return words
+      .toList()
+      .reversed
+      .take(2)
+      .toList()
+      .reversed
+      .map((word) => String.fromCharCode(word.runes.first))
+      .join()
+      .toUpperCase();
 }
 
 class ParentAccount extends StatefulWidget {
@@ -178,15 +213,46 @@ class _ParentAccountState extends State<ParentAccount> {
   }
 
   void _openChildInfo() {
+    final children = widget.overview.allChildren.isNotEmpty
+        ? widget.overview.allChildren
+        : [widget.overview];
+    if (children.length > 1) {
+      _openChildSelectionSheet();
+    } else {
+      _openSingleChildInfo(children.first);
+    }
+  }
+
+  void _openSingleChildInfo(ChildOverview targetOverview) {
     showKSheet<void>(
       context,
       GardenVoiceScope(
         child: _ParentChildInfoSheet(
-          overview: widget.overview,
+          overview: targetOverview,
           parentId: widget.parent.parentId,
           repository: widget.repository,
+          allChildren: widget.overview.allChildren,
+          onSwitchChild: () => _openChildSelectionSheet(),
           onChildUpdated: widget.onChildUpdated,
           onHealthUpdated: widget.onHealthUpdated,
+        ),
+      ),
+    );
+  }
+
+  void _openChildSelectionSheet() {
+    final children = widget.overview.allChildren.isNotEmpty
+        ? widget.overview.allChildren
+        : [widget.overview];
+    showKSheet<void>(
+      context,
+      GardenVoiceScope(
+        child: _ParentChildSelectionSheet(
+          children: children,
+          currentChildId: widget.overview.child.childId,
+          onSelectChild: (selectedOverview) {
+            _openSingleChildInfo(selectedOverview);
+          },
         ),
       ),
     );
@@ -268,7 +334,7 @@ class _ParentAccountState extends State<ParentAccount> {
                                 borderRadius: BorderRadius.circular(99),
                               ),
                               child: Text(
-                                '$relationship của ${child.displayName}',
+                                '$relationship của ${formatParentChildrenNames(widget.overview).replaceFirst("Phụ huynh bé ", "")}',
                                 style: const TextStyle(
                                     fontSize: 12, color: Colors.white),
                               ),
@@ -491,6 +557,7 @@ class _ParentAccountState extends State<ParentAccount> {
                 label: 'Về KinderLog',
                 trailing: Text('v1.0.0',
                     style: TextStyle(fontSize: 12, color: context.k.inkFaint)),
+                onTap: () => showAboutKinderLogSheet(context),
               ),
             ],
           ),
@@ -513,7 +580,6 @@ class _ParentAccountState extends State<ParentAccount> {
   Widget _buildGardenVoiceAccount(BuildContext context) {
     final k = context.k;
     final parent = widget.parent;
-    final child = widget.overview.child;
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 16;
 
     return ColoredBox(
@@ -598,7 +664,7 @@ class _ParentAccountState extends State<ParentAccount> {
                               ),
                             ),
                             Text(
-                              'Phụ huynh bé ${child.displayName}',
+                              formatParentChildrenNames(widget.overview),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -676,6 +742,7 @@ class _ParentAccountState extends State<ParentAccount> {
                 icon: 'assets/garden_voice/account_info.svg',
                 label: 'Về KinderLog',
                 subtitle: 'Phiên bản 1.0.0',
+                onTap: () => showAboutKinderLogSheet(context),
               ),
             ],
           ),
@@ -957,11 +1024,15 @@ class _ParentChildInfoSheet extends StatefulWidget {
     required this.repository,
     required this.onChildUpdated,
     required this.onHealthUpdated,
+    this.allChildren,
+    this.onSwitchChild,
   });
 
   final ChildOverview overview;
   final String parentId;
   final HttpDashboardRepository? repository;
+  final List<ChildOverview>? allChildren;
+  final VoidCallback? onSwitchChild;
   final ValueChanged<Child>? onChildUpdated;
   final ValueChanged<Child>? onHealthUpdated;
 
@@ -984,20 +1055,6 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
         widget.onChildUpdated?.call(updated);
       },
     );
-  }
-
-  String _initials(String name) {
-    final words =
-        name.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
-    return words
-        .toList()
-        .reversed
-        .take(2)
-        .toList()
-        .reversed
-        .map((word) => String.fromCharCode(word.runes.first))
-        .join()
-        .toUpperCase();
   }
 
   String _healthSummary(Child child) => switch (child.allergyStatus) {
@@ -1029,6 +1086,19 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
     final overview = widget.overview;
     final phoneAvailable = phoneCallUri(overview.teacherPhone ?? '') != null;
     final dateOfBirth = child.dateOfBirth;
+    final className = overview.className.trim();
+    final classDisplay = className.isEmpty
+        ? ''
+        : (className.toLowerCase().startsWith('lớp')
+            ? className
+            : 'Lớp $className');
+    final teacherDisplay = overview.teacherName.trim().isEmpty
+        ? ''
+        : (overview.teacherName.trim().toLowerCase().startsWith('cô') ||
+                overview.teacherName.trim().toLowerCase().startsWith('thầy')
+            ? overview.teacherName.trim()
+            : 'Cô ${overview.teacherName.trim()}');
+
     return ConstrainedBox(
       constraints:
           BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .85),
@@ -1038,6 +1108,40 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
         children: [
           Row(
             children: [
+              if (widget.allChildren != null && widget.allChildren!.length > 1) ...[
+                Semantics(
+                  button: true,
+                  label: 'Đổi sang bé khác',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onSwitchChild?.call();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_back_ios_new_rounded,
+                              size: 14, color: context.k.brand),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Đổi bé',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: context.k.brand,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
               Expanded(
                 child: Text('Thông tin bé',
                     style: TextStyle(
@@ -1081,7 +1185,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: Text(
-                            _initials(child.fullName),
+                            childInitials(child.fullName),
                             style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -1099,8 +1203,7 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                           [
                             if ((child.nickname ?? '').trim().isNotEmpty)
                               'Biệt danh: ${child.nickname!.trim()}',
-                            if (overview.className.trim().isNotEmpty)
-                              'Lớp ${overview.className.trim()}',
+                            if (classDisplay.isNotEmpty) classDisplay,
                           ].join(' · '),
                           style: TextStyle(
                               fontSize: 12,
@@ -1127,10 +1230,10 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                             value:
                                 '${kDateLabel(dateOfBirth)}${formatChildAge(dateOfBirth).isEmpty ? '' : ' · ${formatChildAge(dateOfBirth)}'}',
                           ),
-                        if (overview.teacherName.trim().isNotEmpty)
+                        if (teacherDisplay.isNotEmpty)
                           KInfoRow(
                               label: 'Giáo viên chủ nhiệm',
-                              value: overview.teacherName),
+                              value: teacherDisplay),
                       ],
                     ),
                   ),
@@ -1186,6 +1289,243 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
                   ],
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bottom Sheet hiển thị danh sách các bé để phụ huynh chọn (khi có > 1 bé).
+class _ParentChildSelectionSheet extends StatelessWidget {
+  const _ParentChildSelectionSheet({
+    required this.children,
+    required this.currentChildId,
+    required this.onSelectChild,
+  });
+
+  final List<ChildOverview> children;
+  final String currentChildId;
+  final ValueChanged<ChildOverview> onSelectChild;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Chọn thông tin bé',
+                      style: TextStyle(
+                        fontSize: 18,
+                        height: 1.3,
+                        fontWeight: FontWeight.w700,
+                        color: k.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Gia đình có ${children.length} bé đang theo học',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.3,
+                        color: k.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Đóng',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: children.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final item = children[index];
+                final child = item.child;
+                final isCurrent = child.childId == currentChildId;
+                final className = item.className.trim();
+                final classDisplay = className.isEmpty
+                    ? ''
+                    : (className.toLowerCase().startsWith('lớp')
+                        ? className
+                        : 'Lớp $className');
+                final teacherDisplay = item.teacherName.trim().isEmpty
+                    ? ''
+                    : (item.teacherName.toLowerCase().startsWith('cô') ||
+                            item.teacherName.toLowerCase().startsWith('thầy')
+                        ? item.teacherName.trim()
+                        : 'Cô ${item.teacherName.trim()}');
+
+                return Material(
+                  color: isCurrent
+                      ? k.brandTint.withValues(alpha: 0.45)
+                      : k.surfaceSunken,
+                  borderRadius: BorderRadius.circular(18),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onSelectChild(item);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: isCurrent ? k.brand : k.line,
+                          width: isCurrent ? 1.5 : 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: k.brand,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Text(
+                              childInitials(child.fullName),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: k.surface,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        child.fullName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          height: 1.3,
+                                          fontWeight: FontWeight.w700,
+                                          color: k.ink,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isCurrent)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: k.brand,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          'Đang chọn',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: k.surface,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  [
+                                    if ((child.nickname ?? '')
+                                        .trim()
+                                        .isNotEmpty)
+                                      'Biệt danh: ${child.nickname!.trim()}',
+                                    if (classDisplay.isNotEmpty) classDisplay,
+                                  ].join(' · '),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.3,
+                                    color: k.inkSoft,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Row(
+                                  children: [
+                                    if (teacherDisplay.isNotEmpty) ...[
+                                      Icon(Icons.person_outline,
+                                          size: 14, color: k.inkFaint),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        teacherDisplay,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: k.inkFaint,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                    ],
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: child.allergyStatus == 'present'
+                                            ? k.badTint
+                                            : k.okTint,
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        child.allergyStatus == 'present'
+                                            ? 'Có dị ứng'
+                                            : 'Sức khỏe tốt',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color:
+                                              child.allergyStatus == 'present'
+                                                  ? k.badText
+                                                  : k.ok,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 22,
+                            color: k.inkSoft,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
