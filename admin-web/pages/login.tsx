@@ -22,9 +22,11 @@ import {
   setToken,
   schoolAdminLoginRequest,
 } from "@/lib/api";
+import { useLanguage, LanguageSwitcher } from "@/lib/language-context";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -118,10 +120,10 @@ export default function LoginPage() {
         } else if (err.status === 403) {
           setError(err.detail || "Tài khoản không có quyền truy cập quản trị.");
         } else {
-          setError(err.detail || "Đăng nhập thất bại. Vui lòng thử lại sau.");
+          setError(err.detail || t("login.errorFailed", "Đăng nhập thất bại. Vui lòng thử lại sau."));
         }
       } else {
-        setError("Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại sau.");
+        setError(t("login.errorNetwork", "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại sau."));
       }
     } finally {
       setLoading(false);
@@ -138,7 +140,7 @@ export default function LoginPage() {
             KinderLog
           </div>
           <div className="text-[#102737] font-extrabold text-2xl lg:text-3xl leading-snug">
-            Mỗi ngày một chút lớn khôn
+            {t("login.tagline", "Mỗi ngày một chút lớn khôn")}
           </div>
           
           <div className="w-full max-w-[460px] h-[175px] rounded-[24px] overflow-hidden shadow-soft border border-[#E5E8EB]">
@@ -150,35 +152,38 @@ export default function LoginPage() {
           </div>
 
           <p className="text-[#65727D] text-base leading-relaxed max-w-[460px]">
-            Cùng nhà trường kết nối giáo viên, phụ huynh và những ngày đến lớp của bé một cách trọn vẹn và an tâm nhất.
+            {t("login.desc", "Cùng nhà trường kết nối giáo viên, phụ huynh và những ngày đến lớp của bé một cách trọn vẹn và an tâm nhất.")}
           </p>
 
           <div className="flex items-center gap-6 pt-2 text-xs font-semibold text-[#8C9BA5]">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#087F70]" />
-              Quản trị trường học
+              {t("schoolAdmin", "Quản trị trường học")}
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#4B6F8C]" />
-              Quản trị hệ thống
+              {t("systemAdmin", "Quản trị hệ thống")}
             </div>
           </div>
         </div>
 
         {/* ─── Cột phải: Form Đăng nhập (Figma Frame #463:1890) ─── */}
         <div className="lg:col-span-6 flex justify-center lg:justify-end">
-          <div className="w-full max-w-[440px] bg-white rounded-[28px] border border-[#E5E8EB] p-8 lg:p-10 shadow-pop">
-            <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
-              Cổng quản trị web
-            </h1>
-            <p className="text-sm text-[#65727D] mt-1 mb-8">
-              Đăng nhập để quản lý trường và vận hành hệ thống KinderLog
+          <div className="w-full max-w-[440px] bg-white rounded-[28px] border border-[#E5E8EB] p-8 lg:p-10 shadow-pop relative">
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
+                {t("login.title", "Cổng quản trị web")}
+              </h1>
+              <LanguageSwitcher />
+            </div>
+            <p className="text-sm text-[#65727D] mb-8">
+              {t("login.subtitle", "Đăng nhập để quản lý trường và vận hành hệ thống KinderLog")}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#102737] mb-2">
-                  Tên đăng nhập hoặc Email
+                  {t("login.usernameOrEmail", "Tên đăng nhập hoặc Email")}
                 </label>
                 <input
                   type="text"
@@ -187,14 +192,14 @@ export default function LoginPage() {
                   autoComplete="username"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="admin@kinderlog.edu.vn hoặc user"
+                  placeholder={t("login.usernameOrEmailPlaceholder", "admin@kinderlog.edu.vn hoặc user")}
                   className="w-full h-12 px-4 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] placeholder:text-[#8C9BA5] focus:outline-none focus:border-[#087F70] focus:ring-2 focus:ring-[#087F70]/10 transition"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#102737] mb-2">
-                  Mật khẩu
+                  {t("login.password", "Mật khẩu")}
                 </label>
                 <div className="relative">
                   <input
@@ -212,7 +217,7 @@ export default function LoginPage() {
                     onClick={() => setShowPwd(!showPwd)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#65727D] hover:text-[#087F70]"
                   >
-                    {showPwd ? "Ẩn" : "Hiện"}
+                    {showPwd ? t("login.hide", "Ẩn") : t("login.show", "Hiện")}
                   </button>
                 </div>
               </div>
@@ -234,13 +239,13 @@ export default function LoginPage() {
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
                 ) : (
-                  "Đăng nhập cổng quản trị"
+                  t("login.submit", "Đăng nhập cổng quản trị")
                 )}
               </button>
             </form>
 
             <div className="mt-8 pt-6 border-t border-[#E5E8EB] text-center text-xs font-medium text-[#65727D]">
-              Email dành cho quản trị hệ thống. Tên đăng nhập dành cho quản trị trường.
+              {t("login.footerNote", "Email dành cho quản trị hệ thống. Tên đăng nhập dành cho quản trị trường.")}
             </div>
           </div>
         </div>

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
+import 'package:adark_frontend/l10n/generated/app_localizations.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/screens/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -96,12 +98,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (_busy) return;
+    final l10n = AppLocalizations.of(context);
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
     if (username.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Vui lòng nhập đầy đủ tên đăng nhập/Gmail và mật khẩu.';
+        _errorMessage = l10n?.loginErrorEmpty ?? 'Vui lòng nhập đầy đủ tên đăng nhập/Gmail và mật khẩu.';
       });
       return;
     }
@@ -141,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await SessionManagementService.instance.clearSession();
         if (!mounted) return;
         setState(() {
-          _errorMessage =
+          _errorMessage = l10n?.loginErrorAdminWebOnly ??
               'Tài khoản Quản trị viên chỉ hỗ trợ trên phiên bản Web máy tính. Vui lòng truy cập cổng quản trị trên trình duyệt web.';
         });
         return;
@@ -152,7 +155,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is AuthException ? e.message : 'Đăng nhập không thành công. Quý phụ huynh và thầy cô vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.';
+        _errorMessage = e is AuthException
+            ? e.message
+            : (l10n?.loginErrorFailed ??
+                'Đăng nhập không thành công. Quý phụ huynh và thầy cô vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.');
       });
     } finally {
       if (mounted) {
@@ -187,17 +193,44 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Builder(
         builder: (context) {
           final k = context.k;
+          final l10n = AppLocalizations.of(context);
           return Scaffold(
             backgroundColor: k.surface,
             body: SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 342),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => LocaleController.instance.toggleLocale(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              backgroundColor: k.surfaceSunken,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: BorderSide(color: k.inputBorder, width: 0.8),
+                              ),
+                            ),
+                            icon: const Icon(Icons.language_rounded, size: 16),
+                            label: Text(
+                              LocaleController.instance.isVietnamese ? 'VI 🇻🇳' : 'EN 🇬🇧',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: k.ink,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -221,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(width: 10),
                             Flexible(
                               child: Text(
-                                'KinderLog',
+                                l10n?.appTitle ?? 'KinderLog',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -247,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Chào mừng trở lại!',
+                          l10n?.loginWelcomeBack ?? 'Chào mừng trở lại!',
                           style: TextStyle(
                             color: k.ink,
                             fontFamily: 'Nunito',
@@ -258,7 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Cùng gia đình lưu giữ từng khoảnh khắc khôn lớn của bé.',
+                          l10n?.loginTagline ?? 'Cùng gia đình lưu giữ từng khoảnh khắc khôn lớn của bé.',
                           style: TextStyle(
                             color: k.inkSoft,
                             fontFamily: 'Nunito',
@@ -294,7 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'TÊN ĐĂNG NHẬP',
+                                    l10n?.loginUsernameLabel ?? 'TÊN ĐĂNG NHẬP',
                                     style: TextStyle(
                                       color: _usernameFocus.hasFocus
                                           ? k.brand
@@ -316,7 +349,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontWeight: FontWeight.w600,
                                     ),
                                     decoration: InputDecoration(
-                                      hintText: 'Nhập tên đăng nhập hoặc Gmail',
+                                      hintText: l10n?.loginUsernameHint ?? 'Nhập tên đăng nhập hoặc Gmail',
                                       hintStyle: TextStyle(
                                         color: k.inkFaint,
                                         fontSize: 14,
@@ -368,7 +401,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'MẬT KHẨU',
+                                            l10n?.loginPasswordLabel ?? 'MẬT KHẨU',
                                             style: TextStyle(
                                               color: _passwordFocus.hasFocus
                                                   ? k.brand
@@ -394,7 +427,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                               fontWeight: FontWeight.w600,
                                             ),
                                             decoration: InputDecoration(
-                                              hintText: 'Nhập mật khẩu',
+                                              hintText: l10n?.loginPasswordHint ?? 'Nhập mật khẩu',
                                               hintStyle: TextStyle(
                                                 color: k.inkFaint,
                                                 fontSize: 14,
@@ -418,8 +451,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   IconButton(
                                     tooltip: _obscurePassword
-                                        ? 'Hiện mật khẩu'
-                                        : 'Ẩn mật khẩu',
+                                        ? (l10n?.loginShowPassword ?? 'Hiện mật khẩu')
+                                        : (l10n?.loginHidePassword ?? 'Ẩn mật khẩu'),
                                     padding: EdgeInsets.zero,
                                     iconSize: 18,
                                     onPressed: () => setState(() =>
@@ -445,7 +478,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               contentPadding: EdgeInsets.zero,
                               controlAffinity: ListTileControlAffinity.leading,
                               title: Text(
-                                'Lưu mật khẩu',
+                                l10n?.loginRememberPassword ?? 'Lưu mật khẩu',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -472,7 +505,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 foregroundColor: k.brand,
                               ),
                               child: Text(
-                                'Quên mật khẩu?',
+                                l10n?.loginForgotPassword ?? 'Quên mật khẩu?',
                                 style: TextStyle(
                                   color: k.brand,
                                   fontFamily: 'Nunito',
@@ -559,7 +592,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   )
                                 : Text(
-                                    'Đăng nhập',
+                                    l10n?.loginButton ?? 'Đăng nhập',
                                     style: TextStyle(
                                       color: k.canvas,
                                       fontFamily: 'Nunito',
@@ -571,7 +604,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'Kết nối lớp học · An tâm mỗi ngày',
+                          l10n?.loginFooter ?? 'Kết nối lớp học · An tâm mỗi ngày',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: k.inkFaint,

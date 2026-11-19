@@ -12,9 +12,11 @@ import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart'
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart'
     as domain_class;
+import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
+import 'package:adark_frontend/l10n/generated/app_localizations.dart';
 
 class TeacherAccountScreen extends StatefulWidget {
   const TeacherAccountScreen({
@@ -70,6 +72,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
   }
 
   void _confirmLogout() {
+    final l10n = AppLocalizations.of(context);
     showKSheet(
       context,
       Column(
@@ -77,7 +80,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bạn có muốn đăng xuất không ?',
+            l10n?.teacherLogoutConfirmTitle ?? 'Bạn có muốn đăng xuất không ?',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 20),
@@ -85,7 +88,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
             children: [
               Expanded(
                 child: KButton(
-                  label: 'Hủy',
+                  label: l10n?.commonCancel ?? 'Hủy',
                   secondary: true,
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -93,7 +96,7 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: KButton(
-                  label: 'Đăng xuất',
+                  label: l10n?.teacherLogoutConfirmButton ?? 'Đăng xuất',
                   icon: Icons.logout,
                   onPressed: () {
                     Navigator.pop(context);
@@ -336,6 +339,21 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
                       label: 'Đổi mật khẩu',
                       onTap: () => context.push('/change-password'),
                     ),
+                    Divider(height: 0.6, thickness: 0.6, color: k.line),
+                    _AccountMenuRow(
+                      iconAsset: 'assets/garden_voice/account_settings.svg',
+                      iconTileColor: k.brandTint,
+                      label: 'Ngôn ngữ / Language',
+                      trailing: Text(
+                        LocaleController.instance.isVietnamese ? 'Tiếng Việt 🇻🇳' : 'English 🇬🇧',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: k.brand,
+                        ),
+                      ),
+                      onTap: () => showLanguageSelectionDialog(context),
+                    ),
                   ],
                 ),
                 const _GroupTitle('Hỗ trợ'),
@@ -471,12 +489,14 @@ class _AccountMenuRow extends StatelessWidget {
     required this.iconAsset,
     required this.iconTileColor,
     required this.label,
+    this.trailing,
     this.onTap,
   });
 
   final String iconAsset;
   final Color iconTileColor;
   final String label;
+  final Widget? trailing;
   final VoidCallback? onTap;
 
   @override
@@ -514,6 +534,10 @@ class _AccountMenuRow extends StatelessWidget {
                 ),
               ),
             ),
+            if (trailing != null) ...[
+              trailing!,
+              const SizedBox(width: 8),
+            ],
             SvgPicture.asset(
               'assets/garden_voice/account_chevron_right.svg',
               width: 17,

@@ -12,6 +12,327 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'KinderLog';
 
   @override
+  String get commonSave => 'Save';
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get commonClose => 'Close';
+
+  @override
+  String get commonConfirm => 'Confirm';
+
+  @override
+  String get commonRetry => 'Retry';
+
+  @override
+  String get commonBack => 'Back';
+
+  @override
+  String get commonDelete => 'Delete';
+
+  @override
+  String get commonEdit => 'Edit';
+
+  @override
+  String get commonLoading => 'Loading...';
+
+  @override
+  String get commonSuccess => 'Success';
+
+  @override
+  String get commonError => 'An error occurred. Please try again later.';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get languageVietnamese => 'Tiếng Việt';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageSelectTitle => 'Select Display Language';
+
+  @override
+  String get loginWelcomeBack => 'Welcome back!';
+
+  @override
+  String get loginTagline =>
+      'Preserving every precious moment of your child\'s growth together.';
+
+  @override
+  String get loginUsernameLabel => 'USERNAME';
+
+  @override
+  String get loginUsernameHint => 'Enter username or Gmail';
+
+  @override
+  String get loginPasswordLabel => 'PASSWORD';
+
+  @override
+  String get loginPasswordHint => 'Enter password';
+
+  @override
+  String get loginRememberPassword => 'Remember password';
+
+  @override
+  String get loginForgotPassword => 'Forgot password?';
+
+  @override
+  String get loginButton => 'Sign In';
+
+  @override
+  String get loginFooter => 'Connecting classrooms · Peace of mind every day';
+
+  @override
+  String get loginErrorEmpty =>
+      'Please enter both username/Gmail and password.';
+
+  @override
+  String get loginErrorFailed =>
+      'Login failed. Please check your internet connection or try again later.';
+
+  @override
+  String get loginErrorAdminWebOnly =>
+      'Admin accounts are only supported on the Web version. Please visit the admin portal on a desktop browser.';
+
+  @override
+  String get loginRememberError =>
+      'Unable to read saved credentials. You can still sign in.';
+
+  @override
+  String get loginRememberClearError =>
+      'Failed to clear saved credentials. Please try again.';
+
+  @override
+  String get loginShowPassword => 'Show password';
+
+  @override
+  String get loginHidePassword => 'Hide password';
+
+  @override
+  String get changePasswordTitle => 'Change Password';
+
+  @override
+  String get changePasswordOldLabel => 'Current password';
+
+  @override
+  String get changePasswordOldHint => 'Enter current password';
+
+  @override
+  String get changePasswordNewLabel => 'New password';
+
+  @override
+  String get changePasswordNewHint => 'At least 6 characters';
+
+  @override
+  String get changePasswordConfirmLabel => 'Confirm new password';
+
+  @override
+  String get changePasswordConfirmHint => 'Re-enter new password';
+
+  @override
+  String get changePasswordButton => 'Save Changes';
+
+  @override
+  String get changePasswordSuccess => 'Password changed successfully!';
+
+  @override
+  String get changePasswordMismatch => 'Passwords do not match.';
+
+  @override
+  String get changePasswordEmpty => 'Please fill in all password fields.';
+
+  @override
+  String get forgotPasswordTitle => 'Forgot Password';
+
+  @override
+  String get forgotPasswordInstruction =>
+      'Enter your registered email address to receive an OTP code to reset your password.';
+
+  @override
+  String get forgotPasswordEmailLabel => 'Account Email';
+
+  @override
+  String get forgotPasswordEmailHint => 'example@gmail.com';
+
+  @override
+  String get forgotPasswordSendOtp => 'Send Verification Code';
+
+  @override
+  String get forgotPasswordEnterOtp => 'Enter OTP Code';
+
+  @override
+  String get forgotPasswordVerify => 'Verify OTP';
+
+  @override
+  String get teacherNavAttendance => 'Attendance';
+
+  @override
+  String get teacherNavTimetable => 'Timetable';
+
+  @override
+  String get teacherNavRecord => 'Daily Log';
+
+  @override
+  String get teacherNavNotifications => 'Notifications';
+
+  @override
+  String get teacherNavAccount => 'Account';
+
+  @override
+  String teacherGreeting(String name) {
+    return 'Hello, Teacher $name!';
+  }
+
+  @override
+  String teacherClassTitle(String className) {
+    return 'Class $className';
+  }
+
+  @override
+  String teacherStudentCount(int count) {
+    return '$count students';
+  }
+
+  @override
+  String get teacherAccountTitle => 'Account';
+
+  @override
+  String get teacherAccountSectionClass => 'Assigned Class';
+
+  @override
+  String get teacherAccountSectionSettings => 'Settings & Support';
+
+  @override
+  String get teacherAccountAbout => 'About KinderLog';
+
+  @override
+  String get teacherAccountQuickBug => 'Bug Report & Feedback';
+
+  @override
+  String get teacherLogoutConfirmTitle => 'Do you want to log out?';
+
+  @override
+  String get teacherLogoutConfirmButton => 'Log out';
+
+  @override
+  String get attendanceTitle => 'Daily Attendance';
+
+  @override
+  String get attendanceSummaryPresent => 'Present';
+
+  @override
+  String get attendanceSummaryAbsent => 'Absent';
+
+  @override
+  String get attendanceSummaryLeave => 'On Leave';
+
+  @override
+  String get attendanceCheckIn => 'Morning Check-in';
+
+  @override
+  String get attendanceCheckOut => 'Afternoon Check-out';
+
+  @override
+  String get attendanceSaveSuccess => 'Attendance saved successfully!';
+
+  @override
+  String get leaveRequestsTitle => 'Leave Requests';
+
+  @override
+  String get leaveRequestsPending => 'Pending';
+
+  @override
+  String get leaveRequestsApproved => 'Approved';
+
+  @override
+  String get leaveRequestsRejected => 'Rejected';
+
+  @override
+  String get leaveRequestApprove => 'Approve';
+
+  @override
+  String get leaveRequestReject => 'Reject';
+
+  @override
+  String leaveRequestReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get recordTitle => 'Class Daily Log';
+
+  @override
+  String get recordMeal => 'Meals';
+
+  @override
+  String get recordNap => 'Nap';
+
+  @override
+  String get recordHygiene => 'Hygiene';
+
+  @override
+  String get recordActivity => 'Activities';
+
+  @override
+  String get recordHealth => 'Health';
+
+  @override
+  String get recordVoiceButton => 'Record Voice Note';
+
+  @override
+  String get recordVoiceListening => 'Listening...';
+
+  @override
+  String get recordVoiceStop => 'Stop Recording';
+
+  @override
+  String get recordVoiceProcessing => 'Processing voice note...';
+
+  @override
+  String get parentNavDaily => 'Today';
+
+  @override
+  String get parentNavActivities => 'Activities';
+
+  @override
+  String get parentNavRequests => 'Requests';
+
+  @override
+  String get parentNavAccount => 'Account';
+
+  @override
+  String get parentChildProfile => 'Child Profile';
+
+  @override
+  String get parentLeaveRequestButton => 'Submit Leave Request';
+
+  @override
+  String get parentHealthNote => 'Health Notes';
+
+  @override
+  String get parentDailyReport => 'Child\'s Daily Report';
+
+  @override
+  String get parentPushNotification => 'Push Notifications';
+
+  @override
+  String get parentPushSubtitle =>
+      'Get notified when new daily reports are posted';
+
+  @override
+  String parentAppVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get parentLogoutConfirmTitle => 'Do you want to log out?';
+
+  @override
   String get bugReportTitle => 'Report a Bug';
 
   @override
