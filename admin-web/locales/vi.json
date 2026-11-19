@@ -1,0 +1,53 @@
+{
+  "brand": "KinderLog",
+  "systemAdmin": "Quản trị hệ thống",
+  "schoolAdmin": "Quản trị trường học",
+  "academicYear": "Năm học 2026–2027",
+  "kindergarten": "Trường Mầm non",
+  "nav": {
+    "overview": "Tổng quan trường",
+    "teachers": "Quản lý Giáo viên",
+    "students": "Quản lý Học sinh",
+    "parents": "Quản lý Phụ huynh",
+    "schedules": "Thời khóa biểu",
+    "classes": "Quản lý Lớp học",
+    "healthExam": "Khám sức khỏe",
+    "account": "Tài khoản trường",
+    "bugReports": "Quản trị Bug Report",
+    "otherModules": "Phân hệ khác"
+  },
+  "login": {
+    "title": "Cổng quản trị web",
+    "subtitle": "Đăng nhập để quản lý trường và vận hành hệ thống KinderLog",
+    "tagline": "Mỗi ngày một chút lớn khôn",
+    "desc": "Cùng nhà trường kết nối giáo viên, phụ huynh và những ngày đến lớp của bé một cách trọn vẹn và an tâm nhất.",
+    "usernameOrEmail": "Tên đăng nhập hoặc Email",
+    "usernameOrEmailPlaceholder": "admin@kinderlog.edu.vn hoặc user",
+    "password": "Mật khẩu",
+    "show": "Hiện",
+    "hide": "Ẩn",
+    "submit": "Đăng nhập cổng quản trị",
+    "submitting": "Đang đăng nhập...",
+    "footerNote": "Email dành cho quản trị hệ thống. Tên đăng nhập dành cho quản trị trường.",
+    "errorNetwork": "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại sau.",
+    "errorFailed": "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin."
+  },
+  "common": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "search": "Tìm kiếm...",
+    "filter": "Bộ lọc",
+    "status": "Trạng thái",
+    "logout": "Đăng xuất",
+    "actions": "Thao tác",
+    "loading": "Đang tải...",
+    "noData": "Không có dữ liệu",
+    "language": "Ngôn ngữ",
+    "vietnamese": "Tiếng Việt",
+    "english": "English"
+  }
+}

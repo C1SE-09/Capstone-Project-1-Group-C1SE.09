@@ -104,6 +104,612 @@ abstract class AppLocalizations {
   /// **'KinderLog'**
   String get appTitle;
 
+  /// No description provided for @commonSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get commonSave;
+
+  /// No description provided for @commonCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get commonCancel;
+
+  /// No description provided for @commonClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get commonClose;
+
+  /// No description provided for @commonConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get commonConfirm;
+
+  /// No description provided for @commonRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get commonRetry;
+
+  /// No description provided for @commonBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get commonBack;
+
+  /// No description provided for @commonDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get commonDelete;
+
+  /// No description provided for @commonEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get commonEdit;
+
+  /// No description provided for @commonLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get commonLoading;
+
+  /// No description provided for @commonSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get commonSuccess;
+
+  /// No description provided for @commonError.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred. Please try again later.'**
+  String get commonError;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @languageVietnamese.
+  ///
+  /// In en, this message translates to:
+  /// **'Tiếng Việt'**
+  String get languageVietnamese;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageSelectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Display Language'**
+  String get languageSelectTitle;
+
+  /// No description provided for @loginWelcomeBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back!'**
+  String get loginWelcomeBack;
+
+  /// No description provided for @loginTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Preserving every precious moment of your child\'s growth together.'**
+  String get loginTagline;
+
+  /// No description provided for @loginUsernameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'USERNAME'**
+  String get loginUsernameLabel;
+
+  /// No description provided for @loginUsernameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter username or Gmail'**
+  String get loginUsernameHint;
+
+  /// No description provided for @loginPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PASSWORD'**
+  String get loginPasswordLabel;
+
+  /// No description provided for @loginPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter password'**
+  String get loginPasswordHint;
+
+  /// No description provided for @loginRememberPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember password'**
+  String get loginRememberPassword;
+
+  /// No description provided for @loginForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get loginForgotPassword;
+
+  /// No description provided for @loginButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get loginButton;
+
+  /// No description provided for @loginFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting classrooms · Peace of mind every day'**
+  String get loginFooter;
+
+  /// No description provided for @loginErrorEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter both username/Gmail and password.'**
+  String get loginErrorEmpty;
+
+  /// No description provided for @loginErrorFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Login failed. Please check your internet connection or try again later.'**
+  String get loginErrorFailed;
+
+  /// No description provided for @loginErrorAdminWebOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin accounts are only supported on the Web version. Please visit the admin portal on a desktop browser.'**
+  String get loginErrorAdminWebOnly;
+
+  /// No description provided for @loginRememberError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to read saved credentials. You can still sign in.'**
+  String get loginRememberError;
+
+  /// No description provided for @loginRememberClearError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to clear saved credentials. Please try again.'**
+  String get loginRememberClearError;
+
+  /// No description provided for @loginShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get loginShowPassword;
+
+  /// No description provided for @loginHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get loginHidePassword;
+
+  /// No description provided for @changePasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePasswordTitle;
+
+  /// No description provided for @changePasswordOldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get changePasswordOldLabel;
+
+  /// No description provided for @changePasswordOldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter current password'**
+  String get changePasswordOldHint;
+
+  /// No description provided for @changePasswordNewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get changePasswordNewLabel;
+
+  /// No description provided for @changePasswordNewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 6 characters'**
+  String get changePasswordNewHint;
+
+  /// No description provided for @changePasswordConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get changePasswordConfirmLabel;
+
+  /// No description provided for @changePasswordConfirmHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter new password'**
+  String get changePasswordConfirmHint;
+
+  /// No description provided for @changePasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get changePasswordButton;
+
+  /// No description provided for @changePasswordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed successfully!'**
+  String get changePasswordSuccess;
+
+  /// No description provided for @changePasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get changePasswordMismatch;
+
+  /// No description provided for @changePasswordEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in all password fields.'**
+  String get changePasswordEmpty;
+
+  /// No description provided for @forgotPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot Password'**
+  String get forgotPasswordTitle;
+
+  /// No description provided for @forgotPasswordInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your registered email address to receive an OTP code to reset your password.'**
+  String get forgotPasswordInstruction;
+
+  /// No description provided for @forgotPasswordEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Email'**
+  String get forgotPasswordEmailLabel;
+
+  /// No description provided for @forgotPasswordEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'example@gmail.com'**
+  String get forgotPasswordEmailHint;
+
+  /// No description provided for @forgotPasswordSendOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Verification Code'**
+  String get forgotPasswordSendOtp;
+
+  /// No description provided for @forgotPasswordEnterOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter OTP Code'**
+  String get forgotPasswordEnterOtp;
+
+  /// No description provided for @forgotPasswordVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify OTP'**
+  String get forgotPasswordVerify;
+
+  /// No description provided for @teacherNavAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get teacherNavAttendance;
+
+  /// No description provided for @teacherNavTimetable.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable'**
+  String get teacherNavTimetable;
+
+  /// No description provided for @teacherNavRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Log'**
+  String get teacherNavRecord;
+
+  /// No description provided for @teacherNavNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get teacherNavNotifications;
+
+  /// No description provided for @teacherNavAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get teacherNavAccount;
+
+  /// No description provided for @teacherGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello, Teacher {name}!'**
+  String teacherGreeting(String name);
+
+  /// No description provided for @teacherClassTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Class {className}'**
+  String teacherClassTitle(String className);
+
+  /// No description provided for @teacherStudentCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} students'**
+  String teacherStudentCount(int count);
+
+  /// No description provided for @teacherAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get teacherAccountTitle;
+
+  /// No description provided for @teacherAccountSectionClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned Class'**
+  String get teacherAccountSectionClass;
+
+  /// No description provided for @teacherAccountSectionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings & Support'**
+  String get teacherAccountSectionSettings;
+
+  /// No description provided for @teacherAccountAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About KinderLog'**
+  String get teacherAccountAbout;
+
+  /// No description provided for @teacherAccountQuickBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug Report & Feedback'**
+  String get teacherAccountQuickBug;
+
+  /// No description provided for @teacherLogoutConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to log out?'**
+  String get teacherLogoutConfirmTitle;
+
+  /// No description provided for @teacherLogoutConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get teacherLogoutConfirmButton;
+
+  /// No description provided for @attendanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Attendance'**
+  String get attendanceTitle;
+
+  /// No description provided for @attendanceSummaryPresent.
+  ///
+  /// In en, this message translates to:
+  /// **'Present'**
+  String get attendanceSummaryPresent;
+
+  /// No description provided for @attendanceSummaryAbsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Absent'**
+  String get attendanceSummaryAbsent;
+
+  /// No description provided for @attendanceSummaryLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'On Leave'**
+  String get attendanceSummaryLeave;
+
+  /// No description provided for @attendanceCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning Check-in'**
+  String get attendanceCheckIn;
+
+  /// No description provided for @attendanceCheckOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Afternoon Check-out'**
+  String get attendanceCheckOut;
+
+  /// No description provided for @attendanceSaveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance saved successfully!'**
+  String get attendanceSaveSuccess;
+
+  /// No description provided for @leaveRequestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Requests'**
+  String get leaveRequestsTitle;
+
+  /// No description provided for @leaveRequestsPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get leaveRequestsPending;
+
+  /// No description provided for @leaveRequestsApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get leaveRequestsApproved;
+
+  /// No description provided for @leaveRequestsRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get leaveRequestsRejected;
+
+  /// No description provided for @leaveRequestApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get leaveRequestApprove;
+
+  /// No description provided for @leaveRequestReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get leaveRequestReject;
+
+  /// No description provided for @leaveRequestReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String leaveRequestReason(String reason);
+
+  /// No description provided for @recordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Class Daily Log'**
+  String get recordTitle;
+
+  /// No description provided for @recordMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals'**
+  String get recordMeal;
+
+  /// No description provided for @recordNap.
+  ///
+  /// In en, this message translates to:
+  /// **'Nap'**
+  String get recordNap;
+
+  /// No description provided for @recordHygiene.
+  ///
+  /// In en, this message translates to:
+  /// **'Hygiene'**
+  String get recordHygiene;
+
+  /// No description provided for @recordActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get recordActivity;
+
+  /// No description provided for @recordHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Health'**
+  String get recordHealth;
+
+  /// No description provided for @recordVoiceButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Record Voice Note'**
+  String get recordVoiceButton;
+
+  /// No description provided for @recordVoiceListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening...'**
+  String get recordVoiceListening;
+
+  /// No description provided for @recordVoiceStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Recording'**
+  String get recordVoiceStop;
+
+  /// No description provided for @recordVoiceProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing voice note...'**
+  String get recordVoiceProcessing;
+
+  /// No description provided for @parentNavDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get parentNavDaily;
+
+  /// No description provided for @parentNavActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get parentNavActivities;
+
+  /// No description provided for @parentNavRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests'**
+  String get parentNavRequests;
+
+  /// No description provided for @parentNavAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get parentNavAccount;
+
+  /// No description provided for @parentChildProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Child Profile'**
+  String get parentChildProfile;
+
+  /// No description provided for @parentLeaveRequestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Leave Request'**
+  String get parentLeaveRequestButton;
+
+  /// No description provided for @parentHealthNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Notes'**
+  String get parentHealthNote;
+
+  /// No description provided for @parentDailyReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Child\'s Daily Report'**
+  String get parentDailyReport;
+
+  /// No description provided for @parentPushNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Push Notifications'**
+  String get parentPushNotification;
+
+  /// No description provided for @parentPushSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when new daily reports are posted'**
+  String get parentPushSubtitle;
+
+  /// No description provided for @parentAppVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String parentAppVersion(String version);
+
+  /// No description provided for @parentLogoutConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to log out?'**
+  String get parentLogoutConfirmTitle;
+
   /// No description provided for @bugReportTitle.
   ///
   /// In en, this message translates to:
