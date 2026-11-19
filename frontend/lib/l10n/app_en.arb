@@ -195,5 +195,14 @@
 
   "bugReportCommonRetry": "Retry",
   "bugReportCommonCancel": "Cancel",
-  "bugReportCommonClose": "Close"
+  "bugReportCommonClose": "Close",
+
+  "voiceChatRecordTooltip": "Send voice message",
+  "voiceChatCancelTooltip": "Cancel recording",
+  "voiceChatSendTooltip": "Send voice message now",
+  "voiceChatPermissionError": "App needs microphone permission to record voice messages.",
+  "voiceChatStartError": "Cannot start recording. Please try again.",
+  "voiceChatSendError": "Error sending voice recording. Please try again.",
+  "voiceChatLoadError": "Failed to load audio",
+  "voiceChatDefaultContent": "Voice message"
 }

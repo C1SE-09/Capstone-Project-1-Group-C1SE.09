@@ -8,6 +8,8 @@ import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/data/repositories/http_report_response_repository.dart';
 import 'package:adark_frontend/domain/entities/report/report_response.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/voice_message_bubble.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/widgets/voice_record_bar.dart';
 
 typedef ImagePickerCallback = Future<Uint8List?> Function(ImageSource source);
 
@@ -63,6 +65,7 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
 
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
+  bool _isVoiceRecording = false;
 
   @override
   void initState() {
@@ -321,6 +324,46 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
             e is ReportResponseException
                 ? e.message
                 : 'Không thể gửi tin nhắn. Quý phụ huynh vui lòng thử lại.',
+          ),
+          backgroundColor: context.k.bad,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleSendVoice({
+    required Uint8List bytes,
+    required int durationSeconds,
+    required String fileName,
+  }) async {
+    if (_isSending) return;
+    setState(() => _isSending = true);
+
+    try {
+      final newResponse = await _repo.sendVoiceResponse(
+        reportId: widget.reportId,
+        audioBytes: bytes,
+        durationSeconds: durationSeconds,
+        fileName: fileName,
+        isTeacher: widget.isTeacher,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _responses.add(newResponse);
+        _isSending = false;
+      });
+      widget.onDiscussionUpdated?.call();
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSending = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ReportResponseException
+                ? e.message
+                : 'Không thể gửi tin nhắn thoại. Vui lòng thử lại sau.',
           ),
           backgroundColor: context.k.bad,
         ),
@@ -741,6 +784,15 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                   repository: _repo,
                 ),
               ],
+              if (msg.hasAudio && msg.audioUrl != null) ...[
+                const SizedBox(height: 8),
+                VoiceMessageBubbleWidget(
+                  audioUrl: msg.audioUrl!,
+                  durationSeconds: msg.audioDuration,
+                  repository: _repo,
+                  isMe: true,
+                ),
+              ],
             ],
           ),
         ),
@@ -857,6 +909,15 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
                 AttachmentThumbnailWidget(
                   url: msg.imageUrl!,
                   repository: _repo,
+                ),
+              ],
+              if (msg.hasAudio && msg.audioUrl != null) ...[
+                const SizedBox(height: 8),
+                VoiceMessageBubbleWidget(
+                  audioUrl: msg.audioUrl!,
+                  durationSeconds: msg.audioDuration,
+                  repository: _repo,
+                  isMe: false,
                 ),
               ],
               if (msg.isResolved) ...[
@@ -997,81 +1058,97 @@ class _ReportDiscussionSectionState extends State<ReportDiscussionSection> {
               width: _inputFocusNode.hasFocus ? 1.5 : 1.0,
             ),
           ),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Đính kèm ảnh',
-                onPressed: _isSending ? null : _showImageSourcePicker,
-                icon: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: context.k.surfaceSunken,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.camera_alt_outlined,
-                    size: 19,
-                    color: context.k.inkSoft,
-                  ),
+          child: _isVoiceRecording
+              ? VoiceRecordBar(
+                  isSending: _isSending,
+                  onRecordingStateChanged: (rec) {
+                    if (mounted) setState(() => _isVoiceRecording = rec);
+                  },
+                  onVoiceRecorded: _handleSendVoice,
+                )
+              : Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Đính kèm ảnh',
+                      onPressed: _isSending ? null : _showImageSourcePicker,
+                      icon: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: context.k.surfaceSunken,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.camera_alt_outlined,
+                          size: 19,
+                          color: context.k.inkSoft,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: TextField(
+                        controller: _textController,
+                        focusNode: _inputFocusNode,
+                        enabled: !_isSending,
+                        minLines: 1,
+                        maxLines: 4,
+                        style: TextStyle(fontSize: 13, color: context.k.ink),
+                        decoration: InputDecoration(
+                          hintText: widget.isTeacher
+                              ? 'Nhắn phản hồi cho phụ huynh về báo cáo này...'
+                              : 'Nhắn cho cô giáo về báo cáo này...',
+                          hintStyle:
+                              TextStyle(fontSize: 12.5, color: context.k.inkFaint),
+                          isDense: true,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _handleSend(),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    VoiceRecordBar(
+                      isSending: _isSending,
+                      onRecordingStateChanged: (rec) {
+                        if (mounted) setState(() => _isVoiceRecording = rec);
+                      },
+                      onVoiceRecorded: _handleSendVoice,
+                    ),
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: ElevatedButton(
+                        onPressed: _isSending ? null : _handleSend,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: context.k.brand,
+                          foregroundColor: Colors.white,
+                          shape: const CircleBorder(),
+                          padding: EdgeInsets.zero,
+                          elevation: 0,
+                        ),
+                        child: _isSending
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.send_rounded, size: 18),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: TextField(
-                  controller: _textController,
-                  focusNode: _inputFocusNode,
-                  enabled: !_isSending,
-                  minLines: 1,
-                  maxLines: 4,
-                  style: TextStyle(fontSize: 13, color: context.k.ink),
-                  decoration: InputDecoration(
-                    hintText: widget.isTeacher
-                        ? 'Nhắn phản hồi cho phụ huynh về báo cáo này...'
-                        : 'Nhắn cho cô giáo về báo cáo này...',
-                    hintStyle:
-                        TextStyle(fontSize: 12.5, color: context.k.inkFaint),
-                    isDense: true,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _handleSend(),
-                ),
-              ),
-              const SizedBox(width: 4),
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: ElevatedButton(
-                  onPressed: _isSending ? null : _handleSend,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: context.k.brand,
-                    foregroundColor: Colors.white,
-                    shape: const CircleBorder(),
-                    padding: EdgeInsets.zero,
-                    elevation: 0,
-                  ),
-                  child: _isSending
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.send_rounded, size: 18),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

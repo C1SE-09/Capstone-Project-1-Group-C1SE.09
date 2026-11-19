@@ -517,4 +517,30 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get bugReportCommonClose => 'Đóng';
+
+  @override
+  String get voiceChatRecordTooltip => 'Gửi tin nhắn thoại';
+
+  @override
+  String get voiceChatCancelTooltip => 'Hủy ghi âm';
+
+  @override
+  String get voiceChatSendTooltip => 'Gửi tin nhắn thoại ngay';
+
+  @override
+  String get voiceChatPermissionError =>
+      'Ứng dụng cần quyền sử dụng micro để ghi âm tin nhắn thoại.';
+
+  @override
+  String get voiceChatStartError =>
+      'Không thể bắt đầu ghi âm. Vui lòng thử lại.';
+
+  @override
+  String get voiceChatSendError => 'Lỗi khi gửi file ghi âm. Vui lòng thử lại.';
+
+  @override
+  String get voiceChatLoadError => 'Lỗi tải audio';
+
+  @override
+  String get voiceChatDefaultContent => 'Tin nhắn thoại';
 }

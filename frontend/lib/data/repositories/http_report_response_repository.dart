@@ -52,6 +52,7 @@ class HttpReportResponseRepository {
   }
 
   final Dio _dio;
+  final Map<String, Uint8List> _audioCache = {};
 
   Future<List<ReportResponse>> getResponses(
     String reportId, {
@@ -171,6 +172,69 @@ class HttpReportResponseRepository {
     } catch (e) {
       throw ReportResponseException(e.toString());
     }
+  }
+
+  Future<ReportResponse> sendVoiceResponse({
+    required String reportId,
+    required Uint8List audioBytes,
+    required int durationSeconds,
+    String? fileName,
+    String? summaryText,
+    bool isTeacher = false,
+  }) async {
+    try {
+      final name = fileName ??
+          'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final ext = name.contains('.')
+          ? name.split('.').last.toLowerCase()
+          : 'm4a';
+      final mimeType = switch (ext) {
+        'mp3' => MediaType('audio', 'mpeg'),
+        'wav' => MediaType('audio', 'wav'),
+        'ogg' => MediaType('audio', 'ogg'),
+        'aac' => MediaType('audio', 'aac'),
+        _ => MediaType('audio', 'm4a'),
+      };
+
+      final formData = FormData.fromMap({
+        'content': summaryText ?? 'Tin nhắn thoại ($durationSeconds giây)',
+        'duration': durationSeconds,
+        'file': MultipartFile.fromBytes(
+          audioBytes,
+          filename: name,
+          contentType: mimeType,
+        ),
+      });
+
+      final response = await _dio.post(
+        '/api/report-responses/reports/$reportId/with-audio',
+        data: formData,
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      final resObj = data['response'] as Map<String, dynamic>;
+      final result = ReportResponse.fromJson(resObj);
+      if (result.audioUrl != null && result.audioUrl!.isNotEmpty) {
+        _audioCache[result.audioUrl!] = audioBytes;
+      }
+      return result;
+    } on DioException catch (e) {
+      throw ReportResponseException(
+        _formatDioError(e),
+        statusCode: e.response?.statusCode,
+      );
+    } catch (e) {
+      throw ReportResponseException(e.toString());
+    }
+  }
+
+  Future<Uint8List> getAudioBytes(String audioUrl) async {
+    if (_audioCache.containsKey(audioUrl)) {
+      return _audioCache[audioUrl]!;
+    }
+    final bytes = await getAttachmentBytes(audioUrl);
+    _audioCache[audioUrl] = bytes;
+    return bytes;
   }
 
   String _formatDioError(DioException e) {

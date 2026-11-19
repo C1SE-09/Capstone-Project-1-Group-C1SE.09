@@ -361,6 +361,77 @@ def reply_report_response_with_image(
 
 
 # ===========================================================================
+# 2c) POST .../with-audio — gửi tin nhắn thoại (phụ huynh hoặc giáo viên)
+# ===========================================================================
+
+
+@router.post(
+    "/reports/{report_id}/with-audio",
+    response_model=ReportResponseCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Gửi tin nhắn thoại trong trao đổi báo cáo (phụ huynh hoặc giáo viên)",
+    description=(
+        "Nhận multipart/form-data kèm 1 file âm thanh (m4a/aac/mp3/wav/ogg, tối đa 15 MiB). "
+        "File lưu trong kho private; client nghe qua endpoint /audio/... có kiểm tra quyền."
+    ),
+)
+def create_report_response_with_audio(
+    report_id: uuid.UUID,
+    content: str = Form("Tin nhắn thoại", description="Nội dung tóm tắt phản hồi"),
+    duration: int = Form(0, description="Thời lượng âm thanh tính bằng giây"),
+    file: UploadFile = File(..., description="File âm thanh ghi âm"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = ensure_report_responsed(db, report_id)
+    role = role_of(current_user)
+    if role == "parent":
+        _ensure_parent_can_post(db, report, current_user)
+        author_role = ResponseAuthorRole.PARENT.value
+    elif role in {"teacher", "admin"}:
+        _ensure_can_read_report(db, report, current_user)
+        author_role = (
+            ResponseAuthorRole.TEACHER.value
+            if role == "teacher"
+            else ResponseAuthorRole.ADMIN.value
+        )
+    else:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền gửi phản hồi")
+
+    if report.child_id is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy báo cáo")
+
+    audio_bytes = file.file.read(attachments.MAX_AUDIO_BYTES + 1)
+    audio_url = attachments.save_audio_attachment(
+        child_id=report.child_id,
+        user_id=current_user.user_id,
+        data=audio_bytes,
+        content_type=file.content_type,
+    )
+
+    response = create_response(
+        db,
+        report=report,
+        author=current_user,
+        content=content or "Tin nhắn thoại",
+        audio_url=audio_url,
+        audio_duration=max(0, duration) if duration else None,
+        author_role=author_role,
+    )
+
+    if author_role == ResponseAuthorRole.PARENT.value:
+        _safe_dispatch(notify_teacher_report_response, str(response.response_id))
+    else:
+        _safe_dispatch(notify_parent_report_response_reply, str(response.response_id))
+
+    return ReportResponseCreateResponse(
+        response=ReportResponseOut(**to_dict(response)),
+        total=len(list_responses(db, report_id)),
+        unread_count=count_unread_from_parent(db, report_id),
+    )
+
+
+# ===========================================================================
 # 3) GET /api/report-responses/reports/{report_id} — danh sách phản hồi
 # ===========================================================================
 
@@ -570,6 +641,59 @@ def get_report_response_attachment(
         media_type=content_type,
         headers={
             "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get(
+    "/audio/{child_id}/{attachment_id}",
+    summary="Đọc file âm thanh của tin nhắn thoại",
+)
+def get_report_response_audio(
+    child_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Trả về bytes file âm thanh. Quyền đọc = quyền xem hồ sơ bé (parent/teacher/admin)."""
+    role = role_of(current_user)
+    if role == "parent":
+        resolve_child_for_actor(db, child_id, current_user)
+    elif role == "teacher":
+        teacher = getattr(current_user, "teacher", None)
+        child = db.query(Child).filter(Child.child_id == child_id).first()
+        if child is None:
+            raise HTTPException(status_code=404, detail="Không tìm thấy hồ sơ bé")
+        teacher_allowed = (
+            teacher is not None
+            and (
+                (child.class_id and teacher.class_id == child.class_id)
+                or db.query(DailyReport)
+                .filter(
+                    DailyReport.child_id == child_id,
+                    DailyReport.teacher_id == teacher.teacher_id,
+                )
+                .first()
+                is not None
+            )
+        )
+        if not teacher_allowed:
+            raise HTTPException(
+                status_code=403, detail="Bạn không có quyền với hồ sơ bé này"
+            )
+    elif role != "admin":
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+
+    data, content_type = attachments.read_audio_attachment(
+        child_id=child_id, attachment_id=attachment_id
+    )
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "Accept-Ranges": "bytes",
             "X-Content-Type-Options": "nosniff",
         },
     )

@@ -518,4 +518,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bugReportCommonClose => 'Close';
+
+  @override
+  String get voiceChatRecordTooltip => 'Send voice message';
+
+  @override
+  String get voiceChatCancelTooltip => 'Cancel recording';
+
+  @override
+  String get voiceChatSendTooltip => 'Send voice message now';
+
+  @override
+  String get voiceChatPermissionError =>
+      'App needs microphone permission to record voice messages.';
+
+  @override
+  String get voiceChatStartError => 'Cannot start recording. Please try again.';
+
+  @override
+  String get voiceChatSendError =>
+      'Error sending voice recording. Please try again.';
+
+  @override
+  String get voiceChatLoadError => 'Failed to load audio';
+
+  @override
+  String get voiceChatDefaultContent => 'Voice message';
 }

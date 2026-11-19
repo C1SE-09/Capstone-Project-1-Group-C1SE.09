@@ -194,5 +194,14 @@
 
   "bugReportCommonRetry": "Thử lại",
   "bugReportCommonCancel": "Hủy",
-  "bugReportCommonClose": "Đóng"
+  "bugReportCommonClose": "Đóng",
+
+  "voiceChatRecordTooltip": "Gửi tin nhắn thoại",
+  "voiceChatCancelTooltip": "Hủy ghi âm",
+  "voiceChatSendTooltip": "Gửi tin nhắn thoại ngay",
+  "voiceChatPermissionError": "Ứng dụng cần quyền sử dụng micro để ghi âm tin nhắn thoại.",
+  "voiceChatStartError": "Không thể bắt đầu ghi âm. Vui lòng thử lại.",
+  "voiceChatSendError": "Lỗi khi gửi file ghi âm. Vui lòng thử lại.",
+  "voiceChatLoadError": "Lỗi tải audio",
+  "voiceChatDefaultContent": "Tin nhắn thoại"
 }

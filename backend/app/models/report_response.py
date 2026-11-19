@@ -41,6 +41,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
 )
@@ -187,6 +188,19 @@ class ReportResponse(Base, TimestampMixin):
             "Đường dẫn ảnh trong kho private (KHÔNG phải URL public). "
             "Đọc qua endpoint kèm kiểm tra quyền."
         ),
+    )
+    audio_url: Mapped[str | None] = mapped_column(
+        String(512),
+        nullable=True,
+        comment=(
+            "Đường dẫn file âm thanh trong kho private (KHÔNG phải URL public). "
+            "Đọc qua endpoint kèm kiểm tra quyền."
+        ),
+    )
+    audio_duration: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Thời lượng file âm thanh tính bằng giây",
     )
 
     # --- Workflow flags ---
