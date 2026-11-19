@@ -43,6 +43,15 @@ class Child extends BaseEntity {
   String get displayName =>
       (nickname?.isNotEmpty ?? false) ? nickname! : fullName;
 
+  /// Tên đầy đủ kèm biệt danh (nếu có): vd "Lê Ngọc Ánh (Bống)", không có nickname thì "Lê Ngọc Ánh"
+  String get fullNameWithNickname {
+    final nick = nickname?.trim();
+    if (nick != null && nick.isNotEmpty) {
+      return '$fullName ($nick)';
+    }
+    return fullName;
+  }
+
   /// Chuỗi seed/kế thừa ghi "Không có" thay vì để trống khi bé không bị dị ứng.
   static const _noAllergy = {'', 'không', 'không có', 'none'};
 
