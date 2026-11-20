@@ -3,6 +3,8 @@
 // Entity ClassSchedule — MIRROR backend app/schemas/schedule.py
 // (ClassScheduleResponse, flat list with nested time_slot/subject/teacher)
 
+import 'package:adark_frontend/core/localization/locale_controller.dart';
+import 'package:adark_frontend/core/localization/timetable_localizer.dart';
 import 'package:adark_frontend/domain/entities/base_entity.dart';
 import 'package:adark_frontend/domain/entities/timetable/subject.dart';
 import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
@@ -62,6 +64,15 @@ class ClassSchedule extends BaseEntity {
   String get timeKey => slotId.isNotEmpty ? slotId : 'custom:$startTime-$endTime';
   String get teacherLabel => (teacherName?.trim().isNotEmpty ?? false) ? teacherName!.trim() : '';
   String get roomLabel => (roomName?.trim().isNotEmpty ?? false) ? roomName!.trim() : '';
+
+  String localizedDisplayName({bool? isEn}) =>
+      TimetableLocalizer.localizeActivity(displayName, isEn: isEn);
+
+  String localizedRoomLabel({bool? isEn}) =>
+      TimetableLocalizer.localizeRoom(roomLabel, isEn: isEn);
+
+  String localizedTeacherLabel({bool? isEn}) =>
+      LocaleController.formatTeacherName(teacherLabel, isEn: isEn);
 
   factory ClassSchedule.fromJson(Map<String, dynamic>? json) {
     final data = json ?? const <String, dynamic>{};

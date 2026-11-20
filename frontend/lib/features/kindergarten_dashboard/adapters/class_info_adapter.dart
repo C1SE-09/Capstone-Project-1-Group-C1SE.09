@@ -9,7 +9,7 @@ ui.ClassInfo uiClassInfoFromOverview(
 ) =>
     ui.ClassInfo(
       overview.classInfo.classId,
-      overview.classInfo.name,
+      LocaleController.formatClassName(overview.classInfo.name),
       LocaleController.instance.isEnglish
           ? 'No school information'
           : 'Chưa có thông tin trường',
@@ -25,7 +25,7 @@ ui.ClassInfo uiClassInfoFromDomain(
 }) =>
     ui.ClassInfo(
       domain.classId,
-      domain.name,
+      LocaleController.formatClassName(domain.name),
       LocaleController.instance.isEnglish
           ? 'No school information'
           : 'Chưa có thông tin trường',

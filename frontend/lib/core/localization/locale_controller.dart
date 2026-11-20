@@ -59,6 +59,42 @@ class LocaleController extends ValueNotifier<Locale> {
 
   /// Truy cập AppLocalizations bất kỳ đâu mà không cần BuildContext (cho Repositories, Utils, v.v.)
   AppLocalizations get currentL10n => lookupAppLocalizations(value);
+
+  /// Định dạng tên giáo viên song ngữ (tự động gắn danh xưng tĩnh 'Cô' / 'Teacher').
+  static String formatTeacherName(String rawName, {bool? isEn}) {
+    final effectiveIsEn = isEn ?? instance.isEnglish;
+    final trimmed = rawName.trim();
+    if (trimmed.isEmpty) return effectiveIsEn ? 'Teacher' : 'Giáo viên';
+    final clean = trimmed.replaceFirst(RegExp(r'^(Cô|Thầy|cô|thầy|Teacher)\s+', caseSensitive: false), '');
+    if (clean.isEmpty) return effectiveIsEn ? 'Teacher' : 'Giáo viên';
+    return effectiveIsEn ? 'Teacher $clean' : 'Cô $clean';
+  }
+
+  /// Định dạng tên trường học song ngữ (tự động gắn danh xưng tĩnh 'Trường Mầm Non' / 'Kindergarten').
+  static String formatSchoolName(String rawName, {bool? isEn}) {
+    final effectiveIsEn = isEn ?? instance.isEnglish;
+    final trimmed = rawName.trim();
+    if (trimmed.isEmpty ||
+        trimmed == 'Chưa có thông tin trường' ||
+        trimmed == 'No school information') {
+      return effectiveIsEn ? 'No school information' : 'Chưa có thông tin trường';
+    }
+    final clean = trimmed
+        .replaceFirst(RegExp(r'^(Trường\s+Mầm\s+Non|Trường\s+Mẫu\s+Giáo|Trường|School)\s+', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+(Kindergarten|Preschool)$', caseSensitive: false), '');
+    if (clean.isEmpty) return effectiveIsEn ? 'Kindergarten' : 'Trường Mầm Non';
+    return effectiveIsEn ? '$clean Kindergarten' : 'Trường Mầm Non $clean';
+  }
+
+  /// Định dạng tên lớp học song ngữ (tự động gắn danh xưng tĩnh 'Lớp' / 'Class').
+  static String formatClassName(String rawName, {bool? isEn}) {
+    final effectiveIsEn = isEn ?? instance.isEnglish;
+    final trimmed = rawName.trim();
+    if (trimmed.isEmpty) return effectiveIsEn ? 'Class' : 'Lớp';
+    final clean = trimmed.replaceFirst(RegExp(r'^(Lớp|Class)\s+', caseSensitive: false), '');
+    if (clean.isEmpty) return effectiveIsEn ? 'Class' : 'Lớp';
+    return effectiveIsEn ? 'Class $clean' : 'Lớp $clean';
+  }
 }
 
 /// Hiển thị hộp thoại chọn ngôn ngữ (Tiếng Việt / English).

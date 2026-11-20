@@ -147,16 +147,8 @@ class _TeacherAccountScreenState extends State<TeacherAccountScreen> {
     );
   }
 
-  static String _displayTeacherName(String fullName, {bool isEn = false}) {
-    final trimmed = fullName.trim();
-    if (trimmed.isEmpty) return isEn ? 'Teacher' : 'Giáo viên';
-    if (trimmed.startsWith('Cô ') || trimmed.startsWith('Thầy ')) {
-      return isEn
-          ? trimmed.replaceFirst(RegExp(r'^(Cô|Thầy)\s+'), 'Teacher ')
-          : trimmed;
-    }
-    return isEn ? 'Teacher $trimmed' : 'Cô $trimmed';
-  }
+  static String _displayTeacherName(String fullName, {bool isEn = false}) =>
+      LocaleController.formatTeacherName(fullName, isEn: isEn);
 
   @override
   Widget build(BuildContext context) {

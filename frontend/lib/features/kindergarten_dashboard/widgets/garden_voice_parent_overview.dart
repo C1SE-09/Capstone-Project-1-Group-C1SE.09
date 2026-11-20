@@ -437,16 +437,9 @@ class _ChildOverviewCard extends StatelessWidget {
     final allergy = overview.child.allergy;
     final rawClassName = overview.className.trim();
     final isEn = LocaleController.instance.isEnglish;
-    final cleanUpper = rawClassName
-        .replaceFirst(RegExp(r'^(LỚP|CLASS)\s*', caseSensitive: false), '')
-        .toUpperCase();
     final classLabel = rawClassName.isEmpty
         ? (isEn ? 'CLASS' : 'LỚP HỌC')
-        : (isEn
-            ? (cleanUpper.isEmpty ? 'CLASS' : 'CLASS $cleanUpper')
-            : (rawClassName.toUpperCase().startsWith('LỚP')
-                ? rawClassName.toUpperCase()
-                : 'LỚP ${rawClassName.toUpperCase()}'));
+        : LocaleController.formatClassName(rawClassName, isEn: isEn).toUpperCase();
     return Container(
       key: const ValueKey('garden-voice-parent-child-card'),
       height: 160,

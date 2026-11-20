@@ -889,7 +889,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.displayName, style: Theme.of(sheetCtx).textTheme.titleMedium),
+                        Text(item.localizedDisplayName(), style: Theme.of(sheetCtx).textTheme.titleMedium),
                         Text(meta, style: TextStyle(fontSize: 12, color: sheetCtx.k.inkFaint)),
                       ],
                     ),
@@ -902,7 +902,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   children: [
                     Icon(Icons.place_outlined, size: 14, color: sheetCtx.k.inkFaint),
                     const SizedBox(width: 4),
-                    Text(sheetCtx.l10n?.roomLabel(item.roomLabel) ?? 'Phòng: ${item.roomLabel}',
+                    Text(sheetCtx.l10n?.roomLabel(item.localizedRoomLabel()) ?? 'Phòng: ${item.localizedRoomLabel()}',
                         style: TextStyle(fontSize: 13, color: sheetCtx.k.inkSoft)),
                   ],
                 ),
@@ -1360,9 +1360,9 @@ class _ScheduleRow extends StatelessWidget {
     if (context.k.isGardenVoice) return _buildGardenVoice(context);
 
     final Color color = _hexColor(item.subject?.colorCode) ?? context.k.brand;
-    final name = item.displayName;
-    final teacher = item.teacherLabel;
-    final room = item.roomLabel;
+    final name = item.localizedDisplayName();
+    final teacher = item.localizedTeacherLabel();
+    final room = item.localizedRoomLabel();
 
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1468,9 +1468,9 @@ class _ScheduleRow extends StatelessWidget {
   }
 
   Widget _buildGardenVoice(BuildContext context) {
-    final name = item.displayName;
-    final teacher = item.teacherLabel;
-    final room = item.roomLabel;
+    final name = item.localizedDisplayName();
+    final teacher = item.localizedTeacherLabel();
+    final room = item.localizedRoomLabel();
     final kind = _scheduleKind(item);
     final detail = (item.content?.trim().isNotEmpty ?? false)
         ? item.content!.trim()
@@ -1608,14 +1608,14 @@ class _ParentScheduleCard extends StatelessWidget {
     final kind = _scheduleKind(item);
     final detail = (item.content?.trim().isNotEmpty ?? false)
         ? item.content!.trim()
-        : [item.teacherLabel, item.roomLabel]
+        : [item.localizedTeacherLabel(), item.localizedRoomLabel()]
             .where((part) => part.isNotEmpty)
             .join(' · ');
     final current = status == 'Đang diễn ra';
 
     return Semantics(
       button: true,
-      label: '${item.displayName}, ${item.startTime}',
+      label: '${item.localizedDisplayName()}, ${item.startTime}',
       child: Material(
         color: current ? context.k.brandTint : context.k.reviewSurface,
         borderRadius: BorderRadius.circular(16),
