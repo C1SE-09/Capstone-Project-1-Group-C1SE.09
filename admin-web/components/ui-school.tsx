@@ -5,6 +5,8 @@
  */
 
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "@/lib/language-context";
+import { formatClassName } from "@/lib/locale-helper";
 import {
   downloadExcelTemplate,
   parseExcelOrCsvDetailed,
@@ -980,7 +982,7 @@ export function ClassFilterSelect({
   classes,
   value,
   onChange,
-  placeholder = "Tất cả các lớp",
+  placeholder,
   className = "",
 }: {
   classes: { id: string; name: string; room_number?: string; grade_label?: string }[];
@@ -989,24 +991,27 @@ export function ClassFilterSelect({
   placeholder?: string;
   className?: string;
 }) {
+  const { lang } = useLanguage();
+  const defaultPlaceholder = placeholder || (lang === "en" ? "All classes" : "Tất cả các lớp");
+
   const options: SelectOption[] = useMemo(() => {
     return [
-      { value: "", label: placeholder },
+      { value: "", label: defaultPlaceholder },
       ...classes.map((c) => ({
         value: c.id,
-        label: c.name,
+        label: formatClassName(c.name, lang),
         sublabel: c.room_number ? c.room_number : (c.grade_label ? c.grade_label : undefined),
       })),
     ];
-  }, [classes, placeholder]);
+  }, [classes, defaultPlaceholder, lang]);
 
   return (
     <SearchableSelect
       options={options}
       value={value}
       onChange={onChange}
-      placeholder={placeholder}
-      searchPlaceholder="Tìm kiếm tên lớp, phòng..."
+      placeholder={defaultPlaceholder}
+      searchPlaceholder={lang === "en" ? "Search class name, room..." : "Tìm kiếm tên lớp, phòng..."}
       prefixIcon={<span className="text-sm select-none">🏫</span>}
       className={`min-w-[200px] ${className}`}
       allowClear={true}

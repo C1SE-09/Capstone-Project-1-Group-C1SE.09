@@ -21,6 +21,8 @@ import {
   Toast,
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
+import { formatClassName } from "@/lib/locale-helper";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   SchoolClass,
@@ -52,6 +54,7 @@ const GRADE_OPTIONS = ["Nhà trẻ", "Mầm", "Chồi", "Lá", "Mẫu giáo"];
 const GRADE_OTHER = "Khác";
 
 export default function SchoolAdminClassesPage() {
+  const { t, lang } = useLanguage();
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -255,7 +258,7 @@ export default function SchoolAdminClassesPage() {
   return (
     <SchoolAdminLayout
       active="classes"
-      pageTitle="Quản lý lớp học"
+      pageTitle={t("classes.title", "Quản lý lớp học")}
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -417,7 +420,7 @@ export default function SchoolAdminClassesPage() {
                         <a
                           href={`/school-admin/students?class=${c.id}`}
                           className="flex items-center gap-2.5 group"
-                          title={`Xem học sinh lớp ${c.name}`}
+                          title={lang === "en" ? `View students of ${formatClassName(c.name, lang)}` : `Xem học sinh lớp ${c.name}`}
                         >
                           <div
                             className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-white"
@@ -425,7 +428,7 @@ export default function SchoolAdminClassesPage() {
                           >
                             {c.name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="font-bold text-ink group-hover:underline">{c.name}</div>
+                          <div className="font-bold text-ink group-hover:underline">{formatClassName(c.name, lang)}</div>
                         </a>
                       </td>
                       <td className="px-4 py-3">

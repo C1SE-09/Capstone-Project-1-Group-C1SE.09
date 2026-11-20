@@ -41,8 +41,14 @@ import {
   updateSchedule,
 } from "@/lib/admin-api";
 
-const DAY_LABELS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"];
-const DAY_SHORT = ["T2", "T3", "T4", "T5", "T6"];
+import { useLanguage } from "@/lib/language-context";
+import {
+  localizeActivityName,
+  localizeRoomName,
+  getDayLabel,
+  getDayShortLabel,
+} from "@/lib/locale-helper";
+
 const WORKING_HOURS_START = "07:00"; // Mở cửa đón trẻ
 const WORKING_HOURS_END = "17:00"; // Hết giờ trả trẻ
 
@@ -125,6 +131,10 @@ const EMPTY_FORM: FormState = {
 };
 
 export default function SchoolAdminSchedulesPage() {
+  const { t, lang } = useLanguage();
+  const DAY_LABELS = useMemo(() => [0, 1, 2, 3, 4].map((i) => getDayLabel(i, lang)), [lang]);
+  const DAY_SHORT = useMemo(() => [0, 1, 2, 3, 4].map((i) => getDayShortLabel(i, lang)), [lang]);
+
   const [ready, setReady] = useState(false);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -1228,51 +1238,51 @@ export default function SchoolAdminSchedulesPage() {
   return (
     <SchoolAdminLayout
       active="schedules"
-      pageTitle="Quản lý Thời khóa biểu"
+      pageTitle={t("schedules.title", "Quản lý Thời khóa biểu")}
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               mutateDay();
               mutateAll();
-              setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
+              setToast({ msg: lang === "en" ? "Synchronized latest data" : "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
             className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
-            title="Làm mới"
+            title={lang === "en" ? "Refresh" : "Làm mới"}
           >
             ↻
           </button>
           <button
             onClick={() => handleOpenExport("all")}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Xuất toàn bộ thời khóa biểu tất cả các lớp ra file Excel (Tùy chọn thứ & khung giờ)"
+            title={lang === "en" ? "Export timetable of all classes to Excel" : "Xuất toàn bộ thời khóa biểu tất cả các lớp ra file Excel (Tùy chọn thứ & khung giờ)"}
           >
-            🏫 Xuất toàn trường
+            {lang === "en" ? "🏫 Export All Classes" : "🏫 Xuất toàn trường"}
           </button>
           <button
             onClick={() => handleOpenExport("current")}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Xuất thời khóa biểu của lớp đang chọn ra file Excel (Tùy chọn thứ & khung giờ)"
+            title={lang === "en" ? "Export timetable of selected class to Excel" : "Xuất thời khóa biểu của lớp đang chọn ra file Excel (Tùy chọn thứ & khung giờ)"}
           >
-            📥 Xuất Excel
+            {lang === "en" ? "📥 Export Excel" : "📥 Xuất Excel"}
           </button>
           <button
             onClick={() => setImportOpen(true)}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Nhập thời khóa biểu từ file Excel / CSV"
+            title={lang === "en" ? "Import schedule from Excel / CSV" : "Nhập thời khóa biểu từ file Excel / CSV"}
             disabled={isEditingTable}
           >
-            📤 Nhập file
+            {lang === "en" ? "📤 Import file" : "📤 Nhập file"}
           </button>
           {!isEditingTable ? (
             <button
               onClick={startTableEditing}
               className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
-              title="Chỉnh sửa trực tiếp tất cả các hoạt động trên bảng"
+              title={lang === "en" ? "Edit all activities directly in table" : "Chỉnh sửa trực tiếp tất cả các hoạt động trên bảng"}
               disabled={filteredSchedules.length === 0}
             >
               <span>✏️</span>
-              <span>Chỉnh sửa bảng</span>
+              <span>{lang === "en" ? "Edit Table" : "Chỉnh sửa bảng"}</span>
             </button>
           ) : (
             <>
@@ -1281,7 +1291,7 @@ export default function SchoolAdminSchedulesPage() {
                 disabled={savingTable}
                 className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
               >
-                ✕ Hủy bỏ
+                ✕ {lang === "en" ? "Cancel" : "Hủy bỏ"}
               </button>
               <button
                 onClick={handleSaveTableEdits}
@@ -1291,12 +1301,12 @@ export default function SchoolAdminSchedulesPage() {
                 {savingTable ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu...</span>
+                    <span>{lang === "en" ? "Saving..." : "Đang lưu..."}</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu thay đổi</span>
+                    <span>{lang === "en" ? "Save changes" : "Lưu thay đổi"}</span>
                   </>
                 )}
               </button>
@@ -1307,14 +1317,16 @@ export default function SchoolAdminSchedulesPage() {
               onClick={() => openCreate(selectedDay)}
               className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
             >
-              + Thêm hoạt động
+              + {t("schedules.addSlot", "Thêm hoạt động")}
             </button>
           )}
         </div>
       }
     >
       <div className="text-sm text-[#65727D] -mt-3 mb-4">
-        Lịch theo lớp và theo tuần · Hệ thống tự kiểm tra xung đột phòng và trùng giờ trên toàn trường.
+        {lang === "en"
+          ? "Class and weekly timetable · System automatically verifies room and timeslot conflicts across school."
+          : "Lịch theo lớp và theo tuần · Hệ thống tự kiểm tra xung đột phòng và trùng giờ trên toàn trường."}
       </div>
 
       {/* Cảnh báo xung đột TOÀN TRƯỜNG (Figma Frame 09: #454:3952) */}
@@ -1418,7 +1430,7 @@ export default function SchoolAdminSchedulesPage() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm hoạt động, phòng, khung giờ (vd: 08:00, 8h)..."
+          placeholder={lang === "en" ? "Search activity, room, time slot (e.g. 08:00)..." : "Tìm hoạt động, phòng, khung giờ (vd: 08:00, 8h)..."}
           className="kinput"
         />
       </div>
@@ -1531,10 +1543,12 @@ export default function SchoolAdminSchedulesPage() {
           <div className="text-center py-12">
             <div className="text-5xl mb-2">📅</div>
             <div className="text-ink font-semibold">
-              {query ? "Không tìm thấy hoạt động phù hợp" : `Chưa có hoạt động nào cho ${DAY_LABELS[selectedDay]}`}
+              {query
+                ? (lang === "en" ? "No matching activities found" : "Không tìm thấy hoạt động phù hợp")
+                : (lang === "en" ? `No activities scheduled for ${DAY_LABELS[selectedDay]}` : `Chưa có hoạt động nào cho ${DAY_LABELS[selectedDay]}`)}
             </div>
             <div className="text-sm text-ink-soft mt-1">
-              Bấm "+ Thêm hoạt động" để tạo mới.
+              {lang === "en" ? 'Click "+ Add Activity" to create one.' : 'Bấm "+ Thêm hoạt động" để tạo mới.'}
             </div>
           </div>
         ) : (
@@ -1687,25 +1701,25 @@ export default function SchoolAdminSchedulesPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <div className="font-bold text-ink">{s.activity_name}</div>
+                            <div className="font-bold text-ink">{localizeActivityName(s.activity_name, lang)}</div>
                             {hasConflict && (
-                              <Pill tone="warn">⚠️ Xung đột</Pill>
+                              <Pill tone="warn">{lang === "en" ? "⚠️ Conflict" : "⚠️ Xung đột"}</Pill>
                             )}
                             {isHighlighted && (
                               <span className="text-[11px] px-2 py-0.5 rounded font-bold bg-[#B0791B] text-white animate-pulse">
-                                Đang xem xung đột
+                                {lang === "en" ? "Viewing Conflict" : "Đang xem xung đột"}
                               </span>
                             )}
                           </div>
                           <div className="text-xs text-ink-soft mt-0.5 flex items-center gap-1.5 flex-wrap">
-                            {s.time_range && <span>Khung giờ: {s.time_range}</span>}
+                            {s.time_range && <span>{lang === "en" ? "Time slot: " : "Khung giờ: "}{s.time_range}</span>}
                             {s.room_name && (
                               isClassHomeroom(s.room_name, currentClassName, rooms, s.class_id) ? (
-                                <span className="text-ink-faint">· Tại lớp</span>
+                                <span className="text-ink-faint">{lang === "en" ? "· Homeroom" : "· Tại lớp"}</span>
                               ) : (
                                 <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#FAF1E4] text-[#8A5E12] border border-[#ECD9BA] flex items-center gap-1">
                                   <span>📍</span>
-                                  <span>{s.room_name}</span>
+                                  <span>{localizeRoomName(s.room_name, lang)}</span>
                                 </span>
                               )
                             )}
@@ -1727,13 +1741,13 @@ export default function SchoolAdminSchedulesPage() {
                             onClick={() => openEdit(s, selectedDay)}
                             className="kbtn kbtn-ghost text-xs"
                           >
-                            Sửa
+                            {lang === "en" ? "Edit" : "Sửa"}
                           </button>
                           <button
                             onClick={() => setConfirmDel(s)}
                             className="kbtn kbtn-ghost text-xs text-bad"
                           >
-                            Xóa
+                            {lang === "en" ? "Delete" : "Xóa"}
                           </button>
                         </div>
                       </>
