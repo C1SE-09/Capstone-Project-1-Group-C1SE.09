@@ -23,10 +23,10 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/about_kinderlog_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_health_profile_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_child_edit_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/common/bug_report_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/change_password_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/profile/parent_health_profile_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/profile/parent_child_edit_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/parent_profile_sheet.dart';
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/parent_profile_sheet.dart'
     show

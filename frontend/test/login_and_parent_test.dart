@@ -1,5 +1,5 @@
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/auth_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/auth/parent.dart';

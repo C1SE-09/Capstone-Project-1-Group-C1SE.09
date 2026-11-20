@@ -7,8 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_submitted_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_submitted_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_widgets.dart';
 
 part 'parent_requests_form_fields.dart';
 

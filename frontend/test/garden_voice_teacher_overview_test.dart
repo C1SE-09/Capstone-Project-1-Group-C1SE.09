@@ -8,7 +8,7 @@ import 'package:adark_frontend/domain/entities/class/class_info.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart'
     show AttendanceStatus;
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_tabs.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

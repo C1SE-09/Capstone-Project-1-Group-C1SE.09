@@ -6,12 +6,12 @@ import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_notifications_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/attendance_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/leave_request_review_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/record/record_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_notifications_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_shell.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_tabs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

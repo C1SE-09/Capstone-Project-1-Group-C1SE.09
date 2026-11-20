@@ -16,8 +16,8 @@ import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_class_header.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_account_screen.dart';
-export 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_account_screen.dart'
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_account_screen.dart';
+export 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_account_screen.dart'
     show TeacherAccountScreen;
 
 class OverviewScreen extends StatefulWidget {

@@ -15,17 +15,17 @@ import 'package:adark_frontend/domain/entities/child/child.dart'
 
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/report_editor.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/record/report_editor.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/record/record_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_tabs.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/attendance_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/timetable/timetable_screens.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_notifications_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/no_assignment_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/leave_request_review_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_notifications_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/teacher_emergency_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';

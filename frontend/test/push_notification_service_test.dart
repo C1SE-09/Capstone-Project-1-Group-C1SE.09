@@ -1,9 +1,9 @@
 import 'package:adark_frontend/core/notifications/push_notification_service.dart';
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/attendance_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_shell.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart'
     as ui;
 import 'package:firebase_messaging/firebase_messaging.dart';

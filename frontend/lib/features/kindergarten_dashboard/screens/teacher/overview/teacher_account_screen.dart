@@ -14,7 +14,7 @@ import 'package:adark_frontend/domain/entities/class/class_info.dart'
     as domain_class;
 import 'package:adark_frontend/core/localization/locale_controller.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/about_kinderlog_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/common/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/l10n/generated/app_localizations.dart';

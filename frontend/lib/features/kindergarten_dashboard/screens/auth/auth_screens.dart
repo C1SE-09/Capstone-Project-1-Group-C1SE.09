@@ -7,7 +7,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/ui_types.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/l10n/generated/app_localizations.dart';
-export 'package:adark_frontend/features/kindergarten_dashboard/screens/forgot_password_screen.dart';
+export 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({

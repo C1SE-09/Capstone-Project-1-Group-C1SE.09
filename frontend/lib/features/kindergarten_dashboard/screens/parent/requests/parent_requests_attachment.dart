@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:adark_frontend/core/localization/locale_controller.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_widgets.dart';
 
 class ParentRequestAttachment extends StatefulWidget {
   const ParentRequestAttachment(
