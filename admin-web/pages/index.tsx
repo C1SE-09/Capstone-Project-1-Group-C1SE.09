@@ -13,6 +13,8 @@ import AdminLayout from "@/components/AdminLayout";
 import { Spinner } from "@/components/ui-school";
 import { apiFetch, clearToken, getToken } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { useLanguage } from "@/lib/language-context";
+import { formatSchoolName } from "@/lib/locale-helper";
 
 interface Stats {
   total: number;
@@ -34,6 +36,7 @@ interface BugReportItem {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
   const [tokenReady, setTokenReady] = useState(false);
 
   useEffect(() => {
@@ -93,10 +96,12 @@ export default function DashboardPage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
-            Tổng quan hệ thống
+            {t("nav.systemOverview", "Tổng quan hệ thống")}
           </h1>
           <p className="text-sm text-[#65727D] mt-1">
-            Tổng quan bug reports gửi từ giáo viên &amp; phụ huynh qua ứng dụng KinderLog.
+            {lang === "en"
+              ? "Overview of bug reports submitted by teachers and parents via KinderLog apps."
+              : "Tổng quan bug reports gửi từ giáo viên & phụ huynh qua ứng dụng KinderLog."}
           </p>
         </div>
 
@@ -104,53 +109,53 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
             <div className="flex items-center justify-between text-[#65727D]">
-              <span className="text-xs font-bold uppercase tracking-wider">Tổng số báo lỗi</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Total Bug Reports" : "Tổng số báo lỗi"}</span>
               <span className="text-xl">📋</span>
             </div>
             <div className="text-3xl font-extrabold text-[#102737] mt-2">
               {stats.total}
             </div>
             <div className="text-xs text-[#8C9BA5] mt-1">
-              +{stats.new_last_7_days} trong 7 ngày qua
+              +{stats.new_last_7_days} {lang === "en" ? "in last 7 days" : "trong 7 ngày qua"}
             </div>
           </div>
 
           <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
             <div className="flex items-center justify-between text-[#B0791B]">
-              <span className="text-xs font-bold uppercase tracking-wider">Đang chờ xử lý</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Pending Resolution" : "Đang chờ xử lý"}</span>
               <span className="text-xl">⏳</span>
             </div>
             <div className="text-3xl font-extrabold text-[#B0791B] mt-2">
               {openCount}
             </div>
             <div className="text-xs text-[#B0791B] mt-1 font-medium">
-              {stats.by_status["open"] || 0} mới · {stats.by_status["in_progress"] || 0} đang làm
+              {stats.by_status["open"] || 0} {lang === "en" ? "new" : "mới"} · {stats.by_status["in_progress"] || 0} {lang === "en" ? "in progress" : "đang làm"}
             </div>
           </div>
 
           <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
             <div className="flex items-center justify-between text-[#A93832]">
-              <span className="text-xs font-bold uppercase tracking-wider">Sự cố Critical</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Critical Issues" : "Sự cố Critical"}</span>
               <span className="text-xl">🔥</span>
             </div>
             <div className="text-3xl font-extrabold text-[#A93832] mt-2">
               {stats.critical_open}
             </div>
             <div className="text-xs text-[#A93832] mt-1 font-medium">
-              {stats.critical_open > 0 ? "Cần giải quyết ngay" : "Hệ thống ổn định"}
+              {stats.critical_open > 0 ? (lang === "en" ? "Action needed immediately" : "Cần giải quyết ngay") : (lang === "en" ? "System stable" : "Hệ thống ổn định")}
             </div>
           </div>
 
           <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
             <div className="flex items-center justify-between text-[#087F70]">
-              <span className="text-xs font-bold uppercase tracking-wider">Trường đối tác</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Partner Schools" : "Trường đối tác"}</span>
               <span className="text-xl">🏫</span>
             </div>
             <div className="text-3xl font-extrabold text-[#087F70] mt-2">
               1
             </div>
             <div className="text-xs text-[#087F70] mt-1 font-medium">
-              Đang hoạt động trên VPS
+              {lang === "en" ? "Online on VPS" : "Đang hoạt động trên VPS"}
             </div>
           </div>
         </div>
@@ -218,10 +223,10 @@ export default function DashboardPage() {
           <div className="lg:col-span-5 bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft flex flex-col justify-between">
             <div>
               <h2 className="font-extrabold text-base text-[#102737]">
-                Trường đang hoạt động
+                {lang === "en" ? "Active Schools" : "Trường đang hoạt động"}
               </h2>
               <p className="text-xs text-[#65727D] mt-0.5 mb-4">
-                Môi trường vận hành thực tế tại mầm non
+                {lang === "en" ? "Operating environment in kindergarten" : "Môi trường vận hành thực tế tại mầm non"}
               </p>
 
               <div className="p-4 rounded-[18px] bg-[#F6F7F8] border border-[#E5E8EB] flex items-center gap-3">
@@ -230,11 +235,11 @@ export default function DashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-sm text-[#102737] truncate">
-                    Trường Mầm non Hoa Mai
+                    {formatSchoolName("Hoa Mai", lang)}
                   </div>
                   <div className="text-xs text-[#087F70] font-semibold flex items-center gap-1.5 mt-0.5">
                     <span className="w-2 h-2 rounded-full bg-[#087F70] animate-pulse" />
-                    Đang hoạt động · VPS 160.191.87.202
+                    {lang === "en" ? "Active · VPS 160.191.87.202" : "Đang hoạt động · VPS 160.191.87.202"}
                   </div>
                 </div>
               </div>
@@ -245,7 +250,7 @@ export default function DashboardPage() {
                 href="/school-admin"
                 className="w-full h-11 bg-[#E6F3EB] hover:bg-[#D1E9DE] text-[#087F70] font-bold text-xs rounded-full flex items-center justify-center gap-2 transition"
               >
-                Mở Cổng Quản Trị Trường →
+                {lang === "en" ? "Open School Admin Portal →" : "Mở Cổng Quản Trị Trường →"}
               </Link>
             </div>
           </div>

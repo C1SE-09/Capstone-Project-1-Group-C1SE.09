@@ -71,7 +71,7 @@ export default function AdminLayout({ children, currentPage = "dashboard" }: Pro
                 KinderLog
               </div>
               <div className="text-[11px] font-medium text-[#65727D]">
-                Quản trị hệ thống
+                {t("systemAdmin", "Quản trị hệ thống")}
               </div>
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function AdminLayout({ children, currentPage = "dashboard" }: Pro
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
             </svg>
-            Tổng quan hệ thống
+            {t("nav.systemOverview", "Tổng quan hệ thống")}
           </Link>
 
           <Link
@@ -105,22 +105,8 @@ export default function AdminLayout({ children, currentPage = "dashboard" }: Pro
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 1.59C12.96 4.51 12.49 4.41 12 4.41s-.96.1-1.41.18L5 5l1.41 4.41C5.66 7.55 5.05 8.22 4.6 9H2v2h2.09c-.05.33-.09.66-.09 1v1H2v2h2v1c0 .34.04.67.09 1H2v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-3.09c.05-.33.09-.66.09-1v-1h3v-2h-3v-1c0-.34-.04-.67-.09-1H20V8zm-6 7h-4v-2h4v2zm0-4h-4v-2h4v2z" />
               </svg>
-              <span>Báo lỗi ứng dụng</span>
+              <span>{t("nav.bugReports", "Báo lỗi ứng dụng")}</span>
             </div>
-          </Link>
-
-          <div className="pt-4 pb-1 px-3 text-[11px] font-bold text-[#8C9BA5] uppercase tracking-wider">
-            Chuyển phân hệ
-          </div>
-
-          <Link
-            href="/school-admin"
-            className="flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-sm font-semibold text-[#65727D] hover:bg-[#F6F7F8] hover:text-[#087F70] transition"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z" />
-            </svg>
-            Quản trị trường học
           </Link>
         </nav>
 
@@ -142,7 +128,7 @@ export default function AdminLayout({ children, currentPage = "dashboard" }: Pro
         {/* Topbar */}
         <header className="h-16 bg-white border-b border-[#E5E8EB] px-8 flex items-center justify-between sticky top-0 z-40">
           <div className="text-sm font-medium text-[#65727D]">
-            Cổng điều hành & Hỗ trợ kỹ thuật KinderLog
+            {t("systemPortal", "Cổng điều hành & Hỗ trợ kỹ thuật KinderLog")}
           </div>
 
           <div className="flex items-center gap-3">

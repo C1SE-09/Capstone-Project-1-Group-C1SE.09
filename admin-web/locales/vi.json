@@ -4,7 +4,10 @@
   "schoolAdmin": "Quản trị trường học",
   "academicYear": "Năm học 2026–2027",
   "kindergarten": "Trường Mầm non",
+  "systemPortal": "Cổng điều hành & Hỗ trợ kỹ thuật KinderLog",
+  "schoolPortal": "Cổng Quản Trị Nhà Trường",
   "nav": {
+    "systemOverview": "Tổng quan hệ thống",
     "overview": "Tổng quan trường",
     "teachers": "Quản lý Giáo viên",
     "students": "Quản lý Học sinh",
@@ -13,7 +16,7 @@
     "classes": "Quản lý Lớp học",
     "healthExam": "Khám sức khỏe",
     "account": "Tài khoản trường",
-    "bugReports": "Quản trị Bug Report",
+    "bugReports": "Báo lỗi ứng dụng",
     "otherModules": "Phân hệ khác"
   },
   "login": {
@@ -32,6 +35,46 @@
     "errorNetwork": "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng hoặc thử lại sau.",
     "errorFailed": "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin."
   },
+  "schedules": {
+    "title": "Thời khóa biểu sinh hoạt & học tập",
+    "subtitle": "Quản lý lịch học, hoạt động theo tuần và kiểm soát xung đột phòng học",
+    "selectClass": "Chọn lớp học",
+    "allClasses": "Tất cả các lớp",
+    "addSlot": "Thêm hoạt động",
+    "exportExcel": "Xuất Excel",
+    "exportPDF": "Xuất PDF",
+    "timeRange": "Khung giờ",
+    "activity": "Hoạt động",
+    "room": "Phòng học / Địa điểm",
+    "teacher": "Giáo viên phụ trách",
+    "dayOfWeek": "Thứ trong tuần",
+    "conflictAlert": "Cảnh báo xung đột phòng học",
+    "noConflict": "Không phát hiện xung đột phòng học nào",
+    "emptySchedule": "Chưa có lịch sinh hoạt cho ngày này",
+    "saveSuccess": "Lưu lịch thành công",
+    "deleteSuccess": "Xóa lịch thành công",
+    "confirmDelete": "Bạn có chắc chắn muốn xóa tiết hoạt động này không?",
+    "homeroom": "Tại lớp",
+    "sharedRoom": "Phòng dùng chung"
+  },
+  "classes": {
+    "title": "Quản lý lớp học",
+    "totalClasses": "Tổng số lớp",
+    "homeroomTeacher": "Giáo viên chủ nhiệm",
+    "studentCount": "Số học sinh",
+    "grade": "Khối lớp",
+    "academicYear": "Niên khóa"
+  },
+  "teachers": {
+    "title": "Danh sách giáo viên",
+    "fullName": "Họ và tên",
+    "phone": "Số điện thoại",
+    "email": "Email",
+    "assignedClass": "Lớp phụ trách",
+    "status": "Trạng thái công tác",
+    "active": "Đang giảng dạy",
+    "inactive": "Tạm nghỉ"
+  },
   "common": {
     "save": "Lưu",
     "cancel": "Hủy",
@@ -48,6 +91,9 @@
     "noData": "Không có dữ liệu",
     "language": "Ngôn ngữ",
     "vietnamese": "Tiếng Việt",
-    "english": "English"
+    "english": "English",
+    "export": "Xuất file",
+    "import": "Nhập file",
+    "all": "Tất cả"
   }
 }

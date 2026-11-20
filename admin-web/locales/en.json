@@ -4,7 +4,10 @@
   "schoolAdmin": "School Administration",
   "academicYear": "School Year 2026–2027",
   "kindergarten": "Kindergarten",
+  "systemPortal": "KinderLog Operations & Technical Support Portal",
+  "schoolPortal": "School Administration Portal",
   "nav": {
+    "systemOverview": "System Overview",
     "overview": "School Overview",
     "teachers": "Teachers Management",
     "students": "Students Management",
@@ -13,7 +16,7 @@
     "classes": "Classes Management",
     "healthExam": "Health Examinations",
     "account": "School Account",
-    "bugReports": "Bug Reports Management",
+    "bugReports": "Bug Reports",
     "otherModules": "Other Modules"
   },
   "login": {
@@ -32,6 +35,46 @@
     "errorNetwork": "Unable to connect to server. Please check your internet connection or try again later.",
     "errorFailed": "Login failed. Please check your credentials."
   },
+  "schedules": {
+    "title": "Daily Schedule & Activities",
+    "subtitle": "Manage weekly schedule, learning activities and prevent room booking conflicts",
+    "selectClass": "Select class",
+    "allClasses": "All classes",
+    "addSlot": "Add Activity",
+    "exportExcel": "Export Excel",
+    "exportPDF": "Export PDF",
+    "timeRange": "Time slot",
+    "activity": "Activity",
+    "room": "Room / Location",
+    "teacher": "Assigned Teacher",
+    "dayOfWeek": "Day of the week",
+    "conflictAlert": "Room Conflict Alert",
+    "noConflict": "No room conflicts detected",
+    "emptySchedule": "No activities scheduled for this day",
+    "saveSuccess": "Schedule saved successfully",
+    "deleteSuccess": "Schedule deleted successfully",
+    "confirmDelete": "Are you sure you want to delete this scheduled activity?",
+    "homeroom": "Homeroom",
+    "sharedRoom": "Shared Facility"
+  },
+  "classes": {
+    "title": "Classes Management",
+    "totalClasses": "Total Classes",
+    "homeroomTeacher": "Homeroom Teacher",
+    "studentCount": "Number of Students",
+    "grade": "Grade Level",
+    "academicYear": "School Year"
+  },
+  "teachers": {
+    "title": "Teachers List",
+    "fullName": "Full Name",
+    "phone": "Phone Number",
+    "email": "Email",
+    "assignedClass": "Assigned Class",
+    "status": "Work Status",
+    "active": "Teaching",
+    "inactive": "On Leave"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -48,6 +91,9 @@
     "noData": "No data found",
     "language": "Language",
     "vietnamese": "Tiếng Việt",
-    "english": "English"
+    "english": "English",
+    "export": "Export",
+    "import": "Import",
+    "all": "All"
   }
 }

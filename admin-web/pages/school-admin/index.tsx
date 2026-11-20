@@ -12,6 +12,8 @@ import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import { ProgressBar, Spinner } from "@/components/ui-school";
 import { ApiError, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
+import { formatClassName, formatTeacherName } from "@/lib/locale-helper";
 
 interface OverviewStats {
   total_schools: number;
@@ -56,6 +58,7 @@ function toneFromRate(r: number): "ok" | "warn" | "bad" {
 }
 
 export default function SchoolAdminOverviewPage() {
+  const { lang } = useLanguage();
   const [ready, setReady] = useState(false);
   const [schoolName, setSchoolName] = useState("");
 
@@ -313,10 +316,10 @@ export default function SchoolAdminOverviewPage() {
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <div className="font-bold text-sm text-[#102737]">
-                                {c.class_name}
+                                {formatClassName(c.class_name, lang)}
                               </div>
                               <div className="text-xs text-[#65727D]">
-                                GV: {c.teacher_name} · {c.grade_label}
+                                {lang === "en" ? "Teacher: " : "GV: "}{c.teacher_name ? formatTeacherName(c.teacher_name, lang) : "—"} · {c.grade_label}
                               </div>
                             </div>
                             <div className="text-right">

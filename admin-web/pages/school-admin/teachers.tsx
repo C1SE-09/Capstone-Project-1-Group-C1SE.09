@@ -23,6 +23,8 @@ import {
   ImportResult,
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
+import { formatTeacherName, formatClassName } from "@/lib/locale-helper";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   Teacher,
@@ -133,6 +135,7 @@ function isTeacherRowDirty(
 }
 
 export default function SchoolAdminTeachersPage() {
+  const { t, lang } = useLanguage();
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
@@ -652,7 +655,7 @@ export default function SchoolAdminTeachersPage() {
   return (
     <SchoolAdminLayout
       active="teachers"
-      pageTitle="Quản lý Giáo viên"
+      pageTitle={t("teachers.title", "Danh sách giáo viên")}
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -963,7 +966,7 @@ export default function SchoolAdminTeachersPage() {
                                 />
                               ) : (
                                 <div className="w-full px-2 py-1 border border-transparent rounded font-bold text-sm text-ink truncate">
-                                  {t.full_name}
+                                  {formatTeacherName(t.full_name, lang)}
                                 </div>
                               )}
                             </div>
@@ -1076,7 +1079,7 @@ export default function SchoolAdminTeachersPage() {
                               </button>
                             ) : (
                               <div className="w-full px-2 py-1 border border-transparent rounded text-sm text-ink truncate">
-                                {t.class_name || "Chưa phân lớp"}
+                                {t.class_name ? formatClassName(t.class_name, lang) : (lang === "en" ? "Unassigned" : "Chưa phân lớp")}
                               </div>
                             )}
                           </div>
