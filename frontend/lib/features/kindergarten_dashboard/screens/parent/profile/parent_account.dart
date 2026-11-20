@@ -1129,23 +1129,10 @@ class _ParentChildInfoSheetState extends State<_ParentChildInfoSheet> {
     final isEn = LocaleController.instance.isEnglish;
     final classDisplay = className.isEmpty
         ? ''
-        : (isEn
-            ? (className.toLowerCase().startsWith('class')
-                ? className
-                : 'Class $className')
-            : (className.toLowerCase().startsWith('lớp')
-                ? className
-                : 'Lớp $className'));
+        : LocaleController.formatClassName(className, isEn: isEn);
     final teacherDisplay = overview.teacherName.trim().isEmpty
         ? ''
-        : (overview.teacherName.trim().toLowerCase().startsWith('cô') ||
-                overview.teacherName.trim().toLowerCase().startsWith('thầy')
-            ? (isEn
-                ? overview.teacherName.trim().replaceFirst(RegExp(r'^(Cô|Thầy|cô|thầy)\s+'), 'Teacher ')
-                : overview.teacherName.trim())
-            : (isEn
-                ? 'Teacher ${overview.teacherName.trim()}'
-                : 'Cô ${overview.teacherName.trim()}'));
+        : LocaleController.formatTeacherName(overview.teacherName, isEn: isEn);
 
     return ConstrainedBox(
       constraints:
@@ -1416,23 +1403,10 @@ class _ParentChildSelectionSheet extends StatelessWidget {
                 final className = item.className.trim();
                 final classDisplay = className.isEmpty
                     ? ''
-                    : (isEn
-                        ? (className.toLowerCase().startsWith('class')
-                            ? className
-                            : 'Class $className')
-                        : (className.toLowerCase().startsWith('lớp')
-                            ? className
-                            : 'Lớp $className'));
+                    : LocaleController.formatClassName(className, isEn: isEn);
                 final teacherDisplay = item.teacherName.trim().isEmpty
                     ? ''
-                    : (item.teacherName.toLowerCase().startsWith('cô') ||
-                            item.teacherName.toLowerCase().startsWith('thầy')
-                        ? (isEn
-                            ? item.teacherName.trim().replaceFirst(RegExp(r'^(Cô|Thầy|cô|thầy)\s+'), 'Teacher ')
-                            : item.teacherName.trim())
-                        : (isEn
-                            ? 'Teacher ${item.teacherName.trim()}'
-                            : 'Cô ${item.teacherName.trim()}'));
+                    : LocaleController.formatTeacherName(item.teacherName, isEn: isEn);
 
                 return Material(
                   color: isCurrent

@@ -30,7 +30,7 @@ INSERT INTO school (
     updated_at
 ) VALUES (
     'aaaaaaaa-0000-0000-0000-000000000001',
-    'Trường Mầm Non Họa Mi',
+    'Họa Mi',
     'KG-HCM-01',
     '123 Nguyễn Văn Cừ, Quận 5, TP.HCM',
     '0901234567',
@@ -62,7 +62,7 @@ INSERT INTO class (
 ) VALUES (
     'aaaaaaaa-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000001',
-    'Lớp Mầm A',
+    'Mầm A',
     'Mầm',
     'Room 101',
     25,
@@ -92,7 +92,7 @@ INSERT INTO class (
 ) VALUES (
     'aaaaaaaa-0000-0000-0000-000000000002',
     'aaaaaaaa-0000-0000-0000-000000000001',
-    'Lớp Mầm B',
+    'Mầm B',
     'Mầm',
     'Room 102',
     25,
@@ -125,7 +125,7 @@ INSERT INTO teacher (
     'bbbbbbbb-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000001',
-    'Cô Nguyễn Thị Mai',
+    'Nguyễn Thị Mai',
     'shimarin395@gmail.com',
     '0987654321',
     'ACTIVE',
@@ -158,7 +158,7 @@ INSERT INTO teacher (
     'bbbbbbbb-0000-0000-0000-000000000002',
     'aaaaaaaa-0000-0000-0000-000000000001',
     'aaaaaaaa-0000-0000-0000-000000000002',
-    'Cô Trần Thị Lan',
+    'Trần Thị Lan',
     'teacher.lan@hoami.edu.vn',
     '0987654322',
     'ACTIVE',

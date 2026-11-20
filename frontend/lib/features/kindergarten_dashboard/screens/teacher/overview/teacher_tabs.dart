@@ -201,15 +201,10 @@ class _ClassListScreenState extends State<ClassListScreen> {
               (child.allergy != null && child.allergy!.trim().isNotEmpty));
     }).toList();
     final isEn = LocaleController.instance.isEnglish;
-    final resolvedSchoolName = widget.schoolName == 'Chưa có thông tin trường'
-        ? (context.l10n?.noSchoolInfo ?? (isEn ? 'No school information' : 'Chưa có thông tin trường'))
-        : widget.schoolName;
-    String rawTeacher = widget.teacherName?.trim() ?? '';
-    if (isEn && (rawTeacher.startsWith('Cô ') || rawTeacher.startsWith('Thầy '))) {
-      rawTeacher = rawTeacher.replaceFirst(RegExp(r'^(Cô|Thầy)\s+'), 'Teacher ');
-    } else if (isEn && rawTeacher.isNotEmpty && !rawTeacher.startsWith('Teacher ')) {
-      rawTeacher = 'Teacher $rawTeacher';
-    }
+    final resolvedSchoolName = LocaleController.formatSchoolName(widget.schoolName, isEn: isEn);
+    final rawTeacher = (widget.teacherName?.trim().isNotEmpty ?? false)
+        ? LocaleController.formatTeacherName(widget.teacherName!, isEn: isEn)
+        : '';
     final subtitleText = rawTeacher.isNotEmpty ? rawTeacher : resolvedSchoolName;
     final content = Builder(
       builder: (context) {
@@ -220,7 +215,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GardenVoiceClassHeader(
-                className: widget.className,
+                className: LocaleController.formatClassName(widget.className, isEn: isEn),
                 subtitle: subtitleText,
                 selectedTab: GardenVoiceClassTab.roster,
                 notificationCount: widget.notificationCount,
