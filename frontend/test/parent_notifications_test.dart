@@ -5,7 +5,7 @@ import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/child/child_overview.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart'
     show FilterChipButton;

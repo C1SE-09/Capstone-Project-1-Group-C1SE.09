@@ -11,12 +11,12 @@ import 'package:adark_frontend/data/repositories/http_leave_request_repository.d
 import 'package:adark_frontend/core/utils/phone_utils.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_approval_result_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/attendance_approval_result_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/reject_reason_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_class_header.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 import 'package:url_launcher/url_launcher.dart';

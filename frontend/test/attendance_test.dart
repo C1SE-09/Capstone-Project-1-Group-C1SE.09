@@ -3,7 +3,7 @@
 
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/attendance_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';

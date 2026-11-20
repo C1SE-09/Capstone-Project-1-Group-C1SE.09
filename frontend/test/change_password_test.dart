@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/change_password_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/change_password_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 
 class FakeAuthRepository extends AuthRepository {

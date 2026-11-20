@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/leave_request_review_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/leave_request_review_screen.dart';
 import 'package:dio/dio.dart';
 import 'parent_request_repository_test.dart'
     show RequestTransport, jsonBody, requestJson;

@@ -1,8 +1,8 @@
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_tabs.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_notifications.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/attendance_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_tabs.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_notifications.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/record/record_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/attendance_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart' as domain;

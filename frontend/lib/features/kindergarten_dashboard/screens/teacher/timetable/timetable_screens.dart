@@ -455,10 +455,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
         Widget mainContent;
         if (allItems.isEmpty) {
-          mainContent = context.k.isGardenVoice
-              ? _buildPhone(
-                  context, data, items, conflicts, days, selected, todayIndex)
-              : _emptyState(context, data);
+          mainContent = _emptyState(context, data);
         } else if (items.isEmpty) {
           mainContent = Padding(
             padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),

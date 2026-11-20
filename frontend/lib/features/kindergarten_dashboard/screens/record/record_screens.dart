@@ -33,7 +33,7 @@ import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/an
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/edit_observation_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/review_common_widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/done_screen_view.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/common/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_teacher_navigation.dart';
 
 export 'package:adark_frontend/features/kindergarten_dashboard/widgets/review/audio_player_card.dart';

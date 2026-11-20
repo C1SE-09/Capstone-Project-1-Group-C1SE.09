@@ -19,7 +19,7 @@ import 'package:flutter/material.dart';
 
 import 'package:adark_frontend/core/notifications/emergency_siren_service.dart';
 import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/emergency_alert_summary_screen.dart';
 
 class PushNotificationService {
   PushNotificationService._();

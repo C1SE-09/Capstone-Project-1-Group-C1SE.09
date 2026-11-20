@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:adark_frontend/core/localization/locale_controller.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_attachment.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_attachment.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_cards.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_cancelled_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_cancelled_screen.dart';
 
 class ParentRequestDetailScreen extends StatefulWidget {
   const ParentRequestDetailScreen(

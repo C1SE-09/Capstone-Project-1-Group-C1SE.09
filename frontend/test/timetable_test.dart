@@ -3,7 +3,7 @@ import 'package:adark_frontend/data/repositories/http_schedule_repository.dart';
 import 'package:adark_frontend/domain/entities/timetable/class_schedule.dart';
 import 'package:adark_frontend/domain/entities/timetable/subject.dart';
 import 'package:adark_frontend/domain/entities/timetable/time_slot.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/timetable/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

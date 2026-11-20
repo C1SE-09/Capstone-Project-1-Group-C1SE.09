@@ -6,7 +6,7 @@ import 'package:adark_frontend/domain/entities/bug_report/bug_report.dart';
 import 'package:adark_frontend/domain/entities/bug_report/bug_report_list_response.dart';
 import 'package:adark_frontend/domain/entities/bug_report/enums.dart';
 import 'package:adark_frontend/domain/repositories/bug_report_repository.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/bug_report_sheet.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/common/bug_report_sheet.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 
 class _FakeBugReportRepository implements BugReportRepository {

@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_notifications.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_notifications.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_overview.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme_controller.dart';

@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/leave_request.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_form_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_detail_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_form_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_detail_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_widgets.dart'
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_widgets.dart'
     show gardenVoiceRequestRange, requestListRange, requestRange;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';

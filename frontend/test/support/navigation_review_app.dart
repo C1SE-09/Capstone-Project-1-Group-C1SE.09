@@ -10,8 +10,8 @@ import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dar
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_screens.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher_shell.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/teacher_shell.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

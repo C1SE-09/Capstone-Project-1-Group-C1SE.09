@@ -18,13 +18,13 @@ import 'package:adark_frontend/domain/entities/report/daily_report.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart'
     as domain_status;
 
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_account.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_notifications.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent_requests_screen.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/timetable_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/profile/parent_account.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/overview/parent_notifications.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/parent/requests/parent_requests_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/timetable/timetable_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:dio/dio.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/no_assignment_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/no_assignment_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_parent_navigation.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/widgets/garden_voice_navigation_scroll.dart';

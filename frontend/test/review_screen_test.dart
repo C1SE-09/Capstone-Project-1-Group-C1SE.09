@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/record/record_screens.dart';
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart'

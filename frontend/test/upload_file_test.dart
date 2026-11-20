@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:record/record.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/record_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/record/record_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart'
     as ui;
 import 'package:adark_frontend/data/repositories/teacher_repository.dart';

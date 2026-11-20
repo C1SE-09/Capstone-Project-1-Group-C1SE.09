@@ -10,7 +10,7 @@ import 'package:adark_frontend/core/notifications/push_notification_service.dart
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/domain/entities/health/emergency_alert_data.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/emergency_alert_summary_screen.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/overview/emergency_alert_summary_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';

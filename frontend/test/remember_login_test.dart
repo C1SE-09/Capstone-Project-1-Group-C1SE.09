@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:adark_frontend/core/routing/app_router.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth_screens.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/auth_screens.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/theme.dart';
 import 'package:adark_frontend/main.dart';
 import 'package:dio/dio.dart';
