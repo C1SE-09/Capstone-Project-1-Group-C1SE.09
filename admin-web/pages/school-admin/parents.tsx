@@ -20,6 +20,8 @@ import {
   ImportResult,
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
+import { formatClassName, localizeRelationship } from "@/lib/locale-helper";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   Child,
@@ -121,6 +123,7 @@ function parentHasChildInClass(
 }
 
 export default function SchoolAdminParentsPage() {
+  const { t, lang } = useLanguage();
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
@@ -671,16 +674,16 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
   return (
     <SchoolAdminLayout
       active="parents"
-      pageTitle="Quản lý Phụ huynh"
+      pageTitle={t("nav.parents", "Quản lý Phụ huynh")}
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               mutate();
-              setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
+              setToast({ msg: lang === "en" ? "Synchronized latest data" : "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
             className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition disabled:opacity-50"
-            title="Làm mới"
+            title={lang === "en" ? "Refresh" : "Làm mới"}
             disabled={isEditMode}
           >
             ↻
@@ -688,17 +691,17 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           <button
             onClick={handleExportExcel}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Xuất danh sách ra file Excel"
+            title={lang === "en" ? "Export list to Excel" : "Xuất danh sách ra file Excel"}
           >
-            📥 Xuất Excel
+            {lang === "en" ? "📥 Export Excel" : "📥 Xuất Excel"}
           </button>
           <button
             onClick={() => setImportOpen(true)}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
-            title="Nhập dữ liệu từ file Excel / CSV"
+            title={lang === "en" ? "Import data from Excel / CSV" : "Nhập dữ liệu từ file Excel / CSV"}
             disabled={isEditMode}
           >
-            📤 Nhập file
+            {lang === "en" ? "📤 Import file" : "📤 Nhập file"}
           </button>
           {!isEditMode ? (
             <button
@@ -707,11 +710,11 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                 setOpenChildDropdownId(null);
               }}
               className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
-              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
+              title={lang === "en" ? "Edit all rows directly in table" : "Chỉnh sửa trực tiếp tất cả các dòng trên bảng"}
               disabled={filtered.length === 0}
             >
               <span>✏️</span>
-              <span>Chỉnh sửa bảng</span>
+              <span>{lang === "en" ? "Edit Table" : "Chỉnh sửa bảng"}</span>
             </button>
           ) : (
             <>
@@ -719,25 +722,25 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                 onClick={cancelAllEdits}
                 disabled={savingTable}
                 className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
-                title="Hủy bỏ mọi thay đổi chưa lưu"
+                title={lang === "en" ? "Discard all unsaved changes" : "Hủy bỏ mọi thay đổi chưa lưu"}
               >
-                ✕ Hủy bỏ
+                ✕ {lang === "en" ? "Cancel" : "Hủy bỏ"}
               </button>
               <button
                 onClick={handleSaveAllEdits}
                 disabled={savingTable}
                 className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
-                title="Lưu tất cả thay đổi trên mọi dòng"
+                title={lang === "en" ? "Save changes on all rows" : "Lưu tất cả thay đổi trên mọi dòng"}
               >
                 {savingTable ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu ({dirtyRows.length})...</span>
+                    <span>{lang === "en" ? `Saving (${dirtyRows.length})...` : `Đang lưu (${dirtyRows.length})...`}</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu thay đổi</span>
+                    <span>{lang === "en" ? "Save changes" : "Lưu thay đổi"}</span>
                     {dirtyRows.length > 0 && (
                       <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                         {dirtyRows.length}
@@ -754,7 +757,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               onClick={openCreate}
               className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
             >
-              + Thêm phụ huynh
+              {lang === "en" ? "+ Add Parent" : "+ Thêm phụ huynh"}
             </button>
           )}
         </div>
@@ -765,7 +768,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="Tìm phụ huynh, số điện thoại, con liên kết..."
+            placeholder={lang === "en" ? "Search parent, phone, linked child..." : "Tìm phụ huynh, số điện thoại, con liên kết..."}
           />
         </div>
         <div className="w-full sm:w-64">
@@ -782,8 +785,12 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
         <div className="mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg flex items-center justify-between shadow-sm animate-fadeIn">
           <div className="flex items-center gap-2 text-xs sm:text-sm">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            <span className="font-semibold">Đang có {dirtyRows.length} phụ huynh có chỉnh sửa chưa lưu.</span>
-            <span className="text-xs text-amber-700 hidden sm:inline">(Các ô có viền vàng là các trường đã thay đổi)</span>
+            <span className="font-semibold">
+              {lang === "en" ? `${dirtyRows.length} parents have unsaved changes.` : `Đang có ${dirtyRows.length} phụ huynh có chỉnh sửa chưa lưu.`}
+            </span>
+            <span className="text-xs text-amber-700 hidden sm:inline">
+              {lang === "en" ? "(Cells with yellow border have been modified)" : "(Các ô có viền vàng là các trường đã thay đổi)"}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -791,7 +798,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               disabled={savingTable}
               className="text-xs px-2.5 py-1 text-amber-800 hover:text-bad hover:underline font-medium"
             >
-              Hủy bỏ
+              {lang === "en" ? "Cancel" : "Hủy bỏ"}
             </button>
             <button
               onClick={handleSaveAllEdits}
@@ -799,7 +806,9 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               className="kbtn text-xs font-bold text-white py-1 px-3 shadow"
               style={{ background: "#16665a" }}
             >
-              {savingTable ? "Đang lưu..." : `Lưu tất cả (${dirtyRows.length})`}
+              {savingTable
+                ? (lang === "en" ? "Saving..." : "Đang lưu...")
+                : (lang === "en" ? `Save all (${dirtyRows.length})` : `Lưu tất cả (${dirtyRows.length})`)}
             </button>
           </div>
         </div>
@@ -812,18 +821,22 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
               {(parentsError as any)?.status === 401
-                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
-                : `Không thể tải danh sách phụ huynh (${(parentsError as any)?.detail || "Vui lòng thử lại"})`}
+                ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
+                : (lang === "en"
+                    ? `Unable to load parents (${(parentsError as any)?.detail || "Please try again"})`
+                    : `Không thể tải danh sách phụ huynh (${(parentsError as any)?.detail || "Vui lòng thử lại"})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
-              Thử lại
+              {lang === "en" ? "Retry" : "Thử lại"}
             </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">👪</div>
             <div className="text-ink font-semibold">
-              {query ? "Không có kết quả phù hợp." : "Chưa có phụ huynh nào"}
+              {query
+                ? (lang === "en" ? "No matching results." : "Không có kết quả phù hợp.")
+                : (lang === "en" ? "No parents yet" : "Chưa có phụ huynh nào")}
             </div>
           </div>
         ) : (
@@ -856,7 +869,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           if (el) el.indeterminate = someSelected;
                         }}
                         onChange={toggleSelectAll}
-                        title="Bỏ chọn tất cả"
+                        title={lang === "en" ? "Deselect all" : "Bỏ chọn tất cả"}
                       />
                     </th>
                     <th colSpan={4} className="px-4 py-2.5 text-left font-semibold normal-case text-xs">
@@ -865,7 +878,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           {selectedIds.length}
                         </span>
                         <span className="text-[#BB4A34] font-bold">
-                          Đã chọn {selectedIds.length} phụ huynh
+                          {lang === "en" ? `Selected ${selectedIds.length} parents` : `Đã chọn ${selectedIds.length} phụ huynh`}
                         </span>
                       </div>
                     </th>
@@ -876,7 +889,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
                           disabled={bulkDeleting}
                         >
-                          Bỏ chọn
+                          {lang === "en" ? "Deselect" : "Bỏ chọn"}
                         </button>
                         <button
                           onClick={() => setConfirmBulkDel(true)}
@@ -885,7 +898,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           disabled={bulkDeleting}
                         >
                           <span>🗑️</span>
-                          <span>Xóa đã chọn ({selectedIds.length})</span>
+                          <span>{lang === "en" ? `Delete selected (${selectedIds.length})` : `Xóa đã chọn (${selectedIds.length})`}</span>
                         </button>
                       </div>
                     </th>
@@ -901,15 +914,15 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           if (el) el.indeterminate = someSelected;
                         }}
                         onChange={toggleSelectAll}
-                        title="Chọn tất cả phụ huynh hiển thị"
+                        title={lang === "en" ? "Select all visible parents" : "Chọn tất cả phụ huynh hiển thị"}
                       />
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
-                    <th className="px-4 py-3 text-left font-semibold">SĐT / Quan hệ</th>
-                    <th className="px-4 py-3 text-left font-semibold">Con liên kết</th>
-                    <th className="px-4 py-3 text-left font-semibold">Tài khoản</th>
-                    <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
-                    <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Full Name" : "Họ tên"}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Phone / Relationship" : "SĐT / Quan hệ"}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Linked Children" : "Con liên kết"}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Account" : "Tài khoản"}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Status" : "Trạng thái"}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{lang === "en" ? "Actions" : "Thao tác"}</th>
                   </tr>
                 )}
               </thead>
@@ -950,7 +963,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                         {isEditMode && isDirty && (
                           <span
                             className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse pointer-events-none"
-                            title="Dòng này có thay đổi chưa lưu"
+                            title={lang === "en" ? "This row has unsaved changes" : "Dòng này có thay đổi chưa lưu"}
                           />
                         )}
                         <input
@@ -958,7 +971,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           className="rounded cursor-pointer text-brand focus:ring-brand/30"
                           checked={isSelected}
                           onChange={() => toggleSelect(p.id)}
-                          title="Chọn dòng"
+                          title={lang === "en" ? "Select row" : "Chọn dòng"}
                         />
                       </td>
 
@@ -983,7 +996,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                   }`}
                                   value={rowData.full_name}
                                   onChange={(e) => updateCell(p, "full_name", e.target.value)}
-                                  placeholder="Họ và tên phụ huynh..."
+                                  placeholder={lang === "en" ? "Parent full name..." : "Họ và tên phụ huynh..."}
                                 />
                                 <input
                                   type="email"
@@ -994,7 +1007,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                   }`}
                                   value={rowData.email}
                                   onChange={(e) => updateCell(p, "email", e.target.value)}
-                                  placeholder="Gmail phụ huynh..."
+                                  placeholder={lang === "en" ? "Parent Gmail..." : "Gmail phụ huynh..."}
                                 />
                               </>
                             ) : (
@@ -1003,7 +1016,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                   {p.full_name}
                                   {isDirty && (
                                     <span className="ml-1.5 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
-                                      chưa lưu
+                                      {lang === "en" ? "unsaved" : "chưa lưu"}
                                     </span>
                                   )}
                                 </div>
@@ -1030,7 +1043,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                 }`}
                                 value={rowData.phone}
                                 onChange={(e) => updateCell(p, "phone", e.target.value)}
-                                placeholder="Số điện thoại..."
+                                placeholder={lang === "en" ? "Phone number..." : "Số điện thoại..."}
                               />
                               <input
                                 type="text"
@@ -1041,7 +1054,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                 }`}
                                 value={rowData.relationship}
                                 onChange={(e) => updateCell(p, "relationship", e.target.value)}
-                                placeholder="Quan hệ (Bố, Mẹ...)"
+                                placeholder={lang === "en" ? "Relationship (Father, Mother...)" : "Quan hệ (Bố, Mẹ...)"}
                               />
                             </>
                           ) : (
@@ -1050,7 +1063,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                 {p.phone}
                               </div>
                               <div className="w-full px-2 py-0.5 border border-transparent rounded text-xs text-slate-500 font-normal truncate">
-                                {p.relationship || "Phụ huynh"}
+                                {localizeRelationship(p.relationship, lang)}
                               </div>
                             </>
                           )}
@@ -1073,11 +1086,11 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                   ? "bg-amber-50 border-amber-400 text-amber-950 font-medium"
                                   : "border-slate-300 hover:border-[#4B6F8C] focus:ring-1 focus:ring-[#4B6F8C]/30 text-slate-800"
                               }`}
-                              title="Click để chọn danh sách con liên kết"
+                              title={lang === "en" ? "Click to select linked children" : "Click để chọn danh sách con liên kết"}
                             >
                               <div className="truncate flex-1">
                                 {childObjects.length === 0 ? (
-                                  <span className="text-slate-400 italic text-xs">Chọn con liên kết...</span>
+                                  <span className="text-slate-400 italic text-xs">{lang === "en" ? "Select children..." : "Chọn con liên kết..."}</span>
                                 ) : childObjects.length === 1 ? (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[140px]">
                                     {childObjects[0].full_name}
@@ -1093,7 +1106,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                     <span
                                       className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand/10 text-brand border border-brand/20 shrink-0"
                                       title={childObjects
-                                        .map((c) => `${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`)
+                                        .map((c) => `${c.full_name}${c.class_name ? ` (${formatClassName(c.class_name, lang)})` : ""}`)
                                         .join(", ")}
                                     >
                                       +{childObjects.length - 1}
@@ -1122,7 +1135,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                       type="text"
                                       value={childSearchQuery}
                                       onChange={(e) => setChildSearchQuery(e.target.value)}
-                                      placeholder="Tìm tên bé hoặc lớp..."
+                                      placeholder={lang === "en" ? "Search student name or class..." : "Tìm tên bé hoặc lớp..."}
                                       className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:border-[#4B6F8C] focus:outline-none"
                                       autoFocus
                                     />
@@ -1141,7 +1154,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                   <div className="max-h-48 overflow-y-auto space-y-0.5 divide-y divide-slate-50">
                                     {filteredChildrenForDropdown.length === 0 ? (
                                       <div className="text-center py-3 text-xs text-slate-400">
-                                        Không tìm thấy học sinh nào
+                                        {lang === "en" ? "No students found" : "Không tìm thấy học sinh nào"}
                                       </div>
                                     ) : (
                                       filteredChildrenForDropdown.map((c) => {
@@ -1162,7 +1175,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                             </span>
                                             {c.class_name && (
                                               <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded ml-auto">
-                                                {c.class_name}
+                                                {formatClassName(c.class_name, lang)}
                                               </span>
                                             )}
                                           </label>
@@ -1174,14 +1187,14 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                   {/* Footer Dropdown */}
                                   <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[11px]">
                                     <span className="text-slate-500">
-                                      Đã chọn: <strong className="text-slate-700">{rowData.child_ids.length}</strong> bé
+                                      {lang === "en" ? "Selected: " : "Đã chọn: "}<strong className="text-slate-700">{rowData.child_ids.length}</strong> {lang === "en" ? "children" : "bé"}
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => setOpenChildDropdownId(null)}
                                       className="text-brand font-semibold hover:underline"
                                     >
-                                      Xong
+                                      {lang === "en" ? "Done" : "Xong"}
                                     </button>
                                   </div>
                                 </div>
@@ -1193,14 +1206,14 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                           <div className="-mx-2">
                             <div className="w-full px-2 py-1 border border-transparent rounded">
                               {childObjects.length === 0 ? (
-                                <span className="text-xs text-slate-400 italic">Chưa liên kết</span>
+                                <span className="text-xs text-slate-400 italic">{lang === "en" ? "Not linked" : "Chưa liên kết"}</span>
                               ) : childObjects.length <= 2 ? (
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   {childObjects.map((c) => (
                                     <span
                                       key={c.id}
                                       className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs truncate max-w-[130px]"
-                                      title={`${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`}
+                                      title={`${c.full_name}${c.class_name ? ` (${formatClassName(c.class_name, lang)})` : ""}`}
                                     >
                                       {c.full_name}
                                     </span>
@@ -1212,7 +1225,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                     <span
                                       key={c.id}
                                       className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs truncate max-w-[110px]"
-                                      title={`${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`}
+                                      title={`${c.full_name}${c.class_name ? ` (${formatClassName(c.class_name, lang)})` : ""}`}
                                     >
                                       {c.full_name}
                                     </span>
@@ -1220,7 +1233,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                   <span
                                     className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-brand/10 text-brand border border-brand/20 cursor-help"
                                     title={childObjects
-                                      .map((c) => `${c.full_name}${c.class_name ? ` (${c.class_name})` : ""}`)
+                                      .map((c) => `${c.full_name}${c.class_name ? ` (${formatClassName(c.class_name, lang)})` : ""}`)
                                       .join(", ")}
                                   >
                                     +{childObjects.length - 2}
@@ -1278,14 +1291,18 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                                 (isCellDirty(p, "status") ? "ring-2 ring-amber-400 font-bold" : "")
                               : "cursor-default"
                           }`}
-                          title={isEditMode ? "Click để đổi trạng thái" : undefined}
+                          title={isEditMode ? (lang === "en" ? "Click to toggle status" : "Click để đổi trạng thái") : undefined}
                         >
                           <span
                             className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                               rowData.status === "active" ? "bg-emerald-500" : "bg-slate-400"
                             }`}
                           />
-                          <span>{rowData.status === "active" ? "Đang hoạt động" : "Đã khóa"}</span>
+                          <span>
+                            {rowData.status === "active"
+                              ? (lang === "en" ? "Active" : "Đang hoạt động")
+                              : (lang === "en" ? "Locked" : "Đã khóa")}
+                          </span>
                         </button>
                       </td>
 
@@ -1296,7 +1313,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                             type="button"
                             onClick={() => openEdit(p)}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-brand hover:bg-slate-100 transition-colors"
-                            title="Chỉnh sửa chi tiết phụ huynh"
+                            title={lang === "en" ? "Edit parent details" : "Chỉnh sửa chi tiết phụ huynh"}
                           >
                             <span className="text-sm">✏️</span>
                           </button>
@@ -1304,7 +1321,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                             type="button"
                             onClick={() => setConfirmDel(p)}
                             className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
-                            title="Xóa phụ huynh này"
+                            title={lang === "en" ? "Delete this parent" : "Xóa phụ huynh này"}
                           >
                             <span className="text-sm">🗑️</span>
                           </button>
@@ -1320,12 +1337,20 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
       </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-[#65727D] mt-2 mb-4 gap-2">
-        <div>💡 Danh sách phụ huynh toàn trường · Liên kết trực tiếp với hồ sơ học sinh và nhận thông báo hàng ngày.</div>
         <div>
-          Tổng: <span className="font-bold text-[#102737]">{filtered.length}</span> phụ huynh
+          {lang === "en"
+            ? "💡 School-wide parents list · Directly linked to student profiles and daily notifications."
+            : "💡 Danh sách phụ huynh toàn trường · Liên kết trực tiếp với hồ sơ học sinh và nhận thông báo hàng ngày."}
+        </div>
+        <div>
+          {lang === "en" ? (
+            <>Total: <span className="font-bold text-[#102737]">{filtered.length}</span> parents</>
+          ) : (
+            <>Tổng: <span className="font-bold text-[#102737]">{filtered.length}</span> phụ huynh</>
+          )}
           {selectedIds.length > 0 && (
             <span className="ml-2 font-semibold text-[#A93832]">
-              (Đã chọn {selectedIds.length})
+              ({lang === "en" ? `Selected ${selectedIds.length}` : `Đã chọn ${selectedIds.length}`})
             </span>
           )}
         </div>
@@ -1334,7 +1359,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editing ? "Chỉnh sửa phụ huynh" : "Thêm phụ huynh mới"}
+        title={editing ? (lang === "en" ? "Edit Parent" : "Chỉnh sửa phụ huynh") : (lang === "en" ? "Add New Parent" : "Thêm phụ huynh mới")}
         footer={
           <>
             <button
@@ -1342,22 +1367,26 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
               className="kbtn kbtn-secondary"
               disabled={saving}
             >
-              Hủy
+              {lang === "en" ? "Cancel" : "Hủy"}
             </button>
             <button onClick={handleSave} className="kbtn kbtn-primary" disabled={saving}>
-              {saving ? "Đang lưu..." : editing ? "Lưu thay đổi" : "Tạo phụ huynh"}
+              {saving
+                ? (lang === "en" ? "Saving..." : "Đang lưu...")
+                : editing
+                ? (lang === "en" ? "Save changes" : "Lưu thay đổi")
+                : (lang === "en" ? "Create Parent" : "Tạo phụ huynh")}
             </button>
           </>
         }
       >
-        <FormField label="Họ và tên" required>
+        <FormField label={lang === "en" ? "Full Name" : "Họ và tên"} required>
           <input
             className="kinput"
             value={form.full_name}
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
           />
         </FormField>
-        <FormField label="Số điện thoại" required hint="Gồm đúng 10 chữ số, bắt đầu bằng 0">
+        <FormField label={lang === "en" ? "Phone Number" : "Số điện thoại"} required hint={lang === "en" ? "10 digits starting with 0" : "Gồm đúng 10 chữ số, bắt đầu bằng 0"}>
           <input
             className="kinput"
             value={form.phone}
@@ -1365,7 +1394,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             placeholder="0901234567"
           />
         </FormField>
-        <FormField label="Email" hint="(không bắt buộc) · Phải là Gmail">
+        <FormField label="Email" hint={lang === "en" ? "(optional) · Must be Gmail" : "(không bắt buộc) · Phải là Gmail"}>
           <input
             className="kinput"
             type="email"
@@ -1374,25 +1403,25 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             placeholder="parent@gmail.com"
           />
         </FormField>
-        <FormField label="Quan hệ với học sinh">
+        <FormField label={lang === "en" ? "Relationship with student" : "Quan hệ với học sinh"}>
           <select
             className="kinput"
             value={form.relationship}
             onChange={(e) => setForm({ ...form, relationship: e.target.value })}
           >
-            <option value="">-- Chọn quan hệ --</option>
-            <option value="Bố">Bố</option>
-            <option value="Mẹ">Mẹ</option>
-            <option value="Ông">Ông</option>
-            <option value="Bà">Bà</option>
-            <option value="Người giám hộ">Người giám hộ</option>
-            <option value="Phụ huynh">Phụ huynh</option>
+            <option value="">{lang === "en" ? "-- Select relationship --" : "-- Chọn quan hệ --"}</option>
+            <option value="Bố">{lang === "en" ? "Father" : "Bố"}</option>
+            <option value="Mẹ">{lang === "en" ? "Mother" : "Mẹ"}</option>
+            <option value="Ông">{lang === "en" ? "Grandfather" : "Ông"}</option>
+            <option value="Bà">{lang === "en" ? "Grandmother" : "Bà"}</option>
+            <option value="Người giám hộ">{lang === "en" ? "Guardian" : "Người giám hộ"}</option>
+            <option value="Phụ huynh">{lang === "en" ? "Parent" : "Phụ huynh"}</option>
           </select>
         </FormField>
-        <FormField label="Con liên kết" hint="Chọn các học sinh mà phụ huynh này chịu trách nhiệm.">
+        <FormField label={lang === "en" ? "Linked Children" : "Con liên kết"} hint={lang === "en" ? "Select students this parent is responsible for." : "Chọn các học sinh mà phụ huynh này chịu trách nhiệm."}>
           {children.length === 0 ? (
             <div className="text-xs text-ink-faint">
-              Chưa có học sinh nào.
+              {lang === "en" ? "No students yet." : "Chưa có học sinh nào."}
             </div>
           ) : (
             <div className="space-y-2 max-h-64 overflow-auto pr-1">
@@ -1414,8 +1443,8 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
                         {c.full_name}
                       </div>
                       <div className="text-xs text-ink-soft truncate">
-                        {c.class_name}
-                        {c.nickname && ` · Biệt danh: ${c.nickname}`}
+                        {c.class_name ? formatClassName(c.class_name, lang) : ""}
+                        {c.nickname && (lang === "en" ? ` · Nickname: ${c.nickname}` : ` · Biệt danh: ${c.nickname}`)}
                       </div>
                     </div>
                   </label>
@@ -1424,7 +1453,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             </div>
           )}
         </FormField>
-        <FormField label="Tên đăng nhập" hint="(không bắt buộc)">
+        <FormField label={lang === "en" ? "Username" : "Tên đăng nhập"} hint={lang === "en" ? "(optional)" : "(không bắt buộc)"}>
           <input
             className="kinput"
             value={form.username}
@@ -1432,8 +1461,10 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           />
         </FormField>
         <FormField
-          label={editing ? "Đặt lại mật khẩu" : "Mật khẩu"}
-          hint={editing ? "Bỏ trống nếu không muốn đổi. Mặc định: 123456" : "Mặc định: 123456 nếu bỏ trống"}
+          label={editing ? (lang === "en" ? "Reset Password" : "Đặt lại mật khẩu") : (lang === "en" ? "Password" : "Mật khẩu")}
+          hint={editing
+            ? (lang === "en" ? "Leave blank to keep unchanged. Default: 123456" : "Bỏ trống nếu không muốn đổi. Mặc định: 123456")
+            : (lang === "en" ? "Default: 123456 if left blank" : "Mặc định: 123456 nếu bỏ trống")}
         >
           <input
             className="kinput"
@@ -1442,31 +1473,35 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
         </FormField>
-        <FormField label="Trạng thái">
+        <FormField label={lang === "en" ? "Status" : "Trạng thái"}>
           <select
             className="kinput"
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
           >
-            <option value="active">Đang hoạt động</option>
-            <option value="inactive">Ngừng</option>
+            <option value="active">{lang === "en" ? "Active" : "Đang hoạt động"}</option>
+            <option value="inactive">{lang === "en" ? "Inactive" : "Ngừng"}</option>
           </select>
         </FormField>
       </Drawer>
 
       <ConfirmDialog
         open={!!confirmDel}
-        title="Xóa phụ huynh?"
-        message={`Bạn có chắc muốn xóa "${confirmDel?.full_name}"? Toàn bộ tài khoản và liên kết với học sinh sẽ được gỡ.`}
+        title={lang === "en" ? "Delete parent?" : "Xóa phụ huynh?"}
+        message={lang === "en"
+          ? `Are you sure you want to delete "${confirmDel?.full_name}"? Their account and student links will be removed.`
+          : `Bạn có chắc muốn xóa "${confirmDel?.full_name}"? Toàn bộ tài khoản và liên kết với học sinh sẽ được gỡ.`}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
       />
 
       <ConfirmDialog
         open={confirmBulkDel}
-        title={`Xóa ${selectedIds.length} phụ huynh đã chọn?`}
-        message={`Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} phụ huynh này? Toàn bộ tài khoản và liên kết với học sinh sẽ được gỡ bỏ.`}
-        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} phụ huynh`}
+        title={lang === "en" ? `Delete ${selectedIds.length} selected parents?` : `Xóa ${selectedIds.length} phụ huynh đã chọn?`}
+        message={lang === "en"
+          ? `Are you sure you want to permanently delete these ${selectedIds.length} parents? All accounts and student links will be removed.`
+          : `Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} phụ huynh này? Toàn bộ tài khoản và liên kết với học sinh sẽ được gỡ bỏ.`}
+        confirmLabel={bulkDeleting ? (lang === "en" ? "Deleting..." : "Đang xóa...") : (lang === "en" ? `Delete ${selectedIds.length} parents` : `Xóa ${selectedIds.length} phụ huynh`)}
         onConfirm={handleBulkDelete}
         onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
       />
@@ -1474,32 +1509,44 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
       <ImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        title="Nhập danh sách phụ huynh từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh và tự động liên kết với con theo tên học sinh. Nếu để trống cột Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456."
+        title={lang === "en" ? "Import Parents from File" : "Nhập danh sách phụ huynh từ file"}
+        description={lang === "en"
+          ? "Upload an Excel (.xlsx, .xls) or CSV file to bulk import parents and automatically link them to students. If Username and Password are left blank, Phone Number will be used as username and 123456 as default password."
+          : "Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt phụ huynh và tự động liên kết với con theo tên học sinh. Nếu để trống cột Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456."}
         templateFilename="mau_nhap_phu_huynh.xlsx"
-        sampleHeaders={[
-          "Họ và tên",
-          "Số điện thoại",
-          "Email",
-          "Quan hệ (Bố/Mẹ/...)",
-          "Con liên kết (Tên bé hoặc Tên bé - Lớp)",
-          "Tên đăng nhập",
-          "Mật khẩu",
-        ]}
+        sampleHeaders={lang === "en"
+          ? [
+              "Full Name",
+              "Phone Number",
+              "Email",
+              "Relationship (Father/Mother/...)",
+              "Linked Child (Name or Name - Class)",
+              "Username",
+              "Password",
+            ]
+          : [
+              "Họ và tên",
+              "Số điện thoại",
+              "Email",
+              "Quan hệ (Bố/Mẹ/...)",
+              "Con liên kết (Tên bé hoặc Tên bé - Lớp)",
+              "Tên đăng nhập",
+              "Mật khẩu",
+            ]}
         sampleRow={[
           "Nguyễn Văn An",
           "0912345678",
           "an.nguyen@gmail.com",
-          "Bố",
+          lang === "en" ? "Father" : "Bố",
           children[0]
             ? `${children[0].full_name}${children[0].class_name ? ` (${children[0].class_name})` : ""}`
-            : "Nguyễn Bảo An (Lớp Mầm 1)",
+            : "Nguyễn Bảo An (Mầm A)",
           "0912345678",
           "123456",
         ]}
         onImportRows={handleImportRows}
         onSuccess={() => {
-          setToast({ msg: "Đã nhập danh sách phụ huynh thành công", tone: "ok" });
+          setToast({ msg: lang === "en" ? "Parents imported successfully" : "Đã nhập danh sách phụ huynh thành công", tone: "ok" });
         }}
       />
 

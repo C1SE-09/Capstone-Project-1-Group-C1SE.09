@@ -14,16 +14,19 @@ import { Pill } from "@/components/ui-school";
 import { apiFetch, ApiError, getToken } from "@/lib/api";
 import ImageViewerModal from "@/components/ImageViewerModal";
 import {
-  CATEGORY_LABELS,
-  ROLE_LABELS,
   SEVERITY_COLORS,
   STATUS_COLORS,
   formatDate,
   formatFileSize,
+  getCategoryLabel,
+  getRoleLabel,
+  getSeverityLabel,
+  getStatusLabel,
   isImageAttachment,
   resolveAttachmentUrl,
   sanitizeUrl,
 } from "@/lib/format";
+import { useLanguage } from "@/lib/language-context";
 
 interface HistoryEntry {
   history_id: string;
@@ -87,6 +90,7 @@ function sevPillTone(key: string): "bad" | "warn" | "info" | "neutral" {
 
 export default function BugReportDetailPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
   const { id } = router.query;
   const [tokenReady, setTokenReady] = useState(false);
   const [newStatus, setNewStatus] = useState("");
@@ -146,9 +150,9 @@ export default function BugReportDetailPage() {
       setTimeout(() => setSaveOk(false), 3000);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setSaveError(err.detail || "Cập nhật thất bại");
+        setSaveError(err.detail || (lang === "en" ? "Update failed" : "Cập nhật thất bại"));
       } else {
-        setSaveError("Lỗi kết nối");
+        setSaveError(lang === "en" ? "Connection error" : "Lỗi kết nối");
       }
     } finally {
       setSaving(false);
@@ -176,10 +180,12 @@ export default function BugReportDetailPage() {
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs font-bold text-[#65727D]">
           <Link href="/bug-reports" className="hover:text-[#087F70] transition">
-            ← Danh sách báo lỗi
+            {lang === "en" ? "← Bug Reports" : "← Danh sách báo lỗi"}
           </Link>
           <span>/</span>
-          <span className="text-[#102737]">Chi tiết #{report.bug_report_id.slice(0, 8)}</span>
+          <span className="text-[#102737]">
+            {lang === "en" ? "Detail" : "Chi tiết"} #{report.bug_report_id.slice(0, 8)}
+          </span>
         </div>
 
         {/* ─── Header Card (Figma 454:3484) ─── */}
@@ -188,31 +194,32 @@ export default function BugReportDetailPage() {
             <div>
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <Pill tone={statusPillTone(report.status)}>
-                  {STATUS_COLORS[report.status]?.label || report.status}
+                  {getStatusLabel(report.status, lang)}
                 </Pill>
                 <Pill tone={sevPillTone(report.severity)}>
-                  {SEVERITY_COLORS[report.severity]?.label || report.severity}
+                  {getSeverityLabel(report.severity, lang)}
                 </Pill>
                 <span className="text-xs font-bold text-[#65727D] bg-[#F6F7F8] px-2.5 py-1 rounded-full">
-                  {CATEGORY_LABELS[report.category] || report.category}
+                  {getCategoryLabel(report.category, lang)}
                 </span>
               </div>
               <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
                 {report.title}
               </h1>
               <div className="text-xs text-[#65727D] mt-1.5 font-medium">
-                Gửi lúc {formatDate(report.created_at)} bởi{" "}
+                {lang === "en" ? "Submitted at " : "Gửi lúc "}
+                {formatDate(report.created_at)} {lang === "en" ? "by " : "bởi "}
                 <span className="text-[#102737] font-bold">
                   {report.teacher?.full_name || report.user?.username}
                 </span>{" "}
-                ({ROLE_LABELS[report.user?.role] || report.user?.role})
+                ({getRoleLabel(report.user?.role, lang)})
               </div>
             </div>
           </div>
 
           <div className="mt-6 pt-6 border-t border-[#E5E8EB]">
             <h3 className="text-xs font-bold text-[#8C9BA5] uppercase tracking-wider mb-2">
-              Mô tả chi tiết sự cố
+              {lang === "en" ? "Detailed Description" : "Mô tả chi tiết sự cố"}
             </h3>
             <p className="text-sm text-[#102737] whitespace-pre-wrap leading-relaxed bg-[#F6F7F8] p-4 rounded-[16px] border border-[#E5E8EB]/60">
               {report.description}
@@ -230,14 +237,14 @@ export default function BugReportDetailPage() {
             <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-extrabold text-base text-[#102737] flex items-center gap-2">
-                  <span>Ảnh đính kèm</span>
+                  <span>{lang === "en" ? "Attached Images" : "Ảnh đính kèm"}</span>
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#E6F3EB] text-[#087F70] font-bold">
                     {imageAttachments.length}
                   </span>
                 </h3>
                 {imageAttachments.length > 0 && (
                   <span className="text-xs text-[#65727D]">
-                    Nhấn vào ảnh để phóng to
+                    {lang === "en" ? "Click image to zoom" : "Nhấn vào ảnh để phóng to"}
                   </span>
                 )}
               </div>
@@ -258,7 +265,7 @@ export default function BugReportDetailPage() {
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition">
-                          🔍 Xem ảnh
+                          {lang === "en" ? "🔍 View image" : "🔍 Xem ảnh"}
                         </div>
                       </div>
                     );
@@ -266,13 +273,15 @@ export default function BugReportDetailPage() {
                 </div>
               ) : (
                 <div className="py-6 text-center text-xs text-[#8C9BA5]">
-                  Không có ảnh chụp màn hình đính kèm.
+                  {lang === "en" ? "No screenshot attached." : "Không có ảnh chụp màn hình đính kèm."}
                 </div>
               )}
 
               {otherAttachments.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-[#E5E8EB] space-y-2">
-                  <div className="text-xs font-bold text-[#8C9BA5] uppercase">File khác</div>
+                  <div className="text-xs font-bold text-[#8C9BA5] uppercase">
+                    {lang === "en" ? "Other Files" : "File khác"}
+                  </div>
                   {otherAttachments.map((att) => (
                     <a
                       key={att.attachment_id}
@@ -292,7 +301,7 @@ export default function BugReportDetailPage() {
             {/* Môi trường & Thiết bị */}
             <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
               <h3 className="font-extrabold text-base text-[#102737] mb-4">
-                Môi trường thiết bị
+                {lang === "en" ? "Device Environment" : "Môi trường thiết bị"}
               </h3>
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
@@ -302,19 +311,25 @@ export default function BugReportDetailPage() {
                   </div>
                 </div>
                 <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
-                  <div className="text-[#8C9BA5] font-bold">Hệ điều hành</div>
+                  <div className="text-[#8C9BA5] font-bold">
+                    {lang === "en" ? "Operating System" : "Hệ điều hành"}
+                  </div>
                   <div className="font-extrabold text-[#102737] text-sm mt-0.5">
-                    {report.os_version || "Không xác định"}
+                    {report.os_version || (lang === "en" ? "Unknown" : "Không xác định")}
                   </div>
                 </div>
                 <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
-                  <div className="text-[#8C9BA5] font-bold">Thiết bị</div>
+                  <div className="text-[#8C9BA5] font-bold">
+                    {lang === "en" ? "Device" : "Thiết bị"}
+                  </div>
                   <div className="font-extrabold text-[#102737] text-sm mt-0.5">
                     {report.device_model || "Mobile Client"}
                   </div>
                 </div>
                 <div className="p-3 bg-[#F6F7F8] rounded-[14px]">
-                  <div className="text-[#8C9BA5] font-bold">Kết nối mạng</div>
+                  <div className="text-[#8C9BA5] font-bold">
+                    {lang === "en" ? "Network" : "Kết nối mạng"}
+                  </div>
                   <div className="font-extrabold text-[#102737] text-sm mt-0.5">
                     {report.network_type || "WiFi / 4G"}
                   </div>
@@ -330,22 +345,22 @@ export default function BugReportDetailPage() {
             {/* Form Cập nhật */}
             <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
               <h3 className="font-extrabold text-base text-[#102737] mb-4">
-                Cập nhật xử lý
+                {lang === "en" ? "Update Resolution" : "Cập nhật xử lý"}
               </h3>
 
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-[#65727D] mb-1.5 uppercase">
-                    Trạng thái xử lý
+                    {lang === "en" ? "Status" : "Trạng thái xử lý"}
                   </label>
                   <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
                     className="w-full h-11 px-3 rounded-[12px] border border-[#E5E8EB] text-sm font-semibold text-[#102737] focus:outline-none focus:border-[#087F70]"
                   >
-                    {Object.entries(STATUS_COLORS).map(([k, v]) => (
+                    {Object.keys(STATUS_COLORS).map((k) => (
                       <option key={k} value={k}>
-                        {v.label}
+                        {getStatusLabel(k, lang)}
                       </option>
                     ))}
                   </select>
@@ -353,16 +368,16 @@ export default function BugReportDetailPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-[#65727D] mb-1.5 uppercase">
-                    Mức độ nghiêm trọng
+                    {lang === "en" ? "Severity" : "Mức độ nghiêm trọng"}
                   </label>
                   <select
                     value={newSeverity}
                     onChange={(e) => setNewSeverity(e.target.value)}
                     className="w-full h-11 px-3 rounded-[12px] border border-[#E5E8EB] text-sm font-semibold text-[#102737] focus:outline-none focus:border-[#087F70]"
                   >
-                    {Object.entries(SEVERITY_COLORS).map(([k, v]) => (
+                    {Object.keys(SEVERITY_COLORS).map((k) => (
                       <option key={k} value={k}>
-                        {v.label}
+                        {getSeverityLabel(k, lang)}
                       </option>
                     ))}
                   </select>
@@ -370,13 +385,17 @@ export default function BugReportDetailPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-[#65727D] mb-1.5 uppercase">
-                    Ghi chú xử lý
+                    {lang === "en" ? "Resolution Note" : "Ghi chú xử lý"}
                   </label>
                   <textarea
                     rows={3}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Nhập ghi chú xử lý (sửa lỗi, lý do đóng, ...)"
+                    placeholder={
+                      lang === "en"
+                        ? "Enter resolution note (fix details, close reason, ...)"
+                        : "Nhập ghi chú xử lý (sửa lỗi, lý do đóng, ...)"
+                    }
                     className="w-full p-3 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] focus:outline-none focus:border-[#087F70]"
                   />
                 </div>
@@ -388,7 +407,7 @@ export default function BugReportDetailPage() {
                 )}
                 {saveOk && (
                   <div className="p-3 bg-[#E5F5E7] text-[#087F70] rounded-[12px] text-xs font-bold">
-                    ✓ Cập nhật báo lỗi thành công!
+                    {lang === "en" ? "✓ Bug report updated!" : "✓ Cập nhật báo lỗi thành công!"}
                   </div>
                 )}
 
@@ -397,7 +416,13 @@ export default function BugReportDetailPage() {
                   disabled={saving}
                   className="w-full h-11 bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs rounded-full flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-50"
                 >
-                  {saving ? "Đang lưu..." : "Lưu thay đổi"}
+                  {saving
+                    ? lang === "en"
+                      ? "Saving..."
+                      : "Đang lưu..."
+                    : lang === "en"
+                    ? "Save Changes"
+                    : "Lưu thay đổi"}
                 </button>
               </form>
             </div>
@@ -405,7 +430,7 @@ export default function BugReportDetailPage() {
             {/* Lịch sử xử lý */}
             <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft">
               <h3 className="font-extrabold text-base text-[#102737] mb-3">
-                Lịch sử thay đổi
+                {lang === "en" ? "Change History" : "Lịch sử thay đổi"}
               </h3>
               <div className="space-y-3">
                 {report.history && report.history.length > 0 ? (
@@ -415,8 +440,14 @@ export default function BugReportDetailPage() {
                         {h.changed_by?.username || "Admin"} · {formatDate(h.created_at)}
                       </div>
                       <div className="text-[#65727D] mt-1">
-                        Trạng thái: <span className="font-bold">{h.old_status}</span> →{" "}
-                        <span className="font-bold text-[#087F70]">{h.new_status}</span>
+                        {lang === "en" ? "Status: " : "Trạng thái: "}
+                        <span className="font-bold">
+                          {h.old_status ? getStatusLabel(h.old_status, lang) : "—"}
+                        </span>{" "}
+                        →{" "}
+                        <span className="font-bold text-[#087F70]">
+                          {h.new_status ? getStatusLabel(h.new_status, lang) : "—"}
+                        </span>
                       </div>
                       {h.comment && (
                         <div className="mt-1 text-[#102737] italic">&ldquo;{h.comment}&rdquo;</div>
@@ -424,7 +455,9 @@ export default function BugReportDetailPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-xs text-[#8C9BA5]">Chưa có lịch sử thay đổi.</div>
+                  <div className="text-xs text-[#8C9BA5]">
+                    {lang === "en" ? "No change history yet." : "Chưa có lịch sử thay đổi."}
+                  </div>
                 )}
               </div>
             </div>

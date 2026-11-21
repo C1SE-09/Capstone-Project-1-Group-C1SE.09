@@ -661,10 +661,10 @@ export default function SchoolAdminTeachersPage() {
           <button
             onClick={() => {
               mutate();
-              setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
+              setToast({ msg: lang === "en" ? "Synchronized latest data" : "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
             className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
-            title="Làm mới"
+            title={lang === "en" ? "Refresh" : "Làm mới"}
             disabled={isEditingTable}
           >
             ↻
@@ -672,27 +672,27 @@ export default function SchoolAdminTeachersPage() {
           <button
             onClick={handleExportExcel}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Xuất danh sách ra file Excel"
+            title={lang === "en" ? "Export list to Excel" : "Xuất danh sách ra file Excel"}
           >
-            📥 Xuất Excel
+            {lang === "en" ? "📥 Export Excel" : "📥 Xuất Excel"}
           </button>
           <button
             onClick={() => setImportOpen(true)}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Nhập dữ liệu từ file Excel / CSV"
+            title={lang === "en" ? "Import data from Excel / CSV" : "Nhập dữ liệu từ file Excel / CSV"}
             disabled={isEditingTable}
           >
-            📤 Nhập file
+            {lang === "en" ? "📤 Import file" : "📤 Nhập file"}
           </button>
           {!isEditingTable ? (
             <button
               onClick={startTableEditing}
               className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
-              title="Chỉnh sửa trực tiếp tất cả các dòng trên bảng"
+              title={lang === "en" ? "Edit all rows directly in table" : "Chỉnh sửa trực tiếp tất cả các dòng trên bảng"}
               disabled={filtered.length === 0}
             >
               <span>✏️</span>
-              <span>Chỉnh sửa bảng</span>
+              <span>{lang === "en" ? "Edit Table" : "Chỉnh sửa bảng"}</span>
             </button>
           ) : (
             <>
@@ -701,7 +701,7 @@ export default function SchoolAdminTeachersPage() {
                 disabled={savingTable}
                 className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
               >
-                ✕ Hủy bỏ
+                ✕ {lang === "en" ? "Cancel" : "Hủy bỏ"}
               </button>
               <button
                 onClick={handleSaveTableEdits}
@@ -711,12 +711,12 @@ export default function SchoolAdminTeachersPage() {
                 {savingTable ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu ({dirtyRows.length})...</span>
+                    <span>{lang === "en" ? `Saving (${dirtyRows.length})...` : `Đang lưu (${dirtyRows.length})...`}</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu thay đổi</span>
+                    <span>{lang === "en" ? "Save changes" : "Lưu thay đổi"}</span>
                     {dirtyRows.length > 0 && (
                       <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                         {dirtyRows.length}
@@ -732,7 +732,7 @@ export default function SchoolAdminTeachersPage() {
               onClick={openCreate}
               className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
             >
-              + Thêm giáo viên
+              {lang === "en" ? "+ Add Teacher" : "+ Thêm giáo viên"}
             </button>
           )}
         </div>
@@ -744,7 +744,7 @@ export default function SchoolAdminTeachersPage() {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="Tìm giáo viên, số điện thoại, lớp..."
+            placeholder={lang === "en" ? "Search teacher, phone, class..." : "Tìm giáo viên, số điện thoại, lớp..."}
           />
         </div>
         <div className="w-full sm:w-64">
@@ -762,10 +762,12 @@ export default function SchoolAdminTeachersPage() {
           <div className="flex items-center gap-2 text-xs sm:text-sm">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <span className="font-semibold">
-              Đang có {dirtyRows.length} giáo viên có chỉnh sửa chưa lưu.
+              {lang === "en"
+                ? `${dirtyRows.length} teachers have unsaved changes.`
+                : `Đang có ${dirtyRows.length} giáo viên có chỉnh sửa chưa lưu.`}
             </span>
             <span className="text-xs text-amber-700 hidden sm:inline">
-              (Các ô có viền vàng là các trường đã thay đổi)
+              {lang === "en" ? "(Cells with yellow border have been modified)" : "(Các ô có viền vàng là các trường đã thay đổi)"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -774,7 +776,7 @@ export default function SchoolAdminTeachersPage() {
               disabled={savingTable}
               className="text-xs px-2.5 py-1 text-amber-800 hover:text-bad hover:underline font-medium"
             >
-              Hủy bỏ
+              {lang === "en" ? "Cancel" : "Hủy bỏ"}
             </button>
             <button
               onClick={handleSaveTableEdits}
@@ -782,7 +784,9 @@ export default function SchoolAdminTeachersPage() {
               className="kbtn text-xs font-bold text-white py-1 px-3 shadow"
               style={{ background: "#16665a" }}
             >
-              {savingTable ? "Đang lưu..." : `Lưu tất cả (${dirtyRows.length})`}
+              {savingTable
+                ? (lang === "en" ? "Saving..." : "Đang lưu...")
+                : (lang === "en" ? `Save all (${dirtyRows.length})` : `Lưu tất cả (${dirtyRows.length})`)}
             </button>
           </div>
         </div>
@@ -795,21 +799,23 @@ export default function SchoolAdminTeachersPage() {
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
               {(teachersError as any)?.status === 401
-                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
-                : `Không thể tải danh sách giáo viên (${(teachersError as any)?.detail || "Vui lòng thử lại"})`}
+                ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
+                : (lang === "en"
+                    ? `Unable to load teachers (${(teachersError as any)?.detail || "Please try again"})`
+                    : `Không thể tải danh sách giáo viên (${(teachersError as any)?.detail || "Vui lòng thử lại"})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
-              Thử lại
+              {lang === "en" ? "Retry" : "Thử lại"}
             </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">👨‍🏫</div>
-              <div className="text-ink font-semibold">Chưa có giáo viên nào</div>
+              <div className="text-ink font-semibold">{lang === "en" ? "No teachers yet" : "Chưa có giáo viên nào"}</div>
               <div className="text-sm text-ink-soft mt-1">
                 {query
-                  ? "Không có kết quả phù hợp."
-                  : "Bấm \"+ Thêm giáo viên\" để tạo mới."}
+                  ? (lang === "en" ? "No matching results." : "Không có kết quả phù hợp.")
+                  : (lang === "en" ? 'Click "+ Add Teacher" to create one.' : 'Bấm "+ Thêm giáo viên" để tạo mới.')}
               </div>
             </div>
           ) : (
@@ -842,7 +848,7 @@ export default function SchoolAdminTeachersPage() {
                             if (el) el.indeterminate = someSelected;
                           }}
                           onChange={toggleSelectAll}
-                          title="Bỏ chọn tất cả"
+                          title={lang === "en" ? "Deselect all" : "Bỏ chọn tất cả"}
                         />
                       </th>
                       <th colSpan={4} className="px-4 py-2.5 text-left font-semibold normal-case text-xs">
@@ -851,7 +857,7 @@ export default function SchoolAdminTeachersPage() {
                             {selectedIds.length}
                           </span>
                           <span className="text-[#BB4A34] font-bold">
-                            Đã chọn {selectedIds.length} giáo viên
+                            {lang === "en" ? `Selected ${selectedIds.length} teachers` : `Đã chọn ${selectedIds.length} giáo viên`}
                           </span>
                         </div>
                       </th>
@@ -862,7 +868,7 @@ export default function SchoolAdminTeachersPage() {
                             className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
                             disabled={bulkDeleting}
                           >
-                            Bỏ chọn
+                            {lang === "en" ? "Deselect" : "Bỏ chọn"}
                           </button>
                           <button
                             onClick={() => setConfirmBulkDel(true)}
@@ -871,7 +877,7 @@ export default function SchoolAdminTeachersPage() {
                             disabled={bulkDeleting}
                           >
                             <span>🗑️</span>
-                            <span>Xóa đã chọn ({selectedIds.length})</span>
+                            <span>{lang === "en" ? `Delete selected (${selectedIds.length})` : `Xóa đã chọn (${selectedIds.length})`}</span>
                           </button>
                         </div>
                       </th>
@@ -887,15 +893,15 @@ export default function SchoolAdminTeachersPage() {
                             if (el) el.indeterminate = someSelected;
                           }}
                           onChange={toggleSelectAll}
-                          title="Chọn tất cả giáo viên hiển thị"
+                          title={lang === "en" ? "Select all visible teachers" : "Chọn tất cả giáo viên hiển thị"}
                         />
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold">Họ tên</th>
-                      <th className="px-4 py-3 text-left font-semibold">Email / SĐT</th>
-                      <th className="px-4 py-3 text-left font-semibold">Lớp phụ trách</th>
-                      <th className="px-4 py-3 text-left font-semibold">Tài khoản</th>
-                      <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
-                      <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+                      <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Full Name" : "Họ tên"}</th>
+                      <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Email / Phone" : "Email / SĐT"}</th>
+                      <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Assigned Class" : "Lớp phụ trách"}</th>
+                      <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Account" : "Tài khoản"}</th>
+                      <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Status" : "Trạng thái"}</th>
+                      <th className="px-4 py-3 text-right font-semibold">{lang === "en" ? "Actions" : "Thao tác"}</th>
                     </tr>
                   )}
                 </thead>
@@ -1137,9 +1143,9 @@ export default function SchoolAdminTeachersPage() {
                                   updateRowEdit(t, "status", e.target.value)
                                 }
                               >
-                                <option value="active">Đang dạy</option>
-                                <option value="on_leave">Nghỉ phép</option>
-                                <option value="inactive">Ngừng</option>
+                                <option value="active">{lang === "en" ? "Teaching" : "Đang dạy"}</option>
+                                <option value="on_leave">{lang === "en" ? "On Leave" : "Nghỉ phép"}</option>
+                                <option value="inactive">{lang === "en" ? "Inactive" : "Ngừng"}</option>
                               </select>
                             ) : (
                               <div className="w-full px-2 py-1 border border-transparent rounded text-xs">
@@ -1154,10 +1160,10 @@ export default function SchoolAdminTeachersPage() {
                                   }
                                 >
                                   {t.status === "active"
-                                    ? "Đang dạy"
+                                    ? (lang === "en" ? "Teaching" : "Đang dạy")
                                     : t.status === "on_leave"
-                                      ? "Nghỉ phép"
-                                      : "Ngừng"}
+                                      ? (lang === "en" ? "On Leave" : "Nghỉ phép")
+                                      : (lang === "en" ? "Inactive" : "Ngừng")}
                                 </Pill>
                               </div>
                             )}
@@ -1170,14 +1176,14 @@ export default function SchoolAdminTeachersPage() {
                               onClick={() => openEdit(t)}
                               className="px-2.5 py-1 rounded-lg text-xs font-semibold text-ink hover:bg-slate-100 transition-colors"
                             >
-                              Sửa
+                              {lang === "en" ? "Edit" : "Sửa"}
                             </button>
                             <button
                               type="button"
                               onClick={() => setConfirmDel(t)}
                               className="px-2.5 py-1 rounded-lg text-xs font-semibold text-bad hover:bg-bad-tint transition-colors"
                             >
-                              Xóa
+                              {lang === "en" ? "Delete" : "Xóa"}
                             </button>
                           </div>
                         </td>
@@ -1191,7 +1197,9 @@ export default function SchoolAdminTeachersPage() {
       </div>
 
       <div className="text-xs text-[#65727D] mt-2 mb-4">
-        💡 Lưới nhập trực tiếp (Web Grid): chạm vào ô để sửa tại chỗ; thay đổi được lưu theo hàng. Phân công lớp thực hiện ngay tại cột Lớp phụ trách.
+        {lang === "en"
+          ? "💡 Direct Input Grid (Web Grid): click on a cell to edit inline; changes are saved per row. Assign classes directly in the Assigned Class column."
+          : "💡 Lưới nhập trực tiếp (Web Grid): chạm vào ô để sửa tại chỗ; thay đổi được lưu theo hàng. Phân công lớp thực hiện ngay tại cột Lớp phụ trách."}
       </div>
 
       {/* Popover multi-select Lớp phụ trách (fixed để không bị overflow-hidden cắt) */}
@@ -1227,7 +1235,7 @@ export default function SchoolAdminTeachersPage() {
                   type="text"
                   value={classSearchQuery}
                   onChange={(e) => setClassSearchQuery(e.target.value)}
-                  placeholder="Tìm tên lớp..."
+                  placeholder={lang === "en" ? "Search class name..." : "Tìm tên lớp..."}
                   className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:border-[#16665a] focus:outline-none"
                   autoFocus
                 />
@@ -1245,8 +1253,8 @@ export default function SchoolAdminTeachersPage() {
                 {filteredClasses.length === 0 ? (
                   <div className="text-center py-3 text-xs text-slate-400">
                     {classes.length === 0
-                      ? "Chưa có lớp nào"
-                      : "Không tìm thấy lớp phù hợp"}
+                      ? (lang === "en" ? "No classes yet" : "Chưa có lớp nào")
+                      : (lang === "en" ? "No matching classes found" : "Không tìm thấy lớp phù hợp")}
                   </div>
                 ) : (
                   filteredClasses.map((c) => {
@@ -1266,7 +1274,7 @@ export default function SchoolAdminTeachersPage() {
                         />
                         <div className="flex-1 min-w-0 truncate">
                           <span className="font-medium text-slate-800">
-                            {c.name}
+                            {formatClassName(c.name, lang)}
                           </span>
                           {c.grade_label && (
                             <span className="text-[11px] text-slate-400 ml-1">
@@ -1281,18 +1289,18 @@ export default function SchoolAdminTeachersPage() {
               </div>
               <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[11px]">
                 <span className="text-slate-500">
-                  Đã chọn:{" "}
+                  {lang === "en" ? "Selected: " : "Đã chọn: "}
                   <strong className="text-slate-700">
                     {activeRowData.class_ids.length}
                   </strong>{" "}
-                  lớp
+                  {lang === "en" ? "classes" : "lớp"}
                 </span>
                 <button
                   type="button"
                   onClick={() => setOpenClassDropdown(null)}
                   className="text-brand font-semibold hover:underline"
                 >
-                  Xong
+                  {lang === "en" ? "Done" : "Xong"}
                 </button>
               </div>
             </div>
@@ -1301,14 +1309,18 @@ export default function SchoolAdminTeachersPage() {
       })()}
 
       <div className="text-xs text-ink-faint mt-2">
-        Tổng: <span className="font-bold text-ink">{filtered.length}</span> giáo viên
+        {lang === "en" ? (
+          <>Total: <span className="font-bold text-ink">{filtered.length}</span> teachers</>
+        ) : (
+          <>Tổng: <span className="font-bold text-ink">{filtered.length}</span> giáo viên</>
+        )}
       </div>
 
       {/* Drawer chỉnh sửa */}
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editing ? "Chỉnh sửa giáo viên" : "Thêm giáo viên mới"}
+        title={editing ? (lang === "en" ? "Edit Teacher" : "Chỉnh sửa giáo viên") : (lang === "en" ? "Add New Teacher" : "Thêm giáo viên mới")}
         footer={
           <>
             <button
@@ -1316,27 +1328,31 @@ export default function SchoolAdminTeachersPage() {
               className="kbtn kbtn-secondary"
               disabled={saving}
             >
-              Hủy
+              {lang === "en" ? "Cancel" : "Hủy"}
             </button>
             <button
               onClick={handleSave}
               className="kbtn kbtn-primary"
               disabled={saving}
             >
-              {saving ? "Đang lưu..." : editing ? "Lưu thay đổi" : "Tạo giáo viên"}
+              {saving
+                ? (lang === "en" ? "Saving..." : "Đang lưu...")
+                : editing
+                ? (lang === "en" ? "Save changes" : "Lưu thay đổi")
+                : (lang === "en" ? "Create Teacher" : "Tạo giáo viên")}
             </button>
           </>
         }
       >
-        <FormField label="Họ và tên" required>
+        <FormField label={lang === "en" ? "Full Name" : "Họ và tên"} required>
           <input
             className="kinput"
             value={form.full_name}
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-            placeholder="Nguyễn Văn A"
+            placeholder={lang === "en" ? "e.g. Nguyen Thi Mai" : "Nguyễn Văn A"}
           />
         </FormField>
-        <FormField label="Email" required hint="Phải là địa dạng Gmail (@gmail.com)">
+        <FormField label="Email" required hint={lang === "en" ? "Must be a valid Gmail address (@gmail.com)" : "Phải là địa dạng Gmail (@gmail.com)"}>
           <input
             className="kinput"
             type="email"
@@ -1345,7 +1361,7 @@ export default function SchoolAdminTeachersPage() {
             placeholder="teacher@gmail.com"
           />
         </FormField>
-        <FormField label="Số điện thoại" required hint="Gồm đúng 10 chữ số, bắt đầu bằng 0">
+        <FormField label={lang === "en" ? "Phone Number" : "Số điện thoại"} required hint={lang === "en" ? "10 digits starting with 0" : "Gồm đúng 10 chữ số, bắt đầu bằng 0"}>
           <input
             className="kinput"
             value={form.phone}
@@ -1353,7 +1369,7 @@ export default function SchoolAdminTeachersPage() {
             placeholder="0901234567"
           />
         </FormField>
-        <FormField label="Lớp phụ trách">
+        <FormField label={lang === "en" ? "Assigned Class" : "Lớp phụ trách"}>
           <div className="flex flex-wrap gap-2">
             {classes.map((c) => (
               <button
@@ -1371,25 +1387,27 @@ export default function SchoolAdminTeachersPage() {
                     : {}
                 }
               >
-                {c.name}
+                {formatClassName(c.name, lang)}
               </button>
             ))}
             {classes.length === 0 && (
-              <span className="text-xs text-ink-faint">Chưa có lớp nào.</span>
+              <span className="text-xs text-ink-faint">{lang === "en" ? "No classes yet." : "Chưa có lớp nào."}</span>
             )}
           </div>
         </FormField>
-        <FormField label="Tên đăng nhập" hint="(không bắt buộc)">
+        <FormField label={lang === "en" ? "Username" : "Tên đăng nhập"} hint={lang === "en" ? "(optional)" : "(không bắt buộc)"}>
           <input
             className="kinput"
             value={form.username}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
-            placeholder="tên đăng nhập"
+            placeholder={lang === "en" ? "username" : "tên đăng nhập"}
           />
         </FormField>
         <FormField
-          label={editing ? "Đặt lại mật khẩu" : "Mật khẩu"}
-          hint={editing ? "Bỏ trống nếu không muốn đổi. Mặc định: 123456" : "Mặc định: 123456 nếu bỏ trống"}
+          label={editing ? (lang === "en" ? "Reset Password" : "Đặt lại mật khẩu") : (lang === "en" ? "Password" : "Mật khẩu")}
+          hint={editing
+            ? (lang === "en" ? "Leave blank to keep unchanged. Default: 123456" : "Bỏ trống nếu không muốn đổi. Mặc định: 123456")
+            : (lang === "en" ? "Default: 123456 if left blank" : "Mặc định: 123456 nếu bỏ trống")}
         >
           <input
             className="kinput"
@@ -1399,33 +1417,37 @@ export default function SchoolAdminTeachersPage() {
             placeholder="••••••"
           />
         </FormField>
-        <FormField label="Trạng thái">
+        <FormField label={lang === "en" ? "Status" : "Trạng thái"}>
           <select
             className="kinput"
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
           >
-            <option value="active">Đang dạy</option>
-            <option value="on_leave">Nghỉ phép</option>
-            <option value="inactive">Ngừng công tác</option>
+            <option value="active">{lang === "en" ? "Teaching" : "Đang dạy"}</option>
+            <option value="on_leave">{lang === "en" ? "On Leave" : "Nghỉ phép"}</option>
+            <option value="inactive">{lang === "en" ? "Inactive" : "Ngừng công tác"}</option>
           </select>
         </FormField>
       </Drawer>
 
       <ConfirmDialog
         open={!!confirmDel}
-        title="Xóa giáo viên?"
-        message={`Bạn có chắc muốn xóa giáo viên "${confirmDel?.full_name}"? Thao tác này không thể hoàn tác.`}
-        confirmLabel="Xóa"
+        title={lang === "en" ? "Delete teacher?" : "Xóa giáo viên?"}
+        message={lang === "en"
+          ? `Are you sure you want to delete "${formatTeacherName(confirmDel?.full_name, lang)}"? This cannot be undone.`
+          : `Bạn có chắc muốn xóa giáo viên "${confirmDel?.full_name}"? Thao tác này không thể hoàn tác.`}
+        confirmLabel={lang === "en" ? "Delete" : "Xóa"}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
       />
 
       <ConfirmDialog
         open={confirmBulkDel}
-        title={`Xóa ${selectedIds.length} giáo viên đã chọn?`}
-        message={`Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} giáo viên này? Toàn bộ tài khoản và thông tin phân công lớp sẽ được gỡ bỏ.`}
-        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} giáo viên`}
+        title={lang === "en" ? `Delete ${selectedIds.length} selected teachers?` : `Xóa ${selectedIds.length} giáo viên đã chọn?`}
+        message={lang === "en"
+          ? `Are you sure you want to permanently delete these ${selectedIds.length} teachers? All accounts and class assignments will be removed.`
+          : `Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} giáo viên này? Toàn bộ tài khoản và thông tin phân công lớp sẽ được gỡ bỏ.`}
+        confirmLabel={bulkDeleting ? (lang === "en" ? "Deleting..." : "Đang xóa...") : (lang === "en" ? `Delete ${selectedIds.length} teachers` : `Xóa ${selectedIds.length} giáo viên`)}
         onConfirm={handleBulkDelete}
         onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
       />
@@ -1433,21 +1455,25 @@ export default function SchoolAdminTeachersPage() {
       <ImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        title="Nhập danh sách giáo viên từ file"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường. Nếu để trống Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (giáo viên có thể đăng nhập bằng cả Email hoặc Số điện thoại)."
+        title={lang === "en" ? "Import Teachers from File" : "Nhập danh sách giáo viên từ file"}
+        description={lang === "en"
+          ? "Upload an Excel (.xlsx, .xls) or CSV file to bulk import teachers. If Username and Password are left blank, Phone Number will be used as username and 123456 as default password."
+          : "Tải lên file Excel (.xlsx, .xls) hoặc CSV để thêm hàng loạt giáo viên vào trường. Nếu để trống Tên đăng nhập và Mật khẩu, hệ thống sẽ tự động dùng Số điện thoại làm tên đăng nhập và mật khẩu mặc định là 123456 (giáo viên có thể đăng nhập bằng cả Email hoặc Số điện thoại)."}
         templateFilename="mau_nhap_giao_vien.xlsx"
-        sampleHeaders={["Họ và tên", "Email", "Số điện thoại", "Tên lớp", "Tên đăng nhập", "Mật khẩu"]}
+        sampleHeaders={lang === "en"
+          ? ["Full Name", "Email", "Phone", "Class Name", "Username", "Password"]
+          : ["Họ và tên", "Email", "Số điện thoại", "Tên lớp", "Tên đăng nhập", "Mật khẩu"]}
         sampleRow={[
           "Nguyễn Thị Mai",
           "mai.nguyen@gmail.com",
           "0901234567",
-          classes[0]?.name || "Lớp Mầm 1",
+          classes[0]?.name || "Mầm A",
           "mainguyen",
           "123456",
         ]}
         onImportRows={handleImportRows}
         onSuccess={() => {
-          setToast({ msg: "Đã nhập danh sách giáo viên thành công", tone: "ok" });
+          setToast({ msg: lang === "en" ? "Teachers imported successfully" : "Đã nhập danh sách giáo viên thành công", tone: "ok" });
         }}
       />
 

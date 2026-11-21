@@ -18,9 +18,12 @@ import {
   getStoredSchoolAdmin,
   getToken,
 } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
+import { formatSchoolName } from "@/lib/locale-helper";
 
 export default function SchoolAdminAccountPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
   const [ready, setReady] = useState(false);
   const [info, setInfo] = useState<{
     full_name: string;
@@ -54,15 +57,15 @@ export default function SchoolAdminAccountPage() {
 
   async function handleChangePassword() {
     if (newPw.length < 6) {
-      setToast({ msg: "Mật khẩu mới phải có ít nhất 6 ký tự", tone: "bad" });
+      setToast({ msg: lang === "en" ? "New password must be at least 6 characters" : "Mật khẩu mới phải có ít nhất 6 ký tự", tone: "bad" });
       return;
     }
     if (newPw !== confirmPw) {
-      setToast({ msg: "Mật khẩu xác nhận không khớp", tone: "bad" });
+      setToast({ msg: lang === "en" ? "Confirmation password does not match" : "Mật khẩu xác nhận không khớp", tone: "bad" });
       return;
     }
     if (currentPw === newPw) {
-      setToast({ msg: "Mật khẩu mới không được trùng mật khẩu hiện tại", tone: "bad" });
+      setToast({ msg: lang === "en" ? "New password cannot be the same as current password" : "Mật khẩu mới không được trùng mật khẩu hiện tại", tone: "bad" });
       return;
     }
     setSaving(true);
@@ -79,9 +82,9 @@ export default function SchoolAdminAccountPage() {
       setCurrentPw("");
       setNewPw("");
       setConfirmPw("");
-      setToast({ msg: "Đổi mật khẩu thành công", tone: "ok" });
+      setToast({ msg: lang === "en" ? "Password changed successfully" : "Đổi mật khẩu thành công", tone: "ok" });
     } catch (err) {
-      const detail = err instanceof ApiError ? err.detail : "Không thể đổi mật khẩu";
+      const detail = err instanceof ApiError ? err.detail : (lang === "en" ? "Unable to change password" : "Không thể đổi mật khẩu");
       setToast({ msg: detail, tone: "bad" });
     } finally {
       setSaving(false);
@@ -91,16 +94,16 @@ export default function SchoolAdminAccountPage() {
   if (!ready || !info) return null;
 
   return (
-    <SchoolAdminLayout active="account" pageTitle="Tài khoản quản trị trường">
+    <SchoolAdminLayout active="account" pageTitle={lang === "en" ? "School Admin Account" : "Tài khoản quản trị trường"}>
       <div className="max-w-3xl space-y-6">
         
         {/* Header */}
         <div>
           <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
-            Tài khoản quản trị trường
+            {lang === "en" ? "School Admin Account" : "Tài khoản quản trị trường"}
           </h1>
           <p className="text-sm text-[#65727D] mt-1">
-            Thông tin tài khoản, bảo mật và quyền hạn quản lý.
+            {lang === "en" ? "Account details, security settings, and administration role." : "Thông tin tài khoản, bảo mật và quyền hạn quản lý."}
           </p>
         </div>
 
@@ -115,17 +118,17 @@ export default function SchoolAdminAccountPage() {
                 {info.full_name}
               </div>
               <div className="text-xs font-semibold text-[#65727D] mt-0.5">
-                Tên đăng nhập: @{info.username}
+                {lang === "en" ? "Username: " : "Tên đăng nhập: "}@{info.username}
               </div>
               {info.school_name && (
                 <div className="text-xs text-[#087F70] font-bold mt-1.5 flex items-center gap-1.5">
                   <span>🏫</span>
-                  <span>{info.school_name}</span>
+                  <span>{formatSchoolName(info.school_name, lang)}</span>
                 </div>
               )}
             </div>
             <span className="px-3.5 py-1.5 rounded-full bg-[#E6F3EB] text-[#087F70] font-bold text-xs">
-              Quản trị viên trường
+              {lang === "en" ? "School Admin" : "Quản trị viên trường"}
             </span>
           </div>
         </div>
@@ -133,14 +136,16 @@ export default function SchoolAdminAccountPage() {
         {/* ─── Change Password Card (Figma 454:4069) ─── */}
         <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-7 shadow-soft">
           <h2 className="text-base font-extrabold text-[#102737] mb-1">
-            Đổi mật khẩu
+            {lang === "en" ? "Change Password" : "Đổi mật khẩu"}
           </h2>
           <p className="text-xs text-[#65727D] mb-5">
-            Sau khi đổi mật khẩu thành công, các phiên đăng nhập trên thiết bị khác sẽ tự động bị đăng xuất để đảm bảo an toàn.
+            {lang === "en"
+              ? "After changing your password, sessions on other devices will be signed out automatically for security."
+              : "Sau khi đổi mật khẩu thành công, các phiên đăng nhập trên thiết bị khác sẽ tự động bị đăng xuất để đảm bảo an toàn."}
           </p>
 
           <div className="space-y-4 max-w-md">
-            <FormField label="Mật khẩu hiện tại" required>
+            <FormField label={lang === "en" ? "Current Password" : "Mật khẩu hiện tại"} required>
               <input
                 type="password"
                 className="w-full h-11 px-4 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] focus:outline-none focus:border-[#087F70]"
@@ -151,7 +156,7 @@ export default function SchoolAdminAccountPage() {
               />
             </FormField>
 
-            <FormField label="Mật khẩu mới" required hint="Tối thiểu 6 ký tự">
+            <FormField label={lang === "en" ? "New Password" : "Mật khẩu mới"} required hint={lang === "en" ? "Minimum 6 characters" : "Tối thiểu 6 ký tự"}>
               <input
                 type="password"
                 className="w-full h-11 px-4 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] focus:outline-none focus:border-[#087F70]"
@@ -162,7 +167,7 @@ export default function SchoolAdminAccountPage() {
               />
             </FormField>
 
-            <FormField label="Xác nhận mật khẩu mới" required>
+            <FormField label={lang === "en" ? "Confirm New Password" : "Xác nhận mật khẩu mới"} required>
               <input
                 type="password"
                 className="w-full h-11 px-4 rounded-[12px] border border-[#E5E8EB] text-sm text-[#102737] focus:outline-none focus:border-[#087F70]"
@@ -178,7 +183,7 @@ export default function SchoolAdminAccountPage() {
               disabled={saving}
               className="px-6 py-2.5 bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs rounded-full shadow-sm transition disabled:opacity-50"
             >
-              {saving ? "Đang lưu..." : "Cập nhật mật khẩu"}
+              {saving ? (lang === "en" ? "Saving..." : "Đang lưu...") : (lang === "en" ? "Update Password" : "Cập nhật mật khẩu")}
             </button>
           </div>
         </div>
@@ -187,10 +192,10 @@ export default function SchoolAdminAccountPage() {
         <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-7 shadow-soft flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-extrabold text-[#102737]">
-              Đăng xuất khỏi hệ thống
+              {lang === "en" ? "Log Out" : "Đăng xuất khỏi hệ thống"}
             </h2>
             <p className="text-xs text-[#65727D] mt-0.5">
-              Kết thúc phiên làm việc hiện tại trên trình duyệt này.
+              {lang === "en" ? "End the current session on this browser." : "Kết thúc phiên làm việc hiện tại trên trình duyệt này."}
             </p>
           </div>
           <button
@@ -198,13 +203,13 @@ export default function SchoolAdminAccountPage() {
             className="px-5 py-2.5 bg-[#FDEAE5] hover:bg-[#FCD9D1] text-[#A93832] font-bold text-xs rounded-full transition shrink-0 flex items-center gap-2"
           >
             <span>🚪</span>
-            <span>Đăng xuất</span>
+            <span>{lang === "en" ? "Log out" : "Đăng xuất"}</span>
           </button>
         </div>
 
         {/* Footer */}
         <div className="text-center text-xs text-[#8C9BA5] pt-2">
-          KinderLog Garden Voice v2.0 · Cổng Quản Trị Nhà Trường
+          {lang === "en" ? "KinderLog Garden Voice v2.0 · School Administration Portal" : "KinderLog Garden Voice v2.0 · Cổng Quản Trị Nhà Trường"}
         </div>
       </div>
 

@@ -635,6 +635,7 @@ export function SearchBar({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const { lang } = useLanguage();
   return (
     <div className="relative flex items-center">
       <svg
@@ -650,7 +651,7 @@ export function SearchBar({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder ?? "Tìm kiếm..."}
+        placeholder={placeholder ?? (lang === "en" ? "Search..." : "Tìm kiếm...")}
         className="kinput !pl-10 !pr-9"
         style={{ paddingLeft: "2.5rem", paddingRight: "2.25rem" }}
       />
@@ -672,8 +673,8 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = "Xác nhận",
-  cancelLabel = "Hủy",
+  confirmLabel,
+  cancelLabel,
   tone = "danger",
   onConfirm,
   onCancel,
@@ -687,6 +688,10 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { lang } = useLanguage();
+  const effectiveConfirm = confirmLabel || (lang === "en" ? "Confirm" : "Xác nhận");
+  const effectiveCancel = cancelLabel || (lang === "en" ? "Cancel" : "Hủy");
+
   return (
     <Modal
       open={open}
@@ -696,13 +701,13 @@ export function ConfirmDialog({
       footer={
         <>
           <button onClick={onCancel} className="kbtn kbtn-secondary">
-            {cancelLabel}
+            {effectiveCancel}
           </button>
           <button
             onClick={onConfirm}
             className={`kbtn ${tone === "danger" ? "kbtn-danger" : "kbtn-primary"}`}
           >
-            {confirmLabel}
+            {effectiveConfirm}
           </button>
         </>
       }
@@ -759,8 +764,8 @@ export function SearchableSelect({
   options,
   value,
   onChange,
-  placeholder = "Chọn...",
-  searchPlaceholder = "Nhập tìm kiếm...",
+  placeholder,
+  searchPlaceholder,
   prefixIcon,
   className = "",
   disabled = false,
@@ -778,6 +783,9 @@ export function SearchableSelect({
   allowClear?: boolean;
   renderOption?: (opt: SelectOption, isSelected: boolean) => ReactNode;
 }) {
+  const { lang } = useLanguage();
+  const effectivePlaceholder = placeholder ?? (lang === "en" ? "Select..." : "Chọn...");
+  const effectiveSearchPlaceholder = searchPlaceholder ?? (lang === "en" ? "Search..." : "Nhập tìm kiếm...");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -858,7 +866,7 @@ export function SearchableSelect({
                 : "text-ink-soft"
             }`}
           >
-            {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption ? selectedOption.label : effectivePlaceholder}
             {selectedOption?.sublabel && selectedOption.value !== "" && (
               <span className="ml-1.5 text-xs text-ink-soft font-normal">
                 ({selectedOption.sublabel})
@@ -876,7 +884,7 @@ export function SearchableSelect({
                 e.stopPropagation();
                 onChange("");
               }}
-              title="Xóa lựa chọn"
+              title={lang === "en" ? "Clear selection" : "Xóa lựa chọn"}
               className="text-ink-soft hover:text-ink w-5 h-5 flex items-center justify-center text-xs rounded-full hover:bg-black/5"
             >
               ✕
@@ -912,7 +920,7 @@ export function SearchableSelect({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholder}
+                placeholder={effectiveSearchPlaceholder}
                 className="w-full pl-8 pr-7 py-1.5 text-xs sm:text-sm bg-white border border-line rounded-control text-ink placeholder:text-ink-soft focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30"
               />
               {search && (
@@ -931,7 +939,7 @@ export function SearchableSelect({
           <div className="max-h-60 overflow-y-auto py-1">
             {filteredOptions.length === 0 ? (
               <div className="py-6 px-3 text-center text-xs text-ink-soft">
-                Không tìm thấy kết quả phù hợp cho &quot;{search}&quot;
+                {lang === "en" ? `No matching results for "${search}"` : `Không tìm thấy kết quả phù hợp cho "${search}"`}
               </div>
             ) : (
               filteredOptions.map((opt) => {
@@ -1055,6 +1063,7 @@ export function ImportModal({
   onImportRows: (rows: string[][], options?: { overwrite?: boolean }) => Promise<ImportResult>;
   onSuccess?: () => void;
 }) {
+  const { lang } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [overwrite, setOverwrite] = useState(true);
@@ -1091,7 +1100,7 @@ export function ImportModal({
     try {
       const parseRes = await parseExcelOrCsvDetailed(selected, sampleHeaders);
       if (parseRes.rows.length === 0) {
-        setErrorMsg("Không tìm thấy dòng dữ liệu nào trong file được chọn.");
+        setErrorMsg(lang === "en" ? "No valid data rows found in the selected file." : "Không tìm thấy dòng dữ liệu nào trong file được chọn.");
         setParsedRows([]);
         setDetectedSheets([]);
       } else {
@@ -1099,7 +1108,7 @@ export function ImportModal({
         setDetectedSheets(parseRes.sheets);
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || "Không thể đọc file. Vui lòng kiểm tra định dạng.");
+      setErrorMsg(err?.message || (lang === "en" ? "Unable to read file. Please check the format." : "Không thể đọc file. Vui lòng kiểm tra định dạng."));
       setParsedRows([]);
       setDetectedSheets([]);
     } finally {
@@ -1108,7 +1117,7 @@ export function ImportModal({
   }
 
   function handleDownloadTemplate() {
-    downloadExcelTemplate(templateFilename, "Mau_Nhap", sampleHeaders, sampleRow);
+    downloadExcelTemplate(templateFilename, lang === "en" ? "Template" : "Mau_Nhap", sampleHeaders, sampleRow);
   }
 
   async function handleStartImport() {
@@ -1122,7 +1131,7 @@ export function ImportModal({
         onSuccess();
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || "Đã xảy ra lỗi trong quá trình nhập dữ liệu.");
+      setErrorMsg(err?.message || (lang === "en" ? "An error occurred while importing data." : "Đã xảy ra lỗi trong quá trình nhập dữ liệu."));
     } finally {
       setImporting(false);
     }
@@ -1141,7 +1150,7 @@ export function ImportModal({
             onClick={handleDownloadTemplate}
             className="kbtn kbtn-ghost text-xs text-brand flex items-center gap-1.5"
           >
-            📥 Tải file mẫu (.xlsx)
+            {lang === "en" ? "📥 Download Template (.xlsx)" : "📥 Tải file mẫu (.xlsx)"}
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -1150,7 +1159,7 @@ export function ImportModal({
               disabled={importing}
               className="kbtn kbtn-secondary"
             >
-              {result ? "Đóng" : "Hủy"}
+              {result ? (lang === "en" ? "Close" : "Đóng") : (lang === "en" ? "Cancel" : "Hủy")}
             </button>
             {!result && (
               <button
@@ -1163,8 +1172,8 @@ export function ImportModal({
                   <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 )}
                 {importing
-                  ? "Đang nhập..."
-                  : `Nhập dữ liệu (${parsedRows.length} dòng)`}
+                  ? (lang === "en" ? "Importing..." : "Đang nhập...")
+                  : (lang === "en" ? `Import Data (${parsedRows.length} rows)` : `Nhập dữ liệu (${parsedRows.length} dòng)`)}
               </button>
             )}
           </div>
@@ -1182,10 +1191,14 @@ export function ImportModal({
             <div className="rounded-card border border-line bg-sunken/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div>
                 <div className="font-bold text-ink mb-0.5">
-                  Bước 1: Chuẩn bị file dữ liệu
+                  {lang === "en" ? "Step 1: Prepare your data file" : "Bước 1: Chuẩn bị file dữ liệu"}
                 </div>
                 <div className="text-ink-soft">
-                  Hỗ trợ định dạng Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) hoặc <strong>.csv</strong>. Bạn có thể tải file mẫu để nhập đúng cấu trúc.
+                  {lang === "en" ? (
+                    <>Supports Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) or <strong>.csv</strong>. You can download the template to ensure the correct structure.</>
+                  ) : (
+                    <>Hỗ trợ định dạng Excel (<strong>.xlsx</strong>, <strong>.xls</strong>) hoặc <strong>.csv</strong>. Bạn có thể tải file mẫu để nhập đúng cấu trúc.</>
+                  )}
                 </div>
               </div>
               <button
@@ -1193,13 +1206,13 @@ export function ImportModal({
                 onClick={handleDownloadTemplate}
                 className="kbtn kbtn-secondary text-xs whitespace-nowrap self-start sm:self-auto shrink-0"
               >
-                📄 Tải file mẫu
+                {lang === "en" ? "📄 Download Template" : "📄 Tải file mẫu"}
               </button>
             </div>
 
             {/* Step 2: Upload dropzone */}
             <div>
-              <label className="klabel mb-1.5">Bước 2: Chọn file dữ liệu tải lên</label>
+              <label className="klabel mb-1.5">{lang === "en" ? "Step 2: Select file to upload" : "Bước 2: Chọn file dữ liệu tải lên"}</label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1214,10 +1227,10 @@ export function ImportModal({
               >
                 <div className="text-3xl mb-2">📁</div>
                 <div className="text-sm font-semibold text-ink">
-                  {file ? file.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
+                  {file ? file.name : (lang === "en" ? "Click to choose file or drag & drop here" : "Nhấp để chọn file hoặc kéo thả vào đây")}
                 </div>
                 <div className="text-xs text-ink-faint mt-1">
-                  Hỗ trợ các định dạng .xlsx, .xls, .csv (tối đa 10MB)
+                  {lang === "en" ? "Supports .xlsx, .xls, .csv (max 10MB)" : "Hỗ trợ các định dạng .xlsx, .xls, .csv (tối đa 10MB)"}
                 </div>
               </label>
             </div>
@@ -1226,7 +1239,7 @@ export function ImportModal({
             {parsing && (
               <div className="flex items-center justify-center py-4 text-xs text-ink-soft gap-2">
                 <span className="inline-block w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                Đang phân tích file...
+                {lang === "en" ? "Analyzing file..." : "Đang phân tích file..."}
               </div>
             )}
 
@@ -1234,15 +1247,15 @@ export function ImportModal({
             {parsedRows.length > 0 && (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-ink">
-                  <span>Đã phát hiện {parsedRows.length} dòng dữ liệu hợp lệ</span>
-                  <span className="text-ink-soft font-normal">Hiển thị trước tối đa 5 dòng</span>
+                  <span>{lang === "en" ? `Detected ${parsedRows.length} valid data rows` : `Đã phát hiện ${parsedRows.length} dòng dữ liệu hợp lệ`}</span>
+                  <span className="text-ink-soft font-normal">{lang === "en" ? "Showing up to 5 preview rows" : "Hiển thị trước tối đa 5 dòng"}</span>
                 </div>
 
                 {detectedSheets.length > 1 && (
                   <div className="p-2.5 rounded-control bg-sunken/60 border border-line space-y-1.5 text-xs">
                     <div className="font-semibold text-ink flex items-center justify-between">
-                      <span>📄 Tự động nhận diện dữ liệu từ {detectedSheets.length} sheet:</span>
-                      <span className="text-ink-soft text-[11px] font-normal">Mỗi sheet được chia theo lớp</span>
+                      <span>{lang === "en" ? `📄 Auto-detected data from ${detectedSheets.length} sheets:` : `📄 Tự động nhận diện dữ liệu từ ${detectedSheets.length} sheet:`}</span>
+                      <span className="text-ink-soft text-[11px] font-normal">{lang === "en" ? "Each sheet corresponds to a class" : "Mỗi sheet được chia theo lớp"}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {detectedSheets.map((s, idx) => (
@@ -1252,7 +1265,7 @@ export function ImportModal({
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-brand" />
                           <span>{s.name}:</span>
-                          <span className="text-brand-strong">{s.count} dòng</span>
+                          <span className="text-brand-strong">{s.count} {lang === "en" ? "rows" : "dòng"}</span>
                         </span>
                       ))}
                     </div>
@@ -1303,13 +1316,13 @@ export function ImportModal({
                 onChange={(e) => setOverwrite(e.target.checked)}
                 className="w-4 h-4 rounded border-line text-brand focus:ring-brand accent-brand cursor-pointer"
               />
-              <span>{overwriteLabel || "Ghi đè dữ liệu nếu đã tồn tại"}</span>
+              <span>{overwriteLabel || (lang === "en" ? "Overwrite existing records if duplicate" : "Ghi đè dữ liệu nếu đã tồn tại")}</span>
             </label>
             <p className="text-[11px] text-ink-soft pl-6.5 leading-relaxed">
               {overwriteHint ||
                 (overwrite
-                  ? "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới sẽ cập nhật thay thế dữ liệu cũ."
-                  : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng.")}
+                  ? (lang === "en" ? "Overwrite enabled: Duplicate entries will update existing records." : "Đang bật ghi đè: Nếu hệ thống phát hiện dữ liệu trùng lặp (cùng khung giờ/thông tin), dữ liệu mới sẽ cập nhật thay thế dữ liệu cũ.")
+                  : (lang === "en" ? "Overwrite disabled: Existing records will be preserved and duplicates skipped." : "Đang tắt ghi đè: Hệ thống sẽ giữ nguyên dữ liệu hiện có và tự động bỏ qua các dòng bị trùng."))}
             </p>
           </div>
         )}
@@ -1330,28 +1343,28 @@ export function ImportModal({
               </span>
               <div className="font-bold text-sm text-ink">
                 {result.failed === 0
-                  ? "Nhập dữ liệu thành công hoàn toàn!"
+                  ? (lang === "en" ? "Data imported successfully!" : "Nhập dữ liệu thành công hoàn toàn!")
                   : result.success > 0
-                  ? "Nhập dữ liệu hoàn tất một phần"
-                  : "Không thể nhập dữ liệu"}
+                  ? (lang === "en" ? "Data partially imported" : "Nhập dữ liệu hoàn tất một phần")
+                  : (lang === "en" ? "Import failed" : "Không thể nhập dữ liệu")}
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-2.5 rounded-control bg-white border border-line">
-                <div className="text-ink-soft">Tổng số dòng</div>
+                <div className="text-ink-soft">{lang === "en" ? "Total rows" : "Tổng số dòng"}</div>
                 <div className="text-base font-bold text-ink mt-0.5">
                   {result.total}
                 </div>
               </div>
               <div className="p-2.5 rounded-control bg-ok/10 border border-ok/20">
-                <div className="text-ok font-semibold">Thành công</div>
+                <div className="text-ok font-semibold">{lang === "en" ? "Succeeded" : "Thành công"}</div>
                 <div className="text-base font-bold text-ok mt-0.5">
                   {result.success}
                 </div>
               </div>
               <div className="p-2.5 rounded-control bg-bad/10 border border-bad/20">
-                <div className="text-bad font-semibold">Thất bại</div>
+                <div className="text-bad font-semibold">{lang === "en" ? "Failed" : "Thất bại"}</div>
                 <div className="text-base font-bold text-bad mt-0.5">
                   {result.failed}
                 </div>
@@ -1363,7 +1376,7 @@ export function ImportModal({
               <div className="rounded-control bg-warn/10 border border-warn/30 p-3 space-y-1.5 text-xs">
                 <div className="font-bold text-warn flex items-center gap-1.5">
                   <span>ℹ️</span>
-                  <span>Cảnh báo lưu ý ({result.warnings.length}):</span>
+                  <span>{lang === "en" ? `Warnings (${result.warnings.length}):` : `Cảnh báo lưu ý (${result.warnings.length}):`}</span>
                 </div>
                 <div className="max-h-32 overflow-y-auto space-y-1 pl-5 list-disc">
                   {result.warnings.map((w, i) => (
@@ -1380,7 +1393,7 @@ export function ImportModal({
               <div className="rounded-control bg-bad/10 border border-bad/30 p-3 space-y-1.5 text-xs">
                 <div className="font-bold text-bad flex items-center gap-1.5">
                   <span>⚠</span>
-                  <span>Chi tiết lỗi ({result.errors.length}):</span>
+                  <span>{lang === "en" ? `Error details (${result.errors.length}):` : `Chi tiết lỗi (${result.errors.length}):`}</span>
                 </div>
                 <div className="max-h-36 overflow-y-auto space-y-1 pl-5">
                   {result.errors.map((err, i) => (
