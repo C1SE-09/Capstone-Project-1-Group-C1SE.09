@@ -67,9 +67,14 @@ export default function DashboardPage() {
       <AdminLayout currentPage="dashboard">
         {error ? (
           <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-8 max-w-md">
-            <div className="font-bold text-[#A93832] mb-1 text-base">Lỗi tải dữ liệu</div>
+            <div className="font-bold text-[#A93832] mb-1 text-base">
+              {lang === "en" ? "Data Loading Error" : "Lỗi tải dữ liệu"}
+            </div>
             <div className="text-sm text-[#65727D] mb-4">
-              {error?.detail || "Phiên làm việc đã hết hạn hoặc không kết nối được máy chủ."}
+              {error?.detail ||
+                (lang === "en"
+                  ? "Session expired or unable to connect to the server."
+                  : "Phiên làm việc đã hết hạn hoặc không kết nối được máy chủ.")}
             </div>
             <button
               onClick={() => {
@@ -78,7 +83,7 @@ export default function DashboardPage() {
               }}
               className="px-5 py-2.5 bg-[#A93832] text-white rounded-full font-bold text-sm"
             >
-              Đăng nhập lại
+              {lang === "en" ? "Sign in again" : "Đăng nhập lại"}
             </button>
           </div>
         ) : (
@@ -168,17 +173,19 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-extrabold text-base text-[#102737]">
-                  Báo lỗi mới nhất
+                  {lang === "en" ? "Latest Bug Reports" : "Báo lỗi mới nhất"}
                 </h2>
                 <p className="text-xs text-[#65727D]">
-                  Cần phản hồi và phân loại từ đội ngũ vận hành
+                  {lang === "en"
+                    ? "Requires response and triage from operations team"
+                    : "Cần phản hồi và phân loại từ đội ngũ vận hành"}
                 </p>
               </div>
               <Link
                 href="/bug-reports"
                 className="text-xs font-bold text-[#087F70] hover:underline"
               >
-                Xem tất cả →
+                {lang === "en" ? "View all →" : "Xem tất cả →"}
               </Link>
             </div>
 
@@ -195,7 +202,7 @@ export default function DashboardPage() {
                         {item.title}
                       </div>
                       <div className="text-xs text-[#65727D] mt-0.5">
-                        {item.sender_name || "Người dùng"} ({item.sender_type}) · {formatDate(item.created_at)}
+                        {item.sender_name || (lang === "en" ? "User" : "Người dùng")} ({item.sender_type}) · {formatDate(item.created_at)}
                       </div>
                     </div>
                     <span
@@ -213,7 +220,7 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <div className="py-8 text-center text-xs text-[#8C9BA5]">
-                  Chưa có báo lỗi mới.
+                  {lang === "en" ? "No new bug reports." : "Chưa có báo lỗi mới."}
                 </div>
               )}
             </div>

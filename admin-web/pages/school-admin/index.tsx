@@ -13,7 +13,7 @@ import { ProgressBar, Spinner } from "@/components/ui-school";
 import { ApiError, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { apiFetch } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
-import { formatClassName, formatTeacherName } from "@/lib/locale-helper";
+import { formatSchoolName, formatClassName, formatTeacherName, localizeGradeLabel } from "@/lib/locale-helper";
 
 interface OverviewStats {
   total_schools: number;
@@ -97,24 +97,24 @@ export default function SchoolAdminOverviewPage() {
   if (!ready) return null;
 
   return (
-    <SchoolAdminLayout active="overview" pageTitle="Tổng quan trường">
+    <SchoolAdminLayout active="overview" pageTitle={lang === "en" ? "School Overview" : "Tổng quan trường"}>
       <div className="space-y-8">
         
         {/* Header (Figma 454:3567 & 3568) */}
         <div>
           <h1 className="text-2xl font-extrabold text-[#102737] tracking-tight">
-            Tổng quan trường
+            {lang === "en" ? "School Overview" : "Tổng quan trường"}
           </h1>
           <p className="text-sm text-[#65727D] mt-1">
-            {schoolName} · Năm học 2026–2027
+            {formatSchoolName(schoolName, lang)} · {lang === "en" ? "School Year 2026–2027" : "Năm học 2026–2027"}
           </p>
         </div>
 
         {statsErr && (
           <div className="p-4 bg-[#FDEAE5] border border-[#A93832]/30 text-[#A93832] rounded-[16px] text-sm">
-            <div className="font-bold">Không thể tải dữ liệu thống kê</div>
+            <div className="font-bold">{lang === "en" ? "Unable to load statistics" : "Không thể tải dữ liệu thống kê"}</div>
             <div className="text-xs mt-0.5">
-              {statsErr instanceof ApiError ? statsErr.detail : "Vui lòng kiểm tra lại kết nối đến máy chủ."}
+              {statsErr instanceof ApiError ? statsErr.detail : (lang === "en" ? "Please check your server connection." : "Vui lòng kiểm tra lại kết nối đến máy chủ.")}
             </div>
           </div>
         )}
@@ -129,49 +129,49 @@ export default function SchoolAdminOverviewPage() {
               {/* Thẻ 1: Học sinh */}
               <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
                 <div className="flex items-center justify-between text-[#65727D]">
-                  <span className="text-xs font-bold uppercase tracking-wider">Tổng số học sinh</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Total Students" : "Tổng số học sinh"}</span>
                   <span className="text-xl">👶</span>
                 </div>
                 <div className="text-3xl font-extrabold text-[#102737] mt-2">
                   {stats.total_children}
                 </div>
                 <div className="text-xs text-[#087F70] font-semibold mt-1">
-                  🏫 {stats.total_classes} lớp đang học
+                  {lang === "en" ? `🏫 ${stats.total_classes} active classes` : `🏫 ${stats.total_classes} lớp đang học`}
                 </div>
               </div>
 
               {/* Thẻ 2: Giáo viên */}
               <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
                 <div className="flex items-center justify-between text-[#65727D]">
-                  <span className="text-xs font-bold uppercase tracking-wider">Đội ngũ giáo viên</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Teaching Staff" : "Đội ngũ giáo viên"}</span>
                   <span className="text-xl">👩‍🏫</span>
                 </div>
                 <div className="text-3xl font-extrabold text-[#087F70] mt-2">
                   {stats.total_teachers}
                 </div>
                 <div className="text-xs text-[#8C9BA5] mt-1">
-                  Giáo viên đứng lớp &amp; bảo mẫu
+                  {lang === "en" ? "Homeroom teachers & assistants" : "Giáo viên đứng lớp & bảo mẫu"}
                 </div>
               </div>
 
               {/* Thẻ 3: Phụ huynh */}
               <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
                 <div className="flex items-center justify-between text-[#65727D]">
-                  <span className="text-xs font-bold uppercase tracking-wider">Phụ huynh liên kết</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Linked Parents" : "Phụ huynh liên kết"}</span>
                   <span className="text-xl">👨‍👩‍👧</span>
                 </div>
                 <div className="text-3xl font-extrabold text-[#4B6F8C] mt-2">
                   {stats.total_parents}
                 </div>
                 <div className="text-xs text-[#8C9BA5] mt-1">
-                  Tài khoản đang nhận báo cáo
+                  {lang === "en" ? "Accounts receiving daily reports" : "Tài khoản đang nhận báo cáo"}
                 </div>
               </div>
 
               {/* Thẻ 4: Tiến độ báo cáo ngày */}
               <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
                 <div className="flex items-center justify-between text-[#65727D]">
-                  <span className="text-xs font-bold uppercase tracking-wider">Báo cáo ngày hôm nay</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Today's Reports" : "Báo cáo ngày hôm nay"}</span>
                   <span className="text-xl">📋</span>
                 </div>
                 <div className="text-3xl font-extrabold text-[#087F70] mt-2">
@@ -185,8 +185,8 @@ export default function SchoolAdminOverviewPage() {
                   />
                 </div>
                 <div className="flex items-center justify-between text-[11px] font-bold text-[#65727D] mt-2">
-                  <span className="text-[#087F70]">✓ {stats.today_sent_reports_count} đã gửi</span>
-                  <span className="text-[#B0791B]">📝 {stats.today_draft_reports_count} nháp</span>
+                  <span className="text-[#087F70]">✓ {stats.today_sent_reports_count} {lang === "en" ? "sent" : "đã gửi"}</span>
+                  <span className="text-[#B0791B]">📝 {stats.today_draft_reports_count} {lang === "en" ? "drafts" : "nháp"}</span>
                 </div>
               </div>
 
@@ -195,7 +195,7 @@ export default function SchoolAdminOverviewPage() {
             {/* ─── Khối Chức năng Quản lý nhanh (Figma 454:3574 & 3575) ─── */}
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-[#8C9BA5] mb-3">
-                Chức năng quản lý chính
+                {lang === "en" ? "Core Management Modules" : "Chức năng quản lý chính"}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -208,14 +208,14 @@ export default function SchoolAdminOverviewPage() {
                       👩‍🏫
                     </div>
                     <div className="font-extrabold text-base text-[#102737] group-hover:text-[#087F70] transition">
-                      Quản lý Giáo viên
+                      {lang === "en" ? "Teachers Management" : "Quản lý Giáo viên"}
                     </div>
                     <p className="text-xs text-[#65727D] mt-1 line-clamp-2">
-                      Nhập và sửa trực tiếp trên lưới Web Grid, phân công lớp và Excel.
+                      {lang === "en" ? "Inline editing via Web Grid, class assignment, and Excel." : "Nhập và sửa trực tiếp trên lưới Web Grid, phân công lớp và Excel."}
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-[#E5E8EB] flex items-center justify-between text-xs font-bold text-[#087F70]">
-                    <span>Vào quản lý</span>
+                    <span>{lang === "en" ? "Manage" : "Vào quản lý"}</span>
                     <span>→</span>
                   </div>
                 </Link>
@@ -229,14 +229,14 @@ export default function SchoolAdminOverviewPage() {
                       👶
                     </div>
                     <div className="font-extrabold text-base text-[#102737] group-hover:text-[#087F70] transition">
-                      Quản lý Học sinh
+                      {lang === "en" ? "Students Management" : "Quản lý Học sinh"}
                     </div>
                     <p className="text-xs text-[#65727D] mt-1 line-clamp-2">
-                      Hồ sơ học sinh toàn trường, tóm tắt thông tin sức khỏe và phân lớp.
+                      {lang === "en" ? "School-wide student profiles, health summary, and class assignment." : "Hồ sơ học sinh toàn trường, tóm tắt thông tin sức khỏe và phân lớp."}
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-[#E5E8EB] flex items-center justify-between text-xs font-bold text-[#087F70]">
-                    <span>Vào quản lý</span>
+                    <span>{lang === "en" ? "Manage" : "Vào quản lý"}</span>
                     <span>→</span>
                   </div>
                 </Link>
@@ -250,14 +250,14 @@ export default function SchoolAdminOverviewPage() {
                       👨‍👩‍👧
                     </div>
                     <div className="font-extrabold text-base text-[#102737] group-hover:text-[#087F70] transition">
-                      Quản lý Phụ huynh
+                      {lang === "en" ? "Parents Management" : "Quản lý Phụ huynh"}
                     </div>
                     <p className="text-xs text-[#65727D] mt-1 line-clamp-2">
-                      Danh sách phụ huynh, tài khoản liên kết và số điện thoại liên lạc.
+                      {lang === "en" ? "Parents directory, linked accounts, and contact phone numbers." : "Danh sách phụ huynh, tài khoản liên kết và số điện thoại liên lạc."}
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-[#E5E8EB] flex items-center justify-between text-xs font-bold text-[#087F70]">
-                    <span>Vào quản lý</span>
+                    <span>{lang === "en" ? "Manage" : "Vào quản lý"}</span>
                     <span>→</span>
                   </div>
                 </Link>
@@ -271,14 +271,14 @@ export default function SchoolAdminOverviewPage() {
                       📅
                     </div>
                     <div className="font-extrabold text-base text-[#102737] group-hover:text-[#087F70] transition">
-                      Thời khóa biểu
+                      {lang === "en" ? "Timetable & Schedules" : "Thời khóa biểu"}
                     </div>
                     <p className="text-xs text-[#65727D] mt-1 line-clamp-2">
-                      Lịch theo lớp và theo tuần, kiểm tra xung đột phòng và giờ.
+                      {lang === "en" ? "Weekly class schedules with automatic room & time conflict checks." : "Lịch theo lớp và theo tuần, kiểm tra xung đột phòng và giờ."}
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-[#E5E8EB] flex items-center justify-between text-xs font-bold text-[#087F70]">
-                    <span>Vào quản lý</span>
+                    <span>{lang === "en" ? "Manage" : "Vào quản lý"}</span>
                     <span>→</span>
                   </div>
                 </Link>
@@ -293,10 +293,12 @@ export default function SchoolAdminOverviewPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="font-extrabold text-base text-[#102737]">
-                      Tiến độ báo cáo theo lớp hôm nay
+                      {lang === "en" ? "Today's Report Progress by Class" : "Tiến độ báo cáo theo lớp hôm nay"}
                     </h2>
                     <p className="text-xs text-[#65727D]">
-                      {(classesProgress ?? []).length} lớp đang theo dõi theo thời gian thực
+                      {lang === "en"
+                        ? `${(classesProgress ?? []).length} classes tracked in real time`
+                        : `${(classesProgress ?? []).length} lớp đang theo dõi theo thời gian thực`}
                     </p>
                   </div>
                 </div>
@@ -305,7 +307,7 @@ export default function SchoolAdminOverviewPage() {
                   <Spinner />
                 ) : classesProgress.length === 0 ? (
                   <div className="py-8 text-center text-xs text-[#8C9BA5]">
-                    Không có lớp học nào đang hoạt động.
+                    {lang === "en" ? "No active classes found." : "Không có lớp học nào đang hoạt động."}
                   </div>
                 ) : (
                   <div className="divide-y divide-[#E5E8EB] max-h-[360px] overflow-y-auto">
@@ -319,7 +321,7 @@ export default function SchoolAdminOverviewPage() {
                                 {formatClassName(c.class_name, lang)}
                               </div>
                               <div className="text-xs text-[#65727D]">
-                                {lang === "en" ? "Teacher: " : "GV: "}{c.teacher_name ? formatTeacherName(c.teacher_name, lang) : "—"} · {c.grade_label}
+                                {lang === "en" ? "Teacher: " : "GV: "}{c.teacher_name ? formatTeacherName(c.teacher_name, lang) : "—"} · {localizeGradeLabel(c.grade_label, lang)}
                               </div>
                             </div>
                             <div className="text-right">
@@ -337,7 +339,7 @@ export default function SchoolAdminOverviewPage() {
                                 {fmtPercent(c.completion_rate)}
                               </div>
                               <div className="text-[11px] text-[#8C9BA5]">
-                                {c.reported_children}/{c.total_children} bé
+                                {c.reported_children}/{c.total_children} {lang === "en" ? "students" : "bé"}
                               </div>
                             </div>
                           </div>
@@ -359,23 +361,23 @@ export default function SchoolAdminOverviewPage() {
               <div className="lg:col-span-5 bg-white rounded-[24px] border border-[#E5E8EB] p-6 shadow-soft flex flex-col justify-between">
                 <div>
                   <h2 className="font-extrabold text-base text-[#102737]">
-                    Xu hướng báo cáo 7 ngày
+                    {lang === "en" ? "7-Day Report Trend" : "Xu hướng báo cáo 7 ngày"}
                   </h2>
                   <p className="text-xs text-[#65727D] mt-0.5">
-                    Tổng số sổ liên lạc gửi phụ huynh
+                    {lang === "en" ? "Total daily reports sent to parents" : "Tổng số sổ liên lạc gửi phụ huynh"}
                   </p>
 
                   <div className="flex items-center gap-4 text-xs mt-3 mb-2">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-[#087F70]" />
                       <span className="font-bold text-[#087F70]">
-                        Đã gửi ({trends?.reduce((s, t) => s + t.sent_reports, 0) ?? 0})
+                        {lang === "en" ? "Sent" : "Đã gửi"} ({trends?.reduce((s, t) => s + t.sent_reports, 0) ?? 0})
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-[#B0791B]" />
                       <span className="font-bold text-[#B0791B]">
-                        Bản nháp ({trends?.reduce((s, t) => s + t.draft_reports, 0) ?? 0})
+                        {lang === "en" ? "Drafts" : "Bản nháp"} ({trends?.reduce((s, t) => s + t.draft_reports, 0) ?? 0})
                       </span>
                     </div>
                   </div>
@@ -403,6 +405,7 @@ function TrendChart({
   data?: ReportTrend[];
   isLoading?: boolean;
 }) {
+  const { lang } = useLanguage();
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const roRef = useRef<ResizeObserver | null>(null);
 
@@ -487,7 +490,7 @@ function TrendChart({
         </div>
       ) : data.length === 0 ? (
         <div className="flex items-center justify-center h-[180px] text-[#65727D] text-xs">
-          Chưa có dữ liệu xu hướng.
+          {lang === "en" ? "No trend data yet." : "Chưa có dữ liệu xu hướng."}
         </div>
       ) : containerWidth === 0 ? (
         <div className="flex items-center justify-center h-[180px]">
@@ -586,15 +589,15 @@ function TrendChart({
               }}
             >
               <div className="font-bold border-b border-white/20 pb-0.5 mb-1 text-center">
-                Ngày {formatDateLabel(hoveredPoint.label)}
+                {lang === "en" ? "Date" : "Ngày"} {formatDateLabel(hoveredPoint.label)}
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#087F70]" />
-                <span>Đã gửi: <b>{hoveredPoint.sent}</b></span>
+                <span>{lang === "en" ? "Sent:" : "Đã gửi:"} <b>{hoveredPoint.sent}</b></span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#B0791B]" />
-                <span>Bản nháp: <b>{hoveredPoint.draft}</b></span>
+                <span>{lang === "en" ? "Drafts:" : "Bản nháp:"} <b>{hoveredPoint.draft}</b></span>
               </div>
             </div>
           )}

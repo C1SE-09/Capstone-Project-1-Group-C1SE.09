@@ -254,3 +254,73 @@ export function getDayShortLabel(index: number, lang: Language = "vi"): string {
   }
   return DAYS_SHORT_VI[index] || `T${index + 2}`;
 }
+
+/**
+ * Dịch tên khối lớp (Nhà trẻ, Mầm, Chồi, Lá, Mẫu giáo) sang tiếng Anh.
+ */
+export function localizeGradeLabel(
+  grade?: string | null,
+  lang: Language = "vi"
+): string {
+  if (!grade || !grade.trim()) return "—";
+  if (lang !== "en") return grade;
+
+  const lower = grade.trim().toLowerCase();
+  const map: Record<string, string> = {
+    "nhà trẻ": "Nursery",
+    "mầm": "Pre-K",
+    "chồi": "Kindergarten 1",
+    "lá": "Kindergarten 2",
+    "mẫu giáo": "Preschool",
+    "khác": "Other",
+  };
+  return map[lower] || grade;
+}
+
+/**
+ * Dịch giới tính sang tiếng Anh / Việt.
+ */
+export function localizeGender(
+  gender?: string | null,
+  lang: Language = "vi"
+): string {
+  if (!gender || !gender.trim()) return lang === "en" ? "Unspecified" : "Chưa rõ";
+  const lower = gender.trim().toLowerCase();
+  if (lower === "male" || lower === "nam" || lower === "m" || lower === "boy") {
+    return lang === "en" ? "Male" : "Nam";
+  }
+  if (lower === "female" || lower === "nữ" || lower === "nu" || lower === "f" || lower === "girl") {
+    return lang === "en" ? "Female" : "Nữ";
+  }
+  return gender;
+}
+
+/**
+ * Dịch mối quan hệ phụ huynh với bé (Bố, Mẹ, Ông, Bà...) sang tiếng Anh.
+ */
+export function localizeRelationship(
+  rel?: string | null,
+  lang: Language = "vi"
+): string {
+  if (!rel || !rel.trim()) return lang === "en" ? "Parent" : "Phụ huynh";
+  if (lang !== "en") return rel;
+
+  const lower = rel.trim().toLowerCase();
+  const map: Record<string, string> = {
+    "bố": "Father",
+    "cha": "Father",
+    "ba": "Father",
+    "mẹ": "Mother",
+    "má": "Mother",
+    "ông": "Grandfather",
+    "ông nội": "Paternal Grandfather",
+    "ông ngoại": "Maternal Grandfather",
+    "bà": "Grandmother",
+    "bà nội": "Paternal Grandmother",
+    "bà ngoại": "Maternal Grandmother",
+    "người giám hộ": "Guardian",
+    "khác": "Other",
+  };
+  return map[lower] || rel;
+}
+

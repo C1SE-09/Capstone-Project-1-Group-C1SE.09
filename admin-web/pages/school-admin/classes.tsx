@@ -22,7 +22,7 @@ import {
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
-import { formatClassName } from "@/lib/locale-helper";
+import { formatClassName, localizeGradeLabel } from "@/lib/locale-helper";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   SchoolClass,
@@ -264,25 +264,25 @@ export default function SchoolAdminClassesPage() {
           <button
             onClick={() => {
               mutate();
-              setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
+              setToast({ msg: lang === "en" ? "Synchronized latest data" : "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
             className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition"
-            title="Làm mới"
+            title={lang === "en" ? "Refresh" : "Làm mới"}
           >
             ↻
           </button>
           <button
             onClick={handleExportExcel}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Xuất danh sách ra file Excel"
+            title={lang === "en" ? "Export list to Excel" : "Xuất danh sách ra file Excel"}
           >
-            📥 Xuất Excel
+            {lang === "en" ? "📥 Export Excel" : "📥 Xuất Excel"}
           </button>
           <button
             onClick={openCreate}
             className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
           >
-            + Thêm lớp
+            {lang === "en" ? "+ Add Class" : "+ Thêm lớp"}
           </button>
         </div>
       }
@@ -292,7 +292,7 @@ export default function SchoolAdminClassesPage() {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="Tìm lớp, khối, phòng..."
+            placeholder={lang === "en" ? "Search class, grade, room..." : "Tìm lớp, khối, phòng..."}
           />
         </div>
       </div>
@@ -304,19 +304,23 @@ export default function SchoolAdminClassesPage() {
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
               {(classesError as any)?.status === 401
-                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
-                : `Không thể tải danh sách lớp (${(classesError as any)?.detail || "Vui lòng thử lại"})`}
+                ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
+                : (lang === "en"
+                    ? `Unable to load classes (${(classesError as any)?.detail || "Please try again"})`
+                    : `Không thể tải danh sách lớp (${(classesError as any)?.detail || "Vui lòng thử lại"})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
-              Thử lại
+              {lang === "en" ? "Retry" : "Thử lại"}
             </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">🏫</div>
-            <div className="text-ink font-semibold">Chưa có lớp nào</div>
+            <div className="text-ink font-semibold">{lang === "en" ? "No classes yet" : "Chưa có lớp nào"}</div>
             <div className="text-sm text-ink-soft mt-1">
-              {query ? "Không có kết quả phù hợp." : 'Bấm "+ Thêm lớp" để tạo mới.'}
+              {query
+                ? (lang === "en" ? "No matching results." : "Không có kết quả phù hợp.")
+                : (lang === "en" ? 'Click "+ Add Class" to create one.' : 'Bấm "+ Thêm lớp" để tạo mới.')}
             </div>
           </div>
         ) : (
@@ -340,7 +344,7 @@ export default function SchoolAdminClassesPage() {
                           if (el) el.indeterminate = someSelected;
                         }}
                         onChange={toggleSelectAll}
-                        title="Bỏ chọn tất cả"
+                        title={lang === "en" ? "Deselect all" : "Bỏ chọn tất cả"}
                       />
                     </th>
                     <th colSpan={3} className="px-4 py-2.5 text-left font-semibold normal-case text-xs">
@@ -349,7 +353,7 @@ export default function SchoolAdminClassesPage() {
                           {selectedIds.length}
                         </span>
                         <span className="text-[#BB4A34] font-bold">
-                          Đã chọn {selectedIds.length} lớp
+                          {lang === "en" ? `Selected ${selectedIds.length} classes` : `Đã chọn ${selectedIds.length} lớp`}
                         </span>
                       </div>
                     </th>
@@ -360,7 +364,7 @@ export default function SchoolAdminClassesPage() {
                           className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
                           disabled={bulkDeleting}
                         >
-                          Bỏ chọn
+                          {lang === "en" ? "Deselect" : "Bỏ chọn"}
                         </button>
                         <button
                           onClick={() => setConfirmBulkDel(true)}
@@ -369,7 +373,7 @@ export default function SchoolAdminClassesPage() {
                           disabled={bulkDeleting}
                         >
                           <span>🗑️</span>
-                          <span>Xóa đã chọn ({selectedIds.length})</span>
+                          <span>{lang === "en" ? `Delete selected (${selectedIds.length})` : `Xóa đã chọn (${selectedIds.length})`}</span>
                         </button>
                       </div>
                     </th>
@@ -385,14 +389,14 @@ export default function SchoolAdminClassesPage() {
                           if (el) el.indeterminate = someSelected;
                         }}
                         onChange={toggleSelectAll}
-                        title="Chọn tất cả lớp hiển thị"
+                        title={lang === "en" ? "Select all visible classes" : "Chọn tất cả lớp hiển thị"}
                       />
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold">Tên lớp</th>
-                    <th className="px-4 py-3 text-left font-semibold">Khối</th>
-                    <th className="px-4 py-3 text-left font-semibold">Phòng</th>
-                    <th className="px-4 py-3 text-left font-semibold">Sĩ số</th>
-                    <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Class Name" : "Tên lớp"}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Grade" : "Khối"}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Room" : "Phòng"}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Capacity" : "Sĩ số"}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{lang === "en" ? "Actions" : "Thao tác"}</th>
                   </tr>
                 )}
               </thead>
@@ -433,7 +437,7 @@ export default function SchoolAdminClassesPage() {
                       </td>
                       <td className="px-4 py-3">
                         {c.grade_label ? (
-                          <Pill tone="brand">{c.grade_label}</Pill>
+                          <Pill tone="brand">{localizeGradeLabel(c.grade_label, lang)}</Pill>
                         ) : (
                           <span className="text-xs text-ink-faint">—</span>
                         )}
@@ -443,7 +447,7 @@ export default function SchoolAdminClassesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <Pill tone={full ? "warn" : "ok"}>
-                          {count}{c.capacity != null ? `/${c.capacity}` : " bé"}
+                          {count}{c.capacity != null ? `/${c.capacity}` : (lang === "en" ? " children" : " bé")}
                         </Pill>
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -453,15 +457,17 @@ export default function SchoolAdminClassesPage() {
                             onClick={() => openEdit(c)}
                             className="px-2.5 py-1 rounded-lg text-xs font-semibold text-ink hover:bg-slate-100 transition-colors"
                           >
-                            Sửa
+                            {lang === "en" ? "Edit" : "Sửa"}
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmDel(c)}
                             className="px-2.5 py-1 rounded-lg text-xs font-semibold text-bad hover:bg-bad-tint transition-colors"
-                            title={count > 0 ? `Lớp còn ${count} bé — phải chuyển hết mới xóa được` : "Xóa lớp"}
+                            title={count > 0
+                              ? (lang === "en" ? `Class still has ${count} students — transfer them first` : `Lớp còn ${count} bé — phải chuyển hết mới xóa được`)
+                              : (lang === "en" ? "Delete class" : "Xóa lớp")}
                           >
-                            Xóa
+                            {lang === "en" ? "Delete" : "Xóa"}
                           </button>
                         </div>
                       </td>
@@ -475,14 +481,18 @@ export default function SchoolAdminClassesPage() {
       </div>
 
       <div className="text-xs text-ink-faint mt-2">
-        Tổng: <span className="font-bold text-ink">{filtered.length}</span> lớp
+        {lang === "en" ? (
+          <>Total: <span className="font-bold text-ink">{filtered.length}</span> classes</>
+        ) : (
+          <>Tổng: <span className="font-bold text-ink">{filtered.length}</span> lớp</>
+        )}
       </div>
 
       {/* Drawer chỉnh sửa */}
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editing ? "Chỉnh sửa lớp" : "Thêm lớp mới"}
+        title={editing ? (lang === "en" ? "Edit Class" : "Chỉnh sửa lớp") : (lang === "en" ? "Add New Class" : "Thêm lớp mới")}
         footer={
           <>
             <button
@@ -490,23 +500,27 @@ export default function SchoolAdminClassesPage() {
               className="kbtn kbtn-secondary"
               disabled={saving}
             >
-              Hủy
+              {lang === "en" ? "Cancel" : "Hủy"}
             </button>
             <button onClick={handleSave} className="kbtn kbtn-primary" disabled={saving}>
-              {saving ? "Đang lưu..." : editing ? "Lưu thay đổi" : "Tạo lớp"}
+              {saving
+                ? (lang === "en" ? "Saving..." : "Đang lưu...")
+                : editing
+                ? (lang === "en" ? "Save changes" : "Lưu thay đổi")
+                : (lang === "en" ? "Create Class" : "Tạo lớp")}
             </button>
           </>
         }
       >
-        <FormField label="Tên lớp" required>
+        <FormField label={lang === "en" ? "Class Name" : "Tên lớp"} required>
           <input
             className="kinput"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Lớp Mầm 1"
+            placeholder={lang === "en" ? "e.g. Mam A" : "Lớp Mầm 1"}
           />
         </FormField>
-        <FormField label="Khối">
+        <FormField label={lang === "en" ? "Grade Level" : "Khối"}>
           <select
             className="kinput"
             value={
@@ -525,26 +539,26 @@ export default function SchoolAdminClassesPage() {
               }
             }}
           >
-            <option value="">— Chọn khối —</option>
+            <option value="">{lang === "en" ? "— Select grade —" : "— Chọn khối —"}</option>
             {GRADE_OPTIONS.map((g) => (
-              <option key={g} value={g}>{g}</option>
+              <option key={g} value={g}>{localizeGradeLabel(g, lang)}</option>
             ))}
-            <option value={GRADE_OTHER}>{GRADE_OTHER}</option>
+            <option value={GRADE_OTHER}>{localizeGradeLabel(GRADE_OTHER, lang)}</option>
           </select>
           {form.grade_custom && (
             <input
               className="kinput mt-2"
               value={form.grade_label}
               onChange={(e) => setForm({ ...form, grade_label: e.target.value })}
-              placeholder="Nhập tên khối..."
+              placeholder={lang === "en" ? "Enter grade name..." : "Nhập tên khối..."}
             />
           )}
         </FormField>
         <FormField
-          label="Phòng"
+          label={lang === "en" ? "Room" : "Phòng"}
           hint={
             usedRooms.length > 0
-              ? `Phòng đã dùng: ${usedRooms.join(", ")}`
+              ? (lang === "en" ? `Rooms in use: ${usedRooms.join(", ")}` : `Phòng đã dùng: ${usedRooms.join(", ")}`)
               : undefined
           }
         >
@@ -555,7 +569,10 @@ export default function SchoolAdminClassesPage() {
             placeholder="P.101"
           />
         </FormField>
-        <FormField label="Sĩ số tối đa" hint="Bỏ trống nếu không giới hạn">
+        <FormField
+          label={lang === "en" ? "Max Capacity" : "Sĩ số tối đa"}
+          hint={lang === "en" ? "Leave blank for unlimited" : "Bỏ trống nếu không giới hạn"}
+        >
           <input
             className="kinput"
             type="number"
@@ -567,29 +584,37 @@ export default function SchoolAdminClassesPage() {
         </FormField>
         {editing && (editing.student_count ?? 0) > 0 && (
           <div className="text-xs rounded-control px-3 py-2" style={{ background: "#F6EED9", color: "#8A5E12" }}>
-            Lớp đang có {editing.student_count} bé — không xóa được cho đến khi chuyển hết các bé sang lớp khác.
+            {lang === "en"
+              ? `Class currently has ${editing.student_count} students — cannot delete until all are transferred.`
+              : `Lớp đang có ${editing.student_count} bé — không xóa được cho đến khi chuyển hết các bé sang lớp khác.`}
           </div>
         )}
       </Drawer>
 
       <ConfirmDialog
         open={!!confirmDel}
-        title="Xóa lớp?"
+        title={lang === "en" ? "Delete class?" : "Xóa lớp?"}
         message={
           (confirmDel?.student_count ?? 0) > 0
-            ? `Lớp "${confirmDel?.name}" còn ${confirmDel?.student_count} học sinh nên KHÔNG xóa được. Vui lòng chuyển các bé sang lớp khác trước.`
-            : `Bạn có chắc muốn xóa lớp "${confirmDel?.name}"? Thao tác này không thể hoàn tác.`
+            ? (lang === "en"
+                ? `Class "${formatClassName(confirmDel?.name, lang)}" still has ${confirmDel?.student_count} students so it CANNOT be deleted. Please transfer them first.`
+                : `Lớp "${confirmDel?.name}" còn ${confirmDel?.student_count} học sinh nên KHÔNG xóa được. Vui lòng chuyển các bé sang lớp khác trước.`)
+            : (lang === "en"
+                ? `Are you sure you want to delete "${formatClassName(confirmDel?.name, lang)}"? This cannot be undone.`
+                : `Bạn có chắc muốn xóa lớp "${confirmDel?.name}"? Thao tác này không thể hoàn tác.`)
         }
-        confirmLabel="Xóa"
+        confirmLabel={lang === "en" ? "Delete" : "Xóa"}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
       />
 
       <ConfirmDialog
         open={confirmBulkDel}
-        title={`Xóa ${selectedIds.length} lớp đã chọn?`}
-        message="Chỉ những lớp đã hết học sinh mới bị xóa. Các lớp còn bé sẽ được giữ lại và báo rõ."
-        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} lớp`}
+        title={lang === "en" ? `Delete ${selectedIds.length} selected classes?` : `Xóa ${selectedIds.length} lớp đã chọn?`}
+        message={lang === "en"
+          ? "Only empty classes will be deleted. Classes with students will be kept and reported."
+          : "Chỉ những lớp đã hết học sinh mới bị xóa. Các lớp còn bé sẽ được giữ lại và báo rõ."}
+        confirmLabel={bulkDeleting ? (lang === "en" ? "Deleting..." : "Đang xóa...") : (lang === "en" ? `Delete ${selectedIds.length} classes` : `Xóa ${selectedIds.length} lớp`)}
         onConfirm={handleBulkDelete}
         onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
       />

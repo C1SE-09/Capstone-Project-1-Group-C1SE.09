@@ -47,6 +47,8 @@ import {
   todayIsoStr,
 } from "@/components/ui-school";
 import { clearToken, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
+import { formatClassName, localizeGender } from "@/lib/locale-helper";
 import {
   ExcelSheetData,
   exportMultiSheetToExcel,
@@ -199,6 +201,7 @@ interface RowEditState {
 }
 
 export default function HealthExamPage() {
+  const { t, lang } = useLanguage();
   const [ready, setReady] = useState(false);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [query, setQuery] = useState("");
@@ -773,17 +776,17 @@ export default function HealthExamPage() {
   return (
     <SchoolAdminLayout
       active="health-exam"
-      pageTitle="Sổ sức khoẻ học sinh"
+      pageTitle={t("nav.healthExam", "Sổ sức khoẻ học sinh")}
       pageAction={
         <div className="flex flex-wrap items-center gap-2">
           {/* Nút Làm mới */}
           <button
             onClick={() => {
               mutate();
-              setToast({ msg: "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
+              setToast({ msg: lang === "en" ? "Synchronized latest data" : "Đã đồng bộ dữ liệu mới nhất", tone: "brand" });
             }}
             className="px-3 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs transition disabled:opacity-50"
-            title="Làm mới"
+            title={lang === "en" ? "Refresh" : "Làm mới"}
             disabled={isEditMode}
           >
             ↻
@@ -793,30 +796,30 @@ export default function HealthExamPage() {
           <button
             onClick={handleExportExcel}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition"
-            title="Xuất danh sách sổ sức khoẻ ra file Excel"
+            title={lang === "en" ? "Export health records to Excel" : "Xuất danh sách sổ sức khoẻ ra file Excel"}
           >
-            📥 Xuất Excel
+            {lang === "en" ? "📥 Export Excel" : "📥 Xuất Excel"}
           </button>
 
           {/* Nút Nhập file */}
           <button
             onClick={openImportModal}
             className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#102737] hover:bg-[#F6F7F8] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
-            title="Nhập kết quả từ file Excel"
+            title={lang === "en" ? "Import results from Excel" : "Nhập kết quả từ file Excel"}
             disabled={isEditMode}
           >
-            📤 Nhập file
+            {lang === "en" ? "📤 Import file" : "📤 Nhập file"}
           </button>
 
           {!isEditMode ? (
             <button
               onClick={() => setIsEditMode(true)}
               className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#087F70] hover:bg-[#E6F3EB] font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
-              title="Bật chế độ chỉnh sửa trực tiếp số liệu trên bảng (Chuẩn Excel)"
+              title={lang === "en" ? "Enable inline table editing (Excel style)" : "Bật chế độ chỉnh sửa trực tiếp số liệu trên bảng (Chuẩn Excel)"}
               disabled={filtered.length === 0}
             >
               <span>✏️</span>
-              <span>Chỉnh sửa bảng</span>
+              <span>{lang === "en" ? "Edit Table" : "Chỉnh sửa bảng"}</span>
             </button>
           ) : (
             <>
@@ -824,25 +827,25 @@ export default function HealthExamPage() {
                 onClick={cancelAllEdits}
                 disabled={savingTable}
                 className="px-4 py-2 rounded-full border border-[#E5E8EB] bg-white text-[#65727D] hover:bg-[#F6F7F8] font-bold text-xs transition"
-                title="Hủy bỏ mọi thay đổi chưa lưu"
+                title={lang === "en" ? "Discard all unsaved changes" : "Hủy bỏ mọi thay đổi chưa lưu"}
               >
-                ✕ Hủy bỏ
+                ✕ {lang === "en" ? "Cancel" : "Hủy bỏ"}
               </button>
               <button
                 onClick={handleSaveAllEdits}
                 disabled={savingTable}
                 className="px-4 py-2 rounded-full bg-[#087F70] hover:bg-[#06695E] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
-                title="Lưu toàn bộ thay đổi của tất cả các dòng đã sửa"
+                title={lang === "en" ? "Save changes on all modified rows" : "Lưu toàn bộ thay đổi của tất cả các dòng đã sửa"}
               >
                 {savingTable ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang lưu ({dirtyRows.length})...</span>
+                    <span>{lang === "en" ? `Saving (${dirtyRows.length})...` : `Đang lưu (${dirtyRows.length})...`}</span>
                   </>
                 ) : (
                   <>
                     <span>💾</span>
-                    <span>Lưu thay đổi</span>
+                    <span>{lang === "en" ? "Save changes" : "Lưu thay đổi"}</span>
                     {dirtyRows.length > 0 && (
                       <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                         {dirtyRows.length}
@@ -862,7 +865,11 @@ export default function HealthExamPage() {
           <span className="flex items-center gap-2">
             <span className="text-sm">⚠️</span>
             <span>
-              Có <strong>{dirtyRows.length}</strong> học sinh có thay đổi chưa lưu. Nhấn nút <strong>“Lưu tất cả thay đổi”</strong> để cập nhật dữ liệu.
+              {lang === "en" ? (
+                <><strong>{dirtyRows.length}</strong> students have unsaved changes. Click <strong>“Save changes”</strong> to update.</>
+              ) : (
+                <>Có <strong>{dirtyRows.length}</strong> học sinh có thay đổi chưa lưu. Nhấn nút <strong>“Lưu tất cả thay đổi”</strong> để cập nhật dữ liệu.</>
+              )}
             </span>
           </span>
           <button
@@ -870,7 +877,7 @@ export default function HealthExamPage() {
             disabled={savingTable}
             className="font-bold underline text-brand hover:opacity-80 transition-opacity ml-3"
           >
-            Lưu ngay
+            {lang === "en" ? "Save now" : "Lưu ngay"}
           </button>
         </div>
       )}
@@ -878,29 +885,29 @@ export default function HealthExamPage() {
       {/* ══ Thống kê nhanh ══ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
         <div className="card p-3.5">
-          <div className="text-[11px] text-ink-soft font-semibold">Tổng học sinh</div>
+          <div className="text-[11px] text-ink-soft font-semibold">{lang === "en" ? "Total Students" : "Tổng học sinh"}</div>
           <div className="text-2xl font-bold text-ink mt-1">{filtered.length}</div>
         </div>
         <div className="card p-3.5">
-          <div className="text-[11px] text-ink-soft font-semibold">Đã có số liệu</div>
+          <div className="text-[11px] text-ink-soft font-semibold">{lang === "en" ? "Recorded" : "Đã có số liệu"}</div>
           <div className="text-2xl font-bold text-ink mt-1">
             {filtered.filter((r) => r.has_record).length}
           </div>
         </div>
         <div className="card p-3.5">
-          <div className="text-[11px] text-ink-soft font-semibold">Bình thường</div>
+          <div className="text-[11px] text-ink-soft font-semibold">{lang === "en" ? "Normal" : "Bình thường"}</div>
           <div className="text-2xl font-bold mt-1 text-emerald-600">
             {stats.normal ?? 0}
           </div>
         </div>
         <div className="card p-3.5">
-          <div className="text-[11px] text-ink-soft font-semibold">Suy dinh dưỡng</div>
+          <div className="text-[11px] text-ink-soft font-semibold">{lang === "en" ? "Underweight" : "Suy dinh dưỡng"}</div>
           <div className="text-2xl font-bold mt-1 text-amber-600">
             {stats.underweight ?? 0}
           </div>
         </div>
         <div className="card p-3.5">
-          <div className="text-[11px] text-ink-soft font-semibold">Thừa cân</div>
+          <div className="text-[11px] text-ink-soft font-semibold">{lang === "en" ? "Overweight" : "Thừa cân"}</div>
           <div className="text-2xl font-bold mt-1 text-rose-600">
             {stats.overweight ?? 0}
           </div>
@@ -913,12 +920,12 @@ export default function HealthExamPage() {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="Tìm theo tên học sinh, biệt danh, lớp, thể trạng, kết luận..."
+            placeholder={lang === "en" ? "Search student name, nickname, class, status, conclusion..." : "Tìm theo tên học sinh, biệt danh, lớp, thể trạng, kết luận..."}
           />
         </div>
         <div className="w-full sm:w-56">
           <label className="klabel mb-1" htmlFor="filter-class">
-            Lớp
+            {lang === "en" ? "Class" : "Lớp"}
           </label>
           <ClassFilterSelect
             classes={classes}
@@ -928,7 +935,7 @@ export default function HealthExamPage() {
         </div>
         <div className="w-full sm:w-52">
           <label className="klabel mb-1" htmlFor="filter-exam-date">
-            Ngày ghi nhận
+            {lang === "en" ? "Exam Date" : "Ngày ghi nhận"}
           </label>
           <DateInput
             value={examDate}
@@ -941,9 +948,9 @@ export default function HealthExamPage() {
           <button
             onClick={() => setExamDate("")}
             className="kbtn kbtn-secondary text-xs whitespace-nowrap self-end"
-            title="Bỏ lọc theo ngày"
+            title={lang === "en" ? "Clear date filter" : "Bỏ lọc theo ngày"}
           >
-            ✕ Bỏ ngày
+            {lang === "en" ? "✕ Clear date" : "✕ Bỏ ngày"}
           </button>
         )}
       </div>
@@ -956,11 +963,13 @@ export default function HealthExamPage() {
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
               {(error as any)?.status === 401
-                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
-                : `Không thể tải dữ liệu sổ sức khoẻ (${(error as any)?.detail || "Vui lòng thử lại"})`}
+                ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
+                : (lang === "en"
+                    ? `Unable to load health records (${(error as any)?.detail || "Please try again"})`
+                    : `Không thể tải dữ liệu sổ sức khoẻ (${(error as any)?.detail || "Vui lòng thử lại"})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
-              Thử lại
+              {lang === "en" ? "Retry" : "Thử lại"}
             </button>
           </div>
         ) : filtered.length === 0 ? (
@@ -968,22 +977,22 @@ export default function HealthExamPage() {
             icon="📒"
             title={
               query
-                ? "Không có kết quả phù hợp."
+                ? (lang === "en" ? "No matching results." : "Không có kết quả phù hợp.")
                 : examDate
-                ? `Chưa có số liệu ghi nhận ngày ${formatDateToDmy(examDate)}`
-                : "Chưa có học sinh nào"
+                ? (lang === "en" ? `No records on ${formatDateToDmy(examDate)}` : `Chưa có số liệu ghi nhận ngày ${formatDateToDmy(examDate)}`)
+                : (lang === "en" ? "No students yet" : "Chưa có học sinh nào")
             }
             description={
               query
-                ? "Thử từ khoá khác hoặc bỏ bớt bộ lọc."
+                ? (lang === "en" ? "Try another keyword or clear filters." : "Thử từ khoá khác hoặc bỏ bớt bộ lọc.")
                 : examDate
-                ? "Chỉ hiển thị những học sinh có số liệu ghi nhận đúng ngày này. Thử ngày khác hoặc bỏ bộ lọc ngày."
-                : "Dùng nút “📤 Nhập kết quả” để tải file mẫu Excel điền số liệu đo cho cả lớp."
+                ? (lang === "en" ? "Only students with records on this date are shown. Try another date or clear filter." : "Chỉ hiển thị những học sinh có số liệu ghi nhận đúng ngày này. Thử ngày khác hoặc bỏ bộ lọc ngày.")
+                : (lang === "en" ? 'Click “📤 Import file” to download the Excel template for bulk entry.' : 'Dùng nút “📤 Nhập kết quả” để tải file mẫu Excel điền số liệu đo cho cả lớp.')
             }
             action={
               !query && !examDate ? (
                 <button onClick={openImportModal} className="kbtn kbtn-primary text-sm">
-                  📤 Nhập kết quả từ Excel
+                  {lang === "en" ? "📤 Import from Excel" : "📤 Nhập kết quả từ Excel"}
                 </button>
               ) : undefined
             }
@@ -996,15 +1005,15 @@ export default function HealthExamPage() {
                 style={{ background: "#EFECE5", color: "#605D57" }}
               >
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold">Học sinh</th>
-                  <th className="px-3 py-3 text-left font-semibold">Lớp</th>
-                  <th className="px-3 py-3 text-left font-semibold">Ngày ghi nhận</th>
-                  <th className="px-3 py-3 text-right font-semibold">Chiều cao (cm)</th>
-                  <th className="px-3 py-3 text-right font-semibold">Cân nặng (kg)</th>
+                  <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "Student" : "Học sinh"}</th>
+                  <th className="px-3 py-3 text-left font-semibold">{lang === "en" ? "Class" : "Lớp"}</th>
+                  <th className="px-3 py-3 text-left font-semibold">{lang === "en" ? "Exam Date" : "Ngày ghi nhận"}</th>
+                  <th className="px-3 py-3 text-right font-semibold">{lang === "en" ? "Height (cm)" : "Chiều cao (cm)"}</th>
+                  <th className="px-3 py-3 text-right font-semibold">{lang === "en" ? "Weight (kg)" : "Cân nặng (kg)"}</th>
                   <th className="px-3 py-3 text-right font-semibold">BMI</th>
-                  <th className="px-3 py-3 text-left font-semibold">Thể trạng</th>
-                  <th className="px-4 py-3 text-left font-semibold">Kết luận chung</th>
-                  <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+                  <th className="px-3 py-3 text-left font-semibold">{lang === "en" ? "Condition" : "Thể trạng"}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{lang === "en" ? "General Conclusion" : "Kết luận chung"}</th>
+                  <th className="px-4 py-3 text-right font-semibold">{lang === "en" ? "Actions" : "Thao tác"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -1069,9 +1078,9 @@ export default function HealthExamPage() {
                               )}
                             </div>
                             <div className="text-[11px] text-ink-faint mt-0.5 truncate">
-                              {r.date_of_birth ? `${r.date_of_birth}` : "Chưa có ngày sinh"}
+                              {r.date_of_birth ? `${r.date_of_birth}` : (lang === "en" ? "No DOB" : "Chưa có ngày sinh")}
                               {r.gender && (
-                                <span> · {r.gender === "male" ? "Nam" : r.gender === "female" ? "Nữ" : r.gender}</span>
+                                <span> · {localizeGender(r.gender, lang)}</span>
                               )}
                             </div>
                           </div>
@@ -1081,9 +1090,9 @@ export default function HealthExamPage() {
                       {/* Cột 2: Lớp */}
                       <td className="px-3 py-3 text-ink-soft whitespace-nowrap text-xs">
                         {r.class_name ? (
-                          <span className="font-medium text-ink">{r.class_name}</span>
+                          <span className="font-medium text-ink">{formatClassName(r.class_name, lang)}</span>
                         ) : (
-                          <span className="italic text-ink-faint">Chưa xếp lớp</span>
+                          <span className="italic text-ink-faint">{lang === "en" ? "Unassigned" : "Chưa xếp lớp"}</span>
                         )}
                       </td>
 
@@ -1125,7 +1134,7 @@ export default function HealthExamPage() {
                               }`}
                               value={editData.height}
                               onChange={(e) => updateRowCell(r.child_id, "height", e.target.value)}
-                              title={`Chiều cao hợp lệ: ${MIN_CHILD_HEIGHT} - ${MAX_CHILD_HEIGHT} cm`}
+                              title={lang === "en" ? `Valid height: ${MIN_CHILD_HEIGHT} - ${MAX_CHILD_HEIGHT} cm` : `Chiều cao hợp lệ: ${MIN_CHILD_HEIGHT} - ${MAX_CHILD_HEIGHT} cm`}
                             />
                             {!validH && (
                               <span className="text-[10px] text-red-600 mt-0.5">
@@ -1157,7 +1166,7 @@ export default function HealthExamPage() {
                               }`}
                               value={editData.weight}
                               onChange={(e) => updateRowCell(r.child_id, "weight", e.target.value)}
-                              title={`Cân nặng hợp lệ: ${MIN_CHILD_WEIGHT} - ${MAX_CHILD_WEIGHT} kg`}
+                              title={lang === "en" ? `Valid weight: ${MIN_CHILD_WEIGHT} - ${MAX_CHILD_WEIGHT} kg` : `Cân nặng hợp lệ: ${MIN_CHILD_WEIGHT} - ${MAX_CHILD_WEIGHT} kg`}
                             />
                             {!validW && (
                               <span className="text-[10px] text-red-600 mt-0.5">
@@ -1179,7 +1188,7 @@ export default function HealthExamPage() {
                             className={`text-xs px-2 py-1 rounded bg-slate-100 ${
                               liveCalc.bmi != null ? "text-brand" : "text-ink-faint"
                             }`}
-                            title="Chỉ số BMI được tính tự động từ Chiều cao và Cân nặng"
+                            title={lang === "en" ? "BMI is automatically calculated from Height and Weight" : "Chỉ số BMI được tính tự động từ Chiều cao và Cân nặng"}
                           >
                             {liveCalc.bmiText}
                           </span>
@@ -1218,7 +1227,7 @@ export default function HealthExamPage() {
                             </span>
                           ) : (
                             <span className="text-xs text-ink-faint italic bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                              Chưa có
+                              {lang === "en" ? "None" : "Chưa có"}
                             </span>
                           )
                         ) : r.health_category_label ? (
@@ -1248,7 +1257,7 @@ export default function HealthExamPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-ink-faint italic bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                            Chưa có
+                            {lang === "en" ? "None" : "Chưa có"}
                           </span>
                         )}
                       </td>
@@ -1267,7 +1276,7 @@ export default function HealthExamPage() {
                             onChange={(e) =>
                               updateRowCell(r.child_id, "general_conclusion", e.target.value)
                             }
-                            placeholder="Nhập kết luận sức khỏe..."
+                            placeholder={lang === "en" ? "Enter health conclusion..." : "Nhập kết luận sức khỏe..."}
                           />
                         ) : (
                           <div
@@ -1286,7 +1295,7 @@ export default function HealthExamPage() {
                             type="button"
                             onClick={() => clearRowEdits(r)}
                             className="p-1.5 text-slate-400 hover:text-bad rounded hover:bg-bad/10 transition-colors inline-flex items-center gap-1 text-xs"
-                            title="Xóa trắng số liệu dòng này"
+                            title={lang === "en" ? "Clear row values" : "Xóa trắng số liệu dòng này"}
                           >
                             <span>🗑️</span>
                           </button>
@@ -1296,7 +1305,9 @@ export default function HealthExamPage() {
                               type="button"
                               onClick={() => openEditModal(r)}
                               className="p-1.5 text-slate-500 hover:text-brand rounded hover:bg-brand/10 transition-colors"
-                              title={r.id ? "Chỉnh sửa số liệu sức khỏe" : "Nhập số liệu sức khỏe"}
+                              title={r.id
+                                ? (lang === "en" ? "Edit health record" : "Chỉnh sửa số liệu sức khỏe")
+                                : (lang === "en" ? "Enter health record" : "Nhập số liệu sức khỏe")}
                             >
                               ✏️
                             </button>
@@ -1311,8 +1322,8 @@ export default function HealthExamPage() {
                               disabled={!r.id}
                               title={
                                 r.id
-                                  ? "Xóa bản ghi sức khỏe của học sinh này"
-                                  : "Học sinh này chưa có bản ghi sức khỏe để xóa"
+                                  ? (lang === "en" ? "Delete this student's health record" : "Xóa bản ghi sức khỏe của học sinh này")
+                                  : (lang === "en" ? "No health record to delete" : "Học sinh này chưa có bản ghi sức khỏe để xóa")
                               }
                             >
                               🗑️
@@ -1333,7 +1344,7 @@ export default function HealthExamPage() {
       <Modal
         open={!!confirmDel}
         onClose={() => !deleteBusy && setConfirmDel(null)}
-        title="Xác nhận xóa bản ghi sức khỏe"
+        title={lang === "en" ? "Confirm Delete Health Record" : "Xác nhận xóa bản ghi sức khỏe"}
         size="sm"
         footer={
           <div className="flex items-center justify-end gap-2 w-full">
@@ -1343,7 +1354,7 @@ export default function HealthExamPage() {
               disabled={deleteBusy}
               className="kbtn kbtn-secondary text-xs"
             >
-              Hủy
+              {lang === "en" ? "Cancel" : "Hủy"}
             </button>
             <button
               type="button"
@@ -1354,12 +1365,12 @@ export default function HealthExamPage() {
               {deleteBusy ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Đang xóa...</span>
+                  <span>{lang === "en" ? "Deleting..." : "Đang xóa..."}</span>
                 </>
               ) : (
                 <>
                   <span>🗑️</span>
-                  <span>Xác nhận xóa</span>
+                  <span>{lang === "en" ? "Confirm Delete" : "Xác nhận xóa"}</span>
                 </>
               )}
             </button>
@@ -1367,10 +1378,21 @@ export default function HealthExamPage() {
         }
       >
         <div className="py-2 text-sm text-ink-soft leading-relaxed">
-          Bạn có chắc chắn muốn xóa bản ghi sức khỏe của học sinh{" "}
-          <strong className="text-ink">{confirmDel?.full_name}</strong>?
+          {lang === "en" ? (
+            <>
+              Are you sure you want to delete the health record of student{" "}
+              <strong className="text-ink">{confirmDel?.full_name}</strong>?
+            </>
+          ) : (
+            <>
+              Bạn có chắc chắn muốn xóa bản ghi sức khỏe của học sinh{" "}
+              <strong className="text-ink">{confirmDel?.full_name}</strong>?
+            </>
+          )}
           <p className="mt-2 text-xs text-bad">
-            ⚠️ Thao tác này sẽ xóa toàn bộ số liệu chiều cao, cân nặng, BMI và kết luận của học sinh này khỏi hệ thống.
+            {lang === "en"
+              ? "⚠️ This action will delete all height, weight, BMI, and conclusion data for this student from the system."
+              : "⚠️ Thao tác này sẽ xóa toàn bộ số liệu chiều cao, cân nặng, BMI và kết luận của học sinh này khỏi hệ thống."}
           </p>
         </div>
       </Modal>
@@ -1379,7 +1401,7 @@ export default function HealthExamPage() {
       <Modal
         open={importOpen}
         onClose={closeImportModal}
-        title="Nhập kết quả vào sổ sức khoẻ"
+        title={lang === "en" ? "Import Results to Health Book" : "Nhập kết quả vào sổ sức khoẻ"}
         size="xl"
         footer={
           <div className="flex items-center justify-between w-full">
@@ -1388,7 +1410,7 @@ export default function HealthExamPage() {
               onClick={handleDownloadTemplate}
               className="kbtn kbtn-ghost text-xs text-brand flex items-center gap-1.5"
             >
-              📥 Tải file mẫu (.xlsx)
+              {lang === "en" ? "📥 Download Template (.xlsx)" : "📥 Tải file mẫu (.xlsx)"}
             </button>
             <div className="flex items-center gap-2">
               <button
@@ -1397,7 +1419,13 @@ export default function HealthExamPage() {
                 disabled={importBusy}
                 className="kbtn kbtn-secondary"
               >
-                {importResult ? "Đóng" : "Hủy"}
+                {importResult
+                  ? lang === "en"
+                    ? "Close"
+                    : "Đóng"
+                  : lang === "en"
+                  ? "Cancel"
+                  : "Hủy"}
               </button>
               {!importResult && (
                 <button
@@ -1409,7 +1437,13 @@ export default function HealthExamPage() {
                   {importBusy && (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  {importBusy ? "Đang nhập..." : "Nhập vào sổ sức khoẻ"}
+                  {importBusy
+                    ? lang === "en"
+                      ? "Importing..."
+                      : "Đang nhập..."
+                    : lang === "en"
+                    ? "Import to Health Book"
+                    : "Nhập vào sổ sức khoẻ"}
                 </button>
               )}
             </div>
@@ -1418,27 +1452,32 @@ export default function HealthExamPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-ink-soft">
-            Hỗ trợ nhập trực tiếp số liệu khám vào bảng hoặc tải file Excel lên.
-            Hệ thống tự động tính BMI và kiểm tra các số liệu hợp lệ.
+            {lang === "en"
+              ? "Supports direct inline entry in the table or uploading an Excel file. The system automatically calculates BMI and validates entries."
+              : "Hỗ trợ nhập trực tiếp số liệu khám vào bảng hoặc tải file Excel lên. Hệ thống tự động tính BMI và kiểm tra các số liệu hợp lệ."}
           </p>
 
           <div className="rounded-card border border-line bg-sunken/40 p-3.5 space-y-3">
-            <div className="font-bold text-ink text-sm">Chọn lớp & ngày ghi nhận</div>
+            <div className="font-bold text-ink text-sm">
+              {lang === "en" ? "Select class & record date" : "Chọn lớp & ngày ghi nhận"}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="klabel mb-1.5">
-                  Lớp <span className="text-bad ml-0.5">*</span>
+                  {lang === "en" ? "Class" : "Lớp"} <span className="text-bad ml-0.5">*</span>
                 </label>
                 <ClassFilterSelect
                   classes={classes}
                   value={importClassId}
                   onChange={setImportClassId}
-                  placeholder="Tất cả lớp"
+                  placeholder={lang === "en" ? "All classes" : "Tất cả lớp"}
                   className="w-full"
                 />
               </div>
               <div>
-                <label className="klabel mb-1.5">Ngày ghi nhận</label>
+                <label className="klabel mb-1.5">
+                  {lang === "en" ? "Record date" : "Ngày ghi nhận"}
+                </label>
                 <DateInput
                   value={importDate}
                   max={todayIso()}
@@ -1449,18 +1488,22 @@ export default function HealthExamPage() {
             </div>
             {importClass ? (
               <div className="text-[11px] text-ink-soft">
-                Đang chọn lớp <strong className="text-ink">{importClass.name}</strong>.
+                {lang === "en" ? "Selected class " : "Đang chọn lớp "}
+                <strong className="text-ink">{formatClassName(importClass.name, lang)}</strong>.
               </div>
             ) : (
               <div className="text-[11px] text-ink-soft">
-                Đang chọn <strong className="text-ink">tất cả lớp</strong>.
+                {lang === "en" ? "Selected " : "Đang chọn "}
+                <strong className="text-ink">{lang === "en" ? "all classes" : "tất cả lớp"}</strong>.
               </div>
             )}
           </div>
 
           {!importResult && (
             <div>
-              <label className="klabel mb-1.5">Chọn file kết quả tải lên</label>
+              <label className="klabel mb-1.5">
+                {lang === "en" ? "Select result file to upload" : "Chọn file kết quả tải lên"}
+              </label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1475,11 +1518,17 @@ export default function HealthExamPage() {
               >
                 <div className="text-3xl mb-2">📁</div>
                 <div className="text-sm font-semibold text-ink truncate max-w-full">
-                  {importFile ? importFile.name : "Nhấp để chọn file hoặc kéo thả vào đây"}
+                  {importFile
+                    ? importFile.name
+                    : lang === "en"
+                    ? "Click to choose a file or drag and drop here"
+                    : "Nhấp để chọn file hoặc kéo thả vào đây"}
                 </div>
                 <div className="text-xs text-ink-faint mt-1">
                   {importFile
                     ? `${(importFile.size / 1024).toFixed(0)} KB`
+                    : lang === "en"
+                    ? "Supports .xlsx, .xls formats (max 10MB)"
                     : "Hỗ trợ định dạng .xlsx, .xls (tối đa 10MB)"}
                 </div>
               </label>
@@ -1496,29 +1545,39 @@ export default function HealthExamPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
                 <div className="p-2.5 rounded-control bg-sunken/60 border border-line">
-                  <div className="text-[11px] text-ink-soft">Tổng dòng</div>
+                  <div className="text-[11px] text-ink-soft">
+                    {lang === "en" ? "Total rows" : "Tổng dòng"}
+                  </div>
                   <div className="text-lg font-bold text-ink mt-0.5">{importResult.total_rows}</div>
                 </div>
                 <div className="p-2.5 rounded-control bg-ok/10 border border-ok/25">
-                  <div className="text-[11px] text-ok">Thành công</div>
+                  <div className="text-[11px] text-ok">
+                    {lang === "en" ? "Success" : "Thành công"}
+                  </div>
                   <div className="text-lg font-bold text-ok mt-0.5">
                     {importResult.success_count}
                   </div>
                 </div>
                 <div className="p-2.5 rounded-control bg-bad/10 border border-bad/25">
-                  <div className="text-[11px] text-bad">Thất bại</div>
+                  <div className="text-[11px] text-bad">
+                    {lang === "en" ? "Failed" : "Thất bại"}
+                  </div>
                   <div className="text-lg font-bold text-bad mt-0.5">
                     {importResult.failed_count}
                   </div>
                 </div>
                 <div className="p-2.5 rounded-control bg-sunken/60 border border-line">
-                  <div className="text-[11px] text-ink-soft">Bản ghi mới</div>
+                  <div className="text-[11px] text-ink-soft">
+                    {lang === "en" ? "New records" : "Bản ghi mới"}
+                  </div>
                   <div className="text-lg font-bold text-ink mt-0.5">
                     {importResult.created_count}
                   </div>
                 </div>
                 <div className="p-2.5 rounded-control bg-sunken/60 border border-line">
-                  <div className="text-[11px] text-ink-soft">Đã cập nhật</div>
+                  <div className="text-[11px] text-ink-soft">
+                    {lang === "en" ? "Updated" : "Đã cập nhật"}
+                  </div>
                   <div className="text-lg font-bold text-ink mt-0.5">
                     {importResult.updated_count}
                   </div>
@@ -1528,7 +1587,9 @@ export default function HealthExamPage() {
               {importResult.errors.length > 0 && (
                 <div className="space-y-2">
                   <div className="font-bold text-bad text-xs">
-                    Chi tiết lỗi ({importResult.failed_count} dòng bị từ chối)
+                    {lang === "en"
+                      ? `Error details (${importResult.failed_count} rows rejected)`
+                      : `Chi tiết lỗi (${importResult.failed_count} dòng bị từ chối)`}
                   </div>
                   <div className="max-h-64 overflow-y-auto rounded-control border border-bad/25 bg-bad/5 divide-y divide-bad/10">
                     {importResult.errors.map((issue) => (
@@ -1543,8 +1604,8 @@ export default function HealthExamPage() {
                             }`}
                           >
                             {issue.sheet_name
-                              ? `${issue.sheet_name} · Dòng ${issue.row_number}`
-                              : `Dòng ${issue.row_number}`}
+                              ? `${issue.sheet_name} · ${lang === "en" ? "Row" : "Dòng"} ${issue.row_number}`
+                              : `${lang === "en" ? "Row" : "Dòng"} ${issue.row_number}`}
                           </span>
                           {issue.full_name && (
                             <span className="text-xs font-semibold text-ink">{issue.full_name}</span>
@@ -1576,8 +1637,14 @@ export default function HealthExamPage() {
         title={
           editing
             ? editing.id
-              ? "Chỉnh sửa số liệu sức khoẻ"
+              ? lang === "en"
+                ? "Edit Health Data"
+                : "Chỉnh sửa số liệu sức khoẻ"
+              : lang === "en"
+              ? "Enter Health Data"
               : "Nhập số liệu sức khoẻ"
+            : lang === "en"
+            ? "Edit Health Data"
             : "Chỉnh sửa số liệu sức khoẻ"
         }
         footer={
@@ -1587,7 +1654,7 @@ export default function HealthExamPage() {
               className="kbtn kbtn-secondary text-xs"
               disabled={editBusy}
             >
-              Hủy
+              {lang === "en" ? "Cancel" : "Hủy"}
             </button>
             <button
               onClick={handleSaveEdit}
@@ -1595,7 +1662,17 @@ export default function HealthExamPage() {
               style={{ background: "#16665a" }}
               disabled={editBusy}
             >
-              {editBusy ? "Đang lưu..." : editing?.id ? "Lưu thay đổi" : "Lưu số liệu"}
+              {editBusy
+                ? lang === "en"
+                  ? "Saving..."
+                  : "Đang lưu..."
+                : editing?.id
+                ? lang === "en"
+                  ? "Save changes"
+                  : "Lưu thay đổi"
+                : lang === "en"
+                ? "Save data"
+                : "Lưu số liệu"}
             </button>
           </>
         }
@@ -1603,7 +1680,7 @@ export default function HealthExamPage() {
         {editing && (
           <>
             <div className="text-xs text-ink-soft mb-3">
-              Học sinh:{" "}
+              {lang === "en" ? "Student: " : "Học sinh: "}
               <strong className="text-ink">
                 {editing.nickname
                   ? `${editing.full_name} (${editing.nickname})`
@@ -1612,17 +1689,20 @@ export default function HealthExamPage() {
               {editing.class_name && (
                 <>
                   {" · "}
-                  Lớp {editing.class_name}
+                  {lang === "en" ? "Class " : "Lớp "}
+                  {formatClassName(editing.class_name, lang)}
                 </>
               )}
             </div>
 
             {!editing.id && (
               <FormField
-                label="Ngày ghi nhận"
+                label={lang === "en" ? "Record date" : "Ngày ghi nhận"}
                 hint={
                   editDate
-                    ? `Đã chọn: ${formatDateToDmy(editDate)}`
+                    ? `${lang === "en" ? "Selected: " : "Đã chọn: "}${formatDateToDmy(editDate)}`
+                    : lang === "en"
+                    ? "Enter in dd/mm/yyyy format"
                     : "Nhập theo định dạng dd/mm/yyyy"
                 }
               >
@@ -1637,8 +1717,8 @@ export default function HealthExamPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <FormField
-                label="Chiều cao (cm)"
-                hint={`Dải hợp lệ: ${MIN_CHILD_HEIGHT} - ${MAX_CHILD_HEIGHT} cm`}
+                label={lang === "en" ? "Height (cm)" : "Chiều cao (cm)"}
+                hint={`${lang === "en" ? "Valid range: " : "Dải hợp lệ: "}${MIN_CHILD_HEIGHT} - ${MAX_CHILD_HEIGHT} cm`}
               >
                 <input
                   className="kinput text-xs"
@@ -1652,8 +1732,8 @@ export default function HealthExamPage() {
                 />
               </FormField>
               <FormField
-                label="Cân nặng (kg)"
-                hint={`Dải hợp lệ: ${MIN_CHILD_WEIGHT} - ${MAX_CHILD_WEIGHT} kg`}
+                label={lang === "en" ? "Weight (kg)" : "Cân nặng (kg)"}
+                hint={`${lang === "en" ? "Valid range: " : "Dải hợp lệ: "}${MIN_CHILD_WEIGHT} - ${MAX_CHILD_WEIGHT} kg`}
               >
                 <input
                   className="kinput text-xs"
@@ -1669,8 +1749,12 @@ export default function HealthExamPage() {
             </div>
 
             <FormField
-              label="Kết luận chung"
-              hint="Có thể để trống nếu đã nhập chiều cao và cân nặng"
+              label={lang === "en" ? "General conclusion" : "Kết luận chung"}
+              hint={
+                lang === "en"
+                  ? "Optional if height and weight are provided"
+                  : "Có thể để trống nếu đã nhập chiều cao và cân nặng"
+              }
             >
               <textarea
                 className="kinput resize-y text-xs"
@@ -1678,12 +1762,18 @@ export default function HealthExamPage() {
                 onChange={(e) => setEditConclusion(e.target.value)}
                 rows={3}
                 maxLength={2000}
-                placeholder="Nhập kết luận của đợt ghi nhận..."
+                placeholder={
+                  lang === "en"
+                    ? "Enter conclusion for this record..."
+                    : "Nhập kết luận của đợt ghi nhận..."
+                }
               />
             </FormField>
 
             <div className="text-xs text-ink-faint leading-relaxed bg-sunken/50 p-2.5 rounded-control">
-              💡 Hệ thống tự động tính chỉ số BMI và xếp loại thể trạng dựa trên tuổi và giới tính của học sinh.
+              {lang === "en"
+                ? "💡 The system automatically calculates BMI and classifies physical status based on the student's age and gender."
+                : "💡 Hệ thống tự động tính chỉ số BMI và xếp loại thể trạng dựa trên tuổi và giới tính của học sinh."}
             </div>
           </>
         )}

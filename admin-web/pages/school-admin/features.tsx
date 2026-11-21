@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import { getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
 import {
   getClasses,
   getParents,
@@ -56,6 +57,7 @@ interface Tile {
 }
 
 export default function SchoolAdminFeaturesPage() {
+  const { lang } = useLanguage();
   const [ready, setReady] = useState(false);
   const [counts, setCounts] = useState<{
     teachers: number;
@@ -151,8 +153,8 @@ export default function SchoolAdminFeaturesPage() {
   const tiles: Tile[] = [
     {
       href: "/school-admin/classes",
-      label: "Lớp học",
-      desc: "Quản lý lớp học",
+      label: lang === "en" ? "Classes" : "Lớp học",
+      desc: lang === "en" ? "Classes management" : "Quản lý lớp học",
       icon: "🏫",
       iconBg: "#E7EEF3",
       iconColor: "#4B6F8C",
@@ -160,8 +162,8 @@ export default function SchoolAdminFeaturesPage() {
     },
     {
       href: "/school-admin/teachers",
-      label: "Giáo viên",
-      desc: "Quản lý tài khoản, lớp phụ trách",
+      label: lang === "en" ? "Teachers" : "Giáo viên",
+      desc: lang === "en" ? "Accounts & class assignments" : "Quản lý tài khoản, lớp phụ trách",
       icon: "👨‍🏫",
       iconBg: "#E6EFEC",
       iconColor: "#16665a",
@@ -169,8 +171,8 @@ export default function SchoolAdminFeaturesPage() {
     },
     {
       href: "/school-admin/students",
-      label: "Học sinh",
-      desc: "Hồ sơ, phụ huynh liên kết, dị ứng",
+      label: lang === "en" ? "Students" : "Học sinh",
+      desc: lang === "en" ? "Profiles, parents, allergies" : "Hồ sơ, phụ huynh liên kết, dị ứng",
       icon: "🧒",
       iconBg: "#F6EED9",
       iconColor: "#8A5E12",
@@ -178,8 +180,8 @@ export default function SchoolAdminFeaturesPage() {
     },
     {
       href: "/school-admin/parents",
-      label: "Phụ huynh",
-      desc: "Tài khoản, liên kết với học sinh",
+      label: lang === "en" ? "Parents" : "Phụ huynh",
+      desc: lang === "en" ? "Accounts & linked children" : "Tài khoản, liên kết với học sinh",
       icon: "👪",
       iconBg: "#E7EEF3",
       iconColor: "#4B6F8C",
@@ -187,8 +189,8 @@ export default function SchoolAdminFeaturesPage() {
     },
     {
       href: "/school-admin/schedules",
-      label: "Thời khóa biểu",
-      desc: "Lịch học tuần, phát hiện xung đột",
+      label: lang === "en" ? "Timetable" : "Thời khóa biểu",
+      desc: lang === "en" ? "Weekly schedule & conflicts" : "Lịch học tuần, phát hiện xung đột",
       icon: "📅",
       iconBg: "#F6E6E1",
       iconColor: "#BB4A34",
@@ -197,8 +199,8 @@ export default function SchoolAdminFeaturesPage() {
     },
     {
       href: "/school-admin/health-exam",
-      label: "Sổ sức khoẻ",
-      desc: "Theo dõi sức khoẻ học sinh",
+      label: lang === "en" ? "Health Records" : "Sổ sức khoẻ",
+      desc: lang === "en" ? "Track student health exams" : "Theo dõi sức khoẻ học sinh",
       icon: "📒",
       iconBg: "#E6EFEC",
       iconColor: "#16665a",
@@ -207,7 +209,7 @@ export default function SchoolAdminFeaturesPage() {
   ];
 
   return (
-    <SchoolAdminLayout active="features" pageTitle="Chức năng quản trị hệ thống">
+    <SchoolAdminLayout active="features" pageTitle={lang === "en" ? "System Administration Modules" : "Chức năng quản trị hệ thống"}>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {tiles.map((tile) => (
           <Link
@@ -227,14 +229,14 @@ export default function SchoolAdminFeaturesPage() {
             </div>
             <div className="flex items-center justify-between mt-2">
               <span className="text-xs text-ink-faint">
-                {tile.count !== undefined ? `${tile.count} mục` : "Nhập Excel"}
+                {tile.count !== undefined ? (lang === "en" ? `${tile.count} items` : `${tile.count} mục`) : (lang === "en" ? "Import Excel" : "Nhập Excel")}
               </span>
               {tile.badge ? (
                 <span
                   className="text-[11px] font-bold px-1.5 py-0.5 rounded-full"
                   style={{ background: "#F6EED9", color: "#8A5E12" }}
                 >
-                  {tile.badge} xung đột
+                  {tile.badge} {lang === "en" ? "conflicts" : "xung đột"}
                 </span>
               ) : null}
             </div>

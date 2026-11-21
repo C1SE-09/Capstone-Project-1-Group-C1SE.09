@@ -43,6 +43,7 @@ import {
 
 import { useLanguage } from "@/lib/language-context";
 import {
+  formatClassName,
   localizeActivityName,
   localizeRoomName,
   getDayLabel,
@@ -1340,26 +1341,28 @@ export default function SchoolAdminSchedulesPage() {
             background: "#FDF2F0",
             borderColor: "#F2D5CE",
           }}
-          title="Nhấn để xem danh sách các lớp bị xung đột lịch trên toàn trường"
+          title={lang === "en" ? "Click to view list of classes with schedule conflicts across the school" : "Nhấn để xem danh sách các lớp bị xung đột lịch trên toàn trường"}
         >
           <div className="flex items-start gap-3 min-w-0">
             <span className="text-2xl shrink-0 mt-0.5 animate-pulse">🚨</span>
             <div className="min-w-0">
               <div className="font-bold text-sm text-[#BB4A34] flex items-center gap-2 flex-wrap">
                 <span>
-                  Toàn trường: Phát hiện {schoolConflictStats.totalConflicts} tiết học bị xung đột tại {schoolConflictStats.classGroups.length} lớp
+                  {lang === "en"
+                    ? `School-wide: Detected ${schoolConflictStats.totalConflicts} conflicting slots across ${schoolConflictStats.classGroups.length} classes`
+                    : `Toàn trường: Phát hiện ${schoolConflictStats.totalConflicts} tiết học bị xung đột tại ${schoolConflictStats.classGroups.length} lớp`}
                 </span>
                 <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#BB4A34]/15 text-[#BB4A34]">
-                  Nhấn xem chi tiết &amp; sửa
+                  {lang === "en" ? "Click to view & fix" : "Nhấn xem chi tiết & sửa"}
                 </span>
               </div>
               <div className="text-xs text-[#8C3423] mt-1 line-clamp-1">
-                {schoolConflictStats.roomConflicts > 0 && `${schoolConflictStats.roomConflicts} lỗi trùng phòng học`}
+                {schoolConflictStats.roomConflicts > 0 && (lang === "en" ? `${schoolConflictStats.roomConflicts} room conflicts` : `${schoolConflictStats.roomConflicts} lỗi trùng phòng học`)}
                 {schoolConflictStats.roomConflicts > 0 && schoolConflictStats.timeConflicts > 0 && " · "}
-                {schoolConflictStats.timeConflicts > 0 && `${schoolConflictStats.timeConflicts} lỗi trùng giờ`}
-                {" — Các lớp bị ảnh hưởng: "}
+                {schoolConflictStats.timeConflicts > 0 && (lang === "en" ? `${schoolConflictStats.timeConflicts} time overlaps` : `${schoolConflictStats.timeConflicts} lỗi trùng giờ`)}
+                {lang === "en" ? " — Affected classes: " : " — Các lớp bị ảnh hưởng: "}
                 <span className="font-semibold text-ink">
-                  {schoolConflictStats.classGroups.map((g) => g.className).join(", ")}
+                  {schoolConflictStats.classGroups.map((g) => formatClassName(g.className, lang)).join(", ")}
                 </span>
               </div>
             </div>
@@ -1368,7 +1371,7 @@ export default function SchoolAdminSchedulesPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-bold text-white shrink-0 shadow-sm transition group-hover:scale-105"
             style={{ background: "#BB4A34" }}
           >
-            <span>Xem danh sách lớp ({schoolConflictStats.classGroups.length})</span>
+            <span>{lang === "en" ? `View classes (${schoolConflictStats.classGroups.length})` : `Xem danh sách lớp (${schoolConflictStats.classGroups.length})`}</span>
             <span className="text-sm transition group-hover:translate-x-0.5">→</span>
           </div>
         </div>
@@ -1380,13 +1383,13 @@ export default function SchoolAdminSchedulesPage() {
           className="card p-3 mb-4 flex items-center gap-3"
           style={{ background: "#EFECE5" }}
         >
-          <span className="text-sm font-semibold text-ink">Lớp:</span>
+          <span className="text-sm font-semibold text-ink">{lang === "en" ? "Class:" : "Lớp:"}</span>
           <div className="w-72">
             <ClassFilterSelect
               classes={classes}
               value={selectedClassId ?? ""}
               onChange={(val) => setSelectedClassId(val || null)}
-              placeholder="-- Chọn lớp --"
+              placeholder={lang === "en" ? "-- Select class --" : "-- Chọn lớp --"}
             />
           </div>
         </div>
@@ -1416,7 +1419,7 @@ export default function SchoolAdminSchedulesPage() {
                 <span
                   className="w-2 h-2 rounded-full"
                   style={{ background: isActive ? "#FCD34D" : "#DC2626" }}
-                  title="Có tiết bị xung đột trong ngày này"
+                  title={lang === "en" ? "Has conflicting slots on this day" : "Có tiết bị xung đột trong ngày này"}
                 />
               )}
             </button>
@@ -1445,10 +1448,12 @@ export default function SchoolAdminSchedulesPage() {
             <span className="text-2xl shrink-0 mt-0.5">⚠️</span>
             <div className="min-w-0">
               <div className="font-bold text-sm" style={{ color: "#8A5E12" }}>
-                {conflicts.length} xung đột phòng/khung giờ trong ngày {DAY_SHORT[selectedDay]}
+                {lang === "en"
+                  ? `${conflicts.length} room/time conflicts on ${DAY_SHORT[selectedDay]}`
+                  : `${conflicts.length} xung đột phòng/khung giờ trong ngày ${DAY_SHORT[selectedDay]}`}
                 {conflicts.length > 1 && (
                   <span className="ml-2 text-[11px] font-normal px-2 py-0.5 rounded-full bg-[#8A5E12]/15 text-[#8A5E12]">
-                    Tiết {(conflictCycleIndex % conflicts.length) + 1}/{conflicts.length}
+                    {lang === "en" ? `Slot ${(conflictCycleIndex % conflicts.length) + 1}/${conflicts.length}` : `Tiết ${(conflictCycleIndex % conflicts.length) + 1}/${conflicts.length}`}
                   </span>
                 )}
               </div>
@@ -1458,11 +1463,11 @@ export default function SchoolAdminSchedulesPage() {
                   const reason = currConflict ? allConflictReasons.get(currConflict.id) : null;
                   return currConflict ? (
                     <span>
-                      Tiết <strong>&quot;{currConflict.activity_name}&quot;</strong> ({currConflict.start_time} - {currConflict.end_time})
+                      {lang === "en" ? "Activity " : "Tiết "}<strong>&quot;{localizeActivityName(currConflict.activity_name, lang)}&quot;</strong> ({currConflict.start_time} - {currConflict.end_time})
                       {reason && ` · ${reason}`}
                     </span>
                   ) : (
-                    "Vui lòng điều chỉnh để tránh 2 hoạt động cùng phòng + cùng giờ."
+                    lang === "en" ? "Please adjust to avoid overlapping activities in the same room." : "Vui lòng điều chỉnh để tránh 2 hoạt động cùng phòng + cùng giờ."
                   );
                 })()}
               </div>
@@ -1474,9 +1479,9 @@ export default function SchoolAdminSchedulesPage() {
             onClick={jumpToDayConflict}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-bold text-white shrink-0 shadow-sm transition hover:scale-105 active:scale-95 cursor-pointer"
             style={{ background: "#B0791B" }}
-            title="Nhảy tới và đánh dấu tiết học bị xung đột trong ngày này"
+            title={lang === "en" ? "Jump to and highlight conflicting slot" : "Nhảy tới và đánh dấu tiết học bị xung đột trong ngày này"}
           >
-            <span>Sửa tiết xung đột</span>
+            <span>{lang === "en" ? "Fix Conflict" : "Sửa tiết xung đột"}</span>
             <span className="text-sm">→</span>
           </button>
         </div>
@@ -1491,8 +1496,11 @@ export default function SchoolAdminSchedulesPage() {
           <div className="flex items-center gap-2 text-[#8A5E12] min-w-0">
             <span className="shrink-0">ℹ️</span>
             <span className="truncate">
-              Ngày {DAY_LABELS[selectedDay]} không có xung đột. Lớp này có{" "}
-              <strong>{weeklyConflicts.length} tiết bị xung đột</strong> vào các ngày khác trong tuần.
+              {lang === "en" ? (
+                <>No conflicts on {DAY_LABELS[selectedDay]}. This class has <strong>{weeklyConflicts.length} conflicting slots</strong> on other days this week.</>
+              ) : (
+                <>Ngày {DAY_LABELS[selectedDay]} không có xung đột. Lớp này có <strong>{weeklyConflicts.length} tiết bị xung đột</strong> vào các ngày khác trong tuần.</>
+              )}
             </span>
           </div>
           <button
@@ -1512,7 +1520,7 @@ export default function SchoolAdminSchedulesPage() {
             }}
             className="text-xs font-bold text-[#8A5E12] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
           >
-            <span>Chuyển tới {DAY_LABELS[weeklyConflicts[0].day_of_week - 2]}</span>
+            <span>{lang === "en" ? `Go to ${DAY_LABELS[weeklyConflicts[0].day_of_week - 2]}` : `Chuyển tới ${DAY_LABELS[weeklyConflicts[0].day_of_week - 2]}`}</span>
             <span>→</span>
           </button>
         </div>
@@ -1526,8 +1534,10 @@ export default function SchoolAdminSchedulesPage() {
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
               {(scheduleError as any)?.status === 401
-                ? "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập..."
-                : `Không thể tải thời khóa biểu (${(scheduleError as any)?.detail || "Vui lòng thử lại"})`}
+                ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
+                : (lang === "en"
+                    ? `Unable to load timetable (${(scheduleError as any)?.detail || "Please try again"})`
+                    : `Không thể tải thời khóa biểu (${(scheduleError as any)?.detail || "Vui lòng thử lại"})`)}
             </div>
             <button
               onClick={() => {
@@ -1536,7 +1546,7 @@ export default function SchoolAdminSchedulesPage() {
               }}
               className="kbtn kbtn-secondary mt-2"
             >
-              Thử lại
+              {lang === "en" ? "Retry" : "Thử lại"}
             </button>
           </div>
         ) : filteredSchedules.length === 0 ? (
@@ -1570,9 +1580,9 @@ export default function SchoolAdminSchedulesPage() {
                       if (el) el.indeterminate = someSelected;
                     }}
                     onChange={toggleSelectAll}
-                    title="Chọn tất cả hoạt động hiển thị"
+                    title={lang === "en" ? "Select all visible activities" : "Chọn tất cả hoạt động hiển thị"}
                   />
-                  <span>Chọn tất cả ({filteredSchedules.length})</span>
+                  <span>{lang === "en" ? `Select all (${filteredSchedules.length})` : `Chọn tất cả (${filteredSchedules.length})`}</span>
                 </label>
 
                 {selectedIds.length > 0 && (
@@ -1582,7 +1592,7 @@ export default function SchoolAdminSchedulesPage() {
                       <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-[#BB4A34]">
                         {selectedIds.length}
                       </span>
-                      <span>Đã chọn {selectedIds.length} hoạt động</span>
+                      <span>{lang === "en" ? `Selected ${selectedIds.length} activities` : `Đã chọn ${selectedIds.length} hoạt động`}</span>
                     </div>
                   </>
                 )}
@@ -1596,7 +1606,7 @@ export default function SchoolAdminSchedulesPage() {
                       className="kbtn kbtn-secondary text-[11px] py-1 px-2.5 h-auto leading-none"
                       disabled={bulkDeleting || isEditingTable}
                     >
-                      Bỏ chọn
+                      {lang === "en" ? "Deselect" : "Bỏ chọn"}
                     </button>
                     <button
                       onClick={() => setConfirmBulkDel(true)}
@@ -1605,7 +1615,7 @@ export default function SchoolAdminSchedulesPage() {
                       disabled={bulkDeleting || isEditingTable}
                     >
                       <span>🗑️</span>
-                      <span>Xóa đã chọn ({selectedIds.length})</span>
+                      <span>{lang === "en" ? `Delete selected (${selectedIds.length})` : `Xóa đã chọn (${selectedIds.length})`}</span>
                     </button>
                     <span className="text-line-strong">|</span>
                   </>
@@ -1661,28 +1671,28 @@ export default function SchoolAdminSchedulesPage() {
                             className="kinput text-xs py-1 px-2 font-bold w-full"
                             value={tableEdits[s.id]?.activity_name ?? s.activity_name}
                             onChange={(e) => updateRowEdit(s.id, "activity_name", e.target.value)}
-                            placeholder="Tên hoạt động..."
+                            placeholder={lang === "en" ? "Activity name..." : "Tên hoạt động..."}
                           />
                           <div className="flex gap-2">
                             <input
                               type="text"
                               className="kinput text-xs py-0.5 px-2 w-1/3"
-                              value={tableEdits[s.id]?.room_name ?? s.room_name ?? "Phòng học"}
+                              value={tableEdits[s.id]?.room_name ?? s.room_name ?? (lang === "en" ? "Classroom" : "Phòng học")}
                               onChange={(e) => updateRowEdit(s.id, "room_name", e.target.value)}
-                              placeholder="Phòng học..."
+                              placeholder={lang === "en" ? "Room..." : "Phòng học..."}
                             />
                             <input
                               type="text"
                               className="kinput text-xs py-0.5 px-2 flex-1 text-ink-soft"
                               value={tableEdits[s.id]?.content ?? s.content ?? ""}
                               onChange={(e) => updateRowEdit(s.id, "content", e.target.value)}
-                              placeholder="Ghi chú nội dung..."
+                              placeholder={lang === "en" ? "Notes..." : "Ghi chú nội dung..."}
                             />
                           </div>
                         </div>
                         <div className="flex items-center pt-2">
                           <span className="text-[11px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded">
-                            Đang sửa
+                            {lang === "en" ? "Editing" : "Đang sửa"}
                           </span>
                         </div>
                       </>
@@ -1763,7 +1773,7 @@ export default function SchoolAdminSchedulesPage() {
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editing ? "Chỉnh sửa hoạt động" : "Thêm hoạt động"}
+        title={editing ? (lang === "en" ? "Edit Activity" : "Chỉnh sửa hoạt động") : (lang === "en" ? "Add Activity" : "Thêm hoạt động")}
         footer={
           <>
             <button
@@ -1771,23 +1781,23 @@ export default function SchoolAdminSchedulesPage() {
               className="kbtn kbtn-secondary"
               disabled={saving}
             >
-              Hủy
+              {lang === "en" ? "Cancel" : "Hủy"}
             </button>
             <button onClick={handleSave} className="kbtn kbtn-primary" disabled={saving}>
-              {saving ? "Đang lưu..." : "Lưu hoạt động"}
+              {saving ? (lang === "en" ? "Saving..." : "Đang lưu...") : (lang === "en" ? "Save Activity" : "Lưu hoạt động")}
             </button>
           </>
         }
       >
-        <FormField label="Tên hoạt động" required>
+        <FormField label={lang === "en" ? "Activity Name" : "Tên hoạt động"} required>
           <input
             className="kinput"
             value={form.activity_name}
             onChange={(e) => setForm({ ...form, activity_name: e.target.value })}
-            placeholder="VD: Vẽ sáng tạo, Hát tập thể..."
+            placeholder={lang === "en" ? "e.g. Art & Craft, Morning Exercise..." : "VD: Vẽ sáng tạo, Hát tập thể..."}
           />
         </FormField>
-        <FormField label="Thứ">
+        <FormField label={lang === "en" ? "Day of Week" : "Thứ"}>
           <div className="flex gap-2 flex-wrap">
             {DAY_LABELS.map((label, idx) => (
               <button
@@ -1805,7 +1815,7 @@ export default function SchoolAdminSchedulesPage() {
             ))}
           </div>
         </FormField>
-        <FormField label="Khung giờ có sẵn" hint="Click chọn — hệ thống tự điền giờ.">
+        <FormField label={lang === "en" ? "Preset Time Slots" : "Khung giờ có sẵn"} hint={lang === "en" ? "Click to auto-fill start & end times." : "Click chọn — hệ thống tự điền giờ."}>
           {timeSlots && timeSlots.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {timeSlots.map((slot) => (
@@ -1827,10 +1837,10 @@ export default function SchoolAdminSchedulesPage() {
               ))}
             </div>
           ) : (
-            <div className="text-xs text-ink-faint">Chưa có khung giờ nào.</div>
+            <div className="text-xs text-ink-faint">{lang === "en" ? "No time slots available." : "Chưa có khung giờ nào."}</div>
           )}
         </FormField>
-        <FormField label="Hoặc nhập giờ tự do (07:00 – 17:00)">
+        <FormField label={lang === "en" ? "Or enter custom time (07:00 – 17:00)" : "Hoặc nhập giờ tự do (07:00 – 17:00)"}>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <input
@@ -1840,9 +1850,9 @@ export default function SchoolAdminSchedulesPage() {
                 className="kinput"
                 value={form.start_time}
                 onChange={(e) => setForm({ ...form, start_time: e.target.value, slot_id: null })}
-                placeholder="Bắt đầu"
+                placeholder={lang === "en" ? "Start" : "Bắt đầu"}
               />
-              <span className="text-[11px] text-ink-faint mt-1 block">Từ 07:00 (Đón trẻ)</span>
+              <span className="text-[11px] text-ink-faint mt-1 block">{lang === "en" ? "From 07:00 (Arrival)" : "Từ 07:00 (Đón trẻ)"}</span>
             </div>
             <div>
               <input
@@ -1852,13 +1862,13 @@ export default function SchoolAdminSchedulesPage() {
                 className="kinput"
                 value={form.end_time}
                 onChange={(e) => setForm({ ...form, end_time: e.target.value, slot_id: null })}
-                placeholder="Kết thúc"
+                placeholder={lang === "en" ? "End" : "Kết thúc"}
               />
-              <span className="text-[11px] text-ink-faint mt-1 block">Đến 17:00 (Trả trẻ)</span>
+              <span className="text-[11px] text-ink-faint mt-1 block">{lang === "en" ? "Until 17:00 (Dismissal)" : "Đến 17:00 (Trả trẻ)"}</span>
             </div>
           </div>
         </FormField>
-        <FormField label="Địa điểm / Phòng học">
+        <FormField label={lang === "en" ? "Location / Room" : "Địa điểm / Phòng học"}>
           <div className="relative">
             <div className="relative flex items-center">
               <svg
@@ -1888,7 +1898,7 @@ export default function SchoolAdminSchedulesPage() {
                   setForm({ ...form, room_name: e.target.value });
                   setRoomDropdownOpen(true);
                 }}
-                placeholder="Tìm hoặc gõ tên phòng / sân bãi..."
+                placeholder={lang === "en" ? "Search or enter room / yard name..." : "Tìm hoặc gõ tên phòng / sân bãi..."}
               />
               {form.room_name && (
                 <button
@@ -1898,7 +1908,7 @@ export default function SchoolAdminSchedulesPage() {
                     setRoomSearch("");
                   }}
                   className="absolute right-2.5 text-xs text-ink-faint hover:text-ink w-5 h-5 rounded-full hover:bg-surface-sunken flex items-center justify-center transition"
-                  title="Xóa địa điểm"
+                  title={lang === "en" ? "Clear location" : "Xóa địa điểm"}
                 >
                   ✕
                 </button>
@@ -1907,7 +1917,7 @@ export default function SchoolAdminSchedulesPage() {
 
             {/* Quick chips below */}
             <div className="flex flex-wrap gap-1.5 mt-2">
-              <span className="text-[11px] text-ink-faint self-center mr-0.5">Gợi ý nhanh:</span>
+              <span className="text-[11px] text-ink-faint self-center mr-0.5">{lang === "en" ? "Quick picks:" : "Gợi ý nhanh:"}</span>
               {[
                 currentClassName ? `Phòng học ${currentClassName}` : "Phòng học của lớp",
                 "Sân cỏ",
@@ -1956,9 +1966,9 @@ export default function SchoolAdminSchedulesPage() {
                       }}
                       className="p-2 mb-1 rounded bg-[#EDF5F2] hover:bg-[#E0EFEA] text-[#16665A] font-semibold cursor-pointer flex items-center justify-between"
                     >
-                      <span>➕ Sử dụng địa điểm: &ldquo;{roomSearch.trim()}&rdquo;</span>
+                      <span>{lang === "en" ? `➕ Use location: "${roomSearch.trim()}"` : `➕ Sử dụng địa điểm: "${roomSearch.trim()}"`}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-white text-[#16665A] border border-[#C4DCD3]">
-                        Nhập tự do
+                        {lang === "en" ? "Custom" : "Nhập tự do"}
                       </span>
                     </div>
                   )}
@@ -1985,7 +1995,7 @@ export default function SchoolAdminSchedulesPage() {
                               : "hover:bg-surface-sunken text-ink"
                               }`}
                           >
-                            <span className="truncate">{r.name}</span>
+                            <span className="truncate">{localizeRoomName(r.name, lang)}</span>
                           </div>
                         );
                       })}
@@ -1994,7 +2004,9 @@ export default function SchoolAdminSchedulesPage() {
 
                   {filteredRoomGroups.every((g) => g.items.length === 0) && !roomSearch.trim() && (
                     <div className="p-3 text-center text-ink-faint">
-                      Không tìm thấy phòng phù hợp. Bạn có thể gõ tên phòng trực tiếp vào ô tìm kiếm.
+                      {lang === "en"
+                        ? "No matching rooms found. You can type a room name directly in the search box."
+                        : "Không tìm thấy phòng phù hợp. Bạn có thể gõ tên phòng trực tiếp vào ô tìm kiếm."}
                     </div>
                   )}
                 </div>
@@ -2002,30 +2014,34 @@ export default function SchoolAdminSchedulesPage() {
             )}
           </div>
         </FormField>
-        <FormField label="Nội dung chi tiết">
+        <FormField label={lang === "en" ? "Activity Details" : "Nội dung chi tiết"}>
           <textarea
             className="kinput"
             rows={3}
             value={form.content}
             onChange={(e) => setForm({ ...form, content: e.target.value })}
-            placeholder="Mô tả hoạt động..."
+            placeholder={lang === "en" ? "Activity description..." : "Mô tả hoạt động..."}
           />
         </FormField>
       </Drawer>
 
       <ConfirmDialog
         open={!!confirmDel}
-        title="Xóa hoạt động?"
-        message={`Bạn có chắc muốn xóa hoạt động "${confirmDel?.activity_name}"?`}
+        title={lang === "en" ? "Delete activity?" : "Xóa hoạt động?"}
+        message={lang === "en"
+          ? `Are you sure you want to delete "${localizeActivityName(confirmDel?.activity_name, lang)}"?`
+          : `Bạn có chắc muốn xóa hoạt động "${confirmDel?.activity_name}"?`}
         onConfirm={() => confirmDel && handleDelete(confirmDel)}
         onCancel={() => setConfirmDel(null)}
       />
 
       <ConfirmDialog
         open={confirmBulkDel}
-        title={`Xóa ${selectedIds.length} hoạt động đã chọn?`}
-        message={`Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} hoạt động này khỏi thời khóa biểu? Thao tác này không thể hoàn tác.`}
-        confirmLabel={bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.length} hoạt động`}
+        title={lang === "en" ? `Delete ${selectedIds.length} selected activities?` : `Xóa ${selectedIds.length} hoạt động đã chọn?`}
+        message={lang === "en"
+          ? `Are you sure you want to permanently delete these ${selectedIds.length} activities from the timetable? This cannot be undone.`
+          : `Bạn có chắc muốn xóa vĩnh viễn ${selectedIds.length} hoạt động này khỏi thời khóa biểu? Thao tác này không thể hoàn tác.`}
+        confirmLabel={bulkDeleting ? (lang === "en" ? "Deleting..." : "Đang xóa...") : (lang === "en" ? `Delete ${selectedIds.length} activities` : `Xóa ${selectedIds.length} hoạt động`)}
         onConfirm={handleBulkDelete}
         onCancel={() => !bulkDeleting && setConfirmBulkDel(false)}
       />
@@ -2033,35 +2049,34 @@ export default function SchoolAdminSchedulesPage() {
       <ImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        title="Nhập thời khóa biểu từ file Excel"
-        description="Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống hỗ trợ đọc nhiều sheet theo lớp. Cột 'Địa điểm / Phòng học' có thể để trống nếu học tại phòng của chính lớp (chỉ điền khi đổi địa điểm như Sân ngoài trời, Phòng Âm nhạc...)."
+        title={lang === "en" ? "Import Timetable from Excel" : "Nhập thời khóa biểu từ file Excel"}
+        description={lang === "en"
+          ? "Upload an Excel (.xlsx, .xls) or CSV file to import schedules. Multi-sheet files by class are supported. Leave Location blank for homeroom sessions."
+          : "Tải lên file Excel (.xlsx, .xls) hoặc CSV để nạp thời khóa biểu. Hệ thống hỗ trợ đọc nhiều sheet theo lớp. Cột 'Địa điểm / Phòng học' có thể để trống nếu học tại phòng của chính lớp (chỉ điền khi đổi địa điểm như Sân ngoài trời, Phòng Âm nhạc...)."}
         templateFilename={
           currentClassName
             ? `mau_nhap_thoi_khoa_bieu_${currentClassName.replace(/\s+/g, "_")}.xlsx`
             : "mau_nhap_thoi_khoa_bieu.xlsx"
         }
-        sampleHeaders={[
-          "Lớp",
-          "Thứ",
-          "Khung giờ",
-          "Tên hoạt động",
-          "Địa điểm / Phòng học",
-          "Nội dung chi tiết",
-        ]}
+        sampleHeaders={lang === "en"
+          ? ["Class", "Day", "Time Slot", "Activity Name", "Location / Room", "Details"]
+          : ["Lớp", "Thứ", "Khung giờ", "Tên hoạt động", "Địa điểm / Phòng học", "Nội dung chi tiết"]}
         sampleRow={[
-          currentClassName || "Lớp Mầm A",
-          "Thứ 2",
+          currentClassName || "Mầm A",
+          lang === "en" ? "Monday" : "Thứ 2",
           "08:10 - 08:40",
-          "Học hát & Vận động âm nhạc",
+          lang === "en" ? "Music & Movement Activity" : "Học hát & Vận động âm nhạc",
           "",
-          "Tập bài hát Cháu yêu bà (để trống phòng nếu học tại lớp, chỉ điền khi đổi chỗ ra ngoài)",
+          lang === "en" ? "Singing practice (leave location blank for homeroom)" : "Tập bài hát Cháu yêu bà (để trống phòng nếu học tại lớp, chỉ điền khi đổi chỗ ra ngoài)",
         ]}
         allowOverwrite={true}
-        overwriteLabel="Ghi đè hoạt động nếu lớp đã có lịch ở cùng khung giờ"
-        overwriteHint="Mẹo tinh gọn: Cột 'Địa điểm / Phòng học' có thể để trống cho các tiết học tại phòng của lớp. Hệ thống tự động gán phòng của lớp và chỉ cảnh báo khi trùng phòng chức năng / sân trường."
+        overwriteLabel={lang === "en" ? "Overwrite existing activity if class already has a schedule at this time" : "Ghi đè hoạt động nếu lớp đã có lịch ở cùng khung giờ"}
+        overwriteHint={lang === "en"
+          ? "Tip: 'Location / Room' can be left blank for homeroom activities."
+          : "Mẹo tinh gọn: Cột 'Địa điểm / Phòng học' có thể để trống cho các tiết học tại phòng của lớp. Hệ thống tự động gán phòng của lớp và chỉ cảnh báo khi trùng phòng chức năng / sân trường."}
         onImportRows={handleImportRows}
         onSuccess={() => {
-          setToast({ msg: "Đã nạp thời khóa biểu thành công", tone: "ok" });
+          setToast({ msg: lang === "en" ? "Timetable imported successfully" : "Đã nạp thời khóa biểu thành công", tone: "ok" });
         }}
       />
 
@@ -2070,7 +2085,7 @@ export default function SchoolAdminSchedulesPage() {
         <Modal
           open={exportModalOpen}
           onClose={() => setExportModalOpen(false)}
-          title="📥 Tùy chọn xuất thời khóa biểu ra Excel"
+          title={lang === "en" ? "📥 Export Timetable Options" : "📥 Tùy chọn xuất thời khóa biểu ra Excel"}
           size="md"
           footer={
             <div className="flex items-center justify-end gap-2 w-full">
@@ -2079,14 +2094,14 @@ export default function SchoolAdminSchedulesPage() {
                 onClick={() => setExportModalOpen(false)}
                 className="kbtn kbtn-secondary text-sm"
               >
-                Hủy
+                {lang === "en" ? "Cancel" : "Hủy"}
               </button>
               <button
                 type="button"
                 onClick={executeExport}
                 className="kbtn kbtn-primary text-sm flex items-center gap-1.5"
               >
-                <span>📥 Tải file Excel (.xlsx)</span>
+                <span>{lang === "en" ? "📥 Download Excel (.xlsx)" : "📥 Tải file Excel (.xlsx)"}</span>
               </button>
             </div>
           }
@@ -2095,7 +2110,7 @@ export default function SchoolAdminSchedulesPage() {
             {/* 1. Phạm vi xuất */}
             <div>
               <label className="block text-xs font-semibold text-ink mb-1.5">
-                1. Phạm vi xuất
+                {lang === "en" ? "1. Export Scope" : "1. Phạm vi xuất"}
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -2108,7 +2123,7 @@ export default function SchoolAdminSchedulesPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-bold text-xs flex items-center gap-1.5">
-                      <span>🏫 Lớp đang chọn</span>
+                      <span>{lang === "en" ? "🏫 Selected Class" : "🏫 Lớp đang chọn"}</span>
                     </div>
                     {exportConfig.scope === "current" ? (
                       <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
@@ -2120,7 +2135,7 @@ export default function SchoolAdminSchedulesPage() {
                   </div>
                   <div className={`text-[11px] mt-1 truncate ${exportConfig.scope === "current" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
                     }`}>
-                    {currentClassName || "Chưa chọn lớp"}
+                    {currentClassName ? formatClassName(currentClassName, lang) : (lang === "en" ? "No class selected" : "Chưa chọn lớp")}
                   </div>
                 </button>
                 <button
@@ -2133,7 +2148,7 @@ export default function SchoolAdminSchedulesPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-bold text-xs flex items-center gap-1.5">
-                      <span>🌐 Toàn trường</span>
+                      <span>{lang === "en" ? "🌐 All School" : "🌐 Toàn trường"}</span>
                     </div>
                     {exportConfig.scope === "all" ? (
                       <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
@@ -2145,7 +2160,7 @@ export default function SchoolAdminSchedulesPage() {
                   </div>
                   <div className={`text-[11px] mt-1 ${exportConfig.scope === "all" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
                     }`}>
-                    Mỗi lớp 1 sheet riêng biệt
+                    {lang === "en" ? "1 sheet per class" : "Mỗi lớp 1 sheet riêng biệt"}
                   </div>
                 </button>
               </div>
@@ -2154,7 +2169,7 @@ export default function SchoolAdminSchedulesPage() {
             {/* 2. Định dạng file */}
             <div>
               <label className="block text-xs font-semibold text-ink mb-1.5">
-                2. Định dạng bảng biểu
+                {lang === "en" ? "2. Table Format" : "2. Định dạng bảng biểu"}
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -2167,7 +2182,7 @@ export default function SchoolAdminSchedulesPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-bold text-xs flex items-center gap-1.5">
-                      <span>📊 Ma trận thời khóa biểu</span>
+                      <span>{lang === "en" ? "📊 Timetable Matrix" : "📊 Ma trận thời khóa biểu"}</span>
                     </div>
                     {exportConfig.format === "matrix" ? (
                       <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
@@ -2179,7 +2194,9 @@ export default function SchoolAdminSchedulesPage() {
                   </div>
                   <div className={`text-[11px] mt-1 leading-tight ${exportConfig.format === "matrix" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
                     }`}>
-                    Cột Thứ 2 → Thứ 6, hàng là các khung giờ (tự động tinh gọn: chỉ hiện tên phòng khi đổi chỗ ra sân/phòng chức năng)
+                    {lang === "en"
+                      ? "Columns Mon → Fri, rows are time slots (shows room only for special locations)"
+                      : "Cột Thứ 2 → Thứ 6, hàng là các khung giờ (tự động tinh gọn: chỉ hiện tên phòng khi đổi chỗ ra sân/phòng chức năng)"}
                   </div>
                 </button>
                 <button
@@ -2192,7 +2209,7 @@ export default function SchoolAdminSchedulesPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-bold text-xs flex items-center gap-1.5">
-                      <span>📋 Danh sách chi tiết</span>
+                      <span>{lang === "en" ? "📋 Detailed List" : "📋 Danh sách chi tiết"}</span>
                     </div>
                     {exportConfig.format === "list" ? (
                       <span className="w-4 h-4 rounded-full bg-[#16665a] text-white flex items-center justify-center text-[10px] font-bold">
@@ -2204,7 +2221,7 @@ export default function SchoolAdminSchedulesPage() {
                   </div>
                   <div className={`text-[11px] mt-1 leading-tight ${exportConfig.format === "list" ? "text-[#16665a]/80 font-medium" : "text-ink-soft"
                     }`}>
-                    Mỗi hoạt động 1 hàng, đầy đủ phòng học và ghi chú
+                    {lang === "en" ? "1 row per activity, including room and notes" : "Mỗi hoạt động 1 hàng, đầy đủ phòng học và ghi chú"}
                   </div>
                 </button>
               </div>
@@ -2213,7 +2230,7 @@ export default function SchoolAdminSchedulesPage() {
             {/* 3. Lọc theo thứ trong tuần */}
             <div>
               <label className="block text-xs font-semibold text-ink mb-1.5">
-                3. Lọc theo thứ trong tuần
+                {lang === "en" ? "3. Filter by Day of Week" : "3. Lọc theo thứ trong tuần"}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <button
@@ -2224,11 +2241,12 @@ export default function SchoolAdminSchedulesPage() {
                     : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
                     }`}
                 >
-                  📅 Cả tuần (T2 - T6)
+                  {lang === "en" ? "📅 Full Week (Mon - Fri)" : "📅 Cả tuần (T2 - T6)"}
                 </button>
                 {[2, 3, 4, 5, 6].map((d) => {
                   const isCurrentViewingDay = d === selectedDay + 2;
                   const isSelected = exportConfig.dayFilter === d;
+                  const dayLbl = DAY_LABELS[d - 2] || (lang === "en" ? `Day ${d}` : `Thứ ${d}`);
                   return (
                     <button
                       key={d}
@@ -2238,14 +2256,14 @@ export default function SchoolAdminSchedulesPage() {
                         ? "border-2 border-[#16665a] bg-[#16665a] text-white font-bold ring-2 ring-[#16665a]/25 shadow-sm"
                         : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
                         }`}
-                      title={isCurrentViewingDay ? `Thứ ${d} (Đang mở trên màn hình)` : `Thứ ${d}`}
+                      title={isCurrentViewingDay ? (lang === "en" ? `${dayLbl} (Currently open)` : `${dayLbl} (Đang mở trên màn hình)`) : dayLbl}
                     >
                       <div className="flex items-center justify-center gap-1.5">
-                        <span>Thứ {d}</span>
+                        <span>{dayLbl}</span>
                         {isCurrentViewingDay && (
                           <span
                             className="text-xs shrink-0"
-                            title="Ngày đang mở trên màn hình lịch"
+                            title={lang === "en" ? "Currently viewing this day" : "Ngày đang mở trên màn hình lịch"}
                           >
                             📍
                           </span>
@@ -2257,7 +2275,9 @@ export default function SchoolAdminSchedulesPage() {
               </div>
               <div className="mt-1.5 px-0.5 flex items-center justify-between text-[11px] text-ink-soft">
                 <span>
-                  📍 <strong>{DAY_LABELS[selectedDay]}</strong> là ngày bạn đang mở trên bảng lịch.
+                  {lang === "en"
+                    ? <>📍 <strong>{DAY_LABELS[selectedDay]}</strong> is currently open on screen.</>
+                    : <>📍 <strong>{DAY_LABELS[selectedDay]}</strong> là ngày bạn đang mở trên bảng lịch.</>}
                 </span>
                 {exportConfig.dayFilter !== selectedDay + 2 && (
                   <button
@@ -2265,7 +2285,7 @@ export default function SchoolAdminSchedulesPage() {
                     onClick={() => setExportConfig((c) => ({ ...c, dayFilter: selectedDay + 2 }))}
                     className="text-[#16665a] hover:underline font-semibold cursor-pointer"
                   >
-                    Chọn {DAY_LABELS[selectedDay]} →
+                    {lang === "en" ? `Select ${DAY_LABELS[selectedDay]} →` : `Chọn ${DAY_LABELS[selectedDay]} →`}
                   </button>
                 )}
               </div>
@@ -2274,7 +2294,7 @@ export default function SchoolAdminSchedulesPage() {
             {/* 4. Lọc theo khung giờ / buổi */}
             <div>
               <label className="block text-xs font-semibold text-ink mb-1.5">
-                4. Lọc theo khung giờ / Buổi học
+                {lang === "en" ? "4. Filter by Session" : "4. Lọc theo khung giờ / Buổi học"}
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -2285,7 +2305,7 @@ export default function SchoolAdminSchedulesPage() {
                     : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
                     }`}
                 >
-                  ☀️ Cả ngày (Tất cả)
+                  {lang === "en" ? "☀️ Full Day (All)" : "☀️ Cả ngày (Tất cả)"}
                 </button>
                 <button
                   type="button"
@@ -2295,7 +2315,7 @@ export default function SchoolAdminSchedulesPage() {
                     : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
                     }`}
                 >
-                  🌅 Buổi sáng (&lt; 12:00)
+                  {lang === "en" ? "🌅 Morning (< 12:00)" : "🌅 Buổi sáng (< 12:00)"}
                 </button>
                 <button
                   type="button"
@@ -2305,7 +2325,7 @@ export default function SchoolAdminSchedulesPage() {
                     : "border border-line bg-surface text-ink hover:bg-sunken/60 hover:border-lineStrong"
                     }`}
                 >
-                  🌇 Buổi chiều (≥ 12:00)
+                  {lang === "en" ? "🌇 Afternoon (≥ 12:00)" : "🌇 Buổi chiều (≥ 12:00)"}
                 </button>
               </div>
             </div>
@@ -2318,19 +2338,23 @@ export default function SchoolAdminSchedulesPage() {
         <Modal
           open={schoolConflictsModalOpen}
           onClose={() => setSchoolConflictsModalOpen(false)}
-          title={`🚨 Danh sách xung đột lịch toàn trường (${schoolConflictStats.totalConflicts} tiết tại ${schoolConflictStats.classGroups.length} lớp)`}
+          title={lang === "en"
+            ? `🚨 School-wide Schedule Conflicts (${schoolConflictStats.totalConflicts} slots in ${schoolConflictStats.classGroups.length} classes)`
+            : `🚨 Danh sách xung đột lịch toàn trường (${schoolConflictStats.totalConflicts} tiết tại ${schoolConflictStats.classGroups.length} lớp)`}
           size="lg"
           footer={
             <div className="flex items-center justify-between w-full">
               <span className="text-xs text-ink-soft">
-                💡 Bấm vào nút <strong>&quot;Điều chỉnh&quot;</strong> để hệ thống tự động chuyển sang lớp và ngày bị xung đột.
+                {lang === "en"
+                  ? <>💡 Click <strong>&quot;Adjust&quot;</strong> to automatically jump to the conflicting class and day.</>
+                  : <>💡 Bấm vào nút <strong>&quot;Điều chỉnh&quot;</strong> để hệ thống tự động chuyển sang lớp và ngày bị xung đột.</>}
               </span>
               <button
                 type="button"
                 onClick={() => setSchoolConflictsModalOpen(false)}
                 className="kbtn kbtn-secondary text-xs"
               >
-                Đóng
+                {lang === "en" ? "Close" : "Đóng"}
               </button>
             </div>
           }
@@ -2338,8 +2362,11 @@ export default function SchoolAdminSchedulesPage() {
           <div className="space-y-3.5">
             <div className="p-3 rounded-control bg-[#FDF2F0] border border-[#F2D5CE] text-xs text-[#8C3423] flex items-center justify-between flex-wrap gap-2">
               <div>
-                <strong>Tổng cộng:</strong> {schoolConflictStats.totalConflicts} tiết học đang bị xung đột
-                ({schoolConflictStats.roomConflicts} trùng phòng học, {schoolConflictStats.timeConflicts} trùng khung giờ) trên phạm vi toàn trường.
+                {lang === "en" ? (
+                  <><strong>Total:</strong> {schoolConflictStats.totalConflicts} conflicting slots ({schoolConflictStats.roomConflicts} room conflicts, {schoolConflictStats.timeConflicts} time overlaps) across the school.</>
+                ) : (
+                  <><strong>Tổng cộng:</strong> {schoolConflictStats.totalConflicts} tiết học đang bị xung đột ({schoolConflictStats.roomConflicts} trùng phòng học, {schoolConflictStats.timeConflicts} trùng khung giờ) trên phạm vi toàn trường.</>
+                )}
               </div>
             </div>
 
@@ -2357,7 +2384,7 @@ export default function SchoolAdminSchedulesPage() {
                     <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-line/60">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-ink">
-                          {group.className}
+                          {formatClassName(group.className, lang)}
                         </span>
                         {group.gradeLabel && (
                           <span className="text-xs text-ink-soft">
@@ -2365,12 +2392,12 @@ export default function SchoolAdminSchedulesPage() {
                           </span>
                         )}
                         {isCurrentClass && (
-                          <Pill tone="brand">Lớp đang xem</Pill>
+                          <Pill tone="brand">{lang === "en" ? "Current class" : "Lớp đang xem"}</Pill>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Pill tone="bad">
-                          {group.conflicts.length} xung đột
+                          {group.conflicts.length} {lang === "en" ? "conflicts" : "xung đột"}
                         </Pill>
                         {group.classId !== "unassigned" && (
                           <button
@@ -2378,9 +2405,9 @@ export default function SchoolAdminSchedulesPage() {
                             onClick={() => handleJumpToClassConflict(group.classId, group.conflicts[0]?.schedule)}
                             className="kbtn text-xs text-white font-bold px-2.5 py-1 flex items-center gap-1 shadow-sm cursor-pointer"
                             style={{ background: "#16665a" }}
-                            title={`Chuyển ngay sang ${group.className} để xử lý lịch`}
+                            title={lang === "en" ? `Jump to ${formatClassName(group.className, lang)} to resolve` : `Chuyển ngay sang ${group.className} để xử lý lịch`}
                           >
-                            <span>Điều chỉnh</span>
+                            <span>{lang === "en" ? "Adjust" : "Điều chỉnh"}</span>
                             <span>→</span>
                           </button>
                         )}
@@ -2404,11 +2431,11 @@ export default function SchoolAdminSchedulesPage() {
                                 {c.dayLabel} ({c.timeRange}):
                               </span>
                               <span className="font-bold text-brand-strong">
-                                {c.schedule.activity_name}
+                                {localizeActivityName(c.schedule.activity_name, lang)}
                               </span>
                               {c.schedule.room_name && (
                                 <span className="text-ink-soft text-[11px] px-1.5 py-0.5 rounded bg-sunken">
-                                  📍 {c.schedule.room_name}
+                                  📍 {localizeRoomName(c.schedule.room_name, lang)}
                                 </span>
                               )}
                             </div>
@@ -2417,7 +2444,7 @@ export default function SchoolAdminSchedulesPage() {
                             </div>
                           </div>
                           <span className="text-[11px] text-brand-strong font-semibold shrink-0 mt-0.5">
-                            Sửa ↗
+                            {lang === "en" ? "Edit ↗" : "Sửa ↗"}
                           </span>
                         </div>
                       ))}

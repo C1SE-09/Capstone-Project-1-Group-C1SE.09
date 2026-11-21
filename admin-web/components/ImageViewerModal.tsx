@@ -8,6 +8,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { formatFileSize, resolveAttachmentUrl } from "@/lib/format";
+import { useLanguage } from "@/lib/language-context";
 
 export interface AttachmentImageItem {
   attachment_id: string;
@@ -33,6 +34,7 @@ export default function ImageViewerModal({
   currentIndex,
   onSelectIndex,
 }: ImageViewerModalProps) {
+  const { lang } = useLanguage();
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -171,14 +173,14 @@ export default function ImageViewerModal({
             <button
               onClick={handleZoomOut}
               disabled={scale <= 0.5}
-              title="Thu nhỏ (-)"
+              title={lang === "en" ? "Zoom out (-)" : "Thu nhỏ (-)"}
               className="px-2.5 py-1 text-xs text-neutral-300 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-300 transition-colors"
             >
               －
             </button>
             <button
               onClick={handleResetZoom}
-              title="Đặt lại tỉ lệ (0)"
+              title={lang === "en" ? "Reset zoom (0)" : "Đặt lại tỉ lệ (0)"}
               className="px-2 py-1 text-xs font-mono text-teal-400 hover:text-teal-300 transition-colors"
             >
               {Math.round(scale * 100)}%
@@ -186,7 +188,7 @@ export default function ImageViewerModal({
             <button
               onClick={handleZoomIn}
               disabled={scale >= 3}
-              title="Phóng to (+)"
+              title={lang === "en" ? "Zoom in (+)" : "Phóng to (+)"}
               className="px-2.5 py-1 text-xs text-neutral-300 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-300 transition-colors"
             >
               ＋
@@ -196,7 +198,7 @@ export default function ImageViewerModal({
           {/* Rotate */}
           <button
             onClick={handleRotate}
-            title="Xoay ảnh 90°"
+            title={lang === "en" ? "Rotate 90°" : "Xoay ảnh 90°"}
             className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors flex items-center justify-center"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -207,7 +209,7 @@ export default function ImageViewerModal({
           {/* Download */}
           <button
             onClick={handleDownload}
-            title="Tải ảnh về máy"
+            title={lang === "en" ? "Download image" : "Tải ảnh về máy"}
             className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors flex items-center justify-center"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -218,7 +220,7 @@ export default function ImageViewerModal({
           {/* Close button */}
           <button
             onClick={onClose}
-            title="Đóng (Esc)"
+            title={lang === "en" ? "Close (Esc)" : "Đóng (Esc)"}
             className="p-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition-colors ml-1 flex items-center justify-center font-bold"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -245,7 +247,7 @@ export default function ImageViewerModal({
               e.stopPropagation();
               handlePrev();
             }}
-            title="Ảnh trước (Mũi tên trái ←)"
+            title={lang === "en" ? "Previous image (Left arrow ←)" : "Ảnh trước (Mũi tên trái ←)"}
             className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-neutral-900/80 hover:bg-neutral-800 text-white border border-neutral-700/60 flex items-center justify-center text-2xl shadow-xl transition-transform hover:scale-110 active:scale-95"
           >
             ‹
@@ -257,7 +259,7 @@ export default function ImageViewerModal({
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <div className="flex flex-col items-center gap-3 bg-neutral-900/80 px-5 py-4 rounded-xl border border-neutral-800 text-neutral-300">
               <div className="w-8 h-8 border-3 border-teal-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs font-medium">Đang tải hình ảnh...</span>
+              <span className="text-xs font-medium">{lang === "en" ? "Loading image..." : "Đang tải hình ảnh..."}</span>
             </div>
           </div>
         )}
@@ -267,10 +269,10 @@ export default function ImageViewerModal({
           <div className="flex flex-col items-center gap-3 bg-neutral-900/90 p-8 rounded-2xl border border-neutral-800 text-center max-w-md shadow-2xl">
             <div className="text-4xl">⚠️</div>
             <h5 className="text-base font-semibold text-neutral-200">
-              Không thể tải hình ảnh
+              {lang === "en" ? "Unable to load image" : "Không thể tải hình ảnh"}
             </h5>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Địa chỉ hình ảnh không phản hồi hoặc đã bị thay đổi:
+              {lang === "en" ? "Image URL did not respond or has changed:" : "Địa chỉ hình ảnh không phản hồi hoặc đã bị thay đổi:"}
               <br />
               <span className="font-mono text-neutral-500 break-all text-[11px] block mt-1">
                 {currentUrl}
@@ -284,13 +286,13 @@ export default function ImageViewerModal({
                 }}
                 className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium transition-colors"
               >
-                Thử lại
+                {lang === "en" ? "Retry" : "Thử lại"}
               </button>
               <button
                 onClick={onClose}
                 className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium transition-colors"
               >
-                Đóng
+                {lang === "en" ? "Close" : "Đóng"}
               </button>
             </div>
           </div>
@@ -325,7 +327,7 @@ export default function ImageViewerModal({
               e.stopPropagation();
               handleNext();
             }}
-            title="Ảnh kế tiếp (Mũi tên phải →)"
+            title={lang === "en" ? "Next image (Right arrow →)" : "Ảnh kế tiếp (Mũi tên phải →)"}
             className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-neutral-900/80 hover:bg-neutral-800 text-white border border-neutral-700/60 flex items-center justify-center text-2xl shadow-xl transition-transform hover:scale-110 active:scale-95"
           >
             ›
