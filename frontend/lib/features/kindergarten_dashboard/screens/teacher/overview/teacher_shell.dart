@@ -6,8 +6,7 @@ import 'package:adark_frontend/core/notifications/push_notification_service.dart
 import 'package:adark_frontend/data/repositories/http_attendance_repository.dart';
 import 'package:adark_frontend/data/repositories/http_dashboard_repository.dart';
 import 'package:adark_frontend/data/repositories/http_leave_request_repository.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/child_adapter.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/severity_adapter.dart';
+import 'package:adark_frontend/features/kindergarten_dashboard/adapters.dart';
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/domain/entities/class/class_dashboard_summary.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart'
@@ -21,7 +20,6 @@ import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/o
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/attendance_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/timetable/timetable_screens.dart';
 import 'package:adark_frontend/domain/entities/report/daily_report.dart';
-import 'package:adark_frontend/features/kindergarten_dashboard/adapters/report_status_adapter.dart';
 
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/auth/no_assignment_screen.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/screens/teacher/attendance/leave_request_review_screen.dart';
