@@ -32,7 +32,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from app.core.database import get_db
+from app.core.security import get_current_user
 from app.main import app
+from app.models.user import User, UserRole
 from app.models.report import (
     VoiceRecordingSession,
     VoiceRecordingSessionStatus,
@@ -134,7 +136,15 @@ def mock_db():
 @pytest.fixture()
 def client(mock_db):
     """TestClient với DB override + patch các lời gọi ngoài (MinIO/Celery)."""
+    teacher_user = User(
+        user_id=uuid.uuid4(),
+        username="teacher",
+        password_hash="x",
+        role=UserRole.TEACHER,
+        teacher_id=TEACHER_ID,
+    )
     app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: teacher_user
 
     with (
         patch(
