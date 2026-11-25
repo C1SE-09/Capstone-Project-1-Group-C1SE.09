@@ -196,13 +196,19 @@ class PushNotificationService {
     }
 
     final childId = text('child_id');
-    if (type == 'report_sent' || type == 'report_updated') {
+    if (type == 'report_sent' ||
+        type == 'report_updated' ||
+        type == 'report_response_reply') {
       final reportId = text('report_id');
       if (reportId == null || childId == null) return null;
       return Uri(path: '/parent', queryParameters: {
         'reportId': reportId,
         'childId': childId,
       });
+    }
+
+    if (type == 'report_response') {
+      return Uri(path: '/teacher');
     }
 
     if (type == 'leave_request_reviewed') {
