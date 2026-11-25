@@ -11,6 +11,7 @@ from app.core.security import (
     oauth2_scheme,
     oauth2_scheme_optional,
     refresh_session,
+    require_role,
     revoke_other_sessions,
     revoke_session,
     verify_password,
@@ -222,12 +223,11 @@ def forgot_password(data: forgot_password_request, db: Session = Depends(get_db)
 
     if user is None:
         logger.warning(
-            f"[AUTH] Quên mật khẩu: Không tìm thấy tài khoản tương ứng với '{input_val}' trong hệ thống!"
+            "[AUTH] Quên mật khẩu: Không tìm thấy tài khoản tương ứng trong hệ thống."
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Email hoặc tên đăng nhập không tồn tại trong hệ thống.",
-        )
+        return {
+            "message": "Nếu tài khoản tồn tại trong hệ thống, mã xác thực đã được gửi tới email đã đăng ký."
+        }
 
     reset_code = generate_reset_code()
     save_reset_code(email=input_val, reset_code=reset_code)
@@ -304,7 +304,10 @@ def reset_password(data: reset_password_request, db: Session = Depends(get_db)):
     delete_reset_code(input_val)
     return {"message": "Mật khẩu đã được đặt lại thành công."}
 @router.post("/test-email")
-def test_email(to_email: str):
+def test_email(
+    to_email: str,
+    _current_admin: User = Depends(require_role("admin")),
+):
     try:
         send_test_email(
             to_email=to_email,

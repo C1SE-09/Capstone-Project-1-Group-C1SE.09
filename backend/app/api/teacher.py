@@ -49,7 +49,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import require_role
+from app.core.security import require_role, require_roles
 from app.core.storage import upload_audio_to_minio
 from app.models.child import Child
 from app.models.report import (
@@ -122,7 +122,11 @@ from app.config import get_today
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/teacher", tags=["teacher"])
+router = APIRouter(
+    prefix="/api/teacher",
+    tags=["teacher"],
+    dependencies=[Depends(require_roles("teacher", "admin"))],
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1302,8 +1306,15 @@ def publish_report(
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
     is_update: bool = False,
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ):
     """Chuyển trạng thái báo cáo từ DRAFT → PUBLISHED và ghi nhận published_at."""
+    if current_user.teacher_id and current_user.teacher_id != teacher_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Bạn không có quyền gửi báo cáo thay giáo viên khác.",
+        )
+
     report = (
         db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
     )
@@ -1311,10 +1322,15 @@ def publish_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    if report.teacher_id != teacher_id:
-        teacher_obj = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
-        if teacher_obj:
-            report.teacher_id = teacher_id
+    if (
+        current_user.teacher_id
+        and report.teacher_id
+        and report.teacher_id != current_user.teacher_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Bạn không có quyền gửi báo cáo của giáo viên khác.",
+        )
 
     is_update = bool(report.status == DailyReportStatus.PUBLISHED or report.published_at is not None)
 
@@ -1711,7 +1727,11 @@ def send_batch_reports(
 
 
 SENT_STATUS = DailyReportStatus.SENT
-reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
+reports_router = APIRouter(
+    prefix="/api/reports",
+    tags=["reports"],
+    dependencies=[Depends(require_roles("teacher", "admin"))],
+)
 
 
 class ReportAlreadySentError(HTTPException):

@@ -397,7 +397,7 @@ void main() {
         expect(service.currentSession?.sessionId, 'new-session');
         expect(service.currentSession?.accessToken, 'new-access');
         final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getString('app_session_access_token'), 'new-access');
+        expect(prefs.getString('app_session_access_token'), isNull);
       });
     }
 

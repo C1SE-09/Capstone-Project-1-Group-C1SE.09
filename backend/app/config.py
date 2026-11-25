@@ -14,8 +14,17 @@ class Settings(BaseSettings):
     )
     redis_url: str = "redis://localhost:6379/0"
 
-    # Security
+    # Environment & Security
+    environment: str = "development"
+    debug: bool = False
     jwt_secret_key: str = "change-me"
+    cors_origins: str = (
+        "https://admin-web-kinderlog.vercel.app,"
+        "http://localhost:3000,"
+        "http://localhost:3001,"
+        "http://127.0.0.1:3000,"
+        "http://127.0.0.1:3001"
+    )
 
     # AI (optional until sprint 2)
     gemini_api_key: str = ""

@@ -246,7 +246,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-xs text-[#087F70] font-semibold flex items-center gap-1.5 mt-0.5">
                     <span className="w-2 h-2 rounded-full bg-[#087F70] animate-pulse" />
-                    {lang === "en" ? "Active · VPS 160.191.87.202" : "Đang hoạt động · VPS 160.191.87.202"}
+                    {lang === "en" ? "Active · Production Server" : "Đang hoạt động · Máy chủ Production"}
                   </div>
                 </div>
               </div>

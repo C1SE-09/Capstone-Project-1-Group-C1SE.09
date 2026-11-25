@@ -43,9 +43,10 @@ jobs:
 
       - name: Compute Build Version
         id: versioning
+        env:
+          INPUT_VER: ${{ inputs.version_name }}
+          RUN_NUM: ${{ github.run_number }}
         run: |
-          RUN_NUM="${{ github.run_number }}"
-          INPUT_VER="${{ inputs.version_name }}"
           if [ -n "$INPUT_VER" ]; then
             VERSION_NAME="$INPUT_VER"
           else

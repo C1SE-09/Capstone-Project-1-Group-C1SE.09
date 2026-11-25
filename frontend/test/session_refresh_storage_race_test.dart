@@ -14,7 +14,10 @@ void main() {
   test('refresh bị xóa phiên trong lúc ghi storage không khôi phục lại token',
       () async {
     const channel = MethodChannel('plugins.flutter.io/shared_preferences');
+    const secureChannel =
+        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
     final values = <String, Object>{};
+    final secureValues = <String, String>{};
     final writeStarted = Completer<void>();
     final releaseWrite = Completer<bool>();
     var holdWrite = false;
@@ -28,12 +31,27 @@ void main() {
         values.remove(key);
       } else if (call.method.startsWith('set')) {
         values[key] = arguments['value'] as Object;
-        if (holdWrite && key == 'flutter.app_session_access_token') {
-          writeStarted.complete();
-          return releaseWrite.future;
-        }
       }
       return true;
+    });
+    messenger.setMockMethodCallHandler(secureChannel, (call) async {
+      final arguments = (call.arguments as Map?) ?? const {};
+      final key = arguments['key'] as String?;
+      if (call.method == 'read' && key != null) {
+        return secureValues[key];
+      }
+      if (call.method == 'write' && key != null) {
+        if (holdWrite && key == 'app_session_access_token') {
+          if (!writeStarted.isCompleted) writeStarted.complete();
+          await releaseWrite.future;
+          return null;
+        }
+        secureValues[key] = arguments['value'] as String? ?? '';
+      }
+      if (call.method == 'delete' && key != null) {
+        secureValues.remove(key);
+      }
+      return null;
     });
     // Chỉ mở HTTP loopback của test; binding mặc định trả 400 cho mọi HTTP.
     final previousOverrides = HttpOverrides.current;
@@ -46,6 +64,7 @@ void main() {
       await server.close(force: true);
       HttpOverrides.global = previousOverrides;
       messenger.setMockMethodCallHandler(channel, null);
+      messenger.setMockMethodCallHandler(secureChannel, null);
     });
     server.listen((request) async {
       await request.drain<void>();

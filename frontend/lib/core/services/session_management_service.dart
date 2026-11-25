@@ -1,5 +1,6 @@
 import 'package:adark_frontend/core/services/crash_logging_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Ngoại lệ chứa thông điệp thân thiện với người dùng (User-friendly message).
@@ -107,6 +108,8 @@ class SessionManagementService {
 
   SessionManagementService._internal();
 
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
   AppSession? _currentSession;
   Future<String>? _refreshFuture;
   String? _refreshSessionId;
@@ -144,17 +147,55 @@ class SessionManagementService {
   Future<AppSession?> loadPersistedSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final refreshToken = prefs.getString(_keyRefreshToken);
+      if (!_canRestoreSession(prefs)) {
+        await clearSession();
+        return null;
+      }
 
-      if (refreshToken == null || refreshToken.isEmpty || !_canRestoreSession(prefs)) {
+      String? refreshToken;
+      String? accessToken;
+      String? sessionId;
+      try {
+        refreshToken = await _secureStorage.read(key: _keyRefreshToken);
+        accessToken = await _secureStorage.read(key: _keyAccessToken);
+        sessionId = await _secureStorage.read(key: _keySessionId);
+      } catch (_) {
+        // Fallback an toàn nếu môi trường test không có platform channel
+      }
+
+      // Di chuyển dữ liệu cũ từ SharedPreferences sang SecureStorage (nếu có)
+      if (refreshToken == null || refreshToken.isEmpty) {
+        final legacyRefresh = prefs.getString(_keyRefreshToken);
+        final legacyAccess = prefs.getString(_keyAccessToken);
+        final legacySessionId = prefs.getString(_keySessionId);
+        if (legacyRefresh != null && legacyRefresh.isNotEmpty) {
+          refreshToken = legacyRefresh;
+          accessToken = legacyAccess ?? '';
+          sessionId = legacySessionId ?? '';
+          try {
+            await Future.wait([
+              _secureStorage.write(key: _keyAccessToken, value: accessToken),
+              _secureStorage.write(key: _keyRefreshToken, value: refreshToken),
+              _secureStorage.write(key: _keySessionId, value: sessionId),
+            ]);
+          } catch (_) {}
+          await Future.wait([
+            prefs.remove(_keyAccessToken),
+            prefs.remove(_keyRefreshToken),
+            prefs.remove(_keySessionId),
+          ]);
+        }
+      }
+
+      if (refreshToken == null || refreshToken.isEmpty) {
         await clearSession();
         return null;
       }
 
       _currentSession = AppSession(
-        accessToken: prefs.getString(_keyAccessToken) ?? '',
+        accessToken: accessToken ?? '',
         refreshToken: refreshToken,
-        sessionId: prefs.getString(_keySessionId) ?? '',
+        sessionId: sessionId ?? '',
         role: prefs.getString(_keyRole) ?? 'teacher',
         userId: prefs.getString(_keyUserId),
         teacherId: prefs.getString(_keyTeacherId),
@@ -177,11 +218,21 @@ class SessionManagementService {
   Future<void> saveSession(AppSession session) async {
     _currentSession = session;
     try {
+      try {
+        await Future.wait([
+          _secureStorage.write(
+              key: _keyAccessToken, value: session.accessToken),
+          _secureStorage.write(
+              key: _keyRefreshToken, value: session.refreshToken),
+          _secureStorage.write(key: _keySessionId, value: session.sessionId),
+        ]);
+      } catch (_) {}
+
       final prefs = await SharedPreferences.getInstance();
       await Future.wait([
-        prefs.setString(_keyAccessToken, session.accessToken),
-        prefs.setString(_keyRefreshToken, session.refreshToken),
-        prefs.setString(_keySessionId, session.sessionId),
+        prefs.remove(_keyAccessToken),
+        prefs.remove(_keyRefreshToken),
+        prefs.remove(_keySessionId),
         prefs.setString(_keyRole, session.role),
         prefs.setInt(_keyExpiresAt,
             DateTime.now().add(sessionTimeout).millisecondsSinceEpoch),
@@ -239,19 +290,25 @@ class SessionManagementService {
     );
 
     try {
-      final prefs = await SharedPreferences.getInstance();
       if (_currentSession?.sessionId != session.sessionId) return;
       await Future.wait([
-        prefs.setString(_keyAccessToken, newAccessToken),
-        prefs.setString(_keyRefreshToken, newRefreshToken),
+        _secureStorage.write(key: _keyAccessToken, value: newAccessToken),
+        _secureStorage.write(key: _keyRefreshToken, value: newRefreshToken),
       ]);
-    } on Exception catch (_) {}
+    } catch (_) {}
   }
 
   /// Xóa phiên, giữ định danh thiết bị và thông tin nhớ đăng nhập độc lập.
   Future<void> clearSession() async {
     _currentSession = null;
     try {
+      try {
+        await Future.wait([
+          _secureStorage.delete(key: _keyAccessToken),
+          _secureStorage.delete(key: _keyRefreshToken),
+          _secureStorage.delete(key: _keySessionId),
+        ]);
+      } catch (_) {}
       final prefs = await SharedPreferences.getInstance();
       await Future.wait([
         prefs.remove(_keyAccessToken),

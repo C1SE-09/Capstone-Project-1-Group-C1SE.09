@@ -18,7 +18,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_roles
 from app.models.attendance import AttendanceStatus, AttendanceRecord
 from app.models.child import Child, ChildStatus
 from app.models.user import Teacher, User, UserRole
@@ -183,6 +183,23 @@ def save_class_attendance_batch(
             saved_count=0,
         )
 
+    requested_child_ids = {r.child_id for r in payload.records}
+    valid_child_ids = set(
+        db.execute(
+            select(Child.child_id).where(
+                Child.class_id == payload.class_id,
+                Child.child_id.in_(requested_child_ids),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if valid_child_ids != requested_child_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Có học sinh không thuộc lớp học này.",
+        )
+
     teacher_id = current_user.teacher_id
 
     # Chuẩn bị dữ liệu cho câu lệnh insert/update
@@ -275,7 +292,7 @@ def notify_absent_parents(
 @router.post("/trigger-reminder")
 def trigger_attendance_reminder(
     target_date: date = Query(default_factory=date.today, description="Ngày cần nhắc nhở"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ):
     """
     Kích hoạt thủ công luồng quét nhắc nhở điểm danh 07:40.

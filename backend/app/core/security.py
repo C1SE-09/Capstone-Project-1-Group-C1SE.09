@@ -306,12 +306,34 @@ def get_optional_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
+        session_id = payload.get("session_id")
         if user_id is None:
+            return None
+        if session_id and not validate_session(session_id):
             return None
         user_uuid = uuid.UUID(str(user_id))
     except (JWTError, ValueError):
         return None
     return db.query(User).filter(User.user_id == user_uuid).first()
+
+
+def require_roles(*allowed_roles: str) -> Callable:
+    """Kiểm tra user hiện tại có thuộc một trong các role được phép hay không."""
+
+    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        user_role = (
+            current_user.role.value
+            if hasattr(current_user.role, "value")
+            else str(current_user.role)
+        )
+        if user_role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không có quyền truy cập",
+            )
+        return current_user
+
+    return role_checker
 
 
 def require_role(required_role: str) -> Callable:

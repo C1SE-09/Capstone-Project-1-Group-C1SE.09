@@ -22,9 +22,14 @@ import logging
 from app.api.endpoints.auth import find_user_by_identifier
 from app.core.database import get_db
 from app.core.security import (
+    ALGORITHM,
+    SECRET_KEY,
     create_session,
+    oauth2_scheme_optional,
+    revoke_session,
     verify_password,
 )
+from jose import JWTError, jwt
 from app.models.user import School, User, UserRole
 from app.schemas.school_admin_auth import (
     SchoolAdminLoginRequest,
@@ -124,11 +129,18 @@ def school_admin_login(
     summary="Đăng xuất School Admin",
 )
 def school_admin_logout(
-    token: str | None = None,
-    db: Session = Depends(get_db),
+    token: str | None = Depends(oauth2_scheme_optional),
 ):
-    """Logout đơn giản - frontend xóa token là đủ. Endpoint tồn tại cho tài liệu API."""
-    return {"message": "Đã đăng xuất. Hãy xóa token ở phía client."}
+    """Thu hồi session trong Redis khi đăng xuất."""
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            session_id = payload.get("session_id")
+            if session_id:
+                revoke_session(session_id)
+        except JWTError:
+            pass
+    return {"message": "Đã đăng xuất thành công."}
 
 
 @router.get(

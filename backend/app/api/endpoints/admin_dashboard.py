@@ -4,7 +4,7 @@ import logging
 from datetime import date
 
 from app.core.database import get_db
-from app.core.security import get_optional_current_user
+from app.core.security import get_current_user
 from app.models.user import User, UserRole
 from app.schemas.admin_dashboard import (
     AdminOverviewStats,
@@ -23,20 +23,19 @@ router = APIRouter(prefix="/admin/dashboard", tags=["Admin Dashboard"])
 
 
 def check_admin_access(
-    current_user: User | None = Depends(get_optional_current_user),
-) -> User | None:
-    """Kiểm tra quyền hạn quản trị viên khi có token."""
-    if current_user:
-        role_val = (
-            current_user.role.value
-            if hasattr(current_user.role, "value")
-            else str(current_user.role)
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Kiểm tra quyền hạn quản trị viên (bắt buộc đăng nhập với role admin)."""
+    role_val = (
+        current_user.role.value
+        if hasattr(current_user.role, "value")
+        else str(current_user.role)
+    )
+    if role_val != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ tài khoản quản trị viên mới có quyền xem thông tin này",
         )
-        if role_val != UserRole.ADMIN.value:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Chỉ tài khoản quản trị viên mới có quyền xem thông tin này",
-            )
     return current_user
 
 

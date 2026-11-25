@@ -137,8 +137,11 @@ export function sanitizeUrl(url: string | null | undefined): string {
 export function resolveAttachmentUrl(url: string | null | undefined): string {
   if (!url) return "";
   const trimmed = url.trim();
-  if (!trimmed || /^\s*javascript:/i.test(trimmed)) return "";
-  return trimmed;
+  if (!trimmed) return "";
+  if (/^(https?:\/\/|\/)/i.test(trimmed)) {
+    return trimmed;
+  }
+  return "";
 }
 
 /**
