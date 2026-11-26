@@ -33,7 +33,7 @@ class ReviewScreen extends StatefulWidget {
     required this.onBack,
     required this.onCompleted,
     this.mode = RecordMode.classroom,
-    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.classId = '',
     this.child,
     this.className = 'Mầm 1',
     this.repository,

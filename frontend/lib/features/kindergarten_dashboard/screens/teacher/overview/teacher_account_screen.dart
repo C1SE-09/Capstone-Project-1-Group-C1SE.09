@@ -27,7 +27,7 @@ class TeacherAccountScreen extends StatefulWidget {
     this.onOpenNotifications,
     this.notificationCount,
     this.schoolName = 'Mầm non Hoa Hướng Dương',
-    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.classId = '',
     this.repository,
     this.classRepository,
   });

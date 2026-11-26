@@ -159,9 +159,7 @@ class _TeacherShellState extends State<TeacherShell> {
 
   Future<void> _resolveClassId() async {
     // Nếu có classId được truyền vào và không phải ID rỗng
-    if (_activeClassId != null &&
-        _activeClassId!.isNotEmpty &&
-        _activeClassId != 'aaaaaaaa-0000-0000-0000-000000000001') {
+    if (_activeClassId != null && _activeClassId!.isNotEmpty) {
       _hasNoClass = false;
       return;
     }
