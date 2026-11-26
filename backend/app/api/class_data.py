@@ -22,6 +22,7 @@ router = APIRouter(prefix="/api/class", tags=["class"])
 def get_class(
     class_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin", "parent")),
 ):
     class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 
@@ -95,6 +96,7 @@ def get_children(
 def get_teacher(
     class_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin", "parent")),
 ):
     class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
 

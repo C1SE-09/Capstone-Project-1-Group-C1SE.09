@@ -49,7 +49,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import require_role
+from app.core.security import require_role, require_roles
 from app.core.storage import upload_audio_to_minio
 from app.models.child import Child
 from app.models.report import (
@@ -122,7 +122,11 @@ from app.config import get_today
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/teacher", tags=["teacher"])
+router = APIRouter(
+    prefix="/api/teacher",
+    tags=["teacher"],
+    dependencies=[Depends(require_roles("teacher", "admin"))],
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -225,6 +229,35 @@ def _build_report_detail_response(
 # ---------------------------------------------------------------------------
 
 
+def _resolve_authorized_teacher_id(
+    current_user: User,
+    requested_teacher_id: uuid.UUID,
+) -> uuid.UUID:
+    """Xác thực quyền thao tác theo teacher_id để chống IDOR.
+
+    - Giáo viên chỉ được thao tác trên đúng `current_user.teacher_id`.
+    - Admin có thể thao tác theo `requested_teacher_id` được chỉ định.
+    """
+    user_role = (
+        current_user.role.value
+        if hasattr(current_user.role, "value")
+        else str(current_user.role)
+    )
+    if user_role == "admin":
+        return requested_teacher_id
+    if current_user.teacher_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản chưa liên kết hồ sơ giáo viên.",
+        )
+    if requested_teacher_id != current_user.teacher_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thao tác dữ liệu của giáo viên khác.",
+        )
+    return current_user.teacher_id
+
+
 @router.post(
     "/voice/upload",
     status_code=status.HTTP_201_CREATED,
@@ -249,7 +282,10 @@ def upload_voice_record(
         ),
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> VoiceRecordUploadResponse:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
+
     # ------------------------------------------------------------------
     # 1. Validate file extension
     # ------------------------------------------------------------------
@@ -263,19 +299,26 @@ def upload_voice_record(
         )
 
     # ------------------------------------------------------------------
-    # 2. Read bytes & validate size
+    # 2. Read bytes theo chunk & validate size (chống OOM DoS)
     # ------------------------------------------------------------------
-    file_bytes = file.file.read()
-    file_size = len(file_bytes)
-
-    if file_size > MAX_FILE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=(
-                f"File quá lớn: {file_size / 1024 / 1024:.1f} MB. "
-                f"Giới hạn tối đa là 25 MB."
-            ),
-        )
+    chunks: list[bytes] = []
+    file_size = 0
+    chunk_size = 1024 * 1024  # 1 MB
+    while True:
+        chunk = file.file.read(chunk_size)
+        if not chunk:
+            break
+        file_size += len(chunk)
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=(
+                    f"File quá lớn (vượt quá {MAX_FILE_SIZE_BYTES / 1024 / 1024:.0f} MB). "
+                    "Giới hạn tối đa là 25 MB."
+                ),
+            )
+        chunks.append(chunk)
+    file_bytes = b"".join(chunks)
 
     # ------------------------------------------------------------------
     # 3–5. Temp file → ffprobe → MinIO upload
@@ -431,7 +474,9 @@ def list_voice_sessions(
         description="Lọc theo trạng thái (active | merged | discarded)",
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> list[VoiceSessionResponse]:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     # ------------------------------------------------------------------
     # Fallback: đẩy lại các clip đang bị kẹt (PENDING quá lâu).
     # ------------------------------------------------------------------
@@ -466,7 +511,9 @@ def get_voice_record(
         ..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> VoiceRecordDetailResponse:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
     )
@@ -567,6 +614,7 @@ def _serialize_session(
 def create_voice_session(
     payload: CreateVoiceSessionRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> VoiceSessionResponse:
     """
     Tạo (hoặc mở lại) phiên ghi âm.
@@ -579,7 +627,8 @@ def create_voice_session(
     ``force_new = True`` → luôn tạo phiên mới (dùng khi cố ý bắt đầu phiên
     khác trong cùng 1 ngày).
     """
-    teacher_id = resolve_teacher_id(db, payload.teacher_id)
+    authorized_teacher_id = _resolve_authorized_teacher_id(current_user, payload.teacher_id)
+    teacher_id = resolve_teacher_id(db, authorized_teacher_id)
     child_id = resolve_child_id(db, payload.child_id)
 
     scope = (
@@ -629,7 +678,9 @@ def get_voice_session(
     session_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> VoiceSessionResponse:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     session = (
         db.query(VoiceRecordingSession)
         .filter(VoiceRecordingSession.session_id == session_id)
@@ -662,7 +713,9 @@ def merge_voice_session(
     session_id: uuid.UUID,
     payload: MergeVoiceSessionRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> MergeVoiceSessionResponse:
+    authorized_teacher_id = _resolve_authorized_teacher_id(current_user, payload.teacher_id)
     session = (
         db.query(VoiceRecordingSession)
         .filter(VoiceRecordingSession.session_id == session_id)
@@ -671,7 +724,7 @@ def merge_voice_session(
     if session is None:
         raise HTTPException(status_code=404, detail="Recording session not found")
 
-    if session.teacher_id is not None and session.teacher_id != payload.teacher_id:
+    if session.teacher_id is not None and session.teacher_id != authorized_teacher_id:
         raise HTTPException(
             status_code=403,
             detail="Not authorized to merge this recording session",
@@ -742,7 +795,9 @@ def delete_voice_session(
     session_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> dict:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     try:
         discarded = discard_session(db, session_id, teacher_id)
     except PermissionError as exc:
@@ -772,7 +827,9 @@ def delete_voice_clip(
     voice_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> DeleteVoiceClipResponse:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     clip = db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
     if clip is None:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
@@ -818,7 +875,9 @@ def update_voice_transcript(
         ..., description="UUID của giáo viên — dùng để xác thực quyền sở hữu"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> VoiceRecordDetailResponse:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
     )
@@ -859,12 +918,14 @@ def get_voice_extraction(
     voice_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ):
     """
     Lấy kết quả extraction (đã chạy trong Celery task).
     Extraction được thực hiện tự động khi transcription xong,
     không cần gọi extraction API riêng.
     """
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
     )
@@ -903,12 +964,14 @@ def re_extract_from_edited_transcript(
     payload: TranscriptUpdateRequest,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ):
     """Chạy NLP trên transcript đã được giáo viên kiểm tra/chỉnh sửa.
 
     Endpoint này là bước phân tích có chủ ý sau bước PhoWhisper — không được
     gọi tự động khi audio mới hoàn tất phiên âm.
     """
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     voice_record = (
         db.query(VoiceRecord).filter(VoiceRecord.voice_record_id == voice_id).first()
     )
@@ -1056,9 +1119,10 @@ def re_extract_from_edited_transcript(
 def create_report_from_extraction(
     payload: DraftReportCreateRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ):
     voice_id = payload.voice_id
-    teacher_id = payload.teacher_id
+    teacher_id = _resolve_authorized_teacher_id(current_user, payload.teacher_id)
 
     # 1. Lấy VoiceRecord
     voice_record = (
@@ -1068,8 +1132,11 @@ def create_report_from_extraction(
     if not voice_record:
         raise HTTPException(status_code=404, detail="VoiceRecord not found")
 
-    if voice_record.teacher_id != teacher_id:
-        voice_record.teacher_id = teacher_id
+    if voice_record.teacher_id is not None and voice_record.teacher_id != teacher_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền tạo báo cáo từ bản ghi âm của giáo viên khác.",
+        )
 
     if payload.child_id:
         voice_record.child_id = payload.child_id
@@ -1159,7 +1226,10 @@ def create_report_from_extraction(
 def create_manual_report(
     payload: ManualReportCreateRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> DailyReportDetailResponse:
+    authorized_teacher_id = _resolve_authorized_teacher_id(current_user, payload.teacher_id)
+    payload.teacher_id = authorized_teacher_id
     # 1. Kiểm tra giáo viên & học sinh có tồn tại không
     teacher = db.query(Teacher).filter(Teacher.teacher_id == payload.teacher_id).first()
     if not teacher:
@@ -1260,8 +1330,10 @@ def get_report_detail(
     report_id: uuid.UUID,
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ):
     """Trả về toàn bộ thông tin DailyReport kèm danh sách ActivityEntry."""
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     report = (
         db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
     )
@@ -1302,8 +1374,15 @@ def publish_report(
     teacher_id: uuid.UUID = Query(..., description="UUID của giáo viên"),
     db: Session = Depends(get_db),
     is_update: bool = False,
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ):
     """Chuyển trạng thái báo cáo từ DRAFT → PUBLISHED và ghi nhận published_at."""
+    if current_user.teacher_id and current_user.teacher_id != teacher_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Bạn không có quyền gửi báo cáo thay giáo viên khác.",
+        )
+
     report = (
         db.query(DailyReport).filter(DailyReport.daily_report_id == report_id).first()
     )
@@ -1311,10 +1390,15 @@ def publish_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    if report.teacher_id != teacher_id:
-        teacher_obj = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
-        if teacher_obj:
-            report.teacher_id = teacher_id
+    if (
+        current_user.teacher_id
+        and report.teacher_id
+        and report.teacher_id != current_user.teacher_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Bạn không có quyền gửi báo cáo của giáo viên khác.",
+        )
 
     is_update = bool(report.status == DailyReportStatus.PUBLISHED or report.published_at is not None)
 
@@ -1711,7 +1795,11 @@ def send_batch_reports(
 
 
 SENT_STATUS = DailyReportStatus.SENT
-reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
+reports_router = APIRouter(
+    prefix="/api/reports",
+    tags=["reports"],
+    dependencies=[Depends(require_roles("teacher", "admin"))],
+)
 
 
 class ReportAlreadySentError(HTTPException):
@@ -1751,15 +1839,17 @@ def _send_one_report(
         db.rollback()
         raise HTTPException(status_code=404, detail="Report not found")
 
-    # 2. Chủ sở hữu hoặc giáo viên cùng lớp / cùng trường
+    # 2. Kiểm tra quyền sở hữu báo cáo
     if not teacher_id:
         teacher_id = report.teacher_id
 
     if report.teacher_id and teacher_id and report.teacher_id != teacher_id:
-        teacher_obj = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
-        if teacher_obj or not report.teacher_id:
-            report.teacher_id = teacher_id
-    elif not report.teacher_id and teacher_id:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền gửi báo cáo của giáo viên khác.",
+        )
+    if not report.teacher_id and teacher_id:
         report.teacher_id = teacher_id
 
     # 3. Đã gửi rồi -> Nếu không cho phép gửi lại thì raise lỗi
@@ -1858,9 +1948,11 @@ def _send_one_report(
 )
 def send_report(
     report_id: uuid.UUID,
-    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
+    teacher_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> SendReportResponse:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     return _send_one_report(report_id, teacher_id, db)
 
 
@@ -1875,9 +1967,11 @@ def send_report(
 )
 def send_all_reports(
     payload: SendAllRequest,
-    teacher_id: uuid.UUID,  # TODO: thay = get_current_user khi auth sẵn sàng
+    teacher_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("teacher", "admin")),
 ) -> SendAllResponse:
+    teacher_id = _resolve_authorized_teacher_id(current_user, teacher_id)
     # 1. Xac dinh danh sach bao cao can gui.
     if payload.report_ids:
         target_ids = list(dict.fromkeys(payload.report_ids))  # bo trung, giu thu tu

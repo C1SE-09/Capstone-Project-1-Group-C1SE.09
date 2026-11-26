@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:16-alpine
     container_name: kinderlog_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -21,6 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: kinderlog_redis
+    restart: unless-stopped
     # --appendonly yes + volume: phiên đăng nhập (session:*) sống qua `docker compose
     # down`, không thì mọi máy bị đăng xuất sau mỗi lần restart stack.
     # --requirepass: bắt buộc vì Redis được mở ra Internet cho worker RunPod.
@@ -42,13 +44,14 @@ services:
   minio:
     image: alpine/minio:latest-release
     container_name: kinderlog_minio
+    restart: unless-stopped
     user: "0:0"
     environment:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
     ports:
       - "9000:9000"   # MinIO API
-      - "9001:9001"   # MinIO Console (web UI)
+      - "127.0.0.1:9001:9001"   # MinIO Console (chỉ bind localhost, không expose ra Internet)
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -61,6 +64,7 @@ services:
   api:
     build: ./backend
     container_name: kinderlog_api
+    restart: unless-stopped
     env_file: .env
     # Bind mọi interface: app Flutter chạy ngoài Internet cần gọi API.
     ports:
@@ -74,11 +78,12 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
   worker:
     build: ./backend
     container_name: kinderlog_worker
+    restart: unless-stopped
     # Host không có GPU NVIDIA: worker chạy CPU hoặc gửi request sang server GPU ngoài.
     env_file: .env
     volumes:
@@ -106,6 +111,7 @@ services:
   beat:
     build: ./backend
     container_name: kinderlog_beat
+    restart: unless-stopped
     env_file: .env
     volumes:
       - ./backend:/app

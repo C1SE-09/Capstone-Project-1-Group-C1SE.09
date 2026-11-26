@@ -25,7 +25,7 @@ interface Stats {
 }
 
 interface BugReportItem {
-  id: string;
+  bug_report_id: string;
   title: string;
   sender_type: string;
   sender_name?: string;
@@ -193,8 +193,8 @@ export default function DashboardPage() {
               {recentReports?.items && recentReports.items.length > 0 ? (
                 recentReports.items.map((item) => (
                   <Link
-                    key={item.id}
-                    href={`/bug-reports/${item.id}`}
+                    key={item.bug_report_id}
+                    href={`/bug-reports/${item.bug_report_id}`}
                     className="py-3.5 flex items-center justify-between gap-4 hover:bg-[#F6F7F8] px-2 rounded-[12px] transition"
                   >
                     <div className="min-w-0">
@@ -246,7 +246,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-xs text-[#087F70] font-semibold flex items-center gap-1.5 mt-0.5">
                     <span className="w-2 h-2 rounded-full bg-[#087F70] animate-pulse" />
-                    {lang === "en" ? "Active · VPS 160.191.87.202" : "Đang hoạt động · VPS 160.191.87.202"}
+                    {lang === "en" ? "Active · Production Server" : "Đang hoạt động · Máy chủ Production"}
                   </div>
                 </div>
               </div>

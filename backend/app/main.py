@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.api.class_data import router as class_router
 from app.api.child_health import router as child_health_router
@@ -32,21 +34,44 @@ from app.api.teacher import reports_router
 from app.api.teacher import router as teacher_router
 
 
+from app.config import settings
+from app.core.database import SessionLocal
 from app.core.error_handlers import register_error_handlers
+from app.core.security import get_redis_client
+
+_WEAK_JWT_SECRETS = {
+    "",
+    "change-me",
+    "change-me-to-a-random-32-byte-string",
+    "kinderlog-secret",
+}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Các logic chạy trước khi server nhận request (ví dụ: mở kết nối DB)
+    # Kiểm tra cấu hình bảo mật khi khởi động
+    if settings.jwt_secret_key in _WEAK_JWT_SECRETS:
+        if settings.environment.lower() == "production":
+            raise RuntimeError(
+                "JWT_SECRET_KEY không được phép dùng giá trị mặc định yếu ở môi trường production."
+            )
+        logger.warning(
+            "CẢNH BÁO BẢO MẬT: JWT_SECRET_KEY đang dùng giá trị mặc định yếu. Hãy cấu hình biến môi trường trước khi deploy production."
+        )
     yield
     # Các logic dọn dẹp khi tắt server (ví dụ: đóng kết nối DB)
 
+
+_is_prod = settings.environment.lower() == "production" and not settings.debug
 
 app = FastAPI(
     title="Capstone Project API",
     description="Backend API services",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
 )
 
 register_error_handlers(app)
@@ -64,16 +89,24 @@ async def timing_middleware(request: Request, call_next):
     elapsed = (time.perf_counter() - start) * 1000
 
     logger.info("[API] %s %s - %.2f ms", request.method, request.url.path, elapsed)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
 
     return response
 
 
+_allowed_origins = [
+    origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^https?://.*",
+    allow_origins=_allowed_origins,
+    allow_origin_regex=r"^https://admin-web-kinderlog(-[a-zA-Z0-9-]+)?\.vercel\.app$",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
 )
 
 # ---------------------------------------------------------------------------
@@ -110,5 +143,35 @@ async def root():
 
 
 @app.get("/api/health")
-async def health_check():
-    return {"status": "ok", "message": "Server is healthy and running successfully"}
+def health_check():
+    checks: dict[str, str] = {"database": "ok", "redis": "ok"}
+
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[Health] Kiểm tra PostgreSQL thất bại: %s", exc)
+        checks["database"] = "error"
+    finally:
+        db.close()
+
+    try:
+        if not get_redis_client().ping():
+            checks["redis"] = "error"
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[Health] Kiểm tra Redis thất bại: %s", exc)
+        checks["redis"] = "error"
+
+    is_healthy = all(value == "ok" for value in checks.values())
+    payload = {
+        "status": "ok" if is_healthy else "degraded",
+        "message": (
+            "Server is healthy and running successfully"
+            if is_healthy
+            else "Một số dịch vụ nền đang gặp sự cố"
+        ),
+        "checks": checks,
+    }
+    if not is_healthy:
+        return JSONResponse(status_code=503, content=payload)
+    return payload

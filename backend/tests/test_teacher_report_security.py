@@ -188,3 +188,48 @@ def test_send_batch_rejects_another_teachers_report(report_client):
 
     assert response.status_code == 403
     assert foreign_report.teacher_id != user.teacher_id
+
+
+def test_teacher_voice_and_report_endpoints_block_idor(report_client):
+    client, _db, user, _ = report_client
+    other_teacher_id = uuid.uuid4()
+    assert other_teacher_id != user.teacher_id
+
+    resp_sessions = client.get(
+        "/api/teacher/voice/sessions",
+        params={"teacher_id": str(other_teacher_id)},
+    )
+    assert resp_sessions.status_code == 403
+
+    resp_voice = client.get(
+        f"/api/teacher/voice/{uuid.uuid4()}",
+        params={"teacher_id": str(other_teacher_id)},
+    )
+    assert resp_voice.status_code == 403
+
+    resp_delete = client.delete(
+        f"/api/teacher/voice/{uuid.uuid4()}",
+        params={"teacher_id": str(other_teacher_id)},
+    )
+    assert resp_delete.status_code == 403
+
+    resp_report = client.get(
+        f"/api/teacher/reports/{uuid.uuid4()}",
+        params={"teacher_id": str(other_teacher_id)},
+    )
+    assert resp_report.status_code == 403
+
+
+def test_sync_stt_transcribe_endpoint_is_disabled(report_client):
+    from app.api.endpoints.stt import router as stt_router
+
+    _client, _db, user, _ = report_client
+    stt_app = FastAPI()
+    stt_app.include_router(stt_router, prefix="/api/stt")
+    stt_app.dependency_overrides[get_current_user] = lambda: user
+    with TestClient(stt_app) as stt_client:
+        response = stt_client.post(
+            "/api/stt/transcribe",
+            files={"audio": ("sample.wav", b"RIFF0000WAVE", "audio/wav")},
+        )
+    assert response.status_code == 503

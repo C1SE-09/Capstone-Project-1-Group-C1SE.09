@@ -120,6 +120,17 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
       if (!mounted) return;
+      final rawRole = user.role.toLowerCase();
+      if (rawRole == 'admin') {
+        await _authRepository.logout();
+        await SessionManagementService.instance.clearSession();
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = l10n?.loginErrorAdminWebOnly ??
+              'Tài khoản Quản trị viên chỉ hỗ trợ trên phiên bản Web máy tính. Vui lòng truy cập cổng quản trị trên trình duyệt web.';
+        });
+        return;
+      }
       try {
         if (_rememberAccount) {
           await _authRepository.saveRememberedLogin(
@@ -139,17 +150,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
       if (!mounted) return;
-      final rawRole = user.role.toLowerCase();
-      if (rawRole == 'admin') {
-        await _authRepository.logout();
-        await SessionManagementService.instance.clearSession();
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = l10n?.loginErrorAdminWebOnly ??
-              'Tài khoản Quản trị viên chỉ hỗ trợ trên phiên bản Web máy tính. Vui lòng truy cập cổng quản trị trên trình duyệt web.';
-        });
-        return;
-      }
       final UserRole role = rawRole == 'parent' ? UserRole.parent : UserRole.teacher;
       PushNotificationService.instance.registerCurrentDevice();
       widget.onLogin(role);

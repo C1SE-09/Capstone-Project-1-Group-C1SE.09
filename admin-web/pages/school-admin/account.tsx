@@ -14,9 +14,9 @@ import {
 import {
   ApiError,
   apiFetch,
-  clearToken,
   getStoredSchoolAdmin,
   getToken,
+  logoutAccount,
 } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
 import { formatSchoolName } from "@/lib/locale-helper";
@@ -50,8 +50,8 @@ export default function SchoolAdminAccountPage() {
     setReady(true);
   }, [router]);
 
-  function handleLogout() {
-    clearToken("schoolAdmin");
+  async function handleLogout() {
+    await logoutAccount("schoolAdmin");
     router.replace("/login");
   }
 

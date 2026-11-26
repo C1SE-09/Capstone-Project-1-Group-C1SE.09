@@ -1,17 +1,11 @@
 import secrets
 
-import redis
-from app.config import settings
+from app.core.security import get_redis_client
 
 OTP_EXPIRATION_SECONDS = 300  # 5 minutes
 MAX_OTP_ATTEMPTS = 5  # Maximum number of attempts to verify OTP
 OTP_KEY_PREFIX = "password_reset:"  # Prefix for OTP keys in Redis
 
-def get_redis_client():
-    return redis.from_url(
-        settings.redis_url,
-        decode_responses=True
-    )
 
 def generate_reset_code() -> str:
     """Generate a secure random 6-digit reset code."""
@@ -43,7 +37,8 @@ def verify_reset_code(email: str, reset_code: str) -> bool:
         client.delete(key)
         return False
 
-    if data.get("reset_code") != reset_code:
+    stored_code = data.get("reset_code", "")
+    if not stored_code or not secrets.compare_digest(stored_code, reset_code):
         client.hincrby(key, "attempts", 1)
         return False
 

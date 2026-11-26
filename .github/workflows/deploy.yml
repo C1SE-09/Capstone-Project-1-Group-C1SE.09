@@ -89,15 +89,25 @@ jobs:
               exit 1
             fi
 
-            echo "🔄 Khởi động lại container API & Celery Worker..."
-            docker compose restart api worker
+            echo "🔄 Cập nhật & khởi động lại container API, Celery Worker & Beat..."
+            docker compose up -d --no-deps api worker beat
 
-            echo "⏳ Chờ API sẵn sàng..."
-            sleep 4
-            if curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
-              echo "🟢 API Backend phản hồi tốt (HTTP 200)!"
+            echo "⏳ Chờ API sẵn sàng (/api/health)..."
+            HEALTHY=0
+            for i in $(seq 1 10); do
+              if curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+                HEALTHY=1
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "$HEALTHY" -eq 1 ]; then
+              echo "🟢 API Backend phản hồi khỏe mạnh (/api/health HTTP 200)!"
             else
-              echo "⚠️ API chưa phản hồi ngay, có thể đang reload models. Vui lòng kiểm tra lại log nếu cần."
+              echo "❌ API không vượt qua kiểm tra /api/health sau 20 giây!"
+              docker compose logs --tail=50 api || true
+              exit 1
             fi
 
             echo "✅ Deploy nhánh '$TARGET_BRANCH' (commit $CURRENT_COMMIT) hoàn tất thành công!"

@@ -122,7 +122,7 @@ export function relativeTime(iso: string | null | undefined, lang: "vi" | "en" =
 export function sanitizeUrl(url: string | null | undefined): string {
   if (!url) return "#";
   const trimmed = url.trim();
-  if (/^(https?:\/\/|\/)/i.test(trimmed) && !/^\s*javascript:/i.test(trimmed)) {
+  if (/^(https?:\/\/|\/(?!\/))/i.test(trimmed) && !/^\s*javascript:/i.test(trimmed)) {
     return trimmed;
   }
   return "#";
@@ -130,15 +130,18 @@ export function sanitizeUrl(url: string | null | undefined): string {
 
 /**
  * Chuẩn hóa URL của file đính kèm/hình ảnh trước khi render:
- * - Chặn scheme nguy hiểm (javascript:)
+ * - Chặn scheme nguy hiểm (javascript:) và protocol-relative URL (//)
  * - Backend đã trả URL tuyệt đối đúng host/scheme (MINIO_PUBLIC_URL),
  *   client không tự đoán hostname nữa.
  */
 export function resolveAttachmentUrl(url: string | null | undefined): string {
   if (!url) return "";
   const trimmed = url.trim();
-  if (!trimmed || /^\s*javascript:/i.test(trimmed)) return "";
-  return trimmed;
+  if (!trimmed) return "";
+  if (/^(https?:\/\/|\/(?!\/))/i.test(trimmed)) {
+    return trimmed;
+  }
+  return "";
 }
 
 /**

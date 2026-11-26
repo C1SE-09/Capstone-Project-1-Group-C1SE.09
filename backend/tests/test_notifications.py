@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 from app.models.device_token import DeviceToken
 from app.models.report import DailyReport
 from app.models.leave_request import LeaveRequest, LeaveRequestStatus
-from app.models.user import Teacher
+from app.models.user import Teacher, User, UserRole
 from app.tasks import notifications as notifications_task
 
 REPORT_ID = uuid.UUID("44444444-0000-0000-0000-000000000001")
@@ -236,10 +236,18 @@ def test_publish_report_queues_notification(monkeypatch):
         lambda db, r, child, **kwargs: queued.append((r.daily_report_id, kwargs.get("is_update", False))) or 5,
     )
 
+    teacher_user = User(
+        user_id=uuid.uuid4(),
+        username="teacher",
+        password_hash="x",
+        role=UserRole.TEACHER,
+        teacher_id=report.teacher_id,
+    )
     result = teacher_module.publish_report(
         report_id=REPORT_ID,
         teacher_id=report.teacher_id,
         db=db,
+        current_user=teacher_user,
     )
 
     assert result["status"] == DailyReportStatus.PUBLISHED.value

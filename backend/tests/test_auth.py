@@ -142,3 +142,38 @@ class TestLoginWithEmailOrUsername:
         assert data["username"] == "teacher1"
         assert data["access_token"] == "fake_access_token"
 
+    def test_login_rejects_suspended_user(self, client, mock_user, mock_db):
+        from app.models.user import UserStatus
+
+        mock_user.status = UserStatus.SUSPENDED
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+        payload = {
+            "username": "teacher1",
+            "password": "old_password_123",
+            "device_id": "test_device",
+            "device_name": "Test Device",
+        }
+        resp = client.post("/api/auth/login", json=payload)
+        assert resp.status_code == 403
+
+    def test_validate_session_fails_closed_on_redis_error(self):
+        import redis
+        from app.core import security
+
+        fake_client = MagicMock()
+        fake_client.exists.side_effect = redis.RedisError("connection refused")
+        with patch.object(security, "get_redis_client", return_value=fake_client):
+            assert security.validate_session("any-session-id") is False
+
+    def test_get_current_user_rejects_inactive_user(self, mock_user, mock_db):
+        from fastapi import HTTPException
+        from app.core.security import create_access_token, get_current_user
+        from app.models.user import UserStatus
+
+        mock_user.status = UserStatus.INACTIVE
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+        token = create_access_token(user_id=str(mock_user.user_id), role="teacher")
+        with pytest.raises(HTTPException) as exc_info:
+            get_current_user(token=token, db=mock_db)
+        assert exc_info.value.status_code == 403
+

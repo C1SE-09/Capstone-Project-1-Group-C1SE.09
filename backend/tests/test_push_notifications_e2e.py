@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 from app.api import teacher as teacher_api
 from app.models.device_token import DeviceToken
 from app.models.report import DailyReport, DailyReportStatus
-from app.models.user import Teacher
+from app.models.user import Teacher, User, UserRole
 from app.services.notification_service import send_push_notification
 from app.tasks.notifications import _deliver_report_notification
 from firebase_admin import messaging
@@ -242,7 +242,19 @@ class TestTeacherApiIntegration:
             lambda db, r, child, **kwargs: queued_tasks.append(kwargs.get("is_update")),
         )
 
-        teacher_api.publish_report(report_id=REPORT_ID, teacher_id=TEACHER_ID, db=db)
+        teacher_user = User(
+            user_id=uuid.uuid4(),
+            username="teacher",
+            password_hash="x",
+            role=UserRole.TEACHER,
+            teacher_id=TEACHER_ID,
+        )
+        teacher_api.publish_report(
+            report_id=REPORT_ID,
+            teacher_id=TEACHER_ID,
+            db=db,
+            current_user=teacher_user,
+        )
 
         assert len(queued_tasks) == 1
         assert queued_tasks[0] is False
@@ -260,7 +272,19 @@ class TestTeacherApiIntegration:
             lambda db, r, child, **kwargs: queued_tasks.append(kwargs.get("is_update")),
         )
 
-        teacher_api.publish_report(report_id=REPORT_ID, teacher_id=TEACHER_ID, db=db)
+        teacher_user = User(
+            user_id=uuid.uuid4(),
+            username="teacher",
+            password_hash="x",
+            role=UserRole.TEACHER,
+            teacher_id=TEACHER_ID,
+        )
+        teacher_api.publish_report(
+            report_id=REPORT_ID,
+            teacher_id=TEACHER_ID,
+            db=db,
+            current_user=teacher_user,
+        )
 
         assert len(queued_tasks) == 1
         assert queued_tasks[0] is True

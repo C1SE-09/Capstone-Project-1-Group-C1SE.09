@@ -219,8 +219,11 @@ def _response_dict(response: Any) -> dict[str, Any]:
 def get_teacher(
     teacher_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin")),
 ):
     """Trả về thông tin 1 giáo viên (cho màn Tổng quan)."""
+    if role_of(current_user) == "teacher" and current_user.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
     teacher = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -234,11 +237,14 @@ def get_teacher(
 def get_teacher_classes(
     teacher_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin")),
 ):
     """
     Trả về danh sách lớp của giáo viên kèm summary báo cáo hôm nay,
     khớp entity ClassReportOverview ở frontend.
     """
+    if role_of(current_user) == "teacher" and current_user.teacher_id != teacher_id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
     teacher = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -424,11 +430,16 @@ def get_class_activities(
     class_id: uuid.UUID,
     limit: int = Query(default=10, ge=1, le=50),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("teacher", "admin")),
 ):
     """
     Trả về timeline hoạt động gần đây, khớp ActivityItem (frontend).
     Nguồn: DailyReport (đã gửi/review) + VoiceRecord (đã ghi âm).
     """
+    if role_of(current_user) == "teacher" and not teacher_owns_class(
+        current_user, class_id
+    ):
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
     class_ = db.query(Class_).filter(Class_.class_id == class_id).first()
     if class_ is None:
         raise HTTPException(status_code=404, detail="Class not found")
@@ -722,14 +733,15 @@ def get_child_reports(
     limit: int = Query(default=7, ge=1, le=50),
     include_draft: bool = Query(default=True),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "teacher", "admin")),
 ):
     """
     Trả về báo cáo hôm nay (riêng) + danh sách gần đây (mới nhất trước),
     khớp nhu cầu của ParentHomeController và Teacher History.
     """
-    child = db.query(Child).filter(Child.child_id == child_id).first()
-    if not child:
-        raise HTTPException(status_code=404, detail="Child not found")
+    resolve_child_for_actor(db, child_id, current_user)
+    if role_of(current_user) == "parent":
+        include_draft = False
 
     target_date = date_param or get_today()
 
@@ -802,6 +814,7 @@ def get_parent_report(
 def mark_report_as_read(
     report_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
 ):
     """
     Đánh dấu một báo cáo ngày đã được phụ huynh mở đọc:
@@ -813,6 +826,7 @@ def mark_report_as_read(
     )
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+    resolve_child_for_actor(db, report.child_id, current_user)
 
     if report.status in (
         DailyReportStatus.SENT,
@@ -835,5 +849,6 @@ def mark_report_as_read(
 def mark_parent_report_as_read(
     report_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("parent", "admin")),
 ):
-    return mark_report_as_read(report_id=report_id, db=db)
+    return mark_report_as_read(report_id=report_id, db=db, current_user=current_user)

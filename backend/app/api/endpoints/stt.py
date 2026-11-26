@@ -1,78 +1,35 @@
-import os
-import tempfile
+import logging
 from typing import Annotated
 
-from app.services.stt_service import stt_service
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from app.core.security import require_roles
+from app.models.user import User
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+
+logger = logging.getLogger(__name__)
 
 # Khởi tạo router cho nhóm endpoint STT (Speech-to-Text)
 # Router này sẽ được đăng ký vào app chính với prefix (ví dụ: /api/stt)
 router = APIRouter()
 
-# Các định dạng audio được chấp nhận. Giữ nguyên phần mở rộng gốc để bộ giải mã
-# (faster-whisper/PyAV) nhận đúng container, tránh lỗi với .m4a/.mp3/.webm.
-_ALLOWED_SUFFIXES = {
-    ".wav",
-    ".mp3",
-    ".m4a",
-    ".mp4",
-    ".aac",
-    ".ogg",
-    ".oga",
-    ".opus",
-    ".flac",
-    ".webm",
-    ".amr",
-    ".3gp",
-}
-
-
-def _resolve_suffix(filename: str | None) -> str:
-    """Suy ra phần mở rộng hợp lệ từ tên file gốc (mặc định .wav)."""
-    suffix = os.path.splitext(filename or "")[1].lower()
-    if suffix in _ALLOWED_SUFFIXES:
-        return suffix
-    return ".wav"
-
 
 @router.post("/transcribe")
-async def transcribe(audio: Annotated[UploadFile, File()]):
-    """Nhận file âm thanh từ client, trả về văn bản đã nhận dạng (STT)."""
+async def transcribe(
+    audio: Annotated[UploadFile, File()],
+    _current_user: User = Depends(require_roles("teacher", "admin")),
+):
+    """Vô hiệu hóa STT đồng bộ trên luồng HTTP để tránh chặn event loop và OOM trên API server.
 
-    # Lưu file upload vào file tạm, GIỮ ĐÚNG phần mở rộng gốc để giải mã đúng
-    # định dạng (delete=False để STTService có thể mở sau khi đóng).
-    tmp_path = None
-    try:
-        suffix = _resolve_suffix(audio.filename)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(await audio.read())
-            tmp_path = tmp.name
-
-        # Gọi STTService để chuyển đổi file âm thanh tạm thành văn bản
-        text = stt_service.transcribe(tmp_path)
-
-        # Trả về kết quả gồm tên file gốc và văn bản nhận dạng được
-        return {"filename": audio.filename, "text": text}
-
-    except FileNotFoundError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File audio không tìm thấy: {e!s}",
-        ) from e
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File audio không hợp lệ: {e!s}",
-        ) from e
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Lỗi xử lý STT: {e!s}",
-        ) from e
-    finally:
-        # Luôn xóa file tạm sau khi xử lý xong, dù thành công hay thất bại
-        if tmp_path and os.path.exists(tmp_path):
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+    Toàn bộ tác vụ chuyển đổi giọng nói PhoWhisper phải đi qua luồng bất đồng bộ
+    `POST /api/teacher/voice/upload` để Celery GPU worker xử lý.
+    """
+    logger.warning(
+        "[STT] Từ chối yêu cầu STT đồng bộ cho file=%s; vui lòng dùng luồng Celery bất đồng bộ.",
+        audio.filename,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            "Chức năng chuyển đổi giọng nói đồng bộ đã tạm ngưng để đảm bảo ổn định hệ thống. "
+            "Vui lòng sử dụng luồng tải lên bất đồng bộ (/api/teacher/voice/upload)."
+        ),
+    )

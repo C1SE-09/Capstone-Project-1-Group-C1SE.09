@@ -532,3 +532,16 @@ class TestCustomScheduleTimesNoSlotCreation:
         assert sched.slot_id is None
         assert sched.custom_start_time == "07:45"
         assert sched.custom_end_time == "08:10"
+
+
+class TestScheduleReadAuthentication:
+    def test_schedule_get_endpoints_require_authentication(self):
+        app.dependency_overrides.clear()
+        with TestClient(app) as unauth_client:
+            assert unauth_client.get("/api/time-slots").status_code == 401
+            assert unauth_client.get("/api/subjects").status_code == 401
+            assert unauth_client.get(f"/api/schedules/class/{CLASS_ID}").status_code == 401
+            assert (
+                unauth_client.get(f"/api/schedules/teacher/{uuid.uuid4()}").status_code
+                == 401
+            )

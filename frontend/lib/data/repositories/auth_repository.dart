@@ -55,7 +55,44 @@ class AuthException implements Exception {
 }
 
 class AuthRepository {
-  static AuthUser? currentUser;
+  static AuthUser? _currentUser;
+
+  /// Đồng bộ với [SessionManagementService.instance.currentSession] để tránh
+  /// trạng thái split-brain sau khi khôi phục phiên lúc mở lại app hoặc sau silent refresh.
+  static AuthUser? get currentUser {
+    final session = SessionManagementService.instance.currentSession;
+    if (session != null) {
+      final cached = _currentUser;
+      if (cached != null &&
+          (cached.userId == session.userId || cached.userId == null)) {
+        if (session.accessToken.isNotEmpty &&
+            cached.token != session.accessToken) {
+          _currentUser = AuthUser(
+            token: session.accessToken,
+            tokenType: cached.tokenType,
+            role: session.role,
+            userId: session.userId ?? cached.userId,
+            username: cached.username,
+            teacherId: session.teacherId ?? cached.teacherId,
+            parentId: session.parentId ?? cached.parentId,
+          );
+        }
+        return _currentUser;
+      }
+      return AuthUser(
+        token: session.accessToken,
+        role: session.role,
+        userId: session.userId,
+        teacherId: session.teacherId,
+        parentId: session.parentId,
+      );
+    }
+    return _currentUser;
+  }
+
+  static set currentUser(AuthUser? value) {
+    _currentUser = value;
+  }
 
   AuthRepository({Dio? dio, String? baseUrl})
       : _dio = dio ??
@@ -220,8 +257,9 @@ class AuthRepository {
 
   /// Đăng xuất tài khoản qua POST /api/auth/logout.
   Future<void> logout() async {
-    final token = currentUser?.token;
-    currentUser = null;
+    final token = currentUser?.token ??
+        SessionManagementService.instance.currentSession?.accessToken;
+    _currentUser = null;
     if (token == null || token.isEmpty) return;
 
     try {

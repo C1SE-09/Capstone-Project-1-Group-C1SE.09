@@ -7,7 +7,7 @@ FastAPI Routers cho quản lý Thời khóa biểu (TimeSlot, Subject, ClassSche
 import uuid
 
 from app.core.database import get_db
-from app.core.security import get_optional_current_user
+from app.core.security import get_current_user
 from app.models.user import User, UserRole
 from app.schemas.schedule import (
     ClassScheduleBulkCreateRequest,
@@ -31,20 +31,19 @@ subject_router = APIRouter(prefix="/subjects", tags=["subjects"])
 
 
 def check_can_edit_schedule(
-    current_user: User | None = Depends(get_optional_current_user),
-) -> User | None:
-    """Kiểm tra quyền chỉnh sửa thời khóa biểu: Chỉ Quản trị viên (Admin) mới có quyền chỉnh sửa. Giáo viên và phụ huynh chỉ được xem."""
-    if current_user:
-        role_val = (
-            current_user.role.value
-            if hasattr(current_user.role, "value")
-            else str(current_user.role)
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Kiểm tra quyền chỉnh sửa thời khóa biểu: Bắt buộc đăng nhập với vai trò Quản trị viên (Admin)."""
+    role_val = (
+        current_user.role.value
+        if hasattr(current_user.role, "value")
+        else str(current_user.role)
+    )
+    if role_val != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Giáo viên không có quyền chỉnh sửa thời khóa biểu. Chỉ Quản trị viên mới được phép thao tác.",
         )
-        if role_val != UserRole.ADMIN.value:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Giáo viên không có quyền chỉnh sửa thời khóa biểu. Chỉ Quản trị viên mới được phép thao tác.",
-            )
     return current_user
 
 
@@ -52,7 +51,10 @@ def check_can_edit_schedule(
 # 1. TimeSlot APIs
 # ===========================================================================
 @time_slot_router.get("", response_model=list[TimeSlotResponse])
-def get_time_slots(db: Session = Depends(get_db)):
+def get_time_slots(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
     """Lấy danh sách tất cả các khung giờ (sắp xếp theo order_index)."""
     return schedule_service.get_all_time_slots(db)
 
@@ -100,7 +102,10 @@ def delete_time_slot(
 # 2. Subject APIs
 # ===========================================================================
 @subject_router.get("", response_model=list[SubjectResponse])
-def get_subjects(db: Session = Depends(get_db)):
+def get_subjects(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
     """Lấy danh sách tất cả môn học / hoạt động."""
     return schedule_service.get_all_subjects(db)
 
@@ -152,6 +157,7 @@ def get_class_schedule(
     class_id: uuid.UUID,
     day_of_week: int | None = None,
     db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
 ):
     """
     Lấy thời khóa biểu của 1 lớp (dạng Flat List Option A).
@@ -168,6 +174,7 @@ def get_teacher_schedule(
     teacher_id: uuid.UUID,
     day_of_week: int | None = None,
     db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
 ):
     """
     Lấy lịch giảng dạy của giáo viên.

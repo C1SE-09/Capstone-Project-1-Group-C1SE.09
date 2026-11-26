@@ -123,6 +123,18 @@ export function setRefreshToken(token: string) {
   window.localStorage.setItem(NS.schoolAdmin.refresh, token);
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export function getSessionId(): string | null {
   if (typeof window === "undefined") return null;
   const stored = window.localStorage.getItem(NS.schoolAdmin.sessionId);
@@ -130,14 +142,9 @@ export function getSessionId(): string | null {
   // Fallback: giải mã từ JWT access token nếu session_id chưa lưu riêng
   const token = getToken("schoolAdmin");
   if (token) {
-    try {
-      const parts = token.split(".");
-      if (parts.length >= 2) {
-        const payload = JSON.parse(atob(parts[1]));
-        return payload.session_id || null;
-      }
-    } catch {
-      return null;
+    const payload = decodeJwtPayload(token);
+    if (payload && typeof payload.session_id === "string") {
+      return payload.session_id;
     }
   }
   return null;
@@ -166,6 +173,24 @@ export function clearToken(kind?: AccountKind) {
   if (k === "schoolAdmin") {
     window.localStorage.removeItem(NS.schoolAdmin.refresh);
     window.localStorage.removeItem(NS.schoolAdmin.sessionId);
+  }
+}
+
+export async function logoutAccount(kind?: AccountKind): Promise<void> {
+  const k = kind ?? currentKind();
+  const token = getToken(k);
+  clearToken(k);
+  if (k === "schoolAdmin" && token) {
+    try {
+      await fetch(`${API_BASE}/api/auth/logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch {
+      // Bỏ qua lỗi mạng khi đăng xuất để người dùng vẫn thoát được phiên local
+    }
   }
 }
 
@@ -231,16 +256,10 @@ interface RequestOpts {
 }
 
 export function isTokenExpiringSoon(token: string, thresholdSeconds = 120): boolean {
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return true;
-    const payload = JSON.parse(atob(parts[1]));
-    if (!payload.exp) return false;
-    const nowSec = Math.floor(Date.now() / 1000);
-    return payload.exp - nowSec <= thresholdSeconds;
-  } catch {
-    return false;
-  }
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") return false;
+  const nowSec = Math.floor(Date.now() / 1000);
+  return payload.exp - nowSec <= thresholdSeconds;
 }
 
 let isRefreshingPromise: Promise<string | null> | null = null;
@@ -389,8 +408,8 @@ export async function apiFetch<T = any>(
   if (!isFormData && body) {
     headers["Content-Type"] = "application/json";
   }
+  const k = account ?? currentKind();
   if (auth) {
-    const k = account ?? currentKind();
     let token = getToken(k);
     if (k === "schoolAdmin" && token && isTokenExpiringSoon(token, 120)) {
       const refreshedToken = await refreshAccessToken();
@@ -416,10 +435,11 @@ export async function apiFetch<T = any>(
   });
 
   if (!res.ok) {
-    // Tự động làm mới token nếu 401 khi gọi API có auth
+    // Tự động làm mới token nếu 401 khi gọi API có auth của schoolAdmin
     if (
       res.status === 401 &&
       auth &&
+      k === "schoolAdmin" &&
       !isRetry &&
       !path.includes("/login") &&
       !path.includes("/refresh")

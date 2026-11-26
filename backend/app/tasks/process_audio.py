@@ -196,6 +196,24 @@ def process_audio_task(voice_record_id: str) -> dict:
         if not record:
             raise ValueError(f"VoiceRecord {voice_record_id} không tồn tại.")
 
+        # Idempotency guard: nếu task bị giao lại (acks_late=True) sau khi bản ghi
+        # đã hoàn tất phiên âm, không ghi đè để bảo toàn edited_transcript / extraction_result.
+        if (
+            record.status == VoiceRecordStatus.COMPLETED
+            and (record.raw_transcript or "").strip()
+        ):
+            logger.info(
+                "[Process] VoiceRecord %s đã COMPLETED trước đó — bỏ qua xử lý lặp.",
+                voice_record_id,
+            )
+            return {
+                "voice_record_id": voice_record_id,
+                "status": VoiceRecordStatus.COMPLETED.value,
+                "transcript_length": len(record.raw_transcript or ""),
+                "extraction_keys": [],
+                "skipped_duplicate": True,
+            }
+
         # 1. Cập nhật trạng thái bắt đầu xử lý
         record.status = VoiceRecordStatus.PROCESSING
         record.error_message = None
