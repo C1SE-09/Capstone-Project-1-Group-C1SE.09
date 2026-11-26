@@ -262,6 +262,29 @@ export function isTokenExpiringSoon(token: string, thresholdSeconds = 120): bool
   return payload.exp - nowSec <= thresholdSeconds;
 }
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+const REFRESH_TIMEOUT_MS = 15_000;
+const BLOB_TIMEOUT_MS = 60_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(408, "Kết nối máy chủ bị quá thời gian. Vui lòng thử lại.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let isRefreshingPromise: Promise<string | null> | null = null;
 
 async function performTokenRefresh(): Promise<string | null> {
@@ -270,17 +293,20 @@ async function performTokenRefresh(): Promise<string | null> {
   if (!sid || !rf) return null;
 
   try {
-    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Bypass-Tunnel-Reminder": "true",
+    const res = await fetchWithTimeout(
+      `${API_BASE}/api/auth/refresh`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sid,
+          refresh_token: rf,
+        }),
       },
-      body: JSON.stringify({
-        session_id: sid,
-        refresh_token: rf,
-      }),
-    });
+      REFRESH_TIMEOUT_MS,
+    );
 
     if (!res.ok) {
       return null;
@@ -337,9 +363,7 @@ export async function apiFetchBlob(
     if (qs) url += `?${qs}`;
   }
 
-  const headers: Record<string, string> = {
-    "Bypass-Tunnel-Reminder": "true",
-  };
+  const headers: Record<string, string> = {};
   let token = getToken("schoolAdmin");
   if (token && isTokenExpiringSoon(token, 120)) {
     const refreshed = await refreshAccessToken();
@@ -351,7 +375,11 @@ export async function apiFetchBlob(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, { method: opts.method || "GET", headers });
+  const res = await fetchWithTimeout(
+    url,
+    { method: opts.method || "GET", headers },
+    BLOB_TIMEOUT_MS,
+  );
 
   if (res.status === 401 && !isRetry) {
     const newToken = await refreshAccessToken();
@@ -402,9 +430,7 @@ export async function apiFetch<T = any>(
   }
 
   // Headers
-  const headers: Record<string, string> = {
-    "Bypass-Tunnel-Reminder": "true",
-  };
+  const headers: Record<string, string> = {};
   if (!isFormData && body) {
     headers["Content-Type"] = "application/json";
   }
@@ -428,7 +454,7 @@ export async function apiFetch<T = any>(
     payload = isFormData ? (body as FormData) : JSON.stringify(body);
   }
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method,
     headers,
     body: payload,

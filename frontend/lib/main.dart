@@ -88,7 +88,6 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) => ListenableBuilder(
         listenable: LocaleController.instance,
         builder: (context, _) => MaterialApp.router(
-          key: ValueKey('kinderlog_app_${LocaleController.instance.value.languageCode}'),
           routerConfig: appRouter,
           theme: kinderTheme(),
           scrollBehavior: const MaterialScrollBehavior().copyWith(

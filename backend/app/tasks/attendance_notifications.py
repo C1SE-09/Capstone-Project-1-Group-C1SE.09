@@ -14,6 +14,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_today
 from app.core.database import SessionLocal
 from app.models.attendance import AttendanceRecord, AttendanceStatus
 from app.models.child import Child
@@ -66,9 +67,16 @@ def send_absence_notifications(class_id_str: str, date_str: str, target_child_id
         sent_count = 0
         failed_count = 0
 
+        # Batch load thông tin trẻ vắng trong 1 query thay vì N queries
+        absent_child_ids = [rec.child_id for rec in absent_records]
+        children_by_id = {
+            c.child_id: c
+            for c in db.scalars(select(Child).where(Child.child_id.in_(absent_child_ids))).all()
+        }
+
         # 3. Lặp qua từng bé vắng để gửi thông báo riêng biệt cho phụ huynh bé đó
         for rec in absent_records:
-            child = db.scalar(select(Child).where(Child.child_id == rec.child_id))
+            child = children_by_id.get(rec.child_id)
             if not child:
                 continue
 
@@ -80,7 +88,7 @@ def send_absence_notifications(class_id_str: str, date_str: str, target_child_id
 
             display_name = child.full_name
             title = "KinderLog: Thông báo điểm danh"
-            body = f"Bé {display_name} hiện chưa có mặt tại lớp {class_name} hôm nay ({att_date.strftime('%d/%m%Y')}). Ba mẹ vui lòng liên hệ cô nếu cần nhé!"
+            body = f"Bé {display_name} hiện chưa có mặt tại lớp {class_name} hôm nay ({att_date.strftime('%d/%m/%Y')}). Ba mẹ vui lòng liên hệ cô nếu cần nhé!"
 
             for dt in tokens:
                 try:
@@ -118,51 +126,66 @@ def remind_unmarked_attendance(target_date_str: str | None = None) -> dict:
     -> Bắn Push Notification nhắc giáo viên phụ trách hoàn thành trước 07:45.
     """
     db: Session = SessionLocal()
-    try: 
-        target_date = date.fromisoformat(target_date_str) if target_date_str else date.today()
+    try:
+        target_date = date.fromisoformat(target_date_str) if target_date_str else get_today()
 
-        #1 Lấy danh sách các lớp học
+        # 1. Lấy danh sách các lớp học
         classes = db.scalars(select(Class_)).all()
+        if not classes:
+            return {"unmarked_classes": [], "notifications_sent": 0}
+
+        # 2. Batch load các lớp đã có bản ghi điểm danh hôm nay (1 query)
+        marked_class_ids = set(
+            db.scalars(
+                select(AttendanceRecord.class_id)
+                .where(AttendanceRecord.date == target_date)
+                .distinct()
+            ).all()
+        )
+        unmarked_classes = [cls for cls in classes if cls.class_id not in marked_class_ids]
+        if not unmarked_classes:
+            return {"unmarked_classes": [], "notifications_sent": 0}
+
+        # 3. Batch load giáo viên của các lớp chưa điểm danh (1 query)
+        unmarked_class_ids = [cls.class_id for cls in unmarked_classes]
+        teachers = db.scalars(
+            select(Teacher).where(Teacher.class_id.in_(unmarked_class_ids))
+        ).all()
+        teachers_by_class: dict[uuid.UUID, list[Teacher]] = {}
+        for teacher in teachers:
+            if teacher.class_id is not None:
+                teachers_by_class.setdefault(teacher.class_id, []).append(teacher)
+
+        # 4. Batch load device token của tất cả giáo viên cần nhắc (1 query)
+        teacher_ids = [t.teacher_id for t in teachers]
+        tokens_by_teacher: dict[uuid.UUID, list[DeviceToken]] = {}
+        if teacher_ids:
+            token_rows = db.execute(
+                select(User.teacher_id, DeviceToken)
+                .join(User, DeviceToken.user_id == User.user_id)
+                .where(User.teacher_id.in_(teacher_ids))
+            ).all()
+            for tid, dt in token_rows:
+                if tid is not None:
+                    tokens_by_teacher.setdefault(tid, []).append(dt)
+
         reminded_classes = []
         total_sent = 0
 
-        for cls in classes:
-            # 2. Kiểm tra xem lớp đã có bản ghi điểm danh hôm nay chưa
-            has_record = db.scalar(
-                select(AttendanceRecord.record_id)
-                .where(
-                    AttendanceRecord.class_id == cls.class_id,
-                    AttendanceRecord.date == target_date
-                )
-                .limit(1)
-            )
-
-            # Nếu đã điểm danh rồi thì bỏ qua
-            if has_record:
-                continue
-
-            # 3. Lớp chưa điểm danh -> Tìm giáo viên phụ trách lớp
-            teachers = db.scalars(
-                select(Teacher).where(Teacher.class_id == cls.class_id)
-            ).all()
-
-            if not teachers:
+        for cls in unmarked_classes:
+            class_teachers = teachers_by_class.get(cls.class_id, [])
+            if not class_teachers:
                 logger.info("[AttendanceReminder] Lớp %s chưa có giáo viên phụ trách.", cls.name)
                 continue
 
             reminded_classes.append(cls.name)
 
-            # 4. Gửi Push Notification cho từng giáo viên của lớp
+            # 5. Gửi Push Notification cho từng giáo viên của lớp
             title = "KinderLog: Nhắc nhở điểm danh"
             body = f"Sắp đến giờ chốt điểm danh 07:45! Cô vui lòng hoàn thành bảng điểm danh cho lớp {cls.name} nhé."
 
-            for teacher in teachers:
-                # Lấy device token của tài khoản giáo viên
-                tokens = db.scalars(
-                    select(DeviceToken)
-                    .join(User, DeviceToken.user_id == User.user_id)
-                    .where(User.teacher_id == teacher.teacher_id)
-                ).all()
+            for teacher in class_teachers:
+                tokens = tokens_by_teacher.get(teacher.teacher_id, [])
 
                 for dt in tokens:
                     try:

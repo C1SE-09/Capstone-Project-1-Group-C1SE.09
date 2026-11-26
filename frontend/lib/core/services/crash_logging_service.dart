@@ -188,42 +188,49 @@ class CrashLoggingService {
         mimeType: 'text/plain',
       );
 
+      final pendingPayload = <String, dynamic>{
+        'title': title,
+        'description': description,
+        'app_version': deviceInfo.appVersion,
+        'build_number': deviceInfo.buildNumber,
+        'os_version': deviceInfo.osVersion,
+        'device_model': deviceInfo.deviceModel,
+        'network_type': deviceInfo.networkType,
+        'log_content': fullLogContent.toString(),
+        'timestamp': timestamp.millisecondsSinceEpoch,
+      };
+
       final token = AuthRepository.currentUser?.token;
       if (token != null && token.isNotEmpty) {
         // Có phiên đăng nhập -> Gửi trực tiếp lên server
-        final repo = HttpBugReportRepository();
-        await repo.create(
-          BugReportCreatePayload(
-            title: title,
-            description: description,
-            category: BugCategory.crash,
-            severity: BugSeverity.critical,
-            appVersion: deviceInfo.appVersion,
-            buildNumber: deviceInfo.buildNumber,
-            osVersion: deviceInfo.osVersion,
-            deviceModel: deviceInfo.deviceModel,
-            networkType: deviceInfo.networkType,
-            attachments: [logAttachment],
-          ),
-        );
-        debugPrint('[CrashLoggingService] Đã gửi tự động báo cáo crash lên server thành công.');
+        try {
+          final repo = HttpBugReportRepository();
+          await repo.create(
+            BugReportCreatePayload(
+              title: title,
+              description: description,
+              category: BugCategory.crash,
+              severity: BugSeverity.critical,
+              appVersion: deviceInfo.appVersion,
+              buildNumber: deviceInfo.buildNumber,
+              osVersion: deviceInfo.osVersion,
+              deviceModel: deviceInfo.deviceModel,
+              networkType: deviceInfo.networkType,
+              attachments: [logAttachment],
+            ),
+          );
+          debugPrint('[CrashLoggingService] Đã gửi tự động báo cáo crash lên server thành công.');
+        } catch (e) {
+          debugPrint('[CrashLoggingService] Gửi crash report thất bại, lưu vào pending: $e');
+          await _savePendingReport(pendingPayload);
+        }
       } else {
         // Chưa đăng nhập hoặc chưa có token -> Lưu vào pending
         debugPrint('[CrashLoggingService] Chưa có phiên đăng nhập, lưu crash vào pending.');
-        await _savePendingReport({
-          'title': title,
-          'description': description,
-          'app_version': deviceInfo.appVersion,
-          'build_number': deviceInfo.buildNumber,
-          'os_version': deviceInfo.osVersion,
-          'device_model': deviceInfo.deviceModel,
-          'network_type': deviceInfo.networkType,
-          'log_content': fullLogContent.toString(),
-          'timestamp': timestamp.millisecondsSinceEpoch,
-        });
+        await _savePendingReport(pendingPayload);
       }
     } catch (e) {
-      debugPrint('[CrashLoggingService] Gửi crash report thất bại, lưu vào pending: $e');
+      debugPrint('[CrashLoggingService] Lỗi khi chuẩn bị crash report: $e');
     }
   }
 

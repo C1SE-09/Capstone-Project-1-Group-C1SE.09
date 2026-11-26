@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:adark_frontend/core/errors/app_exception.dart';
 import 'package:adark_frontend/core/localization/locale_controller.dart';
 
 /// Chuyển đổi mọi loại lỗi (DioException, Exception, SocketException, v.v.)
@@ -17,43 +18,38 @@ String getFriendlyErrorMessage(
 
   if (error == null) return effectiveFallback;
 
-  // 1. Ngoại lệ có sẵn trường userMessage (như UserFacingException)
-  try {
-    final dynamic dyn = error;
-    final String? userMsg = dyn.userMessage?.toString().trim();
-    if (userMsg != null && userMsg.isNotEmpty && !_isTechnicalErrorString(userMsg)) {
+  // 1. Ngoại lệ nghiệp vụ chuẩn hoá (an toàn với --obfuscate khi build release)
+  if (error is AppException) {
+    final userMsg = error.userMessage?.trim();
+    if (userMsg != null &&
+        userMsg.isNotEmpty &&
+        !_isTechnicalErrorString(userMsg)) {
       return formatFriendlyDetail(userMsg);
     }
-  } catch (_) {}
 
-  // 2. Xử lý các Exception nghiệp vụ tự định nghĩa (ClassDataException, TeacherRepositoryException, ScheduleException, AuthException)
-  final errType = error.runtimeType.toString();
-  if (errType == 'ClassDataException' ||
-      errType == 'TeacherRepositoryException' ||
-      errType == 'ScheduleException' ||
-      errType == 'AuthException' ||
-      errType == 'UserFacingException' ||
-      errType == 'OfflineException' ||
-      errType == 'SessionExpiredException') {
-    try {
-      final dynamic dynamicError = error;
-      final String? msg = dynamicError.message?.toString().trim();
-      final int? statusCode = dynamicError.statusCode as int?;
-      if (statusCode != null) {
-        if (statusCode == 409) {
-          return isEn ? 'Phone number is already in use' : 'Số điện thoại đã được sử dụng';
-        }
-        if (msg == null || msg.isEmpty || msg.toLowerCase() == 'lỗi' || msg.toLowerCase() == 'error' || _isTechnicalErrorString(msg)) {
-          return _statusCodeToFriendlyMessage(statusCode);
-        }
+    final msg = error.message.trim();
+    final statusCode = error.statusCode;
+    if (statusCode != null) {
+      if (statusCode == 409) {
+        return isEn
+            ? 'Phone number is already in use'
+            : 'Số điện thoại đã được sử dụng';
       }
-      if (msg != null && msg.isNotEmpty && msg.toLowerCase() != 'lỗi' && !_isTechnicalErrorString(msg)) {
-        return formatFriendlyDetail(msg);
-      }
-      if (statusCode != null) {
+      if (msg.isEmpty ||
+          msg.toLowerCase() == 'lỗi' ||
+          msg.toLowerCase() == 'error' ||
+          _isTechnicalErrorString(msg)) {
         return _statusCodeToFriendlyMessage(statusCode);
       }
-    } catch (_) {}
+    }
+    if (msg.isNotEmpty &&
+        msg.toLowerCase() != 'lỗi' &&
+        !_isTechnicalErrorString(msg)) {
+      return formatFriendlyDetail(msg);
+    }
+    if (statusCode != null) {
+      return _statusCodeToFriendlyMessage(statusCode);
+    }
   }
 
   // 3. Xử lý DioException từ các cuộc gọi API HTTP

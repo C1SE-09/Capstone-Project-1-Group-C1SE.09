@@ -4,13 +4,37 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.dashboard import _child_dict
-from app.core.access import role_of, teacher_owns_class
+from app.core.access import parent_has_child_in_class, role_of, teacher_owns_class
 from app.core.database import get_db
 from app.core.security import require_any_role
 from app.models.child import Child, ChildStatus
 from app.models.user import Class_, Teacher, User
 
 router = APIRouter(prefix="/api/class", tags=["class"])
+
+
+def _parse_class_uuid(class_id: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(class_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Class not found") from None
+
+
+def _assert_can_access_class(
+    db: Session, current_user: User, class_uuid: uuid.UUID
+) -> None:
+    role = role_of(current_user)
+    if role == "admin":
+        return
+    if role == "teacher":
+        if not teacher_owns_class(current_user, class_uuid, db):
+            raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+        return
+    if role == "parent":
+        if not parent_has_child_in_class(db, current_user, class_uuid):
+            raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+        return
+    raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
 
 
 """
@@ -24,7 +48,10 @@ def get_class(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("teacher", "admin", "parent")),
 ):
-    class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
+    class_uuid = _parse_class_uuid(class_id)
+    _assert_can_access_class(db, current_user, class_uuid)
+
+    class_data = db.query(Class_).filter(Class_.class_id == class_uuid).first()
 
     if not class_data:
         raise HTTPException(status_code=404, detail="Class not found")
@@ -51,13 +78,10 @@ def get_children(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("teacher", "admin")),
 ):
-    try:
-        class_uuid = uuid.UUID(class_id)
-    except ValueError:
-        raise HTTPException(status_code=404, detail="Class not found") from None
+    class_uuid = _parse_class_uuid(class_id)
 
     if role_of(current_user) == "teacher" and not teacher_owns_class(
-        current_user, class_uuid
+        current_user, class_uuid, db
     ):
         raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
 
@@ -98,20 +122,23 @@ def get_teacher(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("teacher", "admin", "parent")),
 ):
-    class_data = db.query(Class_).filter(Class_.class_id == class_id).first()
+    class_uuid = _parse_class_uuid(class_id)
+    _assert_can_access_class(db, current_user, class_uuid)
+
+    class_data = db.query(Class_).filter(Class_.class_id == class_uuid).first()
 
     if not class_data:
         raise HTTPException(status_code=404, detail="Class not found")
 
     teachers = (
         db.query(Teacher)
-        .filter(Teacher.class_id == class_id)
+        .filter(Teacher.class_id == class_uuid)
         .order_by(Teacher.full_name)
         .all()
     )
 
     return {
-        "class_id": str(class_id),
+        "class_id": str(class_uuid),
         "teachers": [
             {
                 "teacher_id": str(teacher.teacher_id),

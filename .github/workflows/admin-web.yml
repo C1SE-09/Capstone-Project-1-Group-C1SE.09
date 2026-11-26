@@ -28,7 +28,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./admin-web
-      run: npm install
+      run: npm ci
 
     - name: Lint
       working-directory: ./admin-web

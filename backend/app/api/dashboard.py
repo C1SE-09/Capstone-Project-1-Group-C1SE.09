@@ -338,7 +338,7 @@ def get_class_dashboard(
     tổng trẻ, completed/draft/missing, danh sách trẻ cần xử lý.
     """
     if role_of(current_user) == "teacher" and not teacher_owns_class(
-        current_user, class_id
+        current_user, class_id, db
     ):
         raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
 
@@ -437,7 +437,7 @@ def get_class_activities(
     Nguồn: DailyReport (đã gửi/review) + VoiceRecord (đã ghi âm).
     """
     if role_of(current_user) == "teacher" and not teacher_owns_class(
-        current_user, class_id
+        current_user, class_id, db
     ):
         raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
     class_ = db.query(Class_).filter(Class_.class_id == class_id).first()

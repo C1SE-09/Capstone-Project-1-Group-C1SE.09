@@ -2,9 +2,7 @@
 // =============================================================
 // Repository giao tiếp API điểm danh học sinh & gửi thông báo vắng.
 
-import 'package:adark_frontend/core/services/session_management_service.dart';
-import 'package:adark_frontend/core/utils/api_config.dart';
-import 'package:adark_frontend/data/repositories/auth_repository.dart';
+import 'package:adark_frontend/core/network/api_client.dart';
 import 'package:adark_frontend/features/kindergarten_dashboard/models.dart';
 import 'package:dio/dio.dart';
 
@@ -28,39 +26,7 @@ class AttendanceChildRecord {
 
 class HttpAttendanceRepository {
   HttpAttendanceRepository({Dio? dio, String? baseUrl})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 30),
-                headers: AuthRepository.currentUser?.token != null
-                    ? {
-                        'Authorization':
-                            'Bearer ${AuthRepository.currentUser!.token}'
-                      }
-                    : null,
-              ),
-            ) {
-    _dio.interceptors.add(
-      SessionManagementService.instance.createDioInterceptor(_dio),
-    );
-    // Đảm bảo gắn Bearer token mới nhất nếu AuthRepository có token
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          final token = AuthRepository.currentUser?.token;
-          if (token != null &&
-              token.isNotEmpty &&
-              (!options.headers.containsKey('Authorization') ||
-                  options.headers['Authorization'] == null)) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          return handler.next(options);
-        },
-      ),
-    );
-  }
+      : _dio = ApiClient.resolveDio(dio: dio, baseUrl: baseUrl);
 
   final Dio _dio;
 

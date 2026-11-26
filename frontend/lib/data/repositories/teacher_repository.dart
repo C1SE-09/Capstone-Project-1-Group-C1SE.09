@@ -13,9 +13,10 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:adark_frontend/core/errors/app_exception.dart';
+import 'package:adark_frontend/core/network/api_client.dart';
 import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
-import 'package:adark_frontend/core/services/session_management_service.dart';
 
 // ---------------------------------------------------------------------------
 // Entity: VoiceRecord
@@ -323,11 +324,15 @@ class ExtractionData {
 // ---------------------------------------------------------------------------
 
 // Thrown when [TeacherRepository.uploadAudio] or [updateTranscript] fails.
-class TeacherRepositoryException implements Exception {
+class TeacherRepositoryException implements AppException {
   const TeacherRepositoryException(this.message, {this.statusCode});
 
+  @override
   final String message;
+  @override
   final int? statusCode;
+  @override
+  String? get userMessage => null;
 
   @override
   String toString() => 'TeacherRepositoryException($statusCode): $message';
@@ -513,9 +518,7 @@ class TeacherRepository implements TeacherRepositoryBase {
                 receiveTimeout: const Duration(minutes: 5),
               ),
             ) {
-    _dio.interceptors.add(
-      SessionManagementService.instance.createDioInterceptor(_dio),
-    );
+    ApiClient.attachSessionInterceptorIfNeeded(_dio);
   }
 
   final Dio _dio;
