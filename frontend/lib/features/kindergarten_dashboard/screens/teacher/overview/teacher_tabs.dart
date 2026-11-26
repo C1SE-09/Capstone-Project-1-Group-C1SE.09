@@ -34,7 +34,7 @@ class OverviewScreen extends StatefulWidget {
     this.onStartReport,
     this.onSelectChild,
     this.notificationCount,
-    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.classId = '',
     this.repository,
     this.scheduleRepository,
     this.attendanceRepository,
@@ -154,7 +154,7 @@ class ClassListScreen extends StatefulWidget {
     this.pendingLeaveCount,
     this.className = 'Lớp',
     this.schoolName = 'Chưa có thông tin trường',
-    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.classId = '',
   });
   final bool initialHealthOnly;
   final ValueChanged<Child> onRecord;

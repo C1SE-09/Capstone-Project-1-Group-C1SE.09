@@ -48,14 +48,25 @@ class HttpDashboardRepository implements DashboardRepository {
       _teacherIdOverride ??
       AuthRepository.currentUser?.teacherId ??
       SessionManagementService.instance.currentSession?.teacherId ??
-      'bbbbbbbb-0000-0000-0000-000000000001';
+      '';
 
   /// Id phụ huynh hiện tại (ưu tiên lấy động theo tài khoản đang đăng nhập).
   String get parentId =>
       _parentIdOverride ??
       AuthRepository.currentUser?.parentId ??
       SessionManagementService.instance.currentSession?.parentId ??
-      'cccccccc-0000-0000-0000-000000000001';
+      '';
+
+  String _requireTeacherId() {
+    final id = teacherId;
+    if (id.isEmpty) {
+      throw const ClassDataException(
+        'Phiên đăng nhập chưa có thông tin giáo viên. Vui lòng đăng nhập lại.',
+        statusCode: 401,
+      );
+    }
+    return id;
+  }
 
   // ══════════════════════════════════════════════════════════
   // Teacher
@@ -63,13 +74,15 @@ class HttpDashboardRepository implements DashboardRepository {
 
   @override
   Future<Teacher> getCurrentTeacher() async {
-    final data = await _get('/api/teacher/$teacherId');
+    final id = _requireTeacherId();
+    final data = await _get('/api/teacher/$id');
     return Teacher.fromJson(data);
   }
 
   @override
   Future<List<ClassReportOverview>> getTeacherClasses() async {
-    final data = await _get('/api/teacher/$teacherId/classes');
+    final id = _requireTeacherId();
+    final data = await _get('/api/teacher/$id/classes');
     final raw = data['classes'];
     if (raw is! List) return const [];
     return raw

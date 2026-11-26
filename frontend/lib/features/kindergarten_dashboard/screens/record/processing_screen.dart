@@ -25,7 +25,7 @@ class ProcessingScreen extends StatefulWidget {
     this.file,
     this.session,
     this.editedMergedTranscript,
-    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.classId = '',
     this.child,
     this.teacherRepository,
   });
@@ -158,7 +158,16 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
     try {
       final teacherId = AuthRepository.currentUser?.teacherId ??
-          'bbbbbbbb-0000-0000-0000-000000000001';
+          session?.teacherId ??
+          '';
+      if (teacherId.isEmpty && widget.teacherRepository == null) {
+        setState(() {
+          isProcessing = false;
+          errorMessage =
+              'Phiên đăng nhập chưa có thông tin giáo viên. Vui lòng đăng nhập lại.';
+        });
+        return;
+      }
       final childId = widget.mode == RecordMode.child ? widget.child?.id : null;
 
       VoiceRecord? currentRecord = uploadedRecord;

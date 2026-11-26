@@ -30,7 +30,7 @@ class RecordingScreen extends StatefulWidget {
     required this.mode,
     required this.onSubmit,
     this.child,
-    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.classId = '',
     this.className = 'Mầm 1',
     this.enableMultiClipSession = false,
     this.teacherRepository,
@@ -93,9 +93,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   late final TeacherRepository _repo =
       widget.teacherRepository ?? TeacherRepository();
 
-  String get _teacherId =>
-      AuthRepository.currentUser?.teacherId ??
-      'bbbbbbbb-0000-0000-0000-000000000001';
+  String get _teacherId => AuthRepository.currentUser?.teacherId ?? '';
 
   String get _sessionScope =>
       widget.mode == RecordMode.child && widget.child != null

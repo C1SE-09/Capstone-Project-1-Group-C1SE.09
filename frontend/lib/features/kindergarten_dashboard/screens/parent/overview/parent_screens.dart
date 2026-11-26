@@ -477,7 +477,7 @@ class _ParentFlowState extends State<ParentFlow> {
           child: TimetableScreen(
             classId: overview.child.classId?.isNotEmpty == true
                 ? overview.child.classId!
-                : 'aaaaaaaa-0000-0000-0000-000000000001',
+                : '',
             className: overview.className.isNotEmpty
                 ? (LocaleController.instance.isEnglish
                     ? (overview.className.toLowerCase().startsWith('class')

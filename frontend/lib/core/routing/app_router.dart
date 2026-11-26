@@ -73,8 +73,7 @@ final GoRouter appRouter = GoRouter(
               key: ValueKey(state.uri.toString()),
               child: TeacherShell(
                 onLogout: _goLogin,
-                classId: state.uri.queryParameters['classId'] ??
-                    'aaaaaaaa-0000-0000-0000-000000000001',
+                classId: state.uri.queryParameters['classId'] ?? '',
                 initialAttendanceDate:
                     state.uri.queryParameters['attendanceDate'],
                 notificationId: state.uri.queryParameters['notification'],
@@ -84,8 +83,7 @@ final GoRouter appRouter = GoRouter(
       path: '/timetable',
       builder: (context, state) => GardenVoiceScope(
         child: TimetableScreen(
-          classId: state.uri.queryParameters['classId'] ??
-              'aaaaaaaa-0000-0000-0000-000000000001',
+          classId: state.uri.queryParameters['classId'] ?? '',
           className: state.uri.queryParameters['className'] ?? 'Lớp học',
           isReadOnly: state.uri.queryParameters['isReadOnly'] == 'true',
         ),

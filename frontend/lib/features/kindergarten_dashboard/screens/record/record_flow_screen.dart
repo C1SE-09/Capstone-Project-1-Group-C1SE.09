@@ -21,7 +21,7 @@ class RecordFlowScreen extends StatefulWidget {
     super.key,
     required this.mode,
     this.child,
-    this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+    this.classId = '',
     this.className = 'Mầm 1',
     this.repository,
     this.teacherRepository,

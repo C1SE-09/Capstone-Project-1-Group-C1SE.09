@@ -25,7 +25,7 @@ class RecordHubScreen extends StatefulWidget {
       {super.key,
       required this.onClass,
       required this.onChild,
-      this.classId = 'aaaaaaaa-0000-0000-0000-000000000001',
+      this.classId = '',
       this.repository,
       this.classRepository,
       this.onNavigationSelected});
