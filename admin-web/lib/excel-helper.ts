@@ -105,7 +105,7 @@ export function exportMultiSheetToExcel(
     ws["!cols"] = colWidths;
 
     // Excel giới hạn tên sheet 31 ký tự, không chứa các ký tự \ / ? * [ ] :
-    let cleanName = sheet.sheetName
+    const cleanName = sheet.sheetName
       .replace(/[\\/?*\[\]:]/g, "-")
       .trim()
       .slice(0, 31) || "Sheet";
@@ -160,7 +160,7 @@ export function formatDateToDmy(dateStr: string | null | undefined): string {
  * Chuyển đổi chuỗi ngày từ file Excel (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD hoặc số serial Excel)
  * sang định dạng chuẩn ISO YYYY-MM-DD để gửi lên backend API.
  */
-export function parseDateToIso(val: any): string | null {
+export function parseDateToIso(val: unknown): string | null {
   if (val === undefined || val === null) return null;
   const s = String(val).trim();
   if (!s) return null;

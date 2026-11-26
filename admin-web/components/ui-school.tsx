@@ -4,7 +4,7 @@
  * UI components nhỏ dùng chung cho School Admin — y hệt pattern Flutter app.
  */
 
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { formatClassName } from "@/lib/locale-helper";
 import {
@@ -445,7 +445,8 @@ export function DateInput({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsError(false);
     const raw = e.target.value;
-    const isDeleting = (e.nativeEvent as any)?.inputType?.startsWith("delete") || raw.length < text.length;
+    const inputType = "inputType" in e.nativeEvent ? String((e.nativeEvent as InputEvent).inputType) : "";
+    const isDeleting = inputType.startsWith("delete") || raw.length < text.length;
 
     // Nếu người dùng xóa hết
     if (!raw.trim()) {
@@ -1107,8 +1108,9 @@ export function ImportModal({
         setParsedRows(parseRes.rows);
         setDetectedSheets(parseRes.sheets);
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || (lang === "en" ? "Unable to read file. Please check the format." : "Không thể đọc file. Vui lòng kiểm tra định dạng."));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : undefined;
+      setErrorMsg(msg || (lang === "en" ? "Unable to read file. Please check the format." : "Không thể đọc file. Vui lòng kiểm tra định dạng."));
       setParsedRows([]);
       setDetectedSheets([]);
     } finally {
@@ -1130,8 +1132,9 @@ export function ImportModal({
       if (res.success > 0 && onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || (lang === "en" ? "An error occurred while importing data." : "Đã xảy ra lỗi trong quá trình nhập dữ liệu."));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : undefined;
+      setErrorMsg(msg || (lang === "en" ? "An error occurred while importing data." : "Đã xảy ra lỗi trong quá trình nhập dữ liệu."));
     } finally {
       setImporting(false);
     }

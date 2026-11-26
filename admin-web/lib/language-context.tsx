@@ -18,9 +18,9 @@ interface LanguageContextType {
   t: (path: string, fallback?: string) => string;
 }
 
-const dictionaries: Record<Language, any> = {
-  vi: viDict,
-  en: enDict,
+const dictionaries: Record<Language, Record<string, unknown>> = {
+  vi: viDict as Record<string, unknown>,
+  en: enDict as Record<string, unknown>,
 };
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -59,16 +59,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = (path: string, fallback?: string): string => {
     const keys = path.split(".");
-    let current: any = dictionaries[lang];
+    let current: unknown = dictionaries[lang];
     for (const key of keys) {
       if (current && typeof current === "object" && key in current) {
-        current = current[key];
+        current = (current as Record<string, unknown>)[key];
       } else {
         // Fallback sang từ điển tiếng Việt nếu thiếu key tiếng Anh
-        let viCurrent: any = dictionaries.vi;
+        let viCurrent: unknown = dictionaries.vi;
         for (const vk of keys) {
           if (viCurrent && typeof viCurrent === "object" && vk in viCurrent) {
-            viCurrent = viCurrent[vk];
+            viCurrent = (viCurrent as Record<string, unknown>)[vk];
           } else {
             return fallback || path;
           }

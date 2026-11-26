@@ -28,7 +28,7 @@ import {
   Toast,
   todayIsoStr,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
+import { clearToken, getErrorMessage, getErrorStatus, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
 import { formatClassName, localizeGender } from "@/lib/locale-helper";
 import {
@@ -419,7 +419,7 @@ export default function SchoolAdminStudentsPage() {
 
   useEffect(() => {
     if (!childrenError) return;
-    const status = (childrenError as any)?.status;
+    const status = getErrorStatus(childrenError);
     if (status !== 401) return;
 
     // 401: thử làm mới token 1 lần trước khi kết luận phiên đã hết hạn.
@@ -783,8 +783,8 @@ export default function SchoolAdminStudentsPage() {
               password: "123456",
               status: "active",
             });
-            if ((pRes as any)?.id) {
-              matchedParentId = (pRes as any).id;
+            if (pRes?.id) {
+              matchedParentId = pRes.id;
               const newParent: Parent = {
                 id: matchedParentId!,
                 full_name: `Phụ huynh bé ${fullName}`,
@@ -800,9 +800,9 @@ export default function SchoolAdminStudentsPage() {
               };
               setParents((prev) => [...prev, newParent]);
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             warnings.push(
-              `Dòng ${i + 1} (${fullName}): Không thể tự động tạo phụ huynh với SĐT ${parentContact}: ${e?.message || "Lỗi tạo phụ huynh"}`
+              `Dòng ${i + 1} (${fullName}): Không thể tự động tạo phụ huynh với SĐT ${parentContact}: ${getErrorMessage(e, "Lỗi tạo phụ huynh")}`
             );
           }
         } else {
@@ -825,7 +825,7 @@ export default function SchoolAdminStudentsPage() {
           status: "enrolled",
         });
         workingChildren.push({
-          id: (res as any)?.id || "",
+          id: res?.id || "",
           full_name: fullName,
           nickname,
           class_id: matchedClassId,
@@ -838,9 +838,9 @@ export default function SchoolAdminStudentsPage() {
           );
         }
         success++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        errors.push(`Dòng ${i + 1} (${fullName}): ${err?.message || "Lỗi tạo học sinh"}`);
+        errors.push(`Dòng ${i + 1} (${fullName}): ${getErrorMessage(err, "Lỗi tạo học sinh")}`);
       }
     }
 
@@ -862,7 +862,7 @@ export default function SchoolAdminStudentsPage() {
       const matched = parents.filter(
         (p) =>
           (p.child_ids && p.child_ids.includes(c.id)) ||
-          (p.children && p.children.some((k: any) => k.id === c.id)),
+          (p.children && p.children.some((k) => k.id === c.id)),
       );
       ids.push(...matched.map((p) => p.id));
     }
@@ -895,7 +895,7 @@ export default function SchoolAdminStudentsPage() {
   }
 
   // Cập nhật giá trị ô input
-  function updateCell(c: Child, field: keyof RowEditState, val: any) {
+  function updateCell<K extends keyof RowEditState>(c: Child, field: K, val: RowEditState[K]) {
     setTableEdits((prev) => {
       const current = prev[c.id] || getRowData(c);
       return {
@@ -957,9 +957,7 @@ export default function SchoolAdminStudentsPage() {
   }
 
   // Danh sách các dòng đang có thay đổi chưa lưu
-  const dirtyRows = useMemo(() => {
-    return filtered.filter((c) => isRowDirty(c));
-  }, [filtered, tableEdits, parents]);
+  const dirtyRows = filtered.filter((c) => isRowDirty(c));
 
   // Hủy toàn bộ thay đổi chưa lưu
   function cancelAllEdits() {
@@ -1005,7 +1003,7 @@ export default function SchoolAdminStudentsPage() {
       try {
         await updateChild(c.id, payload);
         success++;
-      } catch (e) {
+      } catch {
         failed++;
       }
     }
@@ -1150,8 +1148,8 @@ export default function SchoolAdminStudentsPage() {
       }
       setDrawerOpen(false);
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu học sinh", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể lưu học sinh"), tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -1206,8 +1204,8 @@ export default function SchoolAdminStudentsPage() {
       }
       setDrawerOpen(false);
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu học sinh", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể lưu học sinh"), tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -1219,8 +1217,8 @@ export default function SchoolAdminStudentsPage() {
       setToast({ msg: `Đã xóa ${c.full_name}`, tone: "ok" });
       setSelectedIds((prev) => prev.filter((id) => id !== c.id));
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể xóa"), tone: "bad" });
     }
     setConfirmDel(null);
   }
@@ -1255,9 +1253,9 @@ export default function SchoolAdminStudentsPage() {
       });
       setSelectedIds([]);
       mutate();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({
-        msg: err?.message || "Không thể xóa hàng loạt học sinh",
+        msg: getErrorMessage(err, "Không thể xóa hàng loạt học sinh"),
         tone: "bad",
       });
     } finally {
@@ -1434,11 +1432,11 @@ export default function SchoolAdminStudentsPage() {
         ) : childrenError ? (
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
-              {(childrenError as any)?.status === 401
+              {getErrorStatus(childrenError) === 401
                 ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
                 : (lang === "en"
-                    ? `Unable to load students (${(childrenError as any)?.detail || "Please try again"})`
-                    : `Không thể tải danh sách học sinh (${(childrenError as any)?.detail || "Vui lòng thử lại"})`)}
+                    ? `Unable to load students (${getErrorMessage(childrenError, "Please try again")})`
+                    : `Không thể tải danh sách học sinh (${getErrorMessage(childrenError, "Vui lòng thử lại")})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
               {lang === "en" ? "Retry" : "Thử lại"}

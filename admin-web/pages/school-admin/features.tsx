@@ -142,7 +142,7 @@ export default function SchoolAdminFeaturesPage() {
           healthExams: typeof healthExams === "number" ? healthExams : 0,
           classes: classes.length,
         });
-      } catch (_) {
+      } catch {
         /* swallow */
       }
     })();

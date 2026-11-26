@@ -1,11 +1,11 @@
 {
-    "name": "adark_frontend",
-    "short_name": "adark_frontend",
+    "name": "KinderLog",
+    "short_name": "KinderLog",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#087F70",
+    "theme_color": "#087F70",
+    "description": "KinderLog — Ứng dụng nhật ký mầm non thông minh bằng giọng nói dành cho giáo viên và phụ huynh.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -60,3 +60,5 @@ playwright.yml
 frontend/android/build/
 frontend/android/.gradle/
 .postman/
+backend/appendonlydir/
+appendonlydir/

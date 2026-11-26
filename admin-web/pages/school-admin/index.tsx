@@ -647,9 +647,9 @@ function toSmoothPath(
       continue;
     }
 
-    let cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
     let cp1y = p1.y + (p2.y - p0.y) / 6;
-    let cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
     let cp2y = p2.y - (p3.y - p1.y) / 6;
 
     const segMinY = Math.min(p1.y, p2.y);

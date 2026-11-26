@@ -10,7 +10,6 @@ import SchoolAdminLayout from "@/components/SchoolAdminLayout";
 import {
   Drawer,
   FormField,
-  Pill,
   SearchBar,
   Spinner,
   ConfirmDialog,
@@ -19,13 +18,12 @@ import {
   ImportModal,
   ImportResult,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getErrorMessage, getErrorStatus, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
 import { formatClassName, localizeRelationship } from "@/lib/locale-helper";
 import { exportToExcel } from "@/lib/excel-helper";
 import {
   Child,
-  ChildPayload,
   Parent,
   ParentPayload,
   SchoolClass,
@@ -64,7 +62,8 @@ function getParentChildrenSummary(p: Parent, allChildren: Child[] = []): string 
   if (p.children && p.children.length > 0) {
     return p.children
       .map((c) => {
-        const name = c.name || (c as any).full_name || "Bé";
+        const extra = c as { name?: string; full_name?: string; class_name?: string | null };
+        const name = extra.name || extra.full_name || "Bé";
         const cls = c.class_name ? ` (${c.class_name})` : "";
         return `${name}${cls}`;
       })
@@ -177,7 +176,7 @@ export default function SchoolAdminParentsPage() {
   );
 
   useEffect(() => {
-    if (parentsError && (parentsError as any).status === 401) {
+    if (parentsError && getErrorStatus(parentsError) === 401) {
       clearToken("schoolAdmin");
       window.location.href = "/login";
     }
@@ -352,9 +351,9 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
           status: "active",
         });
         success++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        errors.push(`Dòng ${i + 1} (${fullName}): ${err?.message || "Lỗi tạo phụ huynh"}`);
+        errors.push(`Dòng ${i + 1} (${fullName}): ${getErrorMessage(err, "Lỗi tạo phụ huynh")}`);
       }
     }
 
@@ -370,7 +369,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
     if (p.child_ids && Array.isArray(p.child_ids)) {
       ids.push(...p.child_ids);
     } else if (p.children && Array.isArray(p.children)) {
-      ids.push(...p.children.map((c: any) => c.id));
+      ids.push(...p.children.map((c) => c.id));
     } else if (children && children.length > 0) {
       const matched = children.filter(
         (c) =>
@@ -405,7 +404,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
   }
 
   // Cập nhật giá trị ô input
-  function updateCell(p: Parent, field: keyof RowEditState, val: any) {
+  function updateCell<K extends keyof RowEditState>(p: Parent, field: K, val: RowEditState[K]) {
     setTableEdits((prev) => {
       const current = prev[p.id] || getRowData(p);
       return {
@@ -470,9 +469,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
   }
 
   // Danh sách các dòng đang có thay đổi chưa lưu
-  const dirtyRows = useMemo(() => {
-    return filtered.filter((p) => isRowDirty(p));
-  }, [filtered, tableEdits, children]);
+  const dirtyRows = filtered.filter((p) => isRowDirty(p));
 
   // Hủy toàn bộ thay đổi chưa lưu và tắt chế độ sửa
   function cancelAllEdits() {
@@ -526,7 +523,7 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
       try {
         await updateParent(p.id, payload);
         success++;
-      } catch (e) {
+      } catch {
         failed++;
       }
     }
@@ -599,8 +596,8 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
       }
       setDrawerOpen(false);
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể lưu"), tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -631,8 +628,8 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
       setToast({ msg: `Đã xóa ${p.full_name}`, tone: "ok" });
       setSelectedIds((prev) => prev.filter((id) => id !== p.id));
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể xóa"), tone: "bad" });
     }
     setConfirmDel(null);
   }
@@ -648,9 +645,9 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
       });
       setSelectedIds([]);
       mutate();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({
-        msg: err?.message || "Không thể xóa hàng loạt phụ huynh",
+        msg: getErrorMessage(err, "Không thể xóa hàng loạt phụ huynh"),
         tone: "bad",
       });
     } finally {
@@ -820,11 +817,11 @@ function findMatchingChildren(conStr: string, allChildren: Child[]): { matchedId
         ) : parentsError ? (
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
-              {(parentsError as any)?.status === 401
+              {getErrorStatus(parentsError) === 401
                 ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
                 : (lang === "en"
-                    ? `Unable to load parents (${(parentsError as any)?.detail || "Please try again"})`
-                    : `Không thể tải danh sách phụ huynh (${(parentsError as any)?.detail || "Vui lòng thử lại"})`)}
+                    ? `Unable to load parents (${getErrorMessage(parentsError, "Please try again")})`
+                    : `Không thể tải danh sách phụ huynh (${getErrorMessage(parentsError, "Vui lòng thử lại")})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
               {lang === "en" ? "Retry" : "Thử lại"}

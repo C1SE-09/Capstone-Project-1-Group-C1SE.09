@@ -22,7 +22,7 @@ import {
   ImportModal,
   ImportResult,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getErrorMessage, getErrorStatus, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
 import { formatTeacherName, formatClassName } from "@/lib/locale-helper";
 import { exportToExcel } from "@/lib/excel-helper";
@@ -206,7 +206,7 @@ export default function SchoolAdminTeachersPage() {
   );
 
   useEffect(() => {
-    if (teachersError && (teachersError as any).status === 401) {
+    if (teachersError && getErrorStatus(teachersError) === 401) {
       clearToken("schoolAdmin");
       window.location.href = "/login";
     }
@@ -312,9 +312,9 @@ export default function SchoolAdminTeachersPage() {
           status: "active",
         });
         success++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        errors.push(`Dòng ${i + 1} (${fullName}): ${err?.message || "Lỗi tạo giáo viên"}`);
+        errors.push(`Dòng ${i + 1} (${fullName}): ${getErrorMessage(err, "Lỗi tạo giáo viên")}`);
       }
     }
 
@@ -563,8 +563,8 @@ export default function SchoolAdminTeachersPage() {
       }
       setDrawerOpen(false);
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu giáo viên", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể lưu giáo viên"), tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -582,8 +582,8 @@ export default function SchoolAdminTeachersPage() {
         return next;
       });
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể xóa"), tone: "bad" });
     }
     setConfirmDel(null);
   }
@@ -629,9 +629,9 @@ export default function SchoolAdminTeachersPage() {
       });
       setSelectedIds([]);
       mutate();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({
-        msg: err?.message || "Không thể xóa hàng loạt giáo viên",
+        msg: getErrorMessage(err, "Không thể xóa hàng loạt giáo viên"),
         tone: "bad",
       });
     } finally {
@@ -798,11 +798,11 @@ export default function SchoolAdminTeachersPage() {
         ) : teachersError ? (
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
-              {(teachersError as any)?.status === 401
+              {getErrorStatus(teachersError) === 401
                 ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
                 : (lang === "en"
-                    ? `Unable to load teachers (${(teachersError as any)?.detail || "Please try again"})`
-                    : `Không thể tải danh sách giáo viên (${(teachersError as any)?.detail || "Vui lòng thử lại"})`)}
+                    ? `Unable to load teachers (${getErrorMessage(teachersError, "Please try again")})`
+                    : `Không thể tải danh sách giáo viên (${getErrorMessage(teachersError, "Vui lòng thử lại")})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
               {lang === "en" ? "Retry" : "Thử lại"}

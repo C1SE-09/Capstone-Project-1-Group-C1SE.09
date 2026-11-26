@@ -14,7 +14,6 @@ import { Spinner } from "@/components/ui-school";
 import { apiFetch, clearToken, getToken } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useLanguage } from "@/lib/language-context";
-import { formatSchoolName } from "@/lib/locale-helper";
 
 interface Stats {
   total: number;
@@ -94,6 +93,8 @@ export default function DashboardPage() {
   }
 
   const openCount = (stats.by_status["open"] || 0) + (stats.by_status["in_progress"] || 0);
+  const resolvedCount = (stats.by_status["resolved"] || 0) + (stats.by_status["closed"] || 0);
+  const resolutionRate = stats.total > 0 ? Math.round((resolvedCount / stats.total) * 100) : 100;
 
   return (
     <AdminLayout currentPage="dashboard">
@@ -153,14 +154,14 @@ export default function DashboardPage() {
 
           <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-5 shadow-soft">
             <div className="flex items-center justify-between text-[#087F70]">
-              <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Partner Schools" : "Trường đối tác"}</span>
-              <span className="text-xl">🏫</span>
+              <span className="text-xs font-bold uppercase tracking-wider">{lang === "en" ? "Resolved Reports" : "Đã xử lý"}</span>
+              <span className="text-xl">✅</span>
             </div>
             <div className="text-3xl font-extrabold text-[#087F70] mt-2">
-              1
+              {resolvedCount}
             </div>
             <div className="text-xs text-[#087F70] mt-1 font-medium">
-              {lang === "en" ? "Online on VPS" : "Đang hoạt động trên VPS"}
+              {resolutionRate}% {lang === "en" ? "completion rate" : "tỷ lệ hoàn thành"}
             </div>
           </div>
         </div>
@@ -242,7 +243,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-sm text-[#102737] truncate">
-                    {formatSchoolName("Hoa Mai", lang)}
+                    {lang === "en" ? "KinderLog School Portal" : "Cổng Quản Trị Trường Mầm Non"}
                   </div>
                   <div className="text-xs text-[#087F70] font-semibold flex items-center gap-1.5 mt-0.5">
                     <span className="w-2 h-2 rounded-full bg-[#087F70] animate-pulse" />

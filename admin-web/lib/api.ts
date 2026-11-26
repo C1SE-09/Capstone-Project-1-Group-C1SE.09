@@ -20,20 +20,41 @@ function toMessage(detail: unknown, fallback: string): string {
   if (typeof detail === "string" && detail.trim()) return detail;
   if (Array.isArray(detail)) {
     const msgs = detail
-      .map((d) =>
-        typeof d === "string"
-          ? d
-          : d && typeof d === "object" && typeof (d as any).msg === "string"
-            ? (d as any).msg
-            : null,
-      )
+      .map((d) => {
+        if (typeof d === "string") return d;
+        if (d && typeof d === "object" && "msg" in d) {
+          const msg = (d as Record<string, unknown>).msg;
+          if (typeof msg === "string") return msg;
+        }
+        return null;
+      })
       .filter((m): m is string => !!m);
     if (msgs.length) return msgs.join("; ");
   }
-  if (detail && typeof detail === "object" && typeof (detail as any).message === "string") {
-    return (detail as any).message;
+  if (detail && typeof detail === "object" && "message" in detail) {
+    const message = (detail as Record<string, unknown>).message;
+    if (typeof message === "string") return message;
   }
   return fallback;
+}
+
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.detail) return err.detail;
+  if (err && typeof err === "object") {
+    const rec = err as Record<string, unknown>;
+    if (typeof rec.detail === "string" && rec.detail.trim()) return rec.detail;
+    if (typeof rec.message === "string" && rec.message.trim()) return rec.message;
+  }
+  return fallback;
+}
+
+export function getErrorStatus(err: unknown): number | undefined {
+  if (err instanceof ApiError) return err.status;
+  if (err && typeof err === "object" && "status" in err) {
+    const st = (err as Record<string, unknown>).status;
+    if (typeof st === "number") return st;
+  }
+  return undefined;
 }
 
 export class ApiError extends Error {
@@ -248,7 +269,7 @@ export function setStoredAdmin(admin: AdminAppInfo) {
 
 interface RequestOpts {
   method?: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
-  body?: any;
+  body?: unknown;
   query?: Record<string, string | number | undefined | null | boolean>;
   auth?: boolean;
   isFormData?: boolean;
@@ -402,7 +423,7 @@ export async function apiFetchBlob(
   return { blob: await res.blob(), headers: res.headers };
 }
 
-export async function apiFetch<T = any>(
+export async function apiFetch<T = unknown>(
   path: string,
   opts: RequestOpts = {},
   isRetry = false,
