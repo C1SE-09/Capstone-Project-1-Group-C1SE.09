@@ -8,10 +8,12 @@ from app.core.security import (
     create_session,
     get_current_user,
     hash_password,
+    is_user_active,
     oauth2_scheme,
     oauth2_scheme_optional,
     refresh_session,
     require_role,
+    revoke_all_user_sessions,
     revoke_other_sessions,
     revoke_session,
     verify_password,
@@ -103,6 +105,11 @@ def login(data: login_request, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tên đăng nhập hoặc mật khẩu không chính xác",
+        )
+    if not is_user_active(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đã bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ quản trị viên.",
         )
     role = user.role.value
 
@@ -301,6 +308,7 @@ def reset_password(data: reset_password_request, db: Session = Depends(get_db)):
         )
     user.password_hash = hash_password(data.new_password)
     db.commit()
+    revoke_all_user_sessions(str(user.user_id))
     delete_reset_code(input_val)
     return {"message": "Mật khẩu đã được đặt lại thành công."}
 @router.post("/test-email")

@@ -111,7 +111,7 @@ export default function BugReportDetailPage() {
     }
   }, [router]);
 
-  const { data: report, mutate } = useSWR<DetailResponse>(
+  const { data: report, error, mutate } = useSWR<DetailResponse>(
     tokenReady && id ? `/api/bug-reports/${id}` : null,
     (url: string) => apiFetch<DetailResponse>(url, { account: "adminApp" }),
   );
@@ -136,12 +136,12 @@ export default function BugReportDetailPage() {
       await apiFetch<DetailResponse>(`/api/bug-reports/${id}`, {
         account: "adminApp",
         method: "PATCH",
-        body: JSON.stringify({
+        body: {
           status: newStatus !== report?.status ? newStatus : undefined,
           category: newCategory !== report?.category ? newCategory : undefined,
           severity: newSeverity !== report?.severity ? newSeverity : undefined,
           comment: comment.trim() || undefined,
-        }),
+        },
       });
 
       setComment("");
@@ -169,7 +169,28 @@ export default function BugReportDetailPage() {
   if (!tokenReady || !report) {
     return (
       <AdminLayout currentPage="bug-reports">
-        <Spinner />
+        {error ? (
+          <div className="bg-white rounded-[24px] border border-[#E5E8EB] p-8 max-w-md space-y-3">
+            <div className="font-bold text-[#A93832] text-base">
+              {lang === "en" ? "Unable to load bug report" : "Không thể tải chi tiết báo lỗi"}
+            </div>
+            <div className="text-sm text-[#65727D]">
+              {error instanceof ApiError && error.detail
+                ? error.detail
+                : lang === "en"
+                  ? "The report may not exist or your session has expired."
+                  : "Báo lỗi không tồn tại hoặc phiên đăng nhập đã hết hạn."}
+            </div>
+            <Link
+              href="/bug-reports"
+              className="inline-block px-5 py-2.5 bg-[#087F70] text-white rounded-full font-bold text-sm"
+            >
+              {lang === "en" ? "Back to Bug Reports" : "Quay lại danh sách báo lỗi"}
+            </Link>
+          </div>
+        ) : (
+          <Spinner />
+        )}
       </AdminLayout>
     );
   }

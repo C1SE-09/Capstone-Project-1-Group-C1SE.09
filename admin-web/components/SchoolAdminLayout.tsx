@@ -12,9 +12,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { ReactNode, useEffect, useState } from "react";
 import {
-  clearToken,
   getStoredSchoolAdmin,
   getToken,
+  logoutAccount,
 } from "@/lib/api";
 import { useLanguage, LanguageSwitcher } from "@/lib/language-context";
 import { formatSchoolName } from "@/lib/locale-helper";
@@ -131,8 +131,8 @@ export default function SchoolAdminLayout({
     setReady(true);
   }, [router]);
 
-  const handleLogout = () => {
-    clearToken("schoolAdmin");
+  const handleLogout = async () => {
+    await logoutAccount("schoolAdmin");
     router.replace("/login");
   };
 

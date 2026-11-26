@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.api.class_data import router as class_router
 from app.api.child_health import router as child_health_router
@@ -33,9 +35,16 @@ from app.api.teacher import router as teacher_router
 
 
 from app.config import settings
+from app.core.database import SessionLocal
 from app.core.error_handlers import register_error_handlers
+from app.core.security import get_redis_client
 
-_WEAK_JWT_SECRETS = {"", "change-me", "kinderlog-secret"}
+_WEAK_JWT_SECRETS = {
+    "",
+    "change-me",
+    "change-me-to-a-random-32-byte-string",
+    "kinderlog-secret",
+}
 
 
 @asynccontextmanager
@@ -134,5 +143,35 @@ async def root():
 
 
 @app.get("/api/health")
-async def health_check():
-    return {"status": "ok", "message": "Server is healthy and running successfully"}
+def health_check():
+    checks: dict[str, str] = {"database": "ok", "redis": "ok"}
+
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[Health] Kiểm tra PostgreSQL thất bại: %s", exc)
+        checks["database"] = "error"
+    finally:
+        db.close()
+
+    try:
+        if not get_redis_client().ping():
+            checks["redis"] = "error"
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[Health] Kiểm tra Redis thất bại: %s", exc)
+        checks["redis"] = "error"
+
+    is_healthy = all(value == "ok" for value in checks.values())
+    payload = {
+        "status": "ok" if is_healthy else "degraded",
+        "message": (
+            "Server is healthy and running successfully"
+            if is_healthy
+            else "Một số dịch vụ nền đang gặp sự cố"
+        ),
+        "checks": checks,
+    }
+    if not is_healthy:
+        return JSONResponse(status_code=503, content=payload)
+    return payload

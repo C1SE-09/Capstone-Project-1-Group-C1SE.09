@@ -459,31 +459,41 @@ class SessionManagementService {
         return handler.next(options);
       },
       onError: (DioException err, handler) async {
-        // Nếu lỗi 401 và không phải là request đăng nhập/refresh
+        // Nếu lỗi 401, chưa retry và không phải là request đăng nhập/refresh
         final isAuthEndpoint = err.requestOptions.path.contains('/auth/login') ||
             err.requestOptions.path.contains('/auth/refresh');
+        final alreadyRetried = err.requestOptions.extra['_auth_retried'] == true;
 
-        if (err.response?.statusCode == 401 && !isAuthEndpoint) {
+        if (err.response?.statusCode == 401 &&
+            !isAuthEndpoint &&
+            !alreadyRetried) {
           final sessionId = _currentSession?.sessionId;
           try {
             // Thử làm mới token ngầm
             final newToken = await refreshAccessToken(dio);
 
-            // Thử lại request ban đầu với token mới
+            // Thử lại request ban đầu qua một Dio sạch (không gắn lại QueuedInterceptor)
+            // để triệt tiêu nguy cơ deadlock / vòng lặp 401 vô hạn.
             final retryOptions = err.requestOptions;
+            retryOptions.extra['_auth_retried'] = true;
             retryOptions.headers['Authorization'] = 'Bearer $newToken';
 
-            final response = await dio.fetch(retryOptions);
+            final retryDio = Dio(dio.options);
+            retryDio.httpClientAdapter = dio.httpClientAdapter;
+            final response = await retryDio.fetch<dynamic>(retryOptions);
             return handler.resolve(response);
           } on OfflineException {
             // Đang ngoại tuyến -> trả về lỗi ngoại tuyến thân thiện
             return handler.reject(err);
           } on SessionExpiredException {
             // Phiên hết hạn -> gọi callback để UI điều hướng về login
-            if (_currentSession == null || _currentSession?.sessionId == sessionId) {
+            if (_currentSession == null ||
+                _currentSession?.sessionId == sessionId) {
               (onSessionExpired ?? onSessionExpiredGlobally)?.call();
             }
             return handler.reject(err);
+          } on DioException catch (retryErr) {
+            return handler.reject(retryErr);
           } on Exception catch (_) {
             return handler.reject(err);
           }

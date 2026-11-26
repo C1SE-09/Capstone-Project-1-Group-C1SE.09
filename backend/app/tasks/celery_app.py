@@ -74,6 +74,11 @@ celery_app.conf.update(
         },
     },
     task_track_started=True,
+    # Giới hạn thời gian chạy để tránh task treo (ffmpeg/STT) khóa cứng worker --concurrency=1.
+    task_soft_time_limit=240,
+    task_time_limit=300,
+    # Tự động dọn kết quả trên Redis DB 1 sau 1 giờ để tránh đầy RAM.
+    result_expires=3600,
     # Worker có thể chờ Redis sẵn sàng lúc khởi động (không sao, worker thì
     # được phép chờ). Producer (`.delay()`) thì fail nhanh – xem `conf.update`.
     broker_connection_retry_on_startup=True,

@@ -503,4 +503,109 @@ void main() {
       );
     });
   });
+
+  group('P0 Security — đồng bộ Auth state, chống lặp 401 & Role Guard', () {
+    test(
+        'AuthRepository.currentUser tự đồng bộ từ SessionManagementService khi mở lại app và sau silent refresh',
+        () async {
+      AuthRepository.currentUser = null;
+      await SessionManagementService.instance.saveSession(const AppSession(
+        accessToken: 'restored-access',
+        refreshToken: 'restored-refresh',
+        sessionId: 'sess-sync',
+        role: 'teacher',
+        userId: 'u-1',
+        teacherId: 't-1',
+      ));
+
+      final restored = AuthRepository.currentUser;
+      expect(restored, isNotNull);
+      expect(restored?.token, 'restored-access');
+      expect(restored?.teacherId, 't-1');
+      expect(restored?.userId, 'u-1');
+
+      await SessionManagementService.instance.updateTokens(
+        newAccessToken: 'refreshed-access',
+        newRefreshToken: 'refreshed-refresh',
+      );
+      expect(AuthRepository.currentUser?.token, 'refreshed-access');
+    });
+
+    test('guardRedirectFor chặn truy cập chéo vai trò', () {
+      const teacherSession = AppSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        sessionId: 's',
+        role: 'teacher',
+      );
+      const parentSession = AppSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        sessionId: 's',
+        role: 'parent',
+      );
+
+      expect(guardRedirectFor('/teacher', null), '/login');
+      expect(guardRedirectFor('/parent', teacherSession), '/teacher');
+      expect(guardRedirectFor('/parent/emergency-alert', teacherSession),
+          '/teacher');
+      expect(guardRedirectFor('/teacher', parentSession), '/parent');
+      expect(guardRedirectFor('/admin/bug-reports', teacherSession), '/teacher');
+      expect(guardRedirectFor('/admin/bug-reports', parentSession), '/parent');
+      expect(guardRedirectFor('/teacher', teacherSession), isNull);
+      expect(guardRedirectFor('/parent', parentSession), isNull);
+    });
+
+    test('interceptor 401 chỉ retry đúng 1 lần khi retry vẫn trả 401',
+        () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+
+      await SessionManagementService.instance.saveSession(const AppSession(
+        accessToken: 'old-access',
+        refreshToken: 'valid-refresh',
+        sessionId: 'sess-loop',
+        role: 'teacher',
+      ));
+
+      var refreshCalls = 0;
+      var apiCalls = 0;
+      server.listen((request) async {
+        await request.drain<void>();
+        if (request.uri.path.contains('/auth/refresh')) {
+          refreshCalls++;
+          request.response
+            ..statusCode = 200
+            ..headers.contentType = ContentType.json
+            ..write(jsonEncode({
+              'access_token': 'new-access',
+              'refresh_token': 'new-refresh',
+            }));
+          await request.response.close();
+          return;
+        }
+        apiCalls++;
+        request.response
+          ..statusCode = 401
+          ..headers.contentType = ContentType.json
+          ..write('{"detail":"unauthorized"}');
+        await request.response.close();
+      });
+
+      final dio = Dio(BaseOptions(
+        baseUrl: 'http://127.0.0.1:${server.port}',
+      ));
+      dio.interceptors.add(
+        SessionManagementService.instance.createDioInterceptor(dio),
+      );
+
+      await expectLater(
+        dio.get('/api/teacher/me'),
+        throwsA(isA<DioException>()),
+      );
+
+      expect(refreshCalls, 1);
+      expect(apiCalls, 2);
+    });
+  });
 }

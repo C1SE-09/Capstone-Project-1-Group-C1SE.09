@@ -25,16 +25,34 @@ String initialRouteFor(AppSession? session) {
   return '/login';
 }
 
+/// Kiểm tra quyền truy cập route theo trạng thái đăng nhập và vai trò.
+String? guardRedirectFor(String path, AppSession? session) {
+  final isPublicRoute = path == '/login' || path == '/forgot-password';
+  if (!isPublicRoute && session == null) {
+    return '/login';
+  }
+  if (session == null) return null;
+
+  final role = session.role.toLowerCase();
+  if ((path == '/teacher' || path.startsWith('/teacher/')) &&
+      role != 'teacher') {
+    return initialRouteFor(session);
+  }
+  if ((path == '/parent' || path.startsWith('/parent/')) && role != 'parent') {
+    return initialRouteFor(session);
+  }
+  if ((path == '/admin' || path.startsWith('/admin/')) && role != 'admin') {
+    return initialRouteFor(session);
+  }
+  return null;
+}
+
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  redirect: (context, state) {
-    final isPublicRoute =
-        state.uri.path == '/login' || state.uri.path == '/forgot-password';
-    if (!isPublicRoute && !SessionManagementService.instance.isLoggedIn) {
-      return '/login';
-    }
-    return null;
-  },
+  redirect: (context, state) => guardRedirectFor(
+    state.uri.path,
+    SessionManagementService.instance.currentSession,
+  ),
   // Đọc phiên đã nạp từ main() — top-level final nên chỉ chạy lần đầu appRouter
   // được đọc, tức sau khi loadPersistedSession() xong.
   initialLocation: initialRouteFor(
@@ -127,22 +145,19 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/bug-report/new',
       builder: (context, state) => const _PendingScreen(
-        label: 'Bug Report Form — TODO: thay bằng BugReportFormScreen()',
+        label: 'Tính năng báo cáo sự cố đang được hoàn thiện.',
       ),
     ),
-    // 2. Danh sách tất cả báo cáo (admin only — guard ở screen level)
     GoRoute(
       path: '/admin/bug-reports',
       builder: (context, state) => const _PendingScreen(
-        label: 'Admin Bug Reports — TODO: thay bằng AdminReportsListScreen()',
+        label: 'Tính năng quản lý báo cáo sự cố chỉ hỗ trợ trên cổng Web quản trị.',
       ),
     ),
-    // 3. Chi tiết 1 báo cáo (admin only)
     GoRoute(
       path: '/admin/bug-reports/:id',
-      builder: (context, state) => _PendingScreen(
-        label:
-            'Admin Bug Report Detail — TODO: thay bằng AdminReportDetailScreen(id: ${state.pathParameters['id']})',
+      builder: (context, state) => const _PendingScreen(
+        label: 'Tính năng chi tiết báo cáo sự cố chỉ hỗ trợ trên cổng Web quản trị.',
       ),
     ),
   ],

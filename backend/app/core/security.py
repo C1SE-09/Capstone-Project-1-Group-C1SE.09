@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.database import get_db
-from app.models.user import User
+from app.models.user import User, UserStatus
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +33,33 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
+_redis_client: redis.Redis | None = None
+
 
 def get_redis_client() -> redis.Redis:
-    """Khởi tạo Redis client."""
-    return redis.from_url(
-        settings.redis_url,
-        decode_responses=True,
-        socket_timeout=3.0,
-    )
+    """Trả về Redis client singleton dùng chung ConnectionPool."""
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_timeout=3.0,
+            socket_connect_timeout=3.0,
+            max_connections=50,
+        )
+    return _redis_client
+
+
+def is_user_active(user: User) -> bool:
+    """Kiểm tra trạng thái tài khoản người dùng còn hoạt động hay không."""
+    user_status = getattr(user, "status", UserStatus.ACTIVE)
+    if user_status is None:
+        return True
+    if isinstance(user_status, UserStatus):
+        return user_status == UserStatus.ACTIVE
+    if isinstance(user_status, str):
+        return user_status.lower() == UserStatus.ACTIVE.value
+    return True
 
 
 def hash_password(password: str) -> str:
@@ -215,8 +234,8 @@ def validate_session(session_id: str) -> bool:
     try:
         return bool(get_redis_client().exists(f"{KEY_SESSION_PREFIX}{session_id}"))
     except redis.RedisError as e:
-        logger.warning("Lỗi kiểm tra session trên Redis: %s", e)
-        return True
+        logger.error("Lỗi kiểm tra session trên Redis (fail-closed): %s", e)
+        return False
 
 
 def touch_session(session_id: str, user_id: str | None = None) -> None:
@@ -262,6 +281,18 @@ def revoke_other_sessions(user_id: str, current_session_id: str) -> None:
         logger.error("Lỗi khi revoke other sessions: %s", e)
 
 
+def revoke_all_user_sessions(user_id: str) -> None:
+    """Thu hồi toàn bộ phiên đăng nhập của người dùng trên mọi thiết bị."""
+    try:
+        client = get_redis_client()
+        user_sessions_key = f"{KEY_USER_SESSIONS_PREFIX}{user_id}"
+        for sid in client.zrange(user_sessions_key, 0, -1):
+            client.delete(f"{KEY_SESSION_PREFIX}{sid}")
+        client.delete(user_sessions_key)
+    except redis.RedisError as e:
+        logger.error("Lỗi khi revoke toàn bộ session của user %s: %s", user_id, e)
+
+
 # ─── XÁC THỰC CURRENT USER ──────────────────────────────────────────────────
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
@@ -294,6 +325,11 @@ def get_current_user(
     user = db.query(User).filter(User.user_id == user_uuid).first()
     if user is None:
         raise credentials_exception
+    if not is_user_active(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đã bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ quản trị viên.",
+        )
     return user
 
 
@@ -314,7 +350,10 @@ def get_optional_current_user(
         user_uuid = uuid.UUID(str(user_id))
     except (JWTError, ValueError):
         return None
-    return db.query(User).filter(User.user_id == user_uuid).first()
+    user = db.query(User).filter(User.user_id == user_uuid).first()
+    if user is None or not is_user_active(user):
+        return None
+    return user
 
 
 def require_roles(*allowed_roles: str) -> Callable:
