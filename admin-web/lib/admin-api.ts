@@ -317,7 +317,7 @@ export function getSchedules(
     day = dayOfWeek;
   }
 
-  const query: Record<string, any> = {};
+  const query: Record<string, string | number | undefined> = {};
   if (classId) query.class_id = classId;
   if (day !== undefined) query.day_of_week = day;
 
@@ -369,7 +369,7 @@ export interface Room {
 }
 
 export function getRooms(classId?: string | null) {
-  const query: Record<string, any> = {};
+  const query: Record<string, string | undefined> = {};
   if (classId) query.class_id = classId;
   return apiFetch<Room[]>("/api/admin/rooms", {
     query,
@@ -403,7 +403,7 @@ export function checkAvailability(
   params: { username?: string; email?: string; phone?: string; exclude_id?: string },
 ) {
   return apiFetch<AvailabilityCheck>("/api/admin/check-availability", {
-    query: { type, ...params } as any,
+    query: { type, ...params },
     account: "schoolAdmin",
   });
 }
@@ -460,7 +460,7 @@ export function getHealthExamRecords(params?: {
   examination_date?: string;
 }) {
   return apiFetch<HealthExamRecordsResult>("/api/health-exam/records", {
-    query: params as any,
+    query: params,
     account: "schoolAdmin",
   });
 }

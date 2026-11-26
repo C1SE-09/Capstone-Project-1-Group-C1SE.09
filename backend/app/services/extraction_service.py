@@ -96,7 +96,7 @@ def _load_model():
 
         _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        checkpoint = torch.load(MODEL_PATH, map_location=_device)
+        checkpoint = torch.load(MODEL_PATH, map_location=_device, weights_only=True)
         _vocab = checkpoint["vocab"]
         _label_to_id = checkpoint["label_to_id"]
         _id_to_label = {v: k for k, v in _label_to_id.items()}
@@ -204,6 +204,14 @@ def extract_from_transcript(transcript: str) -> dict:
 
     tokens = _tokenizer(transcript)
     input_ids = _numericalize(transcript)
+    if not tokens or not input_ids:
+        return {
+            "meals": None,
+            "sleeping": None,
+            "health": None,
+            "activities": None,
+            "mood": None,
+        }
 
     with torch.no_grad():
         tensor = torch.tensor([input_ids]).to(_device)

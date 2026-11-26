@@ -20,20 +20,41 @@ function toMessage(detail: unknown, fallback: string): string {
   if (typeof detail === "string" && detail.trim()) return detail;
   if (Array.isArray(detail)) {
     const msgs = detail
-      .map((d) =>
-        typeof d === "string"
-          ? d
-          : d && typeof d === "object" && typeof (d as any).msg === "string"
-            ? (d as any).msg
-            : null,
-      )
+      .map((d) => {
+        if (typeof d === "string") return d;
+        if (d && typeof d === "object" && "msg" in d) {
+          const msg = (d as Record<string, unknown>).msg;
+          if (typeof msg === "string") return msg;
+        }
+        return null;
+      })
       .filter((m): m is string => !!m);
     if (msgs.length) return msgs.join("; ");
   }
-  if (detail && typeof detail === "object" && typeof (detail as any).message === "string") {
-    return (detail as any).message;
+  if (detail && typeof detail === "object" && "message" in detail) {
+    const message = (detail as Record<string, unknown>).message;
+    if (typeof message === "string") return message;
   }
   return fallback;
+}
+
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.detail) return err.detail;
+  if (err && typeof err === "object") {
+    const rec = err as Record<string, unknown>;
+    if (typeof rec.detail === "string" && rec.detail.trim()) return rec.detail;
+    if (typeof rec.message === "string" && rec.message.trim()) return rec.message;
+  }
+  return fallback;
+}
+
+export function getErrorStatus(err: unknown): number | undefined {
+  if (err instanceof ApiError) return err.status;
+  if (err && typeof err === "object" && "status" in err) {
+    const st = (err as Record<string, unknown>).status;
+    if (typeof st === "number") return st;
+  }
+  return undefined;
 }
 
 export class ApiError extends Error {
@@ -248,7 +269,7 @@ export function setStoredAdmin(admin: AdminAppInfo) {
 
 interface RequestOpts {
   method?: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
-  body?: any;
+  body?: unknown;
   query?: Record<string, string | number | undefined | null | boolean>;
   auth?: boolean;
   isFormData?: boolean;
@@ -262,6 +283,29 @@ export function isTokenExpiringSoon(token: string, thresholdSeconds = 120): bool
   return payload.exp - nowSec <= thresholdSeconds;
 }
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+const REFRESH_TIMEOUT_MS = 15_000;
+const BLOB_TIMEOUT_MS = 60_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(408, "Kết nối máy chủ bị quá thời gian. Vui lòng thử lại.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let isRefreshingPromise: Promise<string | null> | null = null;
 
 async function performTokenRefresh(): Promise<string | null> {
@@ -270,17 +314,20 @@ async function performTokenRefresh(): Promise<string | null> {
   if (!sid || !rf) return null;
 
   try {
-    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Bypass-Tunnel-Reminder": "true",
+    const res = await fetchWithTimeout(
+      `${API_BASE}/api/auth/refresh`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sid,
+          refresh_token: rf,
+        }),
       },
-      body: JSON.stringify({
-        session_id: sid,
-        refresh_token: rf,
-      }),
-    });
+      REFRESH_TIMEOUT_MS,
+    );
 
     if (!res.ok) {
       return null;
@@ -337,9 +384,7 @@ export async function apiFetchBlob(
     if (qs) url += `?${qs}`;
   }
 
-  const headers: Record<string, string> = {
-    "Bypass-Tunnel-Reminder": "true",
-  };
+  const headers: Record<string, string> = {};
   let token = getToken("schoolAdmin");
   if (token && isTokenExpiringSoon(token, 120)) {
     const refreshed = await refreshAccessToken();
@@ -351,7 +396,11 @@ export async function apiFetchBlob(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, { method: opts.method || "GET", headers });
+  const res = await fetchWithTimeout(
+    url,
+    { method: opts.method || "GET", headers },
+    BLOB_TIMEOUT_MS,
+  );
 
   if (res.status === 401 && !isRetry) {
     const newToken = await refreshAccessToken();
@@ -374,7 +423,7 @@ export async function apiFetchBlob(
   return { blob: await res.blob(), headers: res.headers };
 }
 
-export async function apiFetch<T = any>(
+export async function apiFetch<T = unknown>(
   path: string,
   opts: RequestOpts = {},
   isRetry = false,
@@ -402,9 +451,7 @@ export async function apiFetch<T = any>(
   }
 
   // Headers
-  const headers: Record<string, string> = {
-    "Bypass-Tunnel-Reminder": "true",
-  };
+  const headers: Record<string, string> = {};
   if (!isFormData && body) {
     headers["Content-Type"] = "application/json";
   }
@@ -428,7 +475,7 @@ export async function apiFetch<T = any>(
     payload = isFormData ? (body as FormData) : JSON.stringify(body);
   }
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method,
     headers,
     body: payload,

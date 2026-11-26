@@ -2,15 +2,18 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 
-import 'package:adark_frontend/core/services/session_management_service.dart';
-import 'package:adark_frontend/core/utils/api_config.dart';
-import 'package:adark_frontend/data/repositories/auth_repository.dart';
+import 'package:adark_frontend/core/errors/app_exception.dart';
+import 'package:adark_frontend/core/network/api_client.dart';
 import 'package:adark_frontend/domain/entities/report/report_response.dart';
 
-class ReportResponseException implements Exception {
+class ReportResponseException implements AppException {
   const ReportResponseException(this.message, {this.statusCode});
+  @override
   final String message;
+  @override
   final int? statusCode;
+  @override
+  String? get userMessage => null;
 
   @override
   String toString() => message;
@@ -18,38 +21,7 @@ class ReportResponseException implements Exception {
 
 class HttpReportResponseRepository {
   HttpReportResponseRepository({Dio? dio, String? baseUrl})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 30),
-                headers: AuthRepository.currentUser?.token != null
-                    ? {
-                        'Authorization':
-                            'Bearer ${AuthRepository.currentUser!.token}'
-                      }
-                    : null,
-              ),
-            ) {
-    _dio.interceptors.add(
-      SessionManagementService.instance.createDioInterceptor(_dio),
-    );
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          final token = AuthRepository.currentUser?.token;
-          if (token != null &&
-              token.isNotEmpty &&
-              (!options.headers.containsKey('Authorization') ||
-                  options.headers['Authorization'] == null)) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          return handler.next(options);
-        },
-      ),
-    );
-  }
+      : _dio = ApiClient.resolveDio(dio: dio, baseUrl: baseUrl);
 
   final Dio _dio;
   final Map<String, Uint8List> _audioCache = {};

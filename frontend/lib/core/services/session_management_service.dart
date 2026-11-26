@@ -1,3 +1,4 @@
+import 'package:adark_frontend/core/errors/app_exception.dart';
 import 'package:adark_frontend/core/services/crash_logging_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,11 +6,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Ngoại lệ chứa thông điệp thân thiện với người dùng (User-friendly message).
 /// Đảm bảo không bao giờ hiển thị stack trace hay mã lỗi code thô lên màn hình.
-class UserFacingException implements Exception {
+class UserFacingException implements AppException {
+  @override
   final String userMessage;
+  @override
   final int? statusCode;
 
   const UserFacingException(this.userMessage, {this.statusCode});
+
+  @override
+  String get message => userMessage;
 
   @override
   String toString() => userMessage;

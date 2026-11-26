@@ -1682,64 +1682,70 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<void> _editAndReanalyzeTranscript() async {
     final textCtrl = TextEditingController(text: effectiveTranscript);
-    final shouldReanalyze = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.edit_note_rounded, color: context.k.brand),
-            const SizedBox(width: 8),
-            const Text('Chỉnh sửa văn bản ghi âm',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    bool? shouldReanalyze;
+    String newText = '';
+    try {
+      shouldReanalyze = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
             children: [
-              Text(
-                'Bạn có thể chỉnh sửa lại nội dung văn bản dưới đây rồi bấm "Phân tích lại" để AI trích xuất lại thông tin:',
-                style: TextStyle(fontSize: 12, color: context.k.inkSoft),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: textCtrl,
-                maxLines: 6,
-                minLines: 3,
-                style: const TextStyle(fontSize: 13, height: 1.5),
-                decoration: InputDecoration(
-                  hintText: context.l10n?.sttEnterTextHint ??
-                      'Nhập nội dung văn bản...',
-                  filled: true,
-                  fillColor: context.k.canvas,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: context.k.line),
-                  ),
-                ),
-              ),
+              Icon(Icons.edit_note_rounded, color: context.k.brand),
+              const SizedBox(width: 8),
+              const Text('Chỉnh sửa văn bản ghi âm',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ],
           ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bạn có thể chỉnh sửa lại nội dung văn bản dưới đây rồi bấm "Phân tích lại" để AI trích xuất lại thông tin:',
+                  style: TextStyle(fontSize: 12, color: context.k.inkSoft),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: textCtrl,
+                  maxLines: 6,
+                  minLines: 3,
+                  style: const TextStyle(fontSize: 13, height: 1.5),
+                  decoration: InputDecoration(
+                    hintText: context.l10n?.sttEnterTextHint ??
+                        'Nhập nội dung văn bản...',
+                    filled: true,
+                    fillColor: context.k.canvas,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: context.k.line),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(context.l10n?.commonCancel ?? 'Hủy'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+              label: Text(context.l10n?.sttReanalyze ?? 'Phân tích lại'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n?.commonCancel ?? 'Hủy'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-            label: Text(context.l10n?.sttReanalyze ?? 'Phân tích lại'),
-          ),
-        ],
-      ),
-    );
+      );
+      newText = textCtrl.text.trim();
+    } finally {
+      textCtrl.dispose();
+    }
 
     if (shouldReanalyze == true && mounted) {
-      final newText = textCtrl.text.trim();
       if (newText.isEmpty) {
         _showError('Văn bản không được để trống.');
         return;

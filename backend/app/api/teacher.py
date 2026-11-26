@@ -1518,8 +1518,14 @@ def _assert_teacher_id(user: User, requested_id: uuid.UUID) -> uuid.UUID:
 def _assert_teacher_owns_class(
     db: Session, teacher_id: uuid.UUID, class_id: uuid.UUID
 ) -> None:
+    from app.core.access import teacher_id_owns_class
+
     teacher = db.query(Teacher).filter(Teacher.teacher_id == teacher_id).first()
-    if teacher is None or teacher.class_id != class_id:
+    if teacher is None:
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập lớp này")
+    if teacher.class_id != class_id and not teacher_id_owns_class(
+        db, teacher_id, class_id
+    ):
         raise HTTPException(status_code=403, detail="Không có quyền truy cập lớp này")
 
 

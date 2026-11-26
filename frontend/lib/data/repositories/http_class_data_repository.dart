@@ -1,33 +1,29 @@
-import 'package:adark_frontend/core/utils/api_config.dart';
+import 'package:adark_frontend/core/errors/app_exception.dart';
+import 'package:adark_frontend/core/network/api_client.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
 import 'package:adark_frontend/domain/entities/class/class_info.dart';
 import 'package:dio/dio.dart';
-import 'package:adark_frontend/core/services/session_management_service.dart';
 
 abstract class ClassDataRepository {
   Future<ClassInfo> getClassInfo(String classId);
   Future<List<Child>> getClassChildren(String classId);
 }
 
-class ClassDataException implements Exception {
+class ClassDataException implements AppException {
   const ClassDataException(this.message, {this.statusCode});
+  @override
   final String message;
+  @override
   final int? statusCode;
+  @override
+  String? get userMessage => null;
   @override
   String toString() => 'ClassDataException($statusCode): $message';
 }
 
 class HttpClassDataRepository implements ClassDataRepository {
   HttpClassDataRepository({Dio? dio, String? baseUrl})
-      : _dio = dio ?? Dio(BaseOptions(
-          baseUrl: baseUrl ?? kApiBaseUrl,
-          connectTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
-        )) {
-    _dio.interceptors.add(
-      SessionManagementService.instance.createDioInterceptor(_dio),
-    );
-  }
+      : _dio = ApiClient.resolveDio(dio: dio, baseUrl: baseUrl);
 
   final Dio _dio;
 

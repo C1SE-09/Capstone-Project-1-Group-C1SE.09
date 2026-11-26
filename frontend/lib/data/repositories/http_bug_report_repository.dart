@@ -6,29 +6,17 @@
 // Pattern mirror data/repositories/http_dashboard_repository.dart
 // (auth header lấy từ AuthRepository.currentUser, baseUrl từ kApiBaseUrl).
 
-import 'package:adark_frontend/core/utils/api_config.dart';
+import 'package:adark_frontend/core/network/api_client.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
 import 'package:adark_frontend/domain/entities/bug_report/bug_report.dart';
 import 'package:adark_frontend/domain/entities/bug_report/bug_report_list_response.dart';
 import 'package:adark_frontend/domain/repositories/bug_report_repository.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart' show MediaType;
-import 'package:adark_frontend/core/services/session_management_service.dart';
 
 class HttpBugReportRepository implements BugReportRepository {
   HttpBugReportRepository({Dio? dio, String? baseUrl})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 30),
-              ),
-            ) {
-    _dio.interceptors.add(
-      SessionManagementService.instance.createDioInterceptor(_dio),
-    );
-  }
+      : _dio = ApiClient.resolveDio(dio: dio, baseUrl: baseUrl);
 
   final Dio _dio;
 

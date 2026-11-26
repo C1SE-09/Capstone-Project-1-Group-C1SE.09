@@ -17,6 +17,7 @@
 
 import 'dart:typed_data';
 
+import 'package:adark_frontend/core/errors/app_exception.dart';
 import 'package:adark_frontend/domain/entities/bug_report/bug_report.dart';
 import 'package:adark_frontend/domain/entities/bug_report/bug_report_list_response.dart';
 import 'package:adark_frontend/domain/entities/bug_report/enums.dart';
@@ -146,10 +147,14 @@ abstract class BugReportRepository {
 }
 
 /// Exception riêng cho bug report — UI sẽ dịch sang tiếng Việt.
-class BugReportException implements Exception {
+class BugReportException implements AppException {
   const BugReportException(this.message, {this.statusCode});
+  @override
   final String message;
+  @override
   final int? statusCode;
+  @override
+  String? get userMessage => null;
 
   @override
   String toString() => 'BugReportException($statusCode): $message';

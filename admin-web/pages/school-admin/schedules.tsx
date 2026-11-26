@@ -24,7 +24,7 @@ import {
   Toast,
 } from "@/components/ui-school";
 import { exportMultiSheetToExcel, exportToExcel, ExcelSheetData } from "@/lib/excel-helper";
-import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getErrorMessage, getErrorStatus, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import {
   Room,
   Schedule,
@@ -186,7 +186,9 @@ export default function SchoolAdminSchedulesPage() {
     setReady(true);
     getClasses().then((c) => {
       setClasses(c);
-      if (c.length > 0 && !selectedClassId) setSelectedClassId(c[0].id);
+      if (c.length > 0) {
+        setSelectedClassId((prev) => prev || c[0].id);
+      }
     });
   }, []);
 
@@ -269,7 +271,7 @@ export default function SchoolAdminSchedulesPage() {
   const scheduleError = daySchedulesError || allSchedulesError;
 
   useEffect(() => {
-    if (scheduleError && (scheduleError as any).status === 401) {
+    if (scheduleError && getErrorStatus(scheduleError) === 401) {
       clearToken("schoolAdmin");
       window.location.href = "/login";
     }
@@ -451,7 +453,7 @@ export default function SchoolAdminSchedulesPage() {
       timeConflicts,
       classGroups,
     };
-  }, [allSchedules, allConflictReasons, classMap, classes, selectedClassId]);
+  }, [allSchedules, allConflictReasons, classMap, classes, selectedClassId, DAY_LABELS]);
 
   // Xung đột trong ngày đang chọn của lớp đang chọn
   const conflicts = useMemo(() => {
@@ -477,8 +479,6 @@ export default function SchoolAdminSchedulesPage() {
       return toMin(a.start_time || "") - toMin(b.start_time || "");
     });
   }, [allSchedules, selectedClassId, allConflictReasons]);
-
-  const nearestConflict = weeklyConflicts[0] || null;
 
   // Nhảy tới lớp và ngày bị xung đột từ popup toàn trường
   function handleJumpToClassConflict(targetClassId: string, targetSchedule?: Schedule) {
@@ -545,7 +545,7 @@ export default function SchoolAdminSchedulesPage() {
   }, [schedules, query]);
 
   function startTableEditing() {
-    const initial: Record<string, any> = {};
+    const initial: typeof tableEdits = {};
     filteredSchedules.forEach((s) => {
       initial[s.id] = {
         activity_name: s.activity_name || "",
@@ -630,7 +630,7 @@ export default function SchoolAdminSchedulesPage() {
       try {
         await updateSchedule(item.id, item.payload);
         success++;
-      } catch (e) {
+      } catch {
         failed++;
       }
     }
@@ -663,7 +663,7 @@ export default function SchoolAdminSchedulesPage() {
     setDrawerOpen(true);
   }
 
-  function openEdit(s: Schedule, forDay: number) {
+  function openEdit(s: Schedule) {
     setEditing(s);
     setForm({
       activity_name: s.activity_name,
@@ -735,8 +735,8 @@ export default function SchoolAdminSchedulesPage() {
       setDrawerOpen(false);
       mutateDay();
       mutateAll();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể lưu hoạt động", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể lưu hoạt động"), tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -749,8 +749,8 @@ export default function SchoolAdminSchedulesPage() {
       setSelectedIds((prev) => prev.filter((id) => id !== s.id));
       mutateDay();
       mutateAll();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể xóa", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể xóa"), tone: "bad" });
     }
     setConfirmDel(null);
   }
@@ -787,9 +787,9 @@ export default function SchoolAdminSchedulesPage() {
       setSelectedIds([]);
       mutateDay();
       mutateAll();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({
-        msg: err?.message || "Không thể xóa hàng loạt hoạt động",
+        msg: getErrorMessage(err, "Không thể xóa hàng loạt hoạt động"),
         tone: "bad",
       });
     } finally {
@@ -1030,7 +1030,6 @@ export default function SchoolAdminSchedulesPage() {
       let content = "";
 
       const col0Day = parseDayOfWeek(row[0]);
-      const col1Day = parseDayOfWeek(row[1]);
 
       if (col0Day !== null) {
         dayStr = row[0] ?? "";
@@ -1213,9 +1212,9 @@ export default function SchoolAdminSchedulesPage() {
           });
         }
         success++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): ${err?.message || "Lỗi lưu hoạt động"}`);
+        errors.push(`Dòng ${lineNum} ("${activityName.trim()}"): ${getErrorMessage(err, "Lỗi lưu hoạt động")}`);
       }
     }
 
@@ -1533,11 +1532,11 @@ export default function SchoolAdminSchedulesPage() {
         ) : scheduleError ? (
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
-              {(scheduleError as any)?.status === 401
+              {getErrorStatus(scheduleError) === 401
                 ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
                 : (lang === "en"
-                    ? `Unable to load timetable (${(scheduleError as any)?.detail || "Please try again"})`
-                    : `Không thể tải thời khóa biểu (${(scheduleError as any)?.detail || "Vui lòng thử lại"})`)}
+                    ? `Unable to load timetable (${getErrorMessage(scheduleError, "Please try again")})`
+                    : `Không thể tải thời khóa biểu (${getErrorMessage(scheduleError, "Vui lòng thử lại")})`)}
             </div>
             <button
               onClick={() => {
@@ -1748,7 +1747,7 @@ export default function SchoolAdminSchedulesPage() {
                         </div>
                         <div className="flex items-start gap-1">
                           <button
-                            onClick={() => openEdit(s, selectedDay)}
+                            onClick={() => openEdit(s)}
                             className="kbtn kbtn-ghost text-xs"
                           >
                             {lang === "en" ? "Edit" : "Sửa"}
@@ -2470,7 +2469,7 @@ function toMin(t: string): number {
   return h * 60 + m;
 }
 
-function parseDayOfWeek(val: any): number | null {
+function parseDayOfWeek(val: unknown): number | null {
   if (val === undefined || val === null) return null;
   const s = String(val).trim().toLowerCase();
   if (!s) return null;
@@ -2487,7 +2486,7 @@ function parseDayOfWeek(val: any): number | null {
   return null;
 }
 
-function parseTimeRange(val: any): { start: string; end: string } | null {
+function parseTimeRange(val: unknown): { start: string; end: string } | null {
   if (!val) return null;
   const s = String(val).trim();
   if (!s) return null;

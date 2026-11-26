@@ -5,8 +5,9 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:adark_frontend/core/errors/app_exception.dart';
+import 'package:adark_frontend/core/network/api_client.dart';
 import 'package:adark_frontend/core/services/session_management_service.dart';
-import 'package:adark_frontend/core/utils/api_config.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -45,10 +46,14 @@ class AuthUser {
   }
 }
 
-class AuthException implements Exception {
+class AuthException implements AppException {
   const AuthException(this.message, {this.statusCode});
+  @override
   final String message;
+  @override
   final int? statusCode;
+  @override
+  String? get userMessage => null;
 
   @override
   String toString() => message;
@@ -95,21 +100,12 @@ class AuthRepository {
   }
 
   AuthRepository({Dio? dio, String? baseUrl})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 10),
-                headers: {'Content-Type': 'application/json'},
-              ),
-            ) {
-    // Interceptor tự gắn access token và silent refresh khi gặp 401. Nó chạy sau
-    // các call site tự set header, nên token dùng luôn là bản mới nhất.
-    _dio.interceptors.add(
-      SessionManagementService.instance.createDioInterceptor(_dio),
-    );
-  }
+      : _dio = ApiClient.resolveDio(
+          dio: dio,
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        );
 
   final Dio _dio;
 

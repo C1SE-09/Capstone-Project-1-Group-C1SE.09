@@ -320,21 +320,40 @@ def _validate_child_identity(
 @router.get("/teachers")
 def list_teachers(db: Session = Depends(get_db)):
     teachers = db.query(Teacher).order_by(Teacher.created_at.desc()).all()
+    if not teachers:
+        return []
+
+    teacher_ids = [t.teacher_id for t in teachers]
+
+    # Batch load 1: toàn bộ quan hệ teacher_class + class (thay vì N queries)
+    tc_rows = db.execute(
+        text(
+            "SELECT tc.teacher_id, c.class_id, c.name "
+            "FROM teacher_class tc "
+            "JOIN class c ON tc.class_id = c.class_id "
+            "ORDER BY c.name"
+        )
+    ).fetchall()
+    classes_by_teacher: dict[uuid.UUID, list[dict[str, str]]] = {}
+    for row in tc_rows:
+        classes_by_teacher.setdefault(row[0], []).append(
+            {"id": str(row[1]), "name": row[2]}
+        )
+
+    # Batch load 2: toàn bộ User gắn với các giáo viên (thay vì N queries)
+    users = db.query(User).filter(User.teacher_id.in_(teacher_ids)).all()
+    username_by_teacher: dict[uuid.UUID, str] = {
+        u.teacher_id: u.username for u in users if u.teacher_id is not None
+    }
+
     results = []
     for t in teachers:
-        tc_rows = db.execute(
-            text("SELECT c.class_id, c.name FROM teacher_class tc JOIN class c ON tc.class_id = c.class_id WHERE tc.teacher_id = :tid ORDER BY c.name"),
-            {"tid": t.teacher_id}
-        ).fetchall()
-
-        assigned = [{"id": str(r[0]), "name": r[1]} for r in tc_rows]
+        assigned = list(classes_by_teacher.get(t.teacher_id, []))
         if not assigned and t.class_:
             assigned = [{"id": str(t.class_.class_id), "name": t.class_.name}]
 
         class_ids = [c["id"] for c in assigned]
         class_name = ", ".join([c["name"] for c in assigned]) if assigned else "Chưa phân lớp"
-
-        user = db.query(User).filter(User.teacher_id == t.teacher_id).first()
 
         results.append(
             {
@@ -342,7 +361,7 @@ def list_teachers(db: Session = Depends(get_db)):
                 "full_name": t.full_name,
                 "email": t.email,
                 "phone": t.phone,
-                "username": user.username if user else None,
+                "username": username_by_teacher.get(t.teacher_id),
                 "class_id": class_ids[0] if class_ids else None,
                 "class_ids": class_ids,
                 "class_name": class_name,

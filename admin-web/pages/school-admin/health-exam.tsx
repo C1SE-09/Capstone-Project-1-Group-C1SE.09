@@ -46,7 +46,7 @@ import {
   Toast,
   todayIsoStr,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
+import { clearToken, getErrorMessage, getErrorStatus, getStoredSchoolAdmin, getToken, refreshAccessToken } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
 import { formatClassName, localizeGender } from "@/lib/locale-helper";
 import {
@@ -249,8 +249,8 @@ export default function HealthExamPage() {
       try {
         const list = await getClasses();
         setClasses(list);
-      } catch (err: any) {
-        setToast({ msg: err?.message || "Không tải được danh sách lớp.", tone: "bad" });
+      } catch (err: unknown) {
+        setToast({ msg: getErrorMessage(err, "Không tải được danh sách lớp."), tone: "bad" });
       }
     })();
   }, []);
@@ -270,7 +270,7 @@ export default function HealthExamPage() {
   );
 
   useEffect(() => {
-    if (error && (error as any).status === 401) {
+    if (error && getErrorStatus(error) === 401) {
       if (!getToken("schoolAdmin")) {
         window.location.href = "/login";
         return;
@@ -392,9 +392,7 @@ export default function HealthExamPage() {
     );
   }
 
-  const dirtyRows = useMemo(() => {
-    return filtered.filter((r) => isRowDirty(r));
-  }, [filtered, tableEdits]);
+  const dirtyRows = filtered.filter((r) => isRowDirty(r));
 
   function cancelAllEdits() {
     setTableEdits({});
@@ -492,7 +490,7 @@ export default function HealthExamPage() {
           });
         }
         successCount++;
-      } catch (e) {
+      } catch {
         failedCount++;
       }
     }
@@ -535,8 +533,8 @@ export default function HealthExamPage() {
         return copy;
       });
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể xóa bản ghi sức khỏe", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể xóa bản ghi sức khỏe"), tone: "bad" });
     } finally {
       setDeleteBusy(false);
     }
@@ -618,8 +616,8 @@ export default function HealthExamPage() {
         msg: `Đã cập nhật số liệu sức khoẻ của học sinh ${editing.full_name}.`,
         tone: "ok",
       });
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không lưu được số liệu. Vui lòng thử lại.", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không lưu được số liệu. Vui lòng thử lại."), tone: "bad" });
     } finally {
       setEditBusy(false);
     }
@@ -707,11 +705,11 @@ export default function HealthExamPage() {
           : "Đã tải file mẫu toàn trường. Nhập số liệu rồi tải lên lại.",
         tone: "ok",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setImportError(
-        err?.status === 401
+        getErrorStatus(err) === 401
           ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại rồi tải file mẫu."
-          : err?.message || "Không tải được file mẫu."
+          : getErrorMessage(err, "Không tải được file mẫu.")
       );
     }
   }
@@ -762,8 +760,8 @@ export default function HealthExamPage() {
       } else {
         setToast({ msg: "Không có dòng nào được lưu. Xem chi tiết lỗi bên dưới.", tone: "bad" });
       }
-    } catch (err: any) {
-      setImportError(err?.message || "Đã xảy ra lỗi trong quá trình nhập dữ liệu.");
+    } catch (err: unknown) {
+      setImportError(getErrorMessage(err, "Đã xảy ra lỗi trong quá trình nhập dữ liệu."));
     } finally {
       setImportBusy(false);
     }
@@ -962,11 +960,11 @@ export default function HealthExamPage() {
         ) : error ? (
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
-              {(error as any)?.status === 401
+              {getErrorStatus(error) === 401
                 ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
                 : (lang === "en"
-                    ? `Unable to load health records (${(error as any)?.detail || "Please try again"})`
-                    : `Không thể tải dữ liệu sổ sức khoẻ (${(error as any)?.detail || "Vui lòng thử lại"})`)}
+                    ? `Unable to load health records (${getErrorMessage(error, "Please try again")})`
+                    : `Không thể tải dữ liệu sổ sức khoẻ (${getErrorMessage(error, "Vui lòng thử lại")})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
               {lang === "en" ? "Retry" : "Thử lại"}

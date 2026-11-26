@@ -8,8 +8,6 @@
 // chỉ cần thay 2 hằng số này bằng id từ phiên đăng nhập — View &
 // entity không đổi.
 
-import 'package:adark_frontend/core/utils/api_config.dart';
-
 import 'package:adark_frontend/data/repositories/http_class_data_repository.dart';
 import 'package:adark_frontend/domain/entities/activity/activity_item.dart';
 import 'package:adark_frontend/domain/entities/child/child.dart';
@@ -22,9 +20,10 @@ import 'package:adark_frontend/domain/entities/auth/parent.dart';
 import 'package:adark_frontend/domain/entities/report/report_status.dart';
 import 'package:adark_frontend/domain/entities/auth/teacher.dart';
 import 'package:adark_frontend/data/repositories/auth_repository.dart';
+import 'package:adark_frontend/core/network/api_client.dart';
+import 'package:adark_frontend/core/services/session_management_service.dart';
 import 'package:adark_frontend/domain/repositories/dashboard_repository.dart';
 import 'package:dio/dio.dart';
-import 'package:adark_frontend/core/services/session_management_service.dart';
 
 class HttpDashboardRepository implements DashboardRepository {
   HttpDashboardRepository({
@@ -37,21 +36,7 @@ class HttpDashboardRepository implements DashboardRepository {
         _parentIdOverride = parentId,
         _classData =
             classDataRepository ?? HttpClassDataRepository(dio: dio, baseUrl: baseUrl),
-        _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? kApiBaseUrl,
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 30),
-                headers: AuthRepository.currentUser?.token != null
-                    ? {'Authorization': 'Bearer ${AuthRepository.currentUser!.token}'}
-                    : null,
-              ),
-            ) {
-    _dio.interceptors.add(
-      SessionManagementService.instance.createDioInterceptor(_dio),
-    );
-  }
+        _dio = ApiClient.resolveDio(dio: dio, baseUrl: baseUrl);
 
   final ClassDataRepository _classData;
   final Dio _dio;

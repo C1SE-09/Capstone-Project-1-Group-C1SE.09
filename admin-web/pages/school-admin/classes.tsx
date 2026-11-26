@@ -20,7 +20,7 @@ import {
   ConfirmDialog,
   Toast,
 } from "@/components/ui-school";
-import { clearToken, getStoredSchoolAdmin, getToken } from "@/lib/api";
+import { clearToken, getErrorMessage, getErrorStatus, getStoredSchoolAdmin, getToken } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
 import { formatClassName, localizeGradeLabel } from "@/lib/locale-helper";
 import { exportToExcel } from "@/lib/excel-helper";
@@ -82,7 +82,7 @@ export default function SchoolAdminClassesPage() {
   );
 
   useEffect(() => {
-    if (classesError && (classesError as any).status === 401) {
+    if (classesError && getErrorStatus(classesError) === 401) {
       clearToken("schoolAdmin");
       window.location.href = "/login";
     }
@@ -200,8 +200,8 @@ export default function SchoolAdminClassesPage() {
       }
       setDrawerOpen(false);
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.detail || err?.message || "Không thể lưu lớp", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể lưu lớp"), tone: "bad" });
     } finally {
       setSaving(false);
     }
@@ -213,8 +213,8 @@ export default function SchoolAdminClassesPage() {
       setToast({ msg: `Đã xóa lớp ${c.name}`, tone: "ok" });
       setSelectedIds((prev) => prev.filter((id) => id !== c.id));
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể xóa lớp", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể xóa lớp"), tone: "bad" });
     }
     setConfirmDel(null);
   }
@@ -245,8 +245,8 @@ export default function SchoolAdminClassesPage() {
       setToast({ msg: res.message || `Đã xóa ${selectedIds.length} lớp`, tone: res.blocked && res.blocked.length > 0 ? "warn" : "ok" });
       setSelectedIds([]);
       mutate();
-    } catch (err: any) {
-      setToast({ msg: err?.message || "Không thể xóa hàng loạt lớp", tone: "bad" });
+    } catch (err: unknown) {
+      setToast({ msg: getErrorMessage(err, "Không thể xóa hàng loạt lớp"), tone: "bad" });
     } finally {
       setBulkDeleting(false);
       setConfirmBulkDel(false);
@@ -303,11 +303,11 @@ export default function SchoolAdminClassesPage() {
         ) : classesError ? (
           <div className="text-center py-12">
             <div className="text-bad font-semibold mb-2">
-              {(classesError as any)?.status === 401
+              {getErrorStatus(classesError) === 401
                 ? (lang === "en" ? "Session expired. Redirecting to login..." : "Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...")
                 : (lang === "en"
-                    ? `Unable to load classes (${(classesError as any)?.detail || "Please try again"})`
-                    : `Không thể tải danh sách lớp (${(classesError as any)?.detail || "Vui lòng thử lại"})`)}
+                    ? `Unable to load classes (${getErrorMessage(classesError, "Please try again")})`
+                    : `Không thể tải danh sách lớp (${getErrorMessage(classesError, "Vui lòng thử lại")})`)}
             </div>
             <button onClick={() => mutate()} className="kbtn kbtn-secondary mt-2">
               {lang === "en" ? "Retry" : "Thử lại"}
